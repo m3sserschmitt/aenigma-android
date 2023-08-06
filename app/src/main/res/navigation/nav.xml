@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav"
+    app:startDestination="@id/chatsFragment">
+
+    <fragment
+        android:id="@+id/chatsFragment"
+        android:name="com.example.enigma.ChatsFragment"
+        android:label="fragment_chats"
+        tools:layout="@layout/fragment_chats" />
+    <fragment
+        android:id="@+id/addContactsFragment"
+        android:name="com.example.enigma.AddContactsFragment"
+        android:label="fragment_new"
+        tools:layout="@layout/fragment_add_contacts" />
+</navigation>
