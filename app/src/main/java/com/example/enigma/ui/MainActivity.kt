@@ -1,10 +1,15 @@
-package com.example.enigma
+package com.example.enigma.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.fragment.app.Fragment
+import com.example.enigma.R
+import com.example.enigma.ui.fragments.addcontacts.AddContactsFragment
+import com.example.enigma.ui.fragments.chats.ChatsFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     companion object {

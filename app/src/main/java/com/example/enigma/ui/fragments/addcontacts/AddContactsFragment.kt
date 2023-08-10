@@ -1,10 +1,11 @@
-package com.example.enigma
+package com.example.enigma.ui.fragments.addcontacts
 
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import com.example.enigma.R
 
 class AddContactsFragment : Fragment() {
     override fun onCreateView(

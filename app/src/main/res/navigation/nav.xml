@@ -7,12 +7,12 @@
 
     <fragment
         android:id="@+id/chatsFragment"
-        android:name="com.example.enigma.ChatsFragment"
+        android:name="com.example.enigma.ui.fragments.chats.ChatsFragment"
         android:label="fragment_chats"
         tools:layout="@layout/fragment_chats" />
     <fragment
         android:id="@+id/addContactsFragment"
-        android:name="com.example.enigma.AddContactsFragment"
+        android:name="com.example.enigma.ui.fragments.addcontacts.AddContactsFragment"
         android:label="fragment_new"
         tools:layout="@layout/fragment_add_contacts" />
 </navigation>
