@@ -23,29 +23,71 @@ static long long getHandle(ICryptoContext *ctx)
     return i - 1;
 }
 
-static void freeHandle(int64_t i)
+static bool freeHandle(int64_t i)
 {
-    delete handles[i];
+    auto it = handles.find(i);
+
+    if(it == handles.end())
+    {
+        return false;
+    }
+
+    delete it->second;
+
+    return true;
+}
+
+static ICryptoContext *getCryptoContext(int64_t handle)
+{
+    auto it = handles.find(handle);
+
+    if(it == handles.end())
+    {
+        return nullptr;
+    }
+
+    return it->second;
+}
+
+static unsigned char* asUnsignedCharArray(JNIEnv *env, jbyteArray array, int &len) {
+    len = env->GetArrayLength (array);
+
+    auto *buf = new unsigned char[len];
+    env->GetByteArrayRegion (array, 0, len, reinterpret_cast<jbyte*>(buf));
+
+    return buf;
+}
+
+static jbyteArray toJByteArray(JNIEnv *env, const unsigned char *data, unsigned int size)
+{
+    jbyteArray ret = env->NewByteArray((int)size);
+    env->SetByteArrayRegion (ret, 0, (int)size, (jbyte *)data);
+
+    return ret;
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createEncryptionContext(JNIEnv *env,
-                                                                       jobject thiz,
-                                                                       jstring key) {
+Java_com_example_enigma_crypto_CryptoContext_00024Companion_createEncryptionContext(
+        JNIEnv *env,
+        jobject thiz,
+        jstring key) {
     const char *publicKey = env->GetStringUTFChars(key, nullptr);
 
     ICryptoContext *ctx = CreateAsymmetricEncryptionContext(publicKey);
+    env->ReleaseStringUTFChars(key, publicKey);
 
     return getHandle(ctx);
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createDecryptionContext(JNIEnv *env,
-                                                                                     jobject thiz,
-                                                                                     jstring key,
-                                                                                     jstring passphrase) {
+Java_com_example_enigma_crypto_CryptoContext_00024Companion_createDecryptionContext(
+        JNIEnv *env,
+        jobject thiz,
+        jstring key,
+        jstring passphrase) {
+
     const char *privateKey = env->GetStringUTFChars(key, nullptr);
     const char *protectionPassphrase = env->GetStringUTFChars(passphrase, nullptr);
 
@@ -56,15 +98,21 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createDecryptionCon
 
     ICryptoContext *ctx = CreateAsymmetricDecryptionContext(privateKey, _protectionPassphrase);
 
+    delete[] _protectionPassphrase;
+    env->ReleaseStringUTFChars(key, privateKey);
+    env->ReleaseStringUTFChars(passphrase, protectionPassphrase);
+
     return getHandle(ctx);
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createSignatureContext(JNIEnv *env,
-                                                                                    jobject thiz,
-                                                                                    jstring key,
-                                                                                    jstring passphrase) {
+Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureContext(
+        JNIEnv *env,
+        jobject thiz,
+        jstring key,
+        jstring passphrase) {
+
     const char *privateKey = env->GetStringUTFChars(key, nullptr);
     const char *protectionPassphrase = env->GetStringUTFChars(passphrase, nullptr);
 
@@ -75,25 +123,151 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createSignatureCont
 
     ICryptoContext *ctx = CreateSignatureContext(privateKey, _protectionPassphrase);
 
+    delete[] _protectionPassphrase;
+    env->ReleaseStringUTFChars(key, privateKey);
+    env->ReleaseStringUTFChars(passphrase, protectionPassphrase);
+
     return getHandle(ctx);
 }
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createSignatureVerificationContext(
-        JNIEnv *env, jobject thiz, jstring key) {
+Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureVerificationContext(
+        JNIEnv *env,
+        jobject thiz,
+        jstring key) {
 
     const char *publicKey = env->GetStringUTFChars(key, nullptr);
 
     ICryptoContext *ctx = CreateVerificationContext(publicKey);
 
+    env->ReleaseStringUTFChars(key, publicKey);
+
     return getHandle(ctx);
 }
 
 extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_freeHandle(JNIEnv *env,
-                                                                        jobject thiz,
-                                                                        jlong i) {
-    freeHandle(i);
+JNIEXPORT jboolean JNICALL
+Java_com_example_enigma_crypto_CryptoContextHandle_00024Companion_freeContext(
+        JNIEnv *env,
+        jobject thiz,
+        jlong i) {
+
+    return freeHandle(i);
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_encrypt
+(
+        JNIEnv *env,
+        jobject thiz,
+        jlong handle,
+        jbyteArray plaintext) {
+
+    ICryptoContext *ctx = getCryptoContext(handle);
+
+    if(not ctx)
+    {
+        return nullptr;
+    }
+
+    int len;
+    const unsigned char *data = asUnsignedCharArray(env, plaintext, len);
+
+    const EncrypterData *ciphertext = EncryptDataEx(ctx, data, len);
+
+    delete[] data;
+
+    if(not ciphertext or ciphertext->isError())
+    {
+        return nullptr;
+    }
+
+    return toJByteArray(env, ciphertext->getData(), ciphertext->getDataSize());
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_decrypt(
+        JNIEnv *env,
+        jobject thiz,
+        jlong handle,
+        jbyteArray ciphertext) {
+
+    ICryptoContext *ctx = getCryptoContext(handle);
+
+    if(not ctx)
+    {
+        return nullptr;
+    }
+
+    int len;
+    const unsigned char *data = asUnsignedCharArray(env, ciphertext, len);
+
+    const EncrypterData *plaintext = DecryptDataEx(ctx, data, len);
+
+    delete[] data;
+
+    if(not plaintext or plaintext->isError())
+    {
+        return nullptr;
+    }
+
+    return toJByteArray(env, plaintext->getData(), plaintext->getDataSize());
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sign(
+        JNIEnv *env,
+        jobject thiz,
+        jlong handle,
+        jbyteArray data) {
+
+    ICryptoContext *ctx = getCryptoContext(handle);
+
+    if(not ctx)
+    {
+        return nullptr;
+    }
+
+    int len;
+    const unsigned char *_data = asUnsignedCharArray(env, data, len);
+
+    const EncrypterData *signature = SignDataEx(ctx, _data, len);
+
+    delete[] _data;
+
+    if(not signature or signature->isError())
+    {
+        return nullptr;
+    }
+
+    return toJByteArray(env, signature->getData(), signature->getDataSize());
+}
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
+        JNIEnv *env,
+        jobject thiz,
+        jlong handle,
+        jbyteArray signature) {
+
+    ICryptoContext *ctx = getCryptoContext(handle);
+
+    if(not ctx)
+    {
+        return false;
+    }
+
+    int len;
+    const unsigned char *_data = asUnsignedCharArray(env, signature, len);
+
+    bool result = VerifySignature(ctx, _data, len);
+
+    delete[] _data;
+
+    return result;
 }
