@@ -6,8 +6,10 @@ import com.example.enigma.util.Constants.Companion.CONTACTS_TABLE
 
 @Entity(tableName = CONTACTS_TABLE)
 data class ContactEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long,
     val address: String,
     val name: String,
     val hasNewMessage: Boolean
 )
+{
+    @PrimaryKey(autoGenerate = true) var id: Long = 0
+}

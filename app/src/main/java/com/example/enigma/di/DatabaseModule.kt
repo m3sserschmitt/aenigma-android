@@ -27,5 +27,9 @@ object DatabaseModule {
 
     @Singleton
     @Provides
-    fun provideDao(database: AppDatabase) = database.contactsDao()
+    fun provideContactsDao(database: AppDatabase) = database.contactsDao()
+
+    @Singleton
+    @Provides
+    fun provideMessagesDao(database: AppDatabase) = database.messagesDao()
 }

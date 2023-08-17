@@ -5,6 +5,9 @@ class Constants {
         // Room Database
         const val DATABASE_NAME = "enigma-database"
         const val CONTACTS_TABLE = "Contacts"
+        const val MESSAGES_TABLE = "Messages"
+
+        const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
         const val PUBLIC_KEY =
 """

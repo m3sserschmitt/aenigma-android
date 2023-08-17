@@ -15,6 +15,10 @@
         android:theme="@style/Theme.Enigma"
         tools:targetApi="31">
         <activity
+            android:name=".ui.ChatActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.MainActivity"/>
+        <activity
             android:name=".ui.MainActivity"
             android:exported="true">
             <intent-filter>

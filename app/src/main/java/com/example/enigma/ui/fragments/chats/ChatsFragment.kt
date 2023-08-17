@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.enigma.adapters.ChatsAdapter
+import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.databinding.FragmentChatsBinding
 import com.example.enigma.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -18,13 +19,14 @@ import kotlinx.coroutines.launch
 class ChatsFragment : Fragment() {
 
     private lateinit var mainViewModel: MainViewModel
-    private val chatsAdapter by lazy { ChatsAdapter() }
+    private val chatsAdapter by lazy { ChatsAdapter(requireActivity()) }
     private lateinit var fragmentChatsBinding: FragmentChatsBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         mainViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
+//         seedDatabase()
     }
 
     override fun onCreateView(
@@ -34,8 +36,6 @@ class ChatsFragment : Fragment() {
 
         fragmentChatsBinding = FragmentChatsBinding.inflate(inflater, container, false)
 
-//        mainViewModel.insertContact(ContactEntity(1, "1234", "John", true))
-//        mainViewModel.insertContact(ContactEntity(3, "1236", "Tom", false))
         setupRecyclerView()
         readContactsFromDatabase()
         return fragmentChatsBinding.root
@@ -54,5 +54,11 @@ class ChatsFragment : Fragment() {
                     contacts -> chatsAdapter.setData(contacts)
             }
         }
+    }
+
+    private fun seedDatabase()
+    {
+        mainViewModel.insertContact(ContactEntity("1234", "John", true))
+        mainViewModel.insertContact(ContactEntity("1236", "Tom", false))
     }
 }
