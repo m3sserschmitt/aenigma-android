@@ -3,11 +3,11 @@ package com.example.enigma.crypto
 class CryptoProvider {
 
     companion object {
-        private external fun encrypt(handle: Long, plaintext: ByteArray) : ByteArray
+        private external fun encrypt(handle: Long, plaintext: ByteArray) : ByteArray?
 
-        private external fun decrypt(handle: Long, ciphertext: ByteArray) : ByteArray
+        private external fun decrypt(handle: Long, ciphertext: ByteArray) : ByteArray?
 
-        private external fun sign(handle: Long, data: ByteArray) : ByteArray
+        private external fun sign(handle: Long, data: ByteArray) : ByteArray?
 
         private external fun verify(handle: Long, signature: ByteArray) : Boolean
 
@@ -16,7 +16,7 @@ class CryptoProvider {
             throw IllegalArgumentException("Handle should be an instance of $requiredHandleType")
         }
 
-        fun encrypt(handle : CryptoContextHandle, plaintext: ByteArray) : ByteArray
+        fun encrypt(handle : CryptoContextHandle, plaintext: ByteArray) : ByteArray?
         {
             if(handle !is CryptoContextHandle.EncryptionContextHandle)
             {
@@ -26,7 +26,8 @@ class CryptoProvider {
             return encrypt(handle.handle, plaintext)
         }
 
-        fun decrypt(handle: CryptoContextHandle, ciphertext: ByteArray) : ByteArray
+        @JvmStatic
+        fun decrypt(handle: CryptoContextHandle, ciphertext: ByteArray) : ByteArray?
         {
             if(handle !is CryptoContextHandle.DecryptionContextHandle)
             {
@@ -36,7 +37,7 @@ class CryptoProvider {
             return decrypt(handle.handle, ciphertext)
         }
 
-        fun sign(handle: CryptoContextHandle, data: ByteArray) : ByteArray
+        fun sign(handle: CryptoContextHandle, data: ByteArray) : ByteArray?
         {
             if(handle !is CryptoContextHandle.SignatureContextHandle)
             {
@@ -44,6 +45,17 @@ class CryptoProvider {
             }
 
             return sign(handle.handle, data)
+        }
+
+        @JvmStatic
+        fun sign(key: String, passphrase: String, data: ByteArray) : ByteArray?
+        {
+            val context = CryptoContext.Factory.createSignatureContext(key, passphrase)
+
+            val result = sign(context, data)
+
+            context.free()
+            return result
         }
 
         fun verify(handle: CryptoContextHandle, signature: ByteArray) : Boolean

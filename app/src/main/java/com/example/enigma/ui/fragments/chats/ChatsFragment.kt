@@ -24,9 +24,7 @@ class ChatsFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         mainViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
-//         seedDatabase()
     }
 
     override fun onCreateView(
@@ -58,7 +56,10 @@ class ChatsFragment : Fragment() {
 
     private fun seedDatabase()
     {
-        mainViewModel.insertContact(ContactEntity("1234", "John", true))
-        mainViewModel.insertContact(ContactEntity("1236", "Tom", false))
+        mainViewModel.insertContact(
+            ContactEntity(
+                "cbff2e12fb1f752cb17185f080f2b40301165a1051531cc0614e495ee2620ef9",
+                "John", false))
+        // mainViewModel.insertContact(ContactEntity("1236", "Tom", false))
     }
 }

@@ -8,11 +8,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.enigma.R
 import com.example.enigma.adapters.ChatAdapter
-import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import com.example.enigma.viewmodels.ChatViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.*
 
 @AndroidEntryPoint
 class ChatActivity : AppCompatActivity() {
@@ -71,8 +69,8 @@ class ChatActivity : AppCompatActivity() {
 
     private fun seedDatabase()
     {
-        chatViewModel.insertMessage(MessageEntity("1234", true, "Hello", Date()))
-        chatViewModel.insertMessage(MessageEntity("1234", true, "How are u?", Date()))
-        chatViewModel.insertMessage(MessageEntity("1234", false, "Hi, I'm fine", Date()))
+//        chatViewModel.insertMessage(MessageEntity("1234", true, "Hello", Date()))
+//        chatViewModel.insertMessage(MessageEntity("1234", true, "How are u?", Date()))
+//        chatViewModel.insertMessage(MessageEntity("1234", false, "Hi, I'm fine", Date()))
     }
 }

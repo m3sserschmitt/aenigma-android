@@ -20,6 +20,7 @@ class CryptoContext {
                     CryptoContext.createEncryptionContext(key))
             }
 
+            @JvmStatic
             fun createDecryptionContext(key : String, passphrase : String) : CryptoContextHandle
             {
                 return CryptoContextHandle.DecryptionContextHandle(

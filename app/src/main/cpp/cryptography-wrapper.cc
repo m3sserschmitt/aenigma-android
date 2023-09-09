@@ -5,12 +5,11 @@
 
 using namespace std;
 
+static int64_t i = 0;
 static map<int64_t, ICryptoContext *> handles;
 
 static long long getHandle(ICryptoContext *ctx)
 {
-    static int64_t i = 0;
-
     if(!ctx)
     {
         return -1;

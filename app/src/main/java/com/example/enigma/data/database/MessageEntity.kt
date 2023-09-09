@@ -8,8 +8,8 @@ import java.util.*
 @Entity(tableName = Constants.MESSAGES_TABLE)
 data class MessageEntity (
     val chatId: String,
-    val incoming: Boolean,
     val text: String,
+    val incoming: Boolean,
     val date: Date
 )
 {
