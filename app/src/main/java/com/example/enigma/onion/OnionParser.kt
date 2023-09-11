@@ -1,9 +1,9 @@
-package com.example.enigma.data.network.util
+package com.example.enigma.onion
 
 import com.example.enigma.crypto.CryptoContextHandle
 import com.example.enigma.crypto.CryptoProvider
 import com.example.enigma.models.Message
-import com.example.enigma.util.AddressHexConverter
+import com.example.enigma.util.HexConverter
 import com.example.enigma.util.Constants.Companion.ADDRESS_SIZE
 
 class OnionParser constructor(private val cryptoContextHandle: CryptoContextHandle) {
@@ -21,7 +21,7 @@ class OnionParser constructor(private val cryptoContextHandle: CryptoContextHand
             val encryptedData = onion.sliceArray(2 until onion.size)
             val decryptedData = CryptoProvider.decrypt(cryptoContextHandle, encryptedData) ?: return null
 
-            val address = AddressHexConverter.toHex(decryptedData.sliceArray(0 until ADDRESS_SIZE))
+            val address = HexConverter.toHex(decryptedData.sliceArray(0 until ADDRESS_SIZE))
             val content = String(decryptedData.sliceArray(ADDRESS_SIZE until decryptedData.size))
 
             return Message(address, content, true)

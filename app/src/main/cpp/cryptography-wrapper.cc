@@ -22,9 +22,9 @@ static long long getHandle(ICryptoContext *ctx)
     return i - 1;
 }
 
-static bool freeHandle(int64_t i)
+static bool freeHandle(int64_t handle)
 {
-    auto it = handles.find(i);
+    auto it = handles.find(handle);
 
     if(it == handles.end())
     {
@@ -150,9 +150,9 @@ JNIEXPORT jboolean JNICALL
 Java_com_example_enigma_crypto_CryptoContextHandle_00024Companion_freeContext(
         JNIEnv *env,
         jobject thiz,
-        jlong i) {
+        jlong handle) {
 
-    return freeHandle(i);
+    return freeHandle(handle);
 }
 
 extern "C"
@@ -269,4 +269,15 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
     delete[] _data;
 
     return result;
+}
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_calculateEnvelopeSize(
+        JNIEnv *env,
+        jobject thiz,
+        jint key_size,
+        jint current_size) {
+
+    return (int)GetEnvelopeSize(key_size, current_size);
 }

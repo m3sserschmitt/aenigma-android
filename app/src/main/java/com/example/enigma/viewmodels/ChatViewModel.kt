@@ -9,6 +9,7 @@ import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,6 +31,13 @@ class ChatViewModel @Inject constructor(
     {
         viewModelScope.launch(Dispatchers.IO) {
             repository.local.insertMessage(messageEntity)
+        }
+    }
+
+    fun insertOutgoingMessage(text: String)
+    {
+        savedStateHandle.get<String>(SELECTED_CHAT_ID)?.let{
+            insertMessage(MessageEntity(it, text, false, Date()))
         }
     }
 }

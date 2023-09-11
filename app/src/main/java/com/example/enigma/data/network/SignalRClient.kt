@@ -5,7 +5,7 @@ import com.example.enigma.crypto.CryptoContext
 import com.example.enigma.crypto.CryptoProvider
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.MessageEntity
-import com.example.enigma.data.network.util.OnionParser
+import com.example.enigma.onion.OnionParser
 import com.example.enigma.models.Message
 import com.example.enigma.util.Constants.Companion.PASSPHRASE
 import com.example.enigma.util.Constants.Companion.PRIVATE_KEY
@@ -14,6 +14,7 @@ import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
 import kotlinx.coroutines.*
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -56,7 +57,7 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
             if (decryptedMessage != null) {
                 val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-                scope.launch { emitEvent(decryptedMessage) }
+                // scope.launch { emitEvent(decryptedMessage) }
                 scope.launch { saveMessage(decryptedMessage) }
             }
         }, String::class.java)
@@ -85,10 +86,15 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
     }
 
     fun authenticate() {
-        hubConnection.invoke("GenerateToken")
+        hubConnection.invoke("GenerateToken").blockingAwait()
     }
 
     fun start() {
         hubConnection.start().blockingAwait()
+    }
+
+    fun sendMessage(message: String)
+    {
+        hubConnection.invoke("RouteMessage", message).blockingAwait(5, TimeUnit.SECONDS)
     }
 }

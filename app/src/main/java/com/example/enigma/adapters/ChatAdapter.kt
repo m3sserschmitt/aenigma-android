@@ -36,6 +36,18 @@ class ChatAdapter
             binding.executePendingBindings()
         }
 
+        fun resetAlignment()
+        {
+            binding.contentTextView.updateLayoutParams<ConstraintLayout.LayoutParams>
+            {
+                horizontalBias = 0f
+            }
+            binding.messageDateTextView.updateLayoutParams<ConstraintLayout.LayoutParams>
+            {
+                horizontalBias = 0f
+            }
+        }
+
         companion object {
             fun from(parent: ViewGroup) : ChatViewHolder
             {
@@ -53,6 +65,11 @@ class ChatAdapter
 
     override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
         holder.bind(messages[position])
+    }
+
+    override fun onViewRecycled(holder: ChatViewHolder)
+    {
+        holder.resetAlignment()
     }
 
     override fun getItemCount(): Int {

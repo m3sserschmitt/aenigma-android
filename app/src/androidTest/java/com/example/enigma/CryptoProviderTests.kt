@@ -31,7 +31,7 @@ class CryptoProviderTests {
 
         // Assert
         assertNotNull(result)
-        assertEquals(256 + 12 + 16 + plaintext.size, result.size)
+        assertEquals(256 + 12 + 16 + plaintext.size, result!!.size)
     }
 
     @Test
@@ -46,6 +46,6 @@ class CryptoProviderTests {
 
         // Assert
         assertNotNull(result)
-        assertEquals(256 + plaintext.size, result.size)
+        assertEquals(256 + plaintext.size, result!!.size)
     }
 }

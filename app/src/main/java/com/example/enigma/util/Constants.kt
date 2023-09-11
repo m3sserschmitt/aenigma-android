@@ -3,7 +3,8 @@ package com.example.enigma.util
 class Constants {
     companion object {
 
-        const val ADDRESS_SIZE = 32
+        const val ADDRESS_SIZE = 32 // bytes
+        const val KEY_SIZE = 2048 // bits !!
 
         // Room Database
         const val DATABASE_NAME = "enigma-database"
@@ -12,6 +13,7 @@ class Constants {
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
+        // TODO: Keys for testing. To be removed!!
         const val PUBLIC_KEY =
 """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA13pyOqfbBfDP1HrCyxMw
@@ -55,6 +57,33 @@ ZDg3AwToyLQF9r5kmH/1l48zJOBCEeRZgmCKRg6BoutwufhFtxBkBoGSmqlqsFRh
 sAjwH0LbWe1xhKWHRXhcvA==
 -----END ENCRYPTED PRIVATE KEY-----"""
 
+        const val HEX_ADDRESS = "a186a6fba0ff7570b116b3df639e3713fab0a21f1cf62fb616d84c19217c8023"
+
         const val PASSPHRASE = "12345678";
+
+        const val SERVER_PUBLIC_KEY =
+"""-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxdybNM+2i8csXfkuj188
+inglpjnlwxhfWbt444aP+bsWuf8n9dmr03Eb4N/T7jyjTLLdDSwDbgGOrB/awhkf
+aoSoOwz7F/bLHjCDONKmF952YPCmskkCkeCsd+vtOwLMLgJGS3G8fBEpWi0x6XLU
+7cpzKWfnx8HM3fYQ8/kFfqkwxvFyYJEyG0v3Gz1K+XcrZX/Xbv8ngTzF7XyH7X/S
+Xrr/egIj5TySzke9WAcu4kfiZx0lfy6LDVhrxZdf26jsj8mnf265p3QU7OE3VcV9
+0Kv+2m58zzPLW2qEFe/xFbbURikV9cBnSTqdYgj+LkTycnLeZeTnr7oH0FWLYssK
+owIDAQAB
+-----END PUBLIC KEY-----"""
+
+        const val FOREIGN_PUBLIC_KEY =
+"""-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA9mZB83nnrzpFeSkkr8au
+1rmcYJhpyikM+4jCdJ5FowumVQ8Rq3yaYVTuz4mFQVyM28BldwXpG3FiL/aM7FHC
+0H2tbJ/d4sB579WeGBELiHDWVvM5DrOfj/7QroFNDA6gI7Vmvk6o0BBQ+LiIeWTr
+ivTUTkjZWoTo30RluPEpQKOxRoCdk+DaZNw0FBTdWUngkV8FjHQl6ObWWfQ7f3+t
+yxMFHD9vMDP+nGXmd4NsnsDMABZ4Yn0rgyW1CF9phB1zLdOgxW+JNjK6wLbCqIyK
+GCfJFnZpaImguAjdjPG318nXARZ4PqH3LbrYzPPanHz8IVGWA4vt1BlDROGmx8vJ
+dwIDAQAB
+-----END PUBLIC KEY-----"""
+
+        const val FOREIGN_HEX_ADDRESS =
+            "cbff2e12fb1f752cb17185f080f2b40301165a1051531cc0614e495ee2620ef9"
     }
 }

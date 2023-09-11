@@ -8,6 +8,7 @@ import com.example.enigma.util.Constants.Companion.CONTACTS_TABLE
 data class ContactEntity(
     val address: String,
     val name: String,
+    val publicKey: String,
     val hasNewMessage: Boolean
 )
 {

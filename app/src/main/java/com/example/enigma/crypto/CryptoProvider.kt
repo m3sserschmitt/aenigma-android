@@ -1,8 +1,11 @@
 package com.example.enigma.crypto
 
+import com.example.enigma.util.Constants.Companion.KEY_SIZE
+
 class CryptoProvider {
 
     companion object {
+
         private external fun encrypt(handle: Long, plaintext: ByteArray) : ByteArray?
 
         private external fun decrypt(handle: Long, ciphertext: ByteArray) : ByteArray?
@@ -11,11 +14,27 @@ class CryptoProvider {
 
         private external fun verify(handle: Long, signature: ByteArray) : Boolean
 
-        private fun throwError(requiredHandleType: String?) : String
+        private external fun calculateEnvelopeSize(keySize: Int, currentSize: Int): Int
+
+        @JvmStatic
+        private fun throwError(requiredHandleType: String?)
         {
-            throw IllegalArgumentException("Handle should be an instance of $requiredHandleType")
+            throw IllegalArgumentException("Handle should be an instance of $requiredHandleType.")
         }
 
+        @JvmStatic
+        fun envelopeSizeExceeded(currentSize: Int): Boolean
+        {
+            return currentSize > UShort.MAX_VALUE.toInt()
+        }
+
+        @JvmStatic
+        fun canAddLayer(currentSize: Int): Boolean
+        {
+            return calculateEnvelopeSize(KEY_SIZE, currentSize) < UShort.MAX_VALUE.toInt()
+        }
+
+        @JvmStatic
         fun encrypt(handle : CryptoContextHandle, plaintext: ByteArray) : ByteArray?
         {
             if(handle !is CryptoContextHandle.EncryptionContextHandle)
@@ -24,6 +43,17 @@ class CryptoProvider {
             }
 
             return encrypt(handle.handle, plaintext)
+        }
+
+        @JvmStatic
+        fun encrypt(key: String, plaintext: ByteArray): ByteArray?
+        {
+            val context = CryptoContext.Factory.createEncryptionContext(key)
+
+            val result = encrypt(context, plaintext)
+
+            context.free()
+            return result
         }
 
         @JvmStatic
@@ -37,6 +67,7 @@ class CryptoProvider {
             return decrypt(handle.handle, ciphertext)
         }
 
+        @JvmStatic
         fun sign(handle: CryptoContextHandle, data: ByteArray) : ByteArray?
         {
             if(handle !is CryptoContextHandle.SignatureContextHandle)
@@ -58,6 +89,7 @@ class CryptoProvider {
             return result
         }
 
+        @JvmStatic
         fun verify(handle: CryptoContextHandle, signature: ByteArray) : Boolean
         {
             if(handle !is CryptoContextHandle.SignatureVerificationContextHandle)
