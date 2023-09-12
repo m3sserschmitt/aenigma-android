@@ -12,8 +12,6 @@ import com.example.enigma.R
 import com.example.enigma.adapters.ChatAdapter
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.network.MessageDispatcher
-import com.example.enigma.data.network.SignalRClient
-import com.example.enigma.util.Constants.Companion.FOREIGN_HEX_ADDRESS
 import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import com.example.enigma.viewmodels.ChatViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -105,6 +103,7 @@ class ChatActivity : AppCompatActivity() {
     {
         chatViewModel.readConversation()?.observe(this) {
             chatAdapter.setData(it)
+            chatViewModel.markConversationAsRead()
         }
     }
 

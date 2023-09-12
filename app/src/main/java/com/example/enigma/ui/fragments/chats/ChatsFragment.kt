@@ -44,6 +44,7 @@ class ChatsFragment : Fragment() {
     private fun setupRecyclerView() {
         fragmentChatsBinding.recyclerview.adapter = chatsAdapter
         fragmentChatsBinding.recyclerview.layoutManager = LinearLayoutManager(requireContext())
+        fragmentChatsBinding.recyclerview.itemAnimator = null
     }
 
     private fun readContactsFromDatabase()

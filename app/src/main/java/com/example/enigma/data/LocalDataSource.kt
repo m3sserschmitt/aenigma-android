@@ -35,4 +35,14 @@ class LocalDataSource @Inject constructor(
     {
         messagesDao.insert(messageEntity)
     }
+
+    suspend fun markConversationAsUnread(address: String)
+    {
+        contactsDao.markConversationAsUnread(address)
+    }
+
+    suspend fun markConversationAsRead(address: String)
+    {
+        contactsDao.markConversationAsRead(address)
+    }
 }

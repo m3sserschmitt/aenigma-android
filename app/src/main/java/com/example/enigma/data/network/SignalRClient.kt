@@ -57,7 +57,6 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
             if (decryptedMessage != null) {
                 val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-                // scope.launch { emitEvent(decryptedMessage) }
                 scope.launch { saveMessage(decryptedMessage) }
             }
         }, String::class.java)
@@ -74,7 +73,10 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
     private suspend fun saveMessage(message: Message)
     {
         repository.local.insertMessage(
-            MessageEntity(message.chatId, message.text, true, message.date))
+            MessageEntity(message.chatId, message.text, true, message.date)
+        )
+
+        repository.local.markConversationAsUnread(message.chatId)
     }
 
     fun isConnected(): Boolean {

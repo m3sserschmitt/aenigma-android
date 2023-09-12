@@ -1,6 +1,7 @@
 package com.example.enigma.viewmodels
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.*
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
@@ -31,6 +32,17 @@ class ChatViewModel @Inject constructor(
     {
         viewModelScope.launch(Dispatchers.IO) {
             repository.local.insertMessage(messageEntity)
+        }
+    }
+
+    fun markConversationAsRead()
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            savedStateHandle.get<String>(SELECTED_CHAT_ID)
+                ?.let {
+                    Log.i("MARKED_AS_READ", "OK")
+                    repository.local.markConversationAsRead(it)
+                }
         }
     }
 
