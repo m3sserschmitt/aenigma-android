@@ -7,6 +7,7 @@ import com.example.enigma.data.Repository
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.onion.OnionParser
 import com.example.enigma.models.Message
+import com.example.enigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
 import com.example.enigma.util.Constants.Companion.PASSPHRASE
 import com.example.enigma.util.Constants.Companion.PRIVATE_KEY
 import com.example.enigma.util.Constants.Companion.PUBLIC_KEY
@@ -21,8 +22,19 @@ import javax.inject.Singleton
 @Singleton
 class SignalRClient @Inject constructor(private val repository: Repository) {
 
+    companion object {
+
+        private const val GENERATE_TOKEN_ENDPOINT = "GenerateToken"
+
+        private const val AUTHENTICATION_ENDPOINT = "Authenticate"
+
+        private const val ROUTE_MESSAGE_ENDPOINT = "RouteMessage"
+
+        private const val MESSAGES_SYNCHRONIZATION_ENDPOINT = "Synchronize"
+    }
+
     private val hubConnection: HubConnection = HubConnectionBuilder
-        .create("http://10.0.2.2:5000/OnionRouting")
+        .create(ONION_ROUTING_ENDPOINT)
         .build()
 
     private val parser by lazy {
@@ -33,16 +45,16 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
 
     init {
 
-        hubConnection.on("GenerateToken",
+        hubConnection.on(GENERATE_TOKEN_ENDPOINT,
         { token ->
             val decodedToken = Base64.decode(token, Base64.DEFAULT)
             val signature = CryptoProvider.sign(PRIVATE_KEY, PASSPHRASE, decodedToken)
             val encodedSignature = Base64.encodeToString(signature, Base64.DEFAULT)
 
-            hubConnection.invoke("Authenticate", PUBLIC_KEY, encodedSignature)
+            hubConnection.invoke(AUTHENTICATION_ENDPOINT, PUBLIC_KEY, encodedSignature)
         }, String::class.java)
 
-        hubConnection.on("Authenticate", { result: Boolean ->
+        hubConnection.on(AUTHENTICATION_ENDPOINT, { result: Boolean ->
             authenticated = result
         }, Boolean::class.java)
 
@@ -50,8 +62,20 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
             authenticated = false
         }
 
-        hubConnection.on("RouteMessage", { data: String ->
-            val decodedMessage = Base64.decode(data, Base64.DEFAULT)
+        hubConnection.on(ROUTE_MESSAGE_ENDPOINT, { data: String ->
+            handleIncomingMessages(listOf(data))
+        }, String::class.java)
+
+        hubConnection.on(MESSAGES_SYNCHRONIZATION_ENDPOINT, { data: List<String> ->
+            handleIncomingMessages(data)
+        }, List::class.java)
+    }
+
+    private fun handleIncomingMessages(messages: List<String>)
+    {
+        for (message in messages)
+        {
+            val decodedMessage = Base64.decode(message, Base64.DEFAULT)
             val decryptedMessage = parser.parse(decodedMessage)
 
             if (decryptedMessage != null) {
@@ -59,7 +83,7 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
 
                 scope.launch { saveMessage(decryptedMessage) }
             }
-        }, String::class.java)
+        }
     }
 
     private suspend fun emitEvent(message: Message)
@@ -88,7 +112,7 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
     }
 
     fun authenticate() {
-        hubConnection.invoke("GenerateToken").blockingAwait()
+        hubConnection.invoke(GENERATE_TOKEN_ENDPOINT).blockingAwait()
     }
 
     fun start() {
@@ -97,6 +121,6 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
 
     fun sendMessage(message: String)
     {
-        hubConnection.invoke("RouteMessage", message).blockingAwait(5, TimeUnit.SECONDS)
+        hubConnection.invoke(ROUTE_MESSAGE_ENDPOINT, message).blockingAwait(5, TimeUnit.SECONDS)
     }
 }

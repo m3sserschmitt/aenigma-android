@@ -13,6 +13,10 @@ class Constants {
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
+        const val SERVER_ADDRESS = "http://40.113.105.169:8080"
+
+        const val ONION_ROUTING_ENDPOINT = "$SERVER_ADDRESS/OnionRouting"
+
         // TODO: Keys for testing. To be removed!!
         const val PUBLIC_KEY =
 """-----BEGIN PUBLIC KEY-----
@@ -63,13 +67,13 @@ sAjwH0LbWe1xhKWHRXhcvA==
 
         const val SERVER_PUBLIC_KEY =
 """-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxdybNM+2i8csXfkuj188
-inglpjnlwxhfWbt444aP+bsWuf8n9dmr03Eb4N/T7jyjTLLdDSwDbgGOrB/awhkf
-aoSoOwz7F/bLHjCDONKmF952YPCmskkCkeCsd+vtOwLMLgJGS3G8fBEpWi0x6XLU
-7cpzKWfnx8HM3fYQ8/kFfqkwxvFyYJEyG0v3Gz1K+XcrZX/Xbv8ngTzF7XyH7X/S
-Xrr/egIj5TySzke9WAcu4kfiZx0lfy6LDVhrxZdf26jsj8mnf265p3QU7OE3VcV9
-0Kv+2m58zzPLW2qEFe/xFbbURikV9cBnSTqdYgj+LkTycnLeZeTnr7oH0FWLYssK
-owIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArLisc0sWoqkAHbzV3/xs
+TygvnFPtdjDpyQCpR7UdXXghiz8zLmcSglJCrdjpyHA35btZHWrzbfC9/svhzAYX
+MYy4AjrRtyuAlQBU4nhxiKrCIiJoGNnKRCvJeyhqINQn5hgbHxNzdlz8+GbZBAF+
+l6BhFcaL3UBDoRFKpZFulnV4gj9vhOySa61r97ysRyLK2CYlzvu+reUCRQ6JPO9f
+mYaCSfHDfrCFUdpBlBY1gtal7HmPaJkJIqyMGwzxBSy/N6bIrzd5EskaN3Iipnwg
+58/oiJCTIqpF5PzrBh6YhAXnMZp3u8iqpDZH6aGpqOjbTkbVJiwQXMqd5do/P9YS
+4QIDAQAB
 -----END PUBLIC KEY-----"""
 
         const val FOREIGN_PUBLIC_KEY =
