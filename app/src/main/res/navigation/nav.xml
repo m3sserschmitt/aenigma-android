@@ -14,5 +14,19 @@
         android:id="@+id/addContactsFragment"
         android:name="com.example.enigma.ui.fragments.addcontacts.AddContactsFragment"
         android:label="fragment_new"
-        tools:layout="@layout/fragment_add_contacts" />
+        tools:layout="@layout/fragment_add_contacts" >
+        <action
+            android:id="@+id/action_addContactsFragment_to_saveContactFragment"
+            app:destination="@id/saveContactFragment" >
+        </action>
+    </fragment>
+    <fragment
+        android:id="@+id/saveContactFragment"
+        android:name="com.example.enigma.ui.fragments.addcontacts.SaveContactFragment"
+        android:label="fragment_save_contact"
+        tools:layout="@layout/fragment_save_contact" >
+        <action
+            android:id="@+id/action_saveContactFragment_to_addContactsFragment"
+            app:destination="@id/addContactsFragment" />
+    </fragment>
 </navigation>
