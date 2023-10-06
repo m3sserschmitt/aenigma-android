@@ -13,9 +13,11 @@ class Constants {
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
-        const val SERVER_ADDRESS = "http://40.113.105.169:8080"
+        const val SERVER_URL = "http://40.113.105.169:8080"
 
-        const val ONION_ROUTING_ENDPOINT = "$SERVER_ADDRESS/OnionRouting"
+        const val ONION_ROUTING_ENDPOINT = "$SERVER_URL/OnionRouting"
+
+        const val SERVER_ADDRESS = "server-address"
 
         // TODO: Keys for testing. To be removed!!
         const val PUBLIC_KEY =

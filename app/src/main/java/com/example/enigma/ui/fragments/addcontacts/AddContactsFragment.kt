@@ -3,14 +3,15 @@ package com.example.enigma.ui.fragments.addcontacts
 import android.Manifest.permission.CAMERA
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.example.enigma.R
 import com.example.enigma.databinding.FragmentAddContactsBinding
 import com.example.enigma.util.Constants.Companion.PUBLIC_KEY
 import com.example.enigma.util.Constants.Companion.SERVER_ADDRESS
@@ -18,20 +19,25 @@ import com.example.enigma.util.QrCodeGenerator
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.Result
 import me.dm7.barcodescanner.zxing.ZXingScannerView
+import org.json.JSONException
 import org.json.JSONObject
 
 class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
 
-    private lateinit var binding: FragmentAddContactsBinding
+    private var _binding: FragmentAddContactsBinding? = null
+
+    private val binding get() = _binding!!
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        binding = FragmentAddContactsBinding.inflate(inflater, container, false)
+        _binding = FragmentAddContactsBinding.inflate(inflater, container, false)
 
         setScannerProperties()
         setupSwitchButtons()
+
+        binding.root.setOnFocusChangeListener { v, hasFocus -> Log.i("ADD_CONTACTS_FRAGMENT", hasFocus.toString())}
 
         return binding.root
     }
@@ -67,6 +73,11 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
         binding.qrScannerTextView.text = "Scan the code to connect"
     }
 
+    private fun resumeCamera()
+    {
+        binding.qrCodeScanner.resumeCameraPreview(this)
+    }
+
     private fun setScannerProperties() {
         binding.qrCodeScanner.setFormats(listOf(BarcodeFormat.QR_CODE))
         binding.qrCodeScanner.setAutoFocus(true)
@@ -74,18 +85,24 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
     }
 
     override fun onPause() {
+        super.onPause()
         binding.qrCodeScanner.stopCameraPreview()
         binding.qrCodeScanner.stopCamera()
-        super.onPause()
     }
 
     override fun onStop() {
+        super.onStop()
         binding.qrCodeScanner.stopCameraPreview()
         binding.qrCodeScanner.stopCamera()
-        super.onStop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
     }
 
     override fun onResume() {
+        super.onResume()
         if (ContextCompat.checkSelfPermission(requireActivity(), CAMERA)
             == PackageManager.PERMISSION_GRANTED
         ) {
@@ -93,7 +110,6 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
         } else {
             requestPermissionLauncher.launch(CAMERA)
         }
-        super.onResume()
     }
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -122,7 +138,7 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
             val data = JSONObject()
 
             try {
-                data.put("guard", guard)
+                data.put("guardAddress", guard)
                 data.put("publicKey", publicKey)
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -134,16 +150,31 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
     }
 
     override fun handleResult(result: Result?) {
+        resumeCamera()
         val scannedData: String? = result?.text
         if(scannedData != null)
         {
-            var bundle = Bundle()
             val jsonObject = JSONObject(scannedData)
 
-            
+            try {
+                val publicKey = jsonObject.getString("publicKey")
+                val guardAddress = jsonObject.getString("guardAddress")
 
-            findNavController().navigate(R.id.action_addContactsFragment_to_saveContactFragment)
+                val destination = AddContactsFragmentDirections
+                    .actionAddContactsFragmentToSaveContactBottomSheet(publicKey, guardAddress)
+
+                findNavController().navigate(destination)
+            } catch (ex: JSONException)
+            {
+                Toast.makeText(requireActivity(), "The code is invalid", Toast.LENGTH_SHORT)
+                    .show()
+            }
+            catch (_: Exception)
+            {
+            }
+            finally {
+
+            }
         }
-
     }
 }

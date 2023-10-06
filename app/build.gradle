@@ -3,6 +3,7 @@ apply plugin: 'kotlin-kapt'
 apply plugin: 'org.jetbrains.kotlin.android'
 apply plugin: 'com.google.dagger.hilt.android'
 apply plugin: 'dagger.hilt.android.plugin'
+apply plugin: 'androidx.navigation.safeargs.kotlin'
 
 android {
     compileSdk 33
@@ -27,18 +28,18 @@ android {
         dataBinding true
     }
 
-    buildTypes {
+//    buildTypes {
 //        release {
 //            minifyEnabled false
 //            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 //        }
 
-        buildTypes {
-            customDebugType {
-                debuggable true
-            }
-        }
-    }
+//        buildTypes {
+//            customDebugType {
+//                debuggable true
+//            }
+//        }
+//    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8

@@ -16,17 +16,22 @@
         android:label="fragment_new"
         tools:layout="@layout/fragment_add_contacts" >
         <action
-            android:id="@+id/action_addContactsFragment_to_saveContactFragment"
-            app:destination="@id/saveContactFragment" >
-        </action>
+            android:id="@+id/action_addContactsFragment_to_saveContactBottomSheet"
+            app:destination="@id/saveContactBottomSheet" />
     </fragment>
-    <fragment
-        android:id="@+id/saveContactFragment"
-        android:name="com.example.enigma.ui.fragments.addcontacts.SaveContactFragment"
+    <dialog
+        android:id="@+id/saveContactBottomSheet"
+        android:name="com.example.enigma.ui.fragments.addcontacts.SaveContactBottomSheet"
         android:label="fragment_save_contact"
-        tools:layout="@layout/fragment_save_contact" >
+        tools:layout="@layout/save_contact_bottom_sheet" >
+        <argument
+            android:name="publicKey"
+            app:argType="string" />
+        <argument
+            android:name="guardAddress"
+            app:argType="string" />
         <action
-            android:id="@+id/action_saveContactFragment_to_addContactsFragment"
-            app:destination="@id/addContactsFragment" />
-    </fragment>
+            android:id="@+id/action_saveContactBottomSheet_to_chatsFragment"
+            app:destination="@id/chatsFragment" />
+    </dialog>
 </navigation>
