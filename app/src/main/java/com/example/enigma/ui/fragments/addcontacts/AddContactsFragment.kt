@@ -37,8 +37,6 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
         setScannerProperties()
         setupSwitchButtons()
 
-        binding.root.setOnFocusChangeListener { v, hasFocus -> Log.i("ADD_CONTACTS_FRAGMENT", hasFocus.toString())}
-
         return binding.root
     }
 
