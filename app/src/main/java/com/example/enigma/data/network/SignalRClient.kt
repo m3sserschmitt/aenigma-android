@@ -1,16 +1,11 @@
 package com.example.enigma.data.network
 
-import android.util.Base64
-import com.example.enigma.crypto.CryptoContext
-import com.example.enigma.crypto.CryptoProvider
+import com.example.enigma.crypto.OnionParsingService
+import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.MessageEntity
-import com.example.enigma.onion.OnionParser
 import com.example.enigma.models.Message
 import com.example.enigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
-import com.example.enigma.util.Constants.Companion.PASSPHRASE
-import com.example.enigma.util.Constants.Companion.PRIVATE_KEY
-import com.example.enigma.util.Constants.Companion.PUBLIC_KEY
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
@@ -20,7 +15,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SignalRClient @Inject constructor(private val repository: Repository) {
+class SignalRClient @Inject constructor(
+    private val repository: Repository,
+    private val onionParsingService: OnionParsingService,
+    private val signatureService: SignatureService
+) {
 
     companion object {
 
@@ -37,21 +36,20 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
         .create(ONION_ROUTING_ENDPOINT)
         .build()
 
-    private val parser by lazy {
-        OnionParser(CryptoContext.Factory.createDecryptionContext(PRIVATE_KEY, PASSPHRASE))
-    }
-
     private var authenticated = false
 
     init {
 
         hubConnection.on(GENERATE_TOKEN_ENDPOINT,
         { token ->
-            val decodedToken = Base64.decode(token, Base64.DEFAULT)
-            val signature = CryptoProvider.sign(PRIVATE_KEY, PASSPHRASE, decodedToken)
-            val encodedSignature = Base64.encodeToString(signature, Base64.DEFAULT)
-
-            hubConnection.invoke(AUTHENTICATION_ENDPOINT, PUBLIC_KEY, encodedSignature)
+            if(token != null)
+            {
+                CoroutineScope(Dispatchers.IO).launch {
+                    signatureService.sign(token).collect {
+                        hubConnection.invoke(AUTHENTICATION_ENDPOINT, it.first, it.second)
+                    }
+                }
+            }
         }, String::class.java)
 
         hubConnection.on(AUTHENTICATION_ENDPOINT, { result: Boolean ->
@@ -73,25 +71,15 @@ class SignalRClient @Inject constructor(private val repository: Repository) {
 
     private fun handleIncomingMessages(messages: List<String>)
     {
-        for (message in messages)
+        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        for (ciphertext in messages)
         {
-            val decodedMessage = Base64.decode(message, Base64.DEFAULT)
-            val decryptedMessage = parser.parse(decodedMessage)
-
-            if (decryptedMessage != null) {
-                val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-
-                scope.launch { saveMessage(decryptedMessage) }
+            scope.launch {
+                onionParsingService.parse(ciphertext).collect {
+                    saveMessage(it)
+                }
             }
         }
-    }
-
-    private suspend fun emitEvent(message: Message)
-    {
-        val eventBus = SignalREventBus.getInstance()
-        val event = MessageReceivedEvent(message)
-
-        eventBus.invokeEvent(event)
     }
 
     private suspend fun saveMessage(message: Message)

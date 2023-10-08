@@ -2,17 +2,23 @@ package com.example.enigma.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.work.*
 import com.example.enigma.R
-import com.example.enigma.data.network.SignalRClientWorker
+import com.example.enigma.viewmodels.MainViewModel
+import com.example.enigma.workers.KeysGeneratorWorker
+import com.example.enigma.workers.SignalRClientWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var mainViewModel: MainViewModel
 
     companion object
     {
@@ -25,22 +31,45 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+
         setupNavigation()
         startSignalRWorker()
+        startKeyGeneratorWorker()
     }
 
     private fun startSignalRWorker()
     {
-        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
+        mainViewModel.keysAvailable.observe(this)
+        {
+            if(it)
+            {
+                val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
 
-        val signalRClientRequest =
-            PeriodicWorkRequestBuilder<SignalRClientWorker>(15, TimeUnit.MINUTES)
-                .setConstraints(constraints)
-                .build()
+                val signalRClientRequest =
+                    PeriodicWorkRequestBuilder<SignalRClientWorker>(15, TimeUnit.MINUTES)
+                        .setConstraints(constraints)
+                        .build()
 
-        WorkManager.getInstance(this)
-            .enqueue(signalRClientRequest)
+                WorkManager.getInstance(this)
+                    .enqueue(signalRClientRequest)
+            }
+        }
+    }
+
+    private fun startKeyGeneratorWorker()
+    {
+        mainViewModel.keysAvailable.observe(this) {
+            if(!it)
+            {
+                val keyGeneratorRequest = OneTimeWorkRequestBuilder<KeysGeneratorWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .build()
+
+                WorkManager.getInstance(this).enqueue(keyGeneratorRequest)
+            }
+        }
     }
 
     private fun setupNavigation()

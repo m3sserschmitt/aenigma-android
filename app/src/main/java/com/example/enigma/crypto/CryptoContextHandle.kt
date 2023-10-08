@@ -10,7 +10,7 @@ sealed class CryptoContextHandle(desc: Long) {
 
     val handle : Long = desc
 
-    fun free() : Boolean
+    fun dispose() : Boolean
     {
         if(!disposed)
         {

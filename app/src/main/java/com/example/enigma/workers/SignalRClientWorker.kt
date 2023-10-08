@@ -1,10 +1,10 @@
-package com.example.enigma.data.network
+package com.example.enigma.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.example.enigma.data.network.SignalRClient
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -12,7 +12,8 @@ import dagger.assisted.AssistedInject
 class SignalRClientWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalRClient: SignalRClient)
+    private val signalRClient: SignalRClient
+)
     : Worker(context, params) {
 
     companion object {
@@ -22,8 +23,6 @@ class SignalRClientWorker @AssistedInject constructor(
     }
 
     override fun doWork(): Result {
-
-        Log.i("SIGNALR_WORKER", "Started")
 
         if(!signalRClient.isConnected())
         {

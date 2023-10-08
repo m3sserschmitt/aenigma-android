@@ -57,7 +57,7 @@ class SaveContactBottomSheet : BottomSheetDialogFragment() {
             val contactName = binding.contactNameEditText.text
             if(contactName.isNotEmpty())
             {
-                val contact = ContactEntity(binding.guardAddressEditText.text.toString(),
+                val contact = ContactEntity(binding.contactAddressEditText.text.toString(),
                     contactName.toString(),
                     args.publicKey,
                     false)

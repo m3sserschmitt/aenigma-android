@@ -52,7 +52,7 @@ class CryptoProvider {
 
             val result = encrypt(context, plaintext)
 
-            context.free()
+            context.dispose()
             return result
         }
 
@@ -85,7 +85,7 @@ class CryptoProvider {
 
             val result = sign(context, data)
 
-            context.free()
+            context.dispose()
             return result
         }
 

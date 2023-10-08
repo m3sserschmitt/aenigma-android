@@ -85,7 +85,7 @@ class CryptoContextTests {
         val handle = CryptoContext.Factory.createEncryptionContext(PUBLIC_KEY)
 
         // Act
-        val disposed = handle.free()
+        val disposed = handle.dispose()
 
         assertTrue(disposed)
     }

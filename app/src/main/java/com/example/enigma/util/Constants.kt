@@ -10,6 +10,7 @@ class Constants {
         const val DATABASE_NAME = "enigma-database"
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
+        const val KEYS_TABLE = "Keys"
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 

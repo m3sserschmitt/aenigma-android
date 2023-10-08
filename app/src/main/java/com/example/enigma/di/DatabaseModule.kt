@@ -32,4 +32,8 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideMessagesDao(database: AppDatabase) = database.messagesDao()
+
+    @Singleton
+    @Provides
+    fun provideKeysDao(database: AppDatabase) = database.keysDao()
 }

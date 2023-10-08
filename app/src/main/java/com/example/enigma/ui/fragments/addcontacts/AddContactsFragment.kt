@@ -3,7 +3,6 @@ package com.example.enigma.ui.fragments.addcontacts
 import android.Manifest.permission.CAMERA
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,22 +10,30 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.enigma.databinding.FragmentAddContactsBinding
-import com.example.enigma.util.Constants.Companion.PUBLIC_KEY
-import com.example.enigma.util.Constants.Companion.SERVER_ADDRESS
-import com.example.enigma.util.QrCodeGenerator
+import com.example.enigma.viewmodels.MainViewModel
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.Result
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import me.dm7.barcodescanner.zxing.ZXingScannerView
 import org.json.JSONException
 import org.json.JSONObject
 
 class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
 
+    private lateinit var mainViewModel: MainViewModel
+
     private var _binding: FragmentAddContactsBinding? = null
 
     private val binding get() = _binding!!
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        mainViewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -54,12 +61,14 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
 
     private fun switchToCode()
     {
-        binding.qrCodeScanner.stopCamera()
-        binding.qrCodeSwitchButton.text = "Scan"
-        binding.qrCodeScanner.visibility = View.INVISIBLE
-        binding.qrCodeImageView.visibility = View.VISIBLE
-        binding.qrScannerTextView.text = "Share the code to connect"
-        showCode()
+        mainViewModel.qrCodeBitmap.observe(requireActivity()) {
+            binding.qrCodeImageView.setImageBitmap(it)
+            binding.qrCodeScanner.stopCamera()
+            binding.qrCodeSwitchButton.text = "Scan"
+            binding.qrCodeScanner.visibility = View.INVISIBLE
+            binding.qrCodeImageView.visibility = View.VISIBLE
+            binding.qrScannerTextView.text = "Share the code to connect"
+        }
     }
 
     private fun switchToCamera()
@@ -115,35 +124,6 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
     ) { isGranted: Boolean ->
         if (isGranted) {
             binding.qrCodeScanner.startCamera()
-        }
-    }
-
-    private fun showCode()
-    {
-        val exportedData = ExportedData(SERVER_ADDRESS, PUBLIC_KEY)
-
-        val bitmap = QrCodeGenerator(binding.qrCodeImageView.width, binding.qrCodeImageView.width)
-            .encodeAsBitmap(exportedData.toString())
-
-        binding.qrCodeImageView.setImageBitmap(bitmap)
-    }
-
-    class ExportedData constructor(
-        private val guard: String,
-        private val publicKey: String) {
-
-        override fun toString(): String {
-            val data = JSONObject()
-
-            try {
-                data.put("guardAddress", guard)
-                data.put("publicKey", publicKey)
-            } catch (e: Exception) {
-                e.printStackTrace()
-                return ""
-            }
-
-            return data.toString()
         }
     }
 
