@@ -36,4 +36,16 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideKeysDao(database: AppDatabase) = database.keysDao()
+
+    @Singleton
+    @Provides
+    fun provideGuardsDao(database: AppDatabase) = database.guardsDao()
+
+    @Singleton
+    @Provides
+    fun provideVertexDao(database: AppDatabase) = database.verticesDao()
+
+    @Singleton
+    @Provides
+    fun provideEdgesDao(database: AppDatabase) = database.edgesDao()
 }

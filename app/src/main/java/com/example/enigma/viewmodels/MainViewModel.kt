@@ -28,17 +28,24 @@ class MainViewModel @Inject constructor(
 
     val keysAvailable: LiveData<Boolean> = repository.local.isKeyAvailable().asLiveData()
 
-    val qrCodeBitmap: LiveData<Bitmap> = flow {
-        repository.local.getPublicKey().collect {
-            val exportedData = ExportedContactData(SERVER_ADDRESS, it)
-            val bitmap = QrCodeGenerator(400, 400)
-                .encodeAsBitmap(exportedData.toString())
+    val guardAvailable: LiveData<Boolean> = repository.local.isGuardAvailable().asLiveData()
 
-            if (bitmap != null) {
-                emit(bitmap)
+    private fun generateQrCodeBitmap(): Flow<Bitmap>
+    {
+        return flow {
+            repository.local.getPublicKey().collect {
+                val exportedData = ExportedContactData(SERVER_ADDRESS, it)
+                val bitmap = QrCodeGenerator(400, 400)
+                    .encodeAsBitmap(exportedData.toString())
+
+                if (bitmap != null) {
+                    emit(bitmap)
+                }
             }
         }
-    }.asLiveData()
+    }
+
+    val qrCode: LiveData<Bitmap> = generateQrCodeBitmap().asLiveData()
 
     fun insertContact(contact: ContactEntity) =
         viewModelScope.launch(Dispatchers.IO) {

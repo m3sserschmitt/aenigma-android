@@ -16,8 +16,6 @@ import com.example.enigma.databinding.FragmentAddContactsBinding
 import com.example.enigma.viewmodels.MainViewModel
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.Result
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import me.dm7.barcodescanner.zxing.ZXingScannerView
 import org.json.JSONException
 import org.json.JSONObject
@@ -61,7 +59,7 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
 
     private fun switchToCode()
     {
-        mainViewModel.qrCodeBitmap.observe(requireActivity()) {
+        mainViewModel.qrCode.observe(requireActivity()) {
             binding.qrCodeImageView.setImageBitmap(it)
             binding.qrCodeScanner.stopCamera()
             binding.qrCodeSwitchButton.text = "Scan"

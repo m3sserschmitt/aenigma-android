@@ -11,10 +11,13 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val KEYS_TABLE = "Keys"
+        const val GUARDS_TABLE = "Guards"
+        const val VERTICES_TABLE = "Vertices"
+        const val EDGES_TABLE = "Edges"
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
-        const val SERVER_URL = "http://40.113.105.169:8080"
+        const val SERVER_URL = "http://10.0.2.2:5000"
 
         const val ONION_ROUTING_ENDPOINT = "$SERVER_URL/OnionRouting"
 

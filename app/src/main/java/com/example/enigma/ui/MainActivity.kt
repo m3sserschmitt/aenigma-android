@@ -8,11 +8,11 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.work.*
 import com.example.enigma.R
 import com.example.enigma.viewmodels.MainViewModel
+import com.example.enigma.workers.GraphReaderWorker
 import com.example.enigma.workers.KeysGeneratorWorker
 import com.example.enigma.workers.SignalRClientWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
 
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
+        startRequestGraph()
         setupNavigation()
         startSignalRWorker()
         startKeyGeneratorWorker()
@@ -68,6 +69,24 @@ class MainActivity : AppCompatActivity() {
                     .build()
 
                 WorkManager.getInstance(this).enqueue(keyGeneratorRequest)
+            }
+        }
+    }
+
+    private fun startRequestGraph()
+    {
+        mainViewModel.guardAvailable.observe(this)
+        {
+            if (!it) {
+                val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+
+                val workRequest = OneTimeWorkRequestBuilder<GraphReaderWorker>()
+                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                    .setConstraints(constraints)
+                    .build()
+
+                WorkManager.getInstance(this).enqueue(workRequest)
             }
         }
     }
