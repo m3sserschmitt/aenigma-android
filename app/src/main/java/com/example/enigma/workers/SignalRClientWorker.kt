@@ -22,16 +22,11 @@ class SignalRClientWorker @AssistedInject constructor(
         }
     }
 
-    override fun doWork(): Result {
-
+    override fun doWork(): Result
+    {
         if(!signalRClient.isConnected())
         {
-            signalRClient.start()
-        }
-
-        if(!signalRClient.isAuthenticated())
-        {
-            signalRClient.authenticate()
+            signalRClient.createConnection()
         }
 
         return Result.success()

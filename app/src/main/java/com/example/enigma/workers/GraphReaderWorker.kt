@@ -33,7 +33,7 @@ class GraphReaderWorker @AssistedInject constructor(
             GuardEntity(
                 guard.neighborhood.address,
                 guard.publicKey,
-                guard.neighborhood.hostname,
+                guard.neighborhood.hostname!!,
                 Date()
             )
         )

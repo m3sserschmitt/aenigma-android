@@ -10,7 +10,7 @@ import javax.inject.Singleton
 @Singleton
 class SignatureService @Inject constructor(private val repository: Repository) {
 
-    fun sign(token: String): Flow<Pair<String, String>>
+    fun sign(token: String): Flow<Pair<String, String?>>
     {
         return flow {
             repository.local.getKeys().collect {
@@ -18,7 +18,13 @@ class SignatureService @Inject constructor(private val repository: Repository) {
                 val decodedToken = Base64.decode(token, Base64.DEFAULT)
                 val signature = CryptoProvider.sign(it.privateKey, "", decodedToken)
 
-                emit(Pair(it.publicKey, Base64.encodeToString(signature, Base64.DEFAULT)))
+                if(signature != null)
+                {
+                    emit(Pair(it.publicKey, Base64.encodeToString(signature, Base64.DEFAULT)))
+                }
+                else {
+                    emit(Pair(it.publicKey, null))
+                }
             }
         }
     }

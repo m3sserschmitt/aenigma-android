@@ -54,12 +54,17 @@ class SaveContactBottomSheet : BottomSheetDialogFragment() {
     private fun setupSaveButton()
     {
         binding.saveContactButton.setOnClickListener {
-            val contactName = binding.contactNameEditText.text
+
+            val contactName = binding.contactNameEditText.text.toString()
+            val contactAddress = AddressHelper.getHexAddressFromPublicKey(args.publicKey)
+
             if(contactName.isNotEmpty())
             {
-                val contact = ContactEntity(binding.contactAddressEditText.text.toString(),
-                    contactName.toString(),
+                val contact = ContactEntity(
+                    contactAddress,
+                    contactName,
                     args.publicKey,
+                    args.guardAddress,
                     false)
 
                 CoroutineScope(Dispatchers.IO).launch {

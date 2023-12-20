@@ -9,10 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.enigma.adapters.ChatsAdapter
-import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.databinding.FragmentChatsBinding
-import com.example.enigma.util.Constants.Companion.FOREIGN_HEX_ADDRESS
-import com.example.enigma.util.Constants.Companion.FOREIGN_PUBLIC_KEY
 import com.example.enigma.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -55,16 +52,5 @@ class ChatsFragment : Fragment() {
                     contacts -> chatsAdapter.setData(contacts)
             }
         }
-    }
-
-    private fun seedDatabase()
-    {
-        mainViewModel.insertContact(
-            ContactEntity(
-                FOREIGN_HEX_ADDRESS,
-                "Test User",
-                FOREIGN_PUBLIC_KEY,
-                false))
-        // mainViewModel.insertContact(ContactEntity("1236", "Tom", false))
     }
 }

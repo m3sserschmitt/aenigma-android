@@ -6,8 +6,8 @@ import com.example.enigma.util.Constants.Companion.EDGES_TABLE
 
 @Entity(tableName = EDGES_TABLE)
 class EdgeEntity (
-    val startAddress: String,
-    val endAddress: String
+    val sourceAddress: String,
+    val targetAddress: String
 )
 {
     @PrimaryKey(autoGenerate = true) var id: Long = 0

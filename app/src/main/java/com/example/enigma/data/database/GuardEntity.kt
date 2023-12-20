@@ -9,7 +9,7 @@ import java.util.Date
 class GuardEntity (
     val address: String,
     val publicKey: String,
-    val hostname: String?,
+    val hostname: String,
     val date: Date
 ){
     @PrimaryKey(autoGenerate = true) var id: Long = 0

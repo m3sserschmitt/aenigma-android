@@ -2,11 +2,13 @@ package com.example.enigma.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.work.*
 import com.example.enigma.R
+import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.viewmodels.MainViewModel
 import com.example.enigma.workers.GraphReaderWorker
 import com.example.enigma.workers.KeysGeneratorWorker
@@ -33,60 +35,83 @@ class MainActivity : AppCompatActivity() {
 
         mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
-        startRequestGraph()
         setupNavigation()
-        startSignalRWorker()
-        startKeyGeneratorWorker()
+        setupConnectionStatus()
+        startWorkers()
+    }
+
+    private fun startWorkers()
+    {
+        mainViewModel.keysAvailable.observe(this){ keysAvailable ->
+            if(!keysAvailable)
+            {
+                startKeyGeneratorWorker()
+            } else {
+                mainViewModel.guardAvailable.observe(this) { guardAvailable ->
+                    if(!guardAvailable)
+                    {
+                        startRequestGraph()
+                    } else {
+                        startSignalRWorker()
+                    }
+                }
+            }
+        }
     }
 
     private fun startSignalRWorker()
     {
-        mainViewModel.keysAvailable.observe(this)
-        {
-            if(it)
-            {
-                val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
 
-                val signalRClientRequest =
-                    PeriodicWorkRequestBuilder<SignalRClientWorker>(15, TimeUnit.MINUTES)
-                        .setConstraints(constraints)
-                        .build()
+        val signalRClientRequest =
+            PeriodicWorkRequestBuilder<SignalRClientWorker>(15, TimeUnit.MINUTES)
+                .setConstraints(constraints)
+                .build()
 
-                WorkManager.getInstance(this)
-                    .enqueue(signalRClientRequest)
-            }
-        }
+        WorkManager.getInstance(this)
+            .enqueue(signalRClientRequest)
     }
 
     private fun startKeyGeneratorWorker()
     {
-        mainViewModel.keysAvailable.observe(this) {
-            if(!it)
-            {
-                val keyGeneratorRequest = OneTimeWorkRequestBuilder<KeysGeneratorWorker>()
-                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                    .build()
+        val keyGeneratorRequest = OneTimeWorkRequestBuilder<KeysGeneratorWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build()
 
-                WorkManager.getInstance(this).enqueue(keyGeneratorRequest)
-            }
-        }
+        WorkManager.getInstance(this).enqueue(keyGeneratorRequest)
     }
 
     private fun startRequestGraph()
     {
-        mainViewModel.guardAvailable.observe(this)
-        {
-            if (!it) {
-                val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
 
-                val workRequest = OneTimeWorkRequestBuilder<GraphReaderWorker>()
-                    .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                    .setConstraints(constraints)
-                    .build()
+        val workRequest = OneTimeWorkRequestBuilder<GraphReaderWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(constraints)
+            .build()
 
-                WorkManager.getInstance(this).enqueue(workRequest)
+        WorkManager.getInstance(this).enqueue(workRequest)
+    }
+
+    private fun setupConnectionStatus()
+    {
+        // TODO: We shall refactor this to use something more sophisticated than Toasts!
+        mainViewModel.signalRClientStatus.observe(this) {
+            when(it) {
+
+                is SignalRStatus.Connected ->
+                    Toast.makeText(this, "Connected to server.",
+                        Toast.LENGTH_SHORT).show()
+
+                is SignalRStatus.Disconnected ->
+                    Toast.makeText(this, "Server connection lost.",
+                        Toast.LENGTH_SHORT).show()
+
+                is SignalRStatus.Error ->
+                    Toast.makeText(this, "Failed to connect: ${it.error}.",
+                        Toast.LENGTH_SHORT).show()
             }
         }
     }

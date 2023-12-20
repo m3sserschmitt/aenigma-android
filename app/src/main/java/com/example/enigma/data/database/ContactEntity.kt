@@ -9,6 +9,7 @@ data class ContactEntity(
     val address: String,
     val name: String,
     val publicKey: String,
+    val guardAddress: String,
     val hasNewMessage: Boolean
 )
 {
