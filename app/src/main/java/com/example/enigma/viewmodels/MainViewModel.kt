@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.network.SignalRClient
@@ -23,12 +24,11 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val repository: Repository,
     private val signalRClient: SignalRClient,
+    private val addressProvider: AddressProvider,
     application: Application
 ) : AndroidViewModel(application) {
 
     val readContacts: LiveData<List<ContactEntity>> get() = repository.local.getContacts().asLiveData()
-
-    val keysAvailable: LiveData<Boolean> get() = repository.local.isKeyAvailable().asLiveData()
 
     val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
 
@@ -37,10 +37,11 @@ class MainViewModel @Inject constructor(
     private fun generateQrCodeBitmap(): Flow<Bitmap>
     {
         return flow {
-            repository.local.getPublicKey().collect { publicKey ->
-                repository.local.getGuard().collect {guard ->
+            repository.local.getGuard().collect { guard ->
 
-                    val exportedData = ExportedContactData(guard.address, publicKey)
+                if (addressProvider.address != null) {
+                    val exportedData = ExportedContactData(guard.address,
+                        addressProvider.publicKey!!)
 
                     val bitmap = QrCodeGenerator(400, 400)
                         .encodeAsBitmap(exportedData.toString())

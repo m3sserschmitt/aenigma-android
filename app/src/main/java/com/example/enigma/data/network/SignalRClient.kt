@@ -112,8 +112,10 @@ class SignalRClient @Inject constructor(
         for (ciphertext in messages)
         {
             scope.launch {
-                onionParsingService.parse(ciphertext).collect {
-                    saveMessage(it)
+                val message = onionParsingService.parse(ciphertext)
+                if(message != null)
+                {
+                    saveMessage(message)
                 }
             }
         }
@@ -145,31 +147,26 @@ class SignalRClient @Inject constructor(
         hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).subscribe { token: String? ->
 
             if(token != null) {
-                CoroutineScope(Dispatchers.IO).launch {
+                val signature = signatureService.sign(token)
 
-                    signatureService.sign(token).collect {
-
-                        if(it.second != null) {
-
-                            hubConnection.invoke(
-                                Boolean::class.java,
-                                AUTHENTICATION_METHOD,
-                                AuthenticationRequest(
-                                    it.first,
-                                    it.second!!,
-                                    syncMessagesOnSuccess = true,
-                                    updateNetworkGraph = false
-                                )
-                            ).subscribe { authenticated ->
-                                if(authenticated) {
-                                    updateStatus(SignalRStatus.Authenticated::class.java)
-                                } else {
-                                    updateStatus(SignalRStatus.Error::class.java,
-                                        "Signature verification failed")
-                                }
-                            }
+                if(signature != null) {
+                    hubConnection.invoke(
+                        Boolean::class.java,
+                        AUTHENTICATION_METHOD,
+                        AuthenticationRequest(
+                            signature.first,
+                            signature.second,
+                            syncMessagesOnSuccess = true,
+                            updateNetworkGraph = false
+                        )
+                    ).subscribe { authenticated ->
+                        if (authenticated) {
+                            updateStatus(SignalRStatus.Authenticated::class.java)
                         } else {
-                            updateStatus(SignalRStatus.Error::class.java, "Signing token failed")
+                            updateStatus(
+                                SignalRStatus.Error::class.java,
+                                "Signature verification failed"
+                            )
                         }
                     }
                 }

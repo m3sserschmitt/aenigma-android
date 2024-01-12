@@ -1,5 +1,6 @@
 package com.example.enigma.data.network
 
+import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
@@ -10,22 +11,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 class MessageDispatcher @Inject constructor(
     private val client: SignalRClient,
-    private val repository: Repository
+    private val repository: Repository,
+    private val addressProvider: AddressProvider
     ) {
 
     fun sendMessage(text: String, contact: ContactEntity)
     {
         if(client.isConnected()) {
             CoroutineScope(Dispatchers.IO).launch {
-                repository.local.getAddress().collect {
+                if (addressProvider.address != null) {
                     val onion = OnionBuilder
                         .create(text.toByteArray())
-                        .setAddress(it)
+                        .setAddress(addressProvider.address!!)
                         .seal(contact.publicKey)
                         .addPeel()
                         .setAddress(contact.address)
@@ -33,12 +33,14 @@ class MessageDispatcher @Inject constructor(
                         .buildEncode()
 
                     client.sendMessage(onion)
-                    repository.local.insertMessage(MessageEntity(
-                        contact.address,
-                        text,
-                        false,
-                        Date()
-                    ))
+                    repository.local.insertMessage(
+                        MessageEntity(
+                            contact.address,
+                            text,
+                            false,
+                            Date()
+                        )
+                    )
                 }
             }
         }

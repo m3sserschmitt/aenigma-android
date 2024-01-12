@@ -1,7 +1,5 @@
 package com.example.enigma.crypto
 
-import com.example.enigma.util.Constants.Companion.KEY_SIZE
-
 class CryptoProvider {
 
     companion object {
@@ -14,7 +12,9 @@ class CryptoProvider {
 
         private external fun verify(handle: Long, signature: ByteArray) : Boolean
 
-        private external fun calculateEnvelopeSize(keySize: Int, currentSize: Int): Int
+        private external fun unsealOnion(handle: Long, onion: ByteArray): ByteArray
+
+        private external fun calculateEnvelopeSize(currentSize: Int): Int
 
         @JvmStatic
         private fun throwError(requiredHandleType: String?)
@@ -31,7 +31,7 @@ class CryptoProvider {
         @JvmStatic
         fun canAddLayer(currentSize: Int): Boolean
         {
-            return calculateEnvelopeSize(KEY_SIZE, currentSize) < UShort.MAX_VALUE.toInt()
+            return calculateEnvelopeSize(currentSize) < UShort.MAX_VALUE.toInt()
         }
 
         @JvmStatic

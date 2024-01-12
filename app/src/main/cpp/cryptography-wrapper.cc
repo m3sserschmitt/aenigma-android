@@ -6,9 +6,9 @@
 using namespace std;
 
 static int64_t i = 0;
-static map<int64_t, ICryptoContext *> handles;
+static map<int64_t, CryptoContext *> handles;
 
-static long long getHandle(ICryptoContext *ctx)
+static long long getHandle(CryptoContext *ctx)
 {
     if(!ctx)
     {
@@ -36,7 +36,7 @@ static bool freeHandle(int64_t handle)
     return true;
 }
 
-static ICryptoContext *getCryptoContext(int64_t handle)
+static CryptoContext *getCryptoContext(int64_t handle)
 {
     auto it = handles.find(handle);
 
@@ -73,7 +73,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createEncryptionCont
         jstring key) {
     const char *publicKey = env->GetStringUTFChars(key, nullptr);
 
-    ICryptoContext *ctx = CreateAsymmetricEncryptionContext(publicKey);
+    CryptoContext *ctx = CreateAsymmetricEncryptionContext(publicKey);
     env->ReleaseStringUTFChars(key, publicKey);
 
     return getHandle(ctx);
@@ -95,7 +95,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createDecryptionCont
     memset(_protectionPassphrase, 0, passLength);
     strcpy(_protectionPassphrase, protectionPassphrase);
 
-    ICryptoContext *ctx = CreateAsymmetricDecryptionContext(privateKey, _protectionPassphrase);
+    CryptoContext *ctx = CreateAsymmetricDecryptionContext(privateKey, _protectionPassphrase);
 
     delete[] _protectionPassphrase;
     env->ReleaseStringUTFChars(key, privateKey);
@@ -120,7 +120,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureConte
     memset(_protectionPassphrase, 0, passLength);
     strcpy(_protectionPassphrase, protectionPassphrase);
 
-    ICryptoContext *ctx = CreateSignatureContext(privateKey, _protectionPassphrase);
+    CryptoContext *ctx = CreateSignatureContext(privateKey, _protectionPassphrase);
 
     delete[] _protectionPassphrase;
     env->ReleaseStringUTFChars(key, privateKey);
@@ -138,7 +138,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureVerif
 
     const char *publicKey = env->GetStringUTFChars(key, nullptr);
 
-    ICryptoContext *ctx = CreateVerificationContext(publicKey);
+    CryptoContext *ctx = CreateVerificationContext(publicKey);
 
     env->ReleaseStringUTFChars(key, publicKey);
 
@@ -164,7 +164,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_encrypt
         jlong handle,
         jbyteArray plaintext) {
 
-    ICryptoContext *ctx = getCryptoContext(handle);
+    CryptoContext *ctx = getCryptoContext(handle);
 
     if(not ctx)
     {
@@ -194,7 +194,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_decrypt(
         jlong handle,
         jbyteArray ciphertext) {
 
-    ICryptoContext *ctx = getCryptoContext(handle);
+    CryptoContext *ctx = getCryptoContext(handle);
 
     if(not ctx)
     {
@@ -224,7 +224,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sign(
         jlong handle,
         jbyteArray data) {
 
-    ICryptoContext *ctx = getCryptoContext(handle);
+    CryptoContext *ctx = getCryptoContext(handle);
 
     if(not ctx)
     {
@@ -254,7 +254,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
         jlong handle,
         jbyteArray signature) {
 
-    ICryptoContext *ctx = getCryptoContext(handle);
+    CryptoContext *ctx = getCryptoContext(handle);
 
     if(not ctx)
     {
@@ -276,8 +276,34 @@ JNIEXPORT jint JNICALL
 Java_com_example_enigma_crypto_CryptoProvider_00024Companion_calculateEnvelopeSize(
         JNIEnv *env,
         jobject thiz,
-        jint key_size,
         jint current_size) {
 
-    return (int)GetEnvelopeSize(key_size, current_size);
+    return (int)GetEnvelopeSize(current_size);
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_unsealOnion(
+        JNIEnv *env, jobject thiz,
+        jlong handle,
+        jbyteArray onion) {
+
+    CryptoContext *ctx = getCryptoContext(handle);
+
+    if(not ctx)
+    {
+        return nullptr;
+    }
+
+    int len;
+    const unsigned char *data = asUnsignedCharArray(env, onion, len);
+    const unsigned char *plaintext = UnsealOnion(ctx, data, len);
+    delete[] data;
+
+    if(not plaintext or len < 0)
+    {
+        return nullptr;
+    }
+
+    return toJByteArray(env, plaintext, len);
 }

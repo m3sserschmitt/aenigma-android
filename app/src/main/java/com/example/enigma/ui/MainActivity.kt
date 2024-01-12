@@ -8,6 +8,7 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.work.*
 import com.example.enigma.R
+import com.example.enigma.crypto.KeysManager
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.viewmodels.MainViewModel
 import com.example.enigma.workers.GraphReaderWorker
@@ -42,19 +43,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun startWorkers()
     {
-        mainViewModel.keysAvailable.observe(this){ keysAvailable ->
-            if(!keysAvailable)
+        mainViewModel.guardAvailable.observe(this) { guardAvailable ->
+            if(!guardAvailable)
             {
-                startKeyGeneratorWorker()
-            } else {
-                mainViewModel.guardAvailable.observe(this) { guardAvailable ->
-                    if(!guardAvailable)
-                    {
-                        startRequestGraph()
-                    } else {
-                        startSignalRWorker()
-                    }
-                }
+                startRequestGraph()
+            } else if (KeysManager.generateKeyIfNotExistent(this)) {
+                startSignalRWorker()
             }
         }
     }

@@ -1,41 +1,31 @@
 package com.example.enigma.crypto
 
+import android.content.Context
 import android.util.Base64
-import com.example.enigma.data.Repository
 import com.example.enigma.models.Message
 import com.example.enigma.onion.OnionParser
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import org.bouncycastle.crypto.InvalidCipherTextException
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class OnionParsingService @Inject constructor(private val repository: Repository) {
+class OnionParsingService @Inject constructor(@ApplicationContext context: Context) {
 
-    private val handle: Flow<CryptoContextHandle> = flow {
-        repository.local.getKeys().collect {
-            val handle = CryptoContext.Factory.createDecryptionContext(it.privateKey, "")
-            emit(handle)
+    private val parser: OnionParser?
+
+    init {
+        val key = KeysManager.readPrivateKey(context)
+        parser = if(key != null) {
+            val cryptoContext = CryptoContext.Factory.createDecryptionContext(key, "")
+            OnionParser(cryptoContext)
+        }else {
+            null
         }
     }
 
-    fun parse(ciphertext: String): Flow<Message>
+    fun parse(ciphertext: String): Message?
     {
-        return flow {
-            handle.collect {
-                val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT)
-                val message = OnionParser(it).parse(decodedMessage)
-
-                it.dispose()
-
-                if(message != null)
-                {
-                    emit(message)
-                } else {
-                    throw InvalidCipherTextException("Ciphertext could not be parsed")
-                }
-            }
-        }
+        val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT)
+        return parser?.parse(decodedMessage)
     }
 }

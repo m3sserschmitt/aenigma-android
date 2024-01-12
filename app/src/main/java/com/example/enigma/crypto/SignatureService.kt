@@ -1,31 +1,30 @@
 package com.example.enigma.crypto
 
+import android.content.Context
 import android.util.Base64
-import com.example.enigma.data.Repository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class SignatureService @Inject constructor(private val repository: Repository) {
+class SignatureService @Inject constructor(@ApplicationContext context: Context) {
 
-    fun sign(token: String): Flow<Pair<String, String?>>
+    private val publicKey: String?
+
+    private val privateKey: String?
+
+    init {
+        publicKey = KeysManager.readPublicKey(context)
+        privateKey = KeysManager.readPrivateKey(context)
+    }
+    fun sign(token: String): Pair<String, String>?
     {
-        return flow {
-            repository.local.getKeys().collect {
 
-                val decodedToken = Base64.decode(token, Base64.DEFAULT)
-                val signature = CryptoProvider.sign(it.privateKey, "", decodedToken)
+        val decodedToken = Base64.decode(token, Base64.DEFAULT)
+        val signature = if(privateKey != null && publicKey != null)
+            CryptoProvider.sign(privateKey, "", decodedToken) else null
+        val encodedSignature = if(signature != null)
+            Base64.encodeToString(signature, Base64.DEFAULT) else null
 
-                if(signature != null)
-                {
-                    emit(Pair(it.publicKey, Base64.encodeToString(signature, Base64.DEFAULT)))
-                }
-                else {
-                    emit(Pair(it.publicKey, null))
-                }
-            }
-        }
+        return if (encodedSignature != null && publicKey != null)
+            Pair(publicKey, encodedSignature) else null
     }
 }

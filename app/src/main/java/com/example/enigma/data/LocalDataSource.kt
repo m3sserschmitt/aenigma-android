@@ -6,8 +6,6 @@ import com.example.enigma.data.database.EdgeEntity
 import com.example.enigma.data.database.EdgesDao
 import com.example.enigma.data.database.GuardEntity
 import com.example.enigma.data.database.GuardsDao
-import com.example.enigma.data.database.KeyPairEntity
-import com.example.enigma.data.database.KeyPairsDao
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.database.MessagesDao
 import com.example.enigma.data.database.VertexEntity
@@ -19,7 +17,6 @@ class LocalDataSource @Inject constructor(
     private val contactsDao: ContactsDao,
     private val messagesDao: MessagesDao,
     private val guardsDao: GuardsDao,
-    private val keysDao: KeyPairsDao,
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao
 ){
@@ -61,31 +58,6 @@ class LocalDataSource @Inject constructor(
     suspend fun markConversationAsRead(address: String)
     {
         contactsDao.markConversationAsRead(address)
-    }
-
-    suspend fun insertKeyPair(keyPairEntity: KeyPairEntity)
-    {
-        keysDao.insert(keyPairEntity)
-    }
-
-    fun isKeyAvailable(): Flow<Boolean>
-    {
-        return keysDao.isKeyAvailable()
-    }
-
-    fun getKeys(): Flow<KeyPairEntity>
-    {
-        return keysDao.getLastKeys()
-    }
-
-    fun getPublicKey(): Flow<String>
-    {
-        return keysDao.getPublicKey()
-    }
-
-    fun getAddress(): Flow<String>
-    {
-        return keysDao.getAddress()
     }
 
     fun isGuardAvailable(): Flow<Boolean>

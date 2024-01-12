@@ -14,6 +14,8 @@ class CryptoContext {
 
     class Factory {
         companion object {
+
+            @JvmStatic
             fun createEncryptionContext(key: String) : CryptoContextHandle
             {
                 return CryptoContextHandle.EncryptionContextHandle(
@@ -27,12 +29,14 @@ class CryptoContext {
                     CryptoContext.createDecryptionContext(key, passphrase))
             }
 
+            @JvmStatic
             fun createSignatureContext(key: String, passphrase: String) : CryptoContextHandle
             {
                 return CryptoContextHandle.SignatureContextHandle(
                     CryptoContext.createSignatureContext(key, passphrase))
             }
 
+            @JvmStatic
             fun createSignatureVerificationContext(key: String): CryptoContextHandle
             {
                 return CryptoContextHandle.SignatureVerificationContextHandle(

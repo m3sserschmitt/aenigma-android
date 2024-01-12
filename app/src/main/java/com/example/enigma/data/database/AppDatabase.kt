@@ -8,7 +8,6 @@ import androidx.room.TypeConverters
     entities = [
         ContactEntity::class,
         MessageEntity::class,
-        KeyPairEntity::class,
         GuardEntity::class,
         VertexEntity::class,
         EdgeEntity::class],
@@ -20,8 +19,6 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun contactsDao(): ContactsDao
 
     abstract fun messagesDao(): MessagesDao
-
-    abstract fun keysDao(): KeyPairsDao
 
     abstract fun guardsDao(): GuardsDao
 
