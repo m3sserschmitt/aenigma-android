@@ -1,5 +1,7 @@
 package com.example.enigma.crypto
 
+import android.util.Base64
+
 class CryptoProvider {
 
     companion object {
@@ -12,7 +14,9 @@ class CryptoProvider {
 
         private external fun verify(handle: Long, signature: ByteArray) : Boolean
 
-        private external fun unsealOnion(handle: Long, onion: ByteArray): ByteArray
+        private external fun unsealOnion(handle: Long, onion: ByteArray): ByteArray?
+
+        private external fun sealOnion(plaintext: ByteArray, keys: Array<String>, addresses: Array<String>): ByteArray?
 
         private external fun calculateEnvelopeSize(currentSize: Int): Int
 
@@ -98,6 +102,19 @@ class CryptoProvider {
             }
 
             return verify(handle.handle, signature)
+        }
+
+        @JvmStatic
+        fun buildOnion(plaintext: ByteArray, keys: Array<String>, addresses: Array<String>): String?
+        {
+            if(keys.size != addresses.size)
+            {
+                throw IllegalArgumentException("Number of keys should be equal to number of addresses")
+            }
+
+            val data = sealOnion(plaintext, keys, addresses)
+
+            return if (data != null) String(Base64.encode(data, Base64.DEFAULT)) else null
         }
     }
 }

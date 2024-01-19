@@ -4,6 +4,8 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactsDao
 import com.example.enigma.data.database.EdgeEntity
 import com.example.enigma.data.database.EdgesDao
+import com.example.enigma.data.database.GraphPathEntity
+import com.example.enigma.data.database.GraphPathsDao
 import com.example.enigma.data.database.GuardEntity
 import com.example.enigma.data.database.GuardsDao
 import com.example.enigma.data.database.MessageEntity
@@ -18,7 +20,8 @@ class LocalDataSource @Inject constructor(
     private val messagesDao: MessagesDao,
     private val guardsDao: GuardsDao,
     private val verticesDao: VerticesDao,
-    private val edgesDao: EdgesDao
+    private val edgesDao: EdgesDao,
+    private val graphPathsDao: GraphPathsDao
 ){
     fun getContacts() : Flow<List<ContactEntity>>
     {
@@ -33,6 +36,11 @@ class LocalDataSource @Inject constructor(
     suspend fun insertContact(contactEntity: ContactEntity)
     {
         contactsDao.insert(contactEntity)
+    }
+
+    suspend fun insertContacts(contacts: List<ContactEntity>): List<Long>
+    {
+        return contactsDao.insert(contacts)
     }
 
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
@@ -95,13 +103,43 @@ class LocalDataSource @Inject constructor(
         return edgesDao.remove()
     }
 
-    suspend fun insertEdges(vertices: List<EdgeEntity>)
+    suspend fun insertEdges(edges: List<EdgeEntity>)
     {
-        return edgesDao.insert(vertices)
+        return edgesDao.insert(edges)
+    }
+
+    suspend fun insertEdge(edge: EdgeEntity)
+    {
+        return edgesDao.insert(edge)
     }
 
     fun getEdges(): Flow<List<EdgeEntity>>
     {
         return edgesDao.getAll()
+    }
+
+    fun graphPathExists(destination: String): Flow<Boolean>
+    {
+        return graphPathsDao.pathExists(destination)
+    }
+
+    suspend fun removeGraphPaths()
+    {
+        graphPathsDao.remove()
+    }
+
+    suspend fun insertGraphPaths(paths: List<GraphPathEntity>)
+    {
+        graphPathsDao.insert(paths)
+    }
+
+    suspend fun insertGraphPath(path: GraphPathEntity)
+    {
+        graphPathsDao.insert(path)
+    }
+
+    suspend fun getGraphPath(destination: String): List<GraphPathEntity>
+    {
+        return graphPathsDao.get(destination)
     }
 }

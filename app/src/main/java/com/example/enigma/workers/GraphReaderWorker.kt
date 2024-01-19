@@ -1,6 +1,11 @@
 package com.example.enigma.workers
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.work.HiltWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -13,22 +18,50 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.Date
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
-    @Assisted context: Context,
+    @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository
 ) : Worker(context, params)
 {
+    companion object {
+        const val GRAPH_DATASTORE_PREFERENCES = "Graph"
+        const val GRAPH_DATASTORE_VERSION_KEY = "Version"
+    }
 
-    private suspend fun selectGuard(graph: List<Vertex>)
+    private val Context.graphVersionDataStore: DataStore<Preferences> by preferencesDataStore(
+        name = GRAPH_DATASTORE_PREFERENCES
+    )
+
+    private val graphVersionKey = stringPreferencesKey(GRAPH_DATASTORE_VERSION_KEY)
+
+    private fun getGraphVersionFromDataStore(): Flow<String> =
+        context.graphVersionDataStore.data.map { preferences ->
+            preferences[graphVersionKey] ?: ""
+        }
+
+    private suspend fun saveGraphVersionIntoDataStore(graphVersion: String)
     {
+        context.graphVersionDataStore.edit { preferences ->
+            preferences[graphVersionKey] = graphVersion
+        }
+    }
+
+    private fun selectGuard(graph: List<Vertex>): Vertex {
         // TODO: refactor this to not chose the first item everytime
         val guard = graph[0]
 
+        return guard
+    }
+
+    private suspend fun saveGraph(graph: List<Vertex>, guard: Vertex)
+    {
         repository.local.insertGuard(
             GuardEntity(
                 guard.neighborhood.address,
@@ -37,45 +70,51 @@ class GraphReaderWorker @AssistedInject constructor(
                 Date()
             )
         )
-    }
 
-    private suspend fun saveGraph(graph: List<Vertex>)
-    {
         repository.local.removeVertices()
+        repository.local.removeEdges()
 
-        val vertices = graph.map {
-            VertexEntity(it.neighborhood.address, it.publicKey, it.neighborhood.hostname)
-        }
-
-        val edges = graph.map {
-                vertex -> vertex.neighborhood.neighbors.map {
-            EdgeEntity(vertex.neighborhood.address, it)
-                }
+        val vertices = graph.map { vertex ->
+            VertexEntity(vertex.neighborhood.address, vertex.publicKey, vertex.neighborhood.hostname)
         }
 
         repository.local.insertVertices(vertices)
 
-        for (item in edges)
-        {
-            if(item.isEmpty())
-            {
-                continue
+        graph.map { vertex ->
+            vertex.neighborhood.neighbors.map { neighbor ->
+                repository.local.insertEdge(EdgeEntity(vertex.neighborhood.address, neighbor))
             }
+        }
+    }
 
-            repository.local.insertEdges(item)
+    private suspend fun requestGraph()
+    {
+        val response = repository.remote.getNetworkGraph()
+        val graph = response.body()
+
+        if(response.code() == 200 && graph != null)
+        {
+            val guard = selectGuard(graph)
+            saveGraph(graph, guard)
         }
     }
 
     override fun doWork(): Result {
 
         CoroutineScope(Dispatchers.IO).launch {
-            val response = repository.remote.getNetworkGraph()
-            val graph = response.body()
+            val serverInfoResponse = repository.remote.getServerInfo()
 
-            if(response.code() == 200 && graph != null)
-            {
-                selectGuard(graph)
-                saveGraph(graph)
+            getGraphVersionFromDataStore().collect { graphVersion ->
+                val serverInfo = serverInfoResponse.body()
+
+                if(serverInfoResponse.code() == 200
+                    && serverInfo != null
+                    && serverInfo.graphVersion != graphVersion)
+                {
+                    requestGraph()
+                }
+
+                saveGraphVersionIntoDataStore(serverInfo?.graphVersion ?: "")
             }
         }
 

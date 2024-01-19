@@ -10,7 +10,8 @@ import androidx.room.TypeConverters
         MessageEntity::class,
         GuardEntity::class,
         VertexEntity::class,
-        EdgeEntity::class],
+        EdgeEntity::class,
+        GraphPathEntity::class],
     version = 2,
     exportSchema = false)
 @TypeConverters(Converters::class)
@@ -25,4 +26,6 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun verticesDao(): VerticesDao
 
     abstract fun edgesDao(): EdgesDao
+
+    abstract fun graphPathsDao(): GraphPathsDao
 }

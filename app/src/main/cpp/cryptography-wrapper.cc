@@ -5,11 +5,12 @@
 
 using namespace std;
 
-static int64_t i = 0;
 static map<int64_t, CryptoContext *> handles;
 
 static long long getHandle(CryptoContext *ctx)
 {
+    static int64_t i = 0;
+
     if(!ctx)
     {
         return -1;
@@ -63,6 +64,41 @@ static jbyteArray toJByteArray(JNIEnv *env, const unsigned char *data, unsigned 
     env->SetByteArrayRegion (ret, 0, (int)size, (jbyte *)data);
 
     return ret;
+}
+
+static const char **toArrayOfStrings(JNIEnv *env, jobjectArray array, int &size)
+{
+    size = env->GetArrayLength(array);
+    const char **strings = new const char*[size];
+
+    for (int t = 0; t < size; t ++) {
+
+        auto javaString = (jstring)env->GetObjectArrayElement(array, t);
+        const char *cString = env->GetStringUTFChars(javaString, nullptr);
+
+        int stringLen = env->GetStringUTFLength(javaString);
+        char *cStringCopy = new char[stringLen + 1];
+
+        memcpy(cStringCopy, cString, stringLen);
+        cStringCopy[stringLen] = 0;
+
+        strings[t] = cStringCopy;
+
+        env->ReleaseStringUTFChars(javaString, cString);
+        env->DeleteLocalRef(javaString);
+    }
+
+    return strings;
+}
+
+static void releaseStrings(const char **strings, int count)
+{
+    for(int k = 0; k < count; k ++)
+    {
+        delete[] strings[k];
+    }
+
+    delete[] strings;
 }
 
 extern "C"
@@ -306,4 +342,48 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_unsealOnion(
     }
 
     return toJByteArray(env, plaintext, len);
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sealOnion(
+        JNIEnv *env,
+        jobject thiz,
+        jbyteArray plaintext,
+        jobjectArray keys,
+        jobjectArray addresses) {
+
+    int keysCount;
+    int addressesCount;
+
+    const char **cKeys = toArrayOfStrings(env, keys, keysCount);
+    const char **cAddresses = toArrayOfStrings(env, addresses, addressesCount);
+
+    if(keysCount != addressesCount)
+    {
+        releaseStrings(cKeys, keysCount);
+        releaseStrings(cAddresses, addressesCount);
+
+        return nullptr;
+    }
+
+    int plaintextLen;
+    const unsigned char *cPlaintext = asUnsignedCharArray(env, plaintext, plaintextLen);
+
+    int outLen;
+    const unsigned char *onion = SealOnion(cPlaintext, plaintextLen, cKeys, cAddresses, keysCount, outLen);
+
+    delete[] cPlaintext;
+    releaseStrings(cKeys, keysCount);
+    releaseStrings(cAddresses, addressesCount);
+
+    if(onion == nullptr || outLen < 0)
+    {
+        return nullptr;
+    }
+
+    jbyteArray out = toJByteArray(env, onion, outLen);
+    delete[] onion;
+
+    return out;
 }

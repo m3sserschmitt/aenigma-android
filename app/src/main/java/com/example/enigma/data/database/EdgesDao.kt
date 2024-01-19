@@ -15,6 +15,9 @@ interface EdgesDao {
     @Insert
     suspend fun insert(edges: List<EdgeEntity>)
 
+    @Insert
+    suspend fun insert(edge: EdgeEntity)
+
     @Query("SELECT * FROM $EDGES_TABLE")
     fun getAll(): Flow<List<EdgeEntity>>
 }

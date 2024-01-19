@@ -19,6 +19,9 @@ interface ContactsDao {
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = false WHERE address = :address")
     suspend fun markConversationAsRead(address: String)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(contact : ContactEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(contact : List<ContactEntity>): List<Long>
 }

@@ -44,4 +44,8 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideEdgesDao(database: AppDatabase) = database.edgesDao()
+
+    @Singleton
+    @Provides
+    fun provideGraphPathsDao(database: AppDatabase) = database.graphPathsDao()
 }

@@ -2,13 +2,11 @@ package com.example.enigma.data.network
 
 import android.annotation.SuppressLint
 import androidx.lifecycle.MutableLiveData
-import com.example.enigma.crypto.OnionParsingService
 import com.example.enigma.crypto.SignatureService
+import com.example.enigma.data.IncomingMessageSaver
 import com.example.enigma.data.Repository
-import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.models.AuthenticationRequest
-import com.example.enigma.models.Message
-import com.example.enigma.models.PendingMessage
+import com.google.gson.internal.LinkedTreeMap
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
@@ -21,8 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class SignalRClient @Inject constructor(
     private val repository: Repository,
-    private val onionParsingService: OnionParsingService,
-    private val signatureService: SignatureService
+    private val signatureService: SignatureService,
+    private val messageSaver: IncomingMessageSaver
 ) {
     companion object {
 
@@ -46,11 +44,16 @@ class SignalRClient @Inject constructor(
         }
 
         connection.on(ROUTE_MESSAGE_METHOD, { data: String ->
-            handleIncomingMessages(listOf(data))
+            CoroutineScope(Dispatchers.IO).launch {
+                messageSaver.handleIncomingMessages(listOf(data))
+            }
         }, String::class.java)
 
-        connection.on(MESSAGES_SYNCHRONIZATION_METHOD, { data: List<PendingMessage> ->
-            handleIncomingMessages(data.map { it.content })
+        connection.on(MESSAGES_SYNCHRONIZATION_METHOD, { data: List<LinkedTreeMap<String, String>> ->
+            CoroutineScope(Dispatchers.IO).launch {
+                val messages = data.mapNotNull { item -> item["content"] }
+                messageSaver.handleIncomingMessages(messages)
+            }
         }, List::class.java)
     }
 
@@ -104,30 +107,6 @@ class SignalRClient @Inject constructor(
             SignalRStatus.Disconnected::class.java ->
                 _status.postValue(_status.value?.let { SignalRStatus.Disconnected(it, error) })
         }
-    }
-
-    private fun handleIncomingMessages(messages: List<String>)
-    {
-        val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        for (ciphertext in messages)
-        {
-            scope.launch {
-                val message = onionParsingService.parse(ciphertext)
-                if(message != null)
-                {
-                    saveMessage(message)
-                }
-            }
-        }
-    }
-
-    private suspend fun saveMessage(message: Message)
-    {
-        repository.local.insertMessage(
-            MessageEntity(message.chatId, message.text, true, message.date)
-        )
-
-        repository.local.markConversationAsUnread(message.chatId)
     }
 
     fun isConnected(): Boolean {
