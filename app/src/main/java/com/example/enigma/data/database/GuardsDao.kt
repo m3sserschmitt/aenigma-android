@@ -16,5 +16,5 @@ interface GuardsDao {
     fun isGuardAvailable(): Flow<Boolean>
 
     @Query("SELECT * FROM $GUARDS_TABLE ORDER BY id DESC LIMIT 1")
-    fun getLastGuard(): Flow<GuardEntity>
+    suspend fun getLastGuard(): GuardEntity?
 }

@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.Flow
 interface ContactsDao {
 
     @Query("SELECT * FROM $CONTACTS_TABLE")
-    fun getAll(): Flow<List<ContactEntity>>
+    fun get(): Flow<List<ContactEntity>>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
-    fun getContact(address: String): Flow<ContactEntity>
+    fun get(address: String): Flow<ContactEntity?>
 
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = true WHERE address = :address")
     suspend fun markConversationAsUnread(address: String)

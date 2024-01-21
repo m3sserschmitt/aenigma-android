@@ -8,11 +8,8 @@ import retrofit2.http.GET
 interface EnigmaApi {
 
     @GET("/ServerInfo")
-    suspend fun getServerInfo(): Response<ServerInfo>
-
-    @GET("/Addresses")
-    suspend fun getAddresses(): Response<List<String>>
+    suspend fun getServerInfo(): Response<ServerInfo?>
 
     @GET("/NetworkGraph")
-    suspend fun getNetworkGraph(): Response<List<Vertex>>
+    suspend fun getNetworkGraph(): Response<List<Vertex>?>
 }

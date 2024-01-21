@@ -1,11 +1,9 @@
 package com.example.enigma.routing
 
-import androidx.lifecycle.MutableLiveData
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.GraphPathEntity
 import com.example.enigma.data.database.VertexEntity
-import kotlinx.coroutines.flow.combine
 import org.jgrapht.Graph
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DefaultDirectedGraph
@@ -16,51 +14,52 @@ class PathFinder @Inject constructor(private val repository: Repository) {
 
     private val graph: Graph<VertexEntity, DefaultEdge> = DefaultDirectedGraph(DefaultEdge::class.java)
 
-    val loaded: MutableLiveData<Boolean> = MutableLiveData(false)
+    private var _guardAddress: String? = null
 
-    private lateinit var guardAddress: String
+    private lateinit var _vertices: List<VertexEntity>
 
-    private lateinit var vertices: List<VertexEntity>
-
-    suspend fun load()
+    suspend fun load(): Boolean
     {
-        repository.local.getGuard()
-            .combine(repository.local.getVertices()) { guard, vertices ->
-                Pair(guard, vertices)
-            }.combine(repository.local.getEdges()) { (guard, vertices), edges ->
-                Triple(guard, vertices, edges)
-            }.collect { (guard, v, e) ->
+        val guard = repository.local.getGuard() ?: return false
+        val vertices = repository.local.getVertices()
+        val edges = repository.local.getEdges()
 
-                v.forEach { vertex ->
-                    graph.addVertex(vertex)
-                }
+        vertices.forEach { vertex ->
+            graph.addVertex(vertex)
+        }
 
-                e.forEach { edge ->
-                    graph.addEdge(
-                        vertices.find { item -> item.address == edge.sourceAddress },
-                        vertices.find { item -> item.address == edge.targetAddress }
-                    )
-                }
+        edges.forEach { edge ->
+            graph.addEdge(
+                vertices.find { item -> item.address == edge.sourceAddress },
+                vertices.find { item -> item.address == edge.targetAddress }
+            )
+        }
 
-                guardAddress = guard.address
-                vertices = v
+        _guardAddress = guard.address
+        _vertices = vertices
 
-                loaded.postValue(true)
-            }
+        return true
     }
 
-    suspend fun calculatePaths(destination: ContactEntity)
+    suspend fun calculatePaths(destination: ContactEntity): Boolean
     {
-        val algorithm = AllDirectedPaths(graph)
-        val s = vertices.find { item -> item.address == guardAddress }
-        val d = vertices.find { item -> item.address == destination.guardAddress }
+        val s = _vertices.find { item -> item.address == _guardAddress } ?: return false
+        val d = _vertices.find { item -> item.address == destination.guardAddress } ?: return false
 
+        val algorithm = AllDirectedPaths(graph)
         val paths = algorithm.getAllPaths(s, d, true, 6)
+
+        if(paths.isEmpty())
+        {
+            return false
+        }
 
         for (path in paths)
         {
             val p = listOf(destination.publicKey) + path.vertexList.map { v -> v.publicKey }.reversed()
             repository.local.insertGraphPath(GraphPathEntity(destination.address, p))
         }
+
+        return true
     }
 }

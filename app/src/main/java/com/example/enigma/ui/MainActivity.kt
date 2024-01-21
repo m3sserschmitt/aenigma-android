@@ -8,11 +8,9 @@ import androidx.navigation.findNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.work.*
 import com.example.enigma.R
-import com.example.enigma.crypto.KeysManager
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.viewmodels.MainViewModel
 import com.example.enigma.workers.GraphReaderWorker
-import com.example.enigma.workers.KeysGeneratorWorker
 import com.example.enigma.workers.SignalRClientWorker
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
@@ -47,14 +45,13 @@ class MainActivity : AppCompatActivity() {
             if(!guardAvailable)
             {
                 startRequestGraph()
-            } else if (KeysManager.generateKeyIfNotExistent(this)) {
+            } else {
                 startSignalRWorker()
             }
         }
     }
 
-    private fun startSignalRWorker()
-    {
+    private fun startSignalRWorker() {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
@@ -65,15 +62,6 @@ class MainActivity : AppCompatActivity() {
 
         WorkManager.getInstance(this)
             .enqueue(signalRClientRequest)
-    }
-
-    private fun startKeyGeneratorWorker()
-    {
-        val keyGeneratorRequest = OneTimeWorkRequestBuilder<KeysGeneratorWorker>()
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .build()
-
-        WorkManager.getInstance(this).enqueue(keyGeneratorRequest)
     }
 
     private fun startRequestGraph()

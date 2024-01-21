@@ -2,16 +2,13 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.*
-import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
-import com.example.enigma.data.database.GuardEntity
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.routing.PathFinder
 import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,40 +17,23 @@ class ChatViewModel @Inject constructor(
     private val repository: Repository,
     private val savedStateHandle: SavedStateHandle,
     private val pathFinder: PathFinder,
-    addressProvider: AddressProvider,
     application: Application
 ) : AndroidViewModel(application){
 
-    val chatId: String? = savedStateHandle.get<String>(SELECTED_CHAT_ID)
+    val chatId: String
 
-    private fun getContact() : Flow<ContactEntity>?
-    {
-        return savedStateHandle.get<String>(SELECTED_CHAT_ID)?.let {
-            repository.local.getContact(it) }
+    init {
+        val selectedChatId = savedStateHandle.get<String>(SELECTED_CHAT_ID)
+        chatId = selectedChatId ?: "not-found"
     }
 
-    val contact: LiveData<ContactEntity>? = getContact()?.asLiveData()
+    val contact: LiveData<ContactEntity?> = repository.local.getContact(chatId).asLiveData()
 
-    private fun readConversation() : Flow<List<MessageEntity>>?
-    {
-        return savedStateHandle.get<String>(SELECTED_CHAT_ID)
-            ?.let { repository.local.getConversation(it) }
-    }
+    val conversation: LiveData<List<MessageEntity>> = repository.local.getConversation(chatId).asLiveData()
 
-    val conversation: LiveData<List<MessageEntity>>? = readConversation()?.asLiveData()
+    val pathsExists: LiveData<Boolean> = repository.local.graphPathExists(chatId).asLiveData()
 
-    private fun getGuard(): Flow<GuardEntity> = repository.local.getGuard()
-
-    val guard: LiveData<GuardEntity> = getGuard().asLiveData()
-
-    private fun checkIfPathsExists(): Flow<Boolean>? = savedStateHandle.get<String>(SELECTED_CHAT_ID)
-        ?.let { repository.local.graphPathExists(it) }
-
-    val pathsExists: LiveData<Boolean>? = checkIfPathsExists()?.asLiveData()
-
-    val localAddress: String? = addressProvider.address
-
-    val graphLoaded: LiveData<Boolean> = pathFinder.loaded
+    val errorCalculatingPath: MutableLiveData<Boolean> = MutableLiveData(false)
 
     fun markConversationAsRead()
     {
@@ -68,14 +48,16 @@ class ChatViewModel @Inject constructor(
     fun calculatePath()
     {
         viewModelScope.launch(Dispatchers.IO) {
-            pathFinder.calculatePaths(contact?.value!!)
-        }
-    }
-
-    fun loadGraph()
-    {
-        viewModelScope.launch {
-            pathFinder.load()
+            if(contact.value != null)
+            {
+                if(pathFinder.load())
+                {
+                    val pathCalculationResult = pathFinder.calculatePaths(contact.value!!)
+                    errorCalculatingPath.postValue(pathCalculationResult)
+                }
+            } else {
+                errorCalculatingPath.postValue(false)
+            }
         }
     }
 }

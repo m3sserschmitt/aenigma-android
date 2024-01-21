@@ -34,27 +34,30 @@ class MainViewModel @Inject constructor(
 
     val signalRClientStatus: LiveData<SignalRStatus> get() = signalRClient.status
 
-    private fun generateQrCodeBitmap(): Flow<Bitmap>
+    private fun generateQrCodeBitmap(): Flow<Bitmap?>
     {
         return flow {
-            repository.local.getGuard().collect { guard ->
+            val guard = repository.local.getGuard()
 
-                if (addressProvider.address != null) {
-                    val exportedData = ExportedContactData(guard.address,
-                        addressProvider.publicKey!!)
+            if (guard != null && addressProvider.address != null) {
+                val exportedData = ExportedContactData(
+                    guard.address,
+                    addressProvider.publicKey!!
+                )
 
-                    val bitmap = QrCodeGenerator(400, 400)
-                        .encodeAsBitmap(exportedData.toString())
+                val bitmap = QrCodeGenerator(400, 400)
+                    .encodeAsBitmap(exportedData.toString())
 
-                    if (bitmap != null) {
-                        emit(bitmap)
-                    }
+                if (bitmap != null) {
+                    emit(bitmap)
                 }
+            } else {
+                emit(null)
             }
         }
     }
 
-    val qrCode: LiveData<Bitmap> = generateQrCodeBitmap().asLiveData()
+    val qrCode: LiveData<Bitmap?> = generateQrCodeBitmap().asLiveData()
 
     fun insertContact(contact: ContactEntity) =
         viewModelScope.launch(Dispatchers.IO) {

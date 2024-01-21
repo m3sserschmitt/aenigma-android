@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.work.HiltWorker
-import androidx.work.Worker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.EdgeEntity
@@ -16,11 +16,8 @@ import com.example.enigma.data.database.VertexEntity
 import com.example.enigma.models.Vertex
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import java.util.Date
 
 @HiltWorker
@@ -28,7 +25,7 @@ class GraphReaderWorker @AssistedInject constructor(
     @Assisted private val context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository
-) : Worker(context, params)
+) : CoroutineWorker(context, params)
 {
     companion object {
         const val GRAPH_DATASTORE_PREFERENCES = "Graph"
@@ -99,23 +96,20 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val serverInfoResponse = repository.remote.getServerInfo()
+        val serverInfoResponse = repository.remote.getServerInfo()
+        val serverInfo = serverInfoResponse.body() ?: return Result.failure()
 
-            getGraphVersionFromDataStore().collect { graphVersion ->
-                val serverInfo = serverInfoResponse.body()
+        getGraphVersionFromDataStore().collect { graphVersion ->
 
-                if(serverInfoResponse.code() == 200
-                    && serverInfo != null
-                    && serverInfo.graphVersion != graphVersion)
-                {
-                    requestGraph()
-                }
-
-                saveGraphVersionIntoDataStore(serverInfo?.graphVersion ?: "")
+            if(serverInfoResponse.code() == 200
+                && serverInfo.graphVersion != graphVersion)
+            {
+                requestGraph()
             }
+
+            saveGraphVersionIntoDataStore(serverInfo.graphVersion)
         }
 
         return Result.success()

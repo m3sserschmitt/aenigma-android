@@ -25,12 +25,12 @@ class LocalDataSource @Inject constructor(
 ){
     fun getContacts() : Flow<List<ContactEntity>>
     {
-        return contactsDao.getAll()
+        return contactsDao.get()
     }
 
-    fun getContact(address: String) : Flow<ContactEntity>
+    fun getContact(address: String) : Flow<ContactEntity?>
     {
-        return contactsDao.getContact(address)
+        return contactsDao.get(address)
     }
 
     suspend fun insertContact(contactEntity: ContactEntity)
@@ -78,7 +78,7 @@ class LocalDataSource @Inject constructor(
         return guardsDao.insert(guard)
     }
 
-    fun getGuard(): Flow<GuardEntity>
+    suspend fun getGuard(): GuardEntity?
     {
         return guardsDao.getLastGuard()
     }
@@ -93,9 +93,9 @@ class LocalDataSource @Inject constructor(
         return verticesDao.insert(vertices)
     }
 
-    fun getVertices(): Flow<List<VertexEntity>>
+    suspend fun getVertices(): List<VertexEntity>
     {
-        return verticesDao.getAll()
+        return verticesDao.get()
     }
 
     suspend fun removeEdges()
@@ -113,9 +113,9 @@ class LocalDataSource @Inject constructor(
         return edgesDao.insert(edge)
     }
 
-    fun getEdges(): Flow<List<EdgeEntity>>
+    suspend fun getEdges(): List<EdgeEntity>
     {
-        return edgesDao.getAll()
+        return edgesDao.get()
     }
 
     fun graphPathExists(destination: String): Flow<Boolean>

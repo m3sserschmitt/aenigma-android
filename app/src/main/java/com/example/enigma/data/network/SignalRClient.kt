@@ -57,24 +57,23 @@ class SignalRClient @Inject constructor(
         }, List::class.java)
     }
 
-    fun createConnection() {
-        CoroutineScope(Dispatchers.IO).launch {
-            repository.local.getGuard().collect { guard ->
-                try {
-                    hubConnection = HubConnectionBuilder
-                        .create("${guard.hostname.trim()}/$ONION_ROUTING_ENDPOINT")
-                        .build()
+    suspend fun createConnection()
+    {
+        val guard = repository.local.getGuard() ?: return
 
-                    configureConnection(hubConnection)
-                }
-                catch (ex: Exception) {
-                    updateStatus(SignalRStatus.Error::class.java,
-                        "Could not create connection or invalid URL.")
-                }
+        try {
+            hubConnection = HubConnectionBuilder
+                .create("${guard.hostname.trim()}/$ONION_ROUTING_ENDPOINT")
+                .build()
 
-                start(true)
-            }
+            configureConnection(hubConnection)
         }
+        catch (ex: Exception) {
+            updateStatus(SignalRStatus.Error::class.java,
+                "Could not create connection or invalid URL.")
+        }
+
+        start(true)
     }
 
     private var _status: MutableLiveData<SignalRStatus> =
@@ -122,7 +121,6 @@ class SignalRClient @Inject constructor(
     private fun authenticate(): Boolean {
 
         updateStatus(SignalRStatus.Authenticating::class.java)
-
         hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).subscribe { token: String? ->
 
             if(token != null) {

@@ -14,6 +14,7 @@ class Constants {
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
+        const val GRAPH_PATHS_TABLE = "GraphPaths"
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 

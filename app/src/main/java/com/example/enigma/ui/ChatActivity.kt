@@ -79,20 +79,17 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun checkPaths() {
-        chatViewModel.pathsExists?.observe(this) { pathsExists ->
-            if (!pathsExists) chatViewModel.contact?.observe(this) { contact ->
+        chatViewModel.pathsExists.observe(this) { pathsExists ->
+            if (!pathsExists) chatViewModel.contact.observe(this) { contact ->
                 if (contact != null) {
-                    chatViewModel.loadGraph()
-                    chatViewModel.graphLoaded.observe(this) { loaded ->
-                        if (loaded) chatViewModel.calculatePath()
-                    }
+                    chatViewModel.calculatePath()
                 }
             }
         }
     }
 
     private fun readConversationFromDatabase() {
-        chatViewModel.conversation?.observe(this) {
+        chatViewModel.conversation.observe(this) {
             chatAdapter.setData(it)
             chatViewModel.markConversationAsRead()
         }
