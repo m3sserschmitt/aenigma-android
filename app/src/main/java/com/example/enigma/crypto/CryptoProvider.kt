@@ -116,5 +116,16 @@ class CryptoProvider {
 
             return if (data != null) String(Base64.encode(data, Base64.DEFAULT)) else null
         }
+
+        @JvmStatic
+        fun parseOnion(handle: CryptoContextHandle, ciphertext: String): ByteArray? {
+            if (handle !is CryptoContextHandle.DecryptionContextHandle) {
+                throwError(CryptoContextHandle.SignatureVerificationContextHandle::class.qualifiedName)
+            }
+
+            val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT) ?: return null
+
+            return unsealOnion(handle.handle, decodedMessage)
+        }
     }
 }

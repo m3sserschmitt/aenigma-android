@@ -1,9 +1,9 @@
 package com.example.enigma.crypto
 
 import android.content.Context
-import android.util.Base64
 import com.example.enigma.models.Message
-import com.example.enigma.onion.OnionParser
+import com.example.enigma.util.Constants
+import com.example.enigma.util.HexConverter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -11,21 +11,28 @@ import javax.inject.Singleton
 @Singleton
 class OnionParsingService @Inject constructor(@ApplicationContext context: Context) {
 
-    private val parser: OnionParser?
+    private val cryptoContextHandle: CryptoContextHandle?
 
     init {
         val key = KeysManager.readPrivateKey(context)
-        parser = if(key != null) {
-            val cryptoContext = CryptoContext.Factory.createDecryptionContext(key, "")
-            OnionParser(cryptoContext)
+        cryptoContextHandle = if(key != null) {
+            CryptoContext.Factory.createDecryptionContext(key, "")
         }else {
             null
         }
     }
 
+    val isReady: Boolean get() = cryptoContextHandle != null
+
     fun parse(ciphertext: String): Message?
     {
-        val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT)
-        return parser?.parse(decodedMessage)
+        if(cryptoContextHandle == null) return null
+
+        val decryptedData = CryptoProvider.parseOnion(cryptoContextHandle, ciphertext) ?: return null
+
+        val address = HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE))
+        val content = String(decryptedData.sliceArray(Constants.ADDRESS_SIZE until decryptedData.size))
+
+        return Message(address, content, true)
     }
 }
