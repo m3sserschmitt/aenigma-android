@@ -38,7 +38,7 @@ class IncomingMessageSaver @Inject constructor(
                 AddressHelper.getHexAddressFromPublicKey(item.publicKey),
                 "",
                 item.publicKey,
-                item.guardAddress,
+                item.guardHostname,
                 false)
         }
 

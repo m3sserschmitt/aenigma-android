@@ -5,6 +5,7 @@ import androidx.lifecycle.*
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.routing.PathFinder
 import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,8 +18,9 @@ class ChatViewModel @Inject constructor(
     private val repository: Repository,
     private val savedStateHandle: SavedStateHandle,
     private val pathFinder: PathFinder,
-    application: Application
-) : AndroidViewModel(application){
+    application: Application,
+    signalRClient: SignalRClient
+) : BaseViewModel(application, signalRClient){
 
     val chatId: String
 
@@ -48,15 +50,14 @@ class ChatViewModel @Inject constructor(
     fun calculatePath()
     {
         viewModelScope.launch(Dispatchers.IO) {
-            if(contact.value != null)
-            {
-                if(pathFinder.load())
+            repository.local.getContact(chatId).collect { contact ->
+                if(contact != null && pathFinder.load())
                 {
-                    val pathCalculationResult = pathFinder.calculatePaths(contact.value!!)
+                    val pathCalculationResult = pathFinder.calculatePaths(contact)
                     errorCalculatingPath.postValue(pathCalculationResult)
+                } else {
+                    errorCalculatingPath.postValue(false)
                 }
-            } else {
-                errorCalculatingPath.postValue(false)
             }
         }
     }

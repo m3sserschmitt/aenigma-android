@@ -44,7 +44,7 @@ class PathFinder @Inject constructor(private val repository: Repository) {
     suspend fun calculatePaths(destination: ContactEntity): Boolean
     {
         val s = _vertices.find { item -> item.address == _guardAddress } ?: return false
-        val d = _vertices.find { item -> item.address == destination.guardAddress } ?: return false
+        val d = _vertices.find { item -> item.hostname == destination.guardHostname } ?: return false
 
         val algorithm = AllDirectedPaths(graph)
         val paths = algorithm.getAllPaths(s, d, true, 6)

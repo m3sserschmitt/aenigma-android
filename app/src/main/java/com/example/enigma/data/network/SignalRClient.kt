@@ -1,10 +1,8 @@
 package com.example.enigma.data.network
 
-import android.annotation.SuppressLint
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.IncomingMessageSaver
-import com.example.enigma.data.Repository
 import com.example.enigma.models.AuthenticationRequest
 import com.google.gson.internal.LinkedTreeMap
 import com.microsoft.signalr.HubConnection
@@ -18,7 +16,6 @@ import javax.inject.Singleton
 
 @Singleton
 class SignalRClient @Inject constructor(
-    private val repository: Repository,
     private val signatureService: SignatureService,
     private val messageSaver: IncomingMessageSaver
 ) {
@@ -57,13 +54,11 @@ class SignalRClient @Inject constructor(
         }, List::class.java)
     }
 
-    suspend fun createConnection()
+    fun createConnection(hostname: String)
     {
-        val guard = repository.local.getGuard() ?: return
-
         try {
             hubConnection = HubConnectionBuilder
-                .create("${guard.hostname.trim()}/$ONION_ROUTING_ENDPOINT")
+                .create("${hostname.trim()}/$ONION_ROUTING_ENDPOINT")
                 .build()
 
             configureConnection(hubConnection)
@@ -117,12 +112,10 @@ class SignalRClient @Inject constructor(
         return false
     }
 
-    @SuppressLint("CheckResult")
     private fun authenticate(): Boolean {
 
         updateStatus(SignalRStatus.Authenticating::class.java)
-        hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).subscribe { token: String? ->
-
+        hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).blockingSubscribe { token ->
             if(token != null) {
                 val signature = signatureService.sign(token)
 
@@ -136,7 +129,7 @@ class SignalRClient @Inject constructor(
                             syncMessagesOnSuccess = true,
                             updateNetworkGraph = false
                         )
-                    ).subscribe { authenticated ->
+                    ).blockingSubscribe { authenticated ->
                         if (authenticated) {
                             updateStatus(SignalRStatus.Authenticated::class.java)
                         } else {
@@ -158,8 +151,7 @@ class SignalRClient @Inject constructor(
     private fun start(authenticateOnSuccess: Boolean)
     {
         updateStatus(SignalRStatus.Connecting::class.java)
-
-        hubConnection.start().subscribe(object : CompletableObserver {
+        hubConnection.start().blockingSubscribe(object : CompletableObserver {
             override fun onSubscribe(d: Disposable) { }
 
             override fun onComplete() {
@@ -184,7 +176,12 @@ class SignalRClient @Inject constructor(
             return false
         }
 
-        hubConnection.invoke(ROUTE_MESSAGE_METHOD, message)
+        try {
+            hubConnection.invoke(ROUTE_MESSAGE_METHOD, message).blockingAwait()
+        } catch (ex: Exception)
+        {
+            return false
+        }
 
         return true
     }

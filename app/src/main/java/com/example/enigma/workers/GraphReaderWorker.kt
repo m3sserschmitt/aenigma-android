@@ -7,7 +7,12 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.hilt.work.HiltWorker
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.EdgeEntity
@@ -30,6 +35,20 @@ class GraphReaderWorker @AssistedInject constructor(
     companion object {
         const val GRAPH_DATASTORE_PREFERENCES = "Graph"
         const val GRAPH_DATASTORE_VERSION_KEY = "Version"
+
+        @JvmStatic
+        fun startOneTimeWorkRequest(context: Context)
+        {
+            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            val workRequest = OneTimeWorkRequestBuilder<GraphReaderWorker>()
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .setConstraints(constraints)
+                .build()
+
+            WorkManager.getInstance(context).enqueue(workRequest)
+        }
     }
 
     private val Context.graphVersionDataStore: DataStore<Preferences> by preferencesDataStore(
@@ -68,9 +87,6 @@ class GraphReaderWorker @AssistedInject constructor(
             )
         )
 
-        repository.local.removeVertices()
-        repository.local.removeEdges()
-
         val vertices = graph.map { vertex ->
             VertexEntity(vertex.neighborhood.address, vertex.publicKey, vertex.neighborhood.hostname)
         }
@@ -84,7 +100,14 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun requestGraph()
+    private suspend fun clearDatabase()
+    {
+        repository.local.removeVertices()
+        repository.local.removeEdges()
+        repository.local.removeGraphPaths()
+    }
+
+    private suspend fun requestNewGraph()
     {
         val response = repository.remote.getNetworkGraph()
         val graph = response.body()
@@ -106,7 +129,8 @@ class GraphReaderWorker @AssistedInject constructor(
             if(serverInfoResponse.code() == 200
                 && serverInfo.graphVersion != graphVersion)
             {
-                requestGraph()
+                clearDatabase()
+                requestNewGraph()
             }
 
             saveGraphVersionIntoDataStore(serverInfo.graphVersion)

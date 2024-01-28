@@ -1,10 +1,10 @@
 package com.example.enigma.ui
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.EditText
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,17 +16,21 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import com.example.enigma.R
 import com.example.enigma.adapters.ChatAdapter
+import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
+import com.example.enigma.viewmodels.BaseViewModel
 import com.example.enigma.viewmodels.ChatViewModel
 import com.example.enigma.workers.MessageSenderWorker
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class ChatActivity : AppCompatActivity() {
-
+class ChatActivity : BaseActivity() {
     private lateinit var chatViewModel: ChatViewModel
 
     private val chatAdapter by lazy { ChatAdapter() }
+
+    override val viewModel: BaseViewModel
+        get() = chatViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,10 +41,11 @@ class ChatActivity : AppCompatActivity() {
         savedInstanceState?.putString(SELECTED_CHAT_ID, intent.getStringExtra(SELECTED_CHAT_ID))
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        observeConnection()
         setupRecyclerView()
         setupSendButton()
-        readConversationFromDatabase()
-        checkPaths()
+        observeConversation()
+        observePaths()
     }
 
     override fun onContextItemSelected(item: MenuItem): Boolean {
@@ -78,21 +83,22 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkPaths() {
-        chatViewModel.pathsExists.observe(this) { pathsExists ->
-            if (!pathsExists) chatViewModel.contact.observe(this) { contact ->
-                if (contact != null) {
-                    chatViewModel.calculatePath()
-                }
-            }
-        }
+    private val pathsAvailableObserver = Observer<Boolean> { pathExists ->
+        if (!pathExists) chatViewModel.calculatePath()
     }
 
-    private fun readConversationFromDatabase() {
-        chatViewModel.conversation.observe(this) {
-            chatAdapter.setData(it)
-            chatViewModel.markConversationAsRead()
-        }
+    private val conversationObserver = Observer<List<MessageEntity>> { conversation ->
+        chatAdapter.setData(conversation)
+        chatViewModel.markConversationAsRead()
+    }
+
+    private fun observePaths()
+    {
+        chatViewModel.pathsExists.observe(this, pathsAvailableObserver)
+    }
+
+    private fun observeConversation() {
+        chatViewModel.conversation.observe(this, conversationObserver)
     }
 
     private fun scheduleMessageSending(message: String)

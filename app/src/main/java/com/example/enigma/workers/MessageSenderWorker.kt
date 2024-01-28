@@ -38,10 +38,12 @@ class MessageSenderWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
 
+        val guard = repository.local.getGuard() ?: return Result.failure()
+
         var count = 0
         while(!signalRClient.isConnected() && count < MAX_RETRIES)
         {
-            if(count < 1) signalRClient.createConnection()
+            if(count < 1) signalRClient.createConnection(guard.hostname)
             count ++
             delay(DELAY_TIME)
         }
@@ -69,7 +71,7 @@ class MessageSenderWorker @AssistedInject constructor(
             json.toJson(MessageExtended(
                 data,
                 localPublicKey,
-                AddressHelper.getHexAddressFromPublicKey(path.last()))
+                guard.hostname)
             ) else
             json.toJson(MessageBase(data))
 
