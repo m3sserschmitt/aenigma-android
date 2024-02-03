@@ -39,10 +39,14 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
     ): View {
         _binding = FragmentAddContactsBinding.inflate(inflater, container, false)
 
-        setScannerProperties()
-        setupSwitchButtons()
+        setupBinding()
 
         return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        setScannerProperties()
+        setupSwitchButtons()
     }
 
     private fun setupSwitchButtons()
@@ -57,16 +61,19 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
         }
     }
 
+    private fun setupBinding()
+    {
+        binding.viewModel = mainViewModel
+        binding.lifecycleOwner = this
+    }
+
     private fun switchToCode()
     {
-        mainViewModel.qrCode.observe(requireActivity()) {
-            binding.qrCodeImageView.setImageBitmap(it)
-            binding.qrCodeScanner.stopCamera()
-            binding.qrCodeSwitchButton.text = "Scan"
-            binding.qrCodeScanner.visibility = View.INVISIBLE
-            binding.qrCodeImageView.visibility = View.VISIBLE
-            binding.qrScannerTextView.text = "Share the code to connect"
-        }
+        binding.qrCodeScanner.stopCamera()
+        binding.qrCodeSwitchButton.text = "Scan"
+        binding.qrCodeScanner.visibility = View.INVISIBLE
+        binding.qrCodeImageView.visibility = View.VISIBLE
+        binding.qrScannerTextView.text = "Share the code to connect"
     }
 
     private fun switchToCamera()
@@ -137,7 +144,7 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
                 val guardAddress = jsonObject.getString("guardAddress")
 
                 val destination = AddContactsFragmentDirections
-                    .actionAddContactsFragmentToSaveContactBottomSheet(publicKey, guardAddress)
+                    .actionAddContactsFragmentToSaveContactBottomSheet(publicKey, guardAddress, true)
 
                 findNavController().navigate(destination)
             } catch (ex: JSONException)

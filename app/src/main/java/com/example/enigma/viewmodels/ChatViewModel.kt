@@ -7,7 +7,6 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.routing.PathFinder
-import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -16,32 +15,35 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val repository: Repository,
-    private val savedStateHandle: SavedStateHandle,
     private val pathFinder: PathFinder,
     application: Application,
     signalRClient: SignalRClient
 ) : BaseViewModel(application, signalRClient){
 
-    val chatId: String
+    private var chatId: String? = null
 
-    init {
-        val selectedChatId = savedStateHandle.get<String>(SELECTED_CHAT_ID)
-        chatId = selectedChatId ?: "not-found"
-    }
+    lateinit var contact: LiveData<ContactEntity?>
 
-    val contact: LiveData<ContactEntity?> = repository.local.getContact(chatId).asLiveData()
+    lateinit var conversation: LiveData<List<MessageEntity>>
 
-    val conversation: LiveData<List<MessageEntity>> = repository.local.getConversation(chatId).asLiveData()
-
-    val pathsExists: LiveData<Boolean> = repository.local.graphPathExists(chatId).asLiveData()
+    lateinit var pathsExists: LiveData<Boolean>
 
     val errorCalculatingPath: MutableLiveData<Boolean> = MutableLiveData(false)
+
+    var test: LiveData<String> = MutableLiveData("Test")
+
+    fun load(contactId: String)
+    {
+        chatId = contactId
+        contact = repository.local.getContact(contactId).asLiveData()
+        conversation = repository.local.getConversation(contactId).asLiveData()
+        pathsExists = repository.local.graphPathExists(contactId).asLiveData()
+    }
 
     fun markConversationAsRead()
     {
         viewModelScope.launch(Dispatchers.IO) {
-            savedStateHandle.get<String>(SELECTED_CHAT_ID)
-                ?.let {
+            chatId?.let {
                     repository.local.markConversationAsRead(it)
                 }
         }
@@ -50,13 +52,14 @@ class ChatViewModel @Inject constructor(
     fun calculatePath()
     {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.local.getContact(chatId).collect { contact ->
-                if(contact != null && pathFinder.load())
-                {
-                    val pathCalculationResult = pathFinder.calculatePaths(contact)
-                    errorCalculatingPath.postValue(pathCalculationResult)
-                } else {
-                    errorCalculatingPath.postValue(false)
+            chatId?.let { id ->
+                repository.local.getContact(id).collect { contact ->
+                    if(contact != null && pathFinder.load()) {
+                        val pathCalculationResult = pathFinder.calculatePaths(contact)
+                        errorCalculatingPath.postValue(pathCalculationResult)
+                    } else {
+                        errorCalculatingPath.postValue(false)
+                    }
                 }
             }
         }

@@ -3,13 +3,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav"
-    app:startDestination="@id/chatsFragment">
+    app:startDestination="@id/contactsFragment">
 
     <fragment
-        android:id="@+id/chatsFragment"
-        android:name="com.example.enigma.ui.fragments.chats.ChatsFragment"
-        android:label="fragment_chats"
-        tools:layout="@layout/fragment_chats" />
+        android:id="@+id/contactsFragment"
+        android:name="com.example.enigma.ui.fragments.contacts.ContactsFragment"
+        android:label="contactsFragment"
+        tools:layout="@layout/fragment_contacts" >
+        <action
+            android:id="@+id/action_contactsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+        <action
+            android:id="@+id/action_contactsFragment_to_addContactsFragment"
+            app:destination="@id/addContactsFragment" />
+    </fragment>
     <fragment
         android:id="@+id/addContactsFragment"
         android:name="com.example.enigma.ui.fragments.addcontacts.AddContactsFragment"
@@ -18,11 +25,14 @@
         <action
             android:id="@+id/action_addContactsFragment_to_saveContactBottomSheet"
             app:destination="@id/saveContactBottomSheet" />
+        <action
+            android:id="@+id/action_addContactsFragment_to_contactsFragment"
+            app:destination="@id/contactsFragment" />
     </fragment>
     <dialog
         android:id="@+id/saveContactBottomSheet"
         android:name="com.example.enigma.ui.fragments.addcontacts.SaveContactBottomSheet"
-        android:label="fragment_save_contact"
+        android:label="saveContactBottomSheet"
         tools:layout="@layout/save_contact_bottom_sheet" >
         <argument
             android:name="publicKey"
@@ -30,8 +40,20 @@
         <argument
             android:name="guardAddress"
             app:argType="string" />
-        <action
-            android:id="@+id/action_saveContactBottomSheet_to_chatsFragment"
-            app:destination="@id/chatsFragment" />
+        <argument
+            android:name="createNew"
+            app:argType="boolean"/>
     </dialog>
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="com.example.enigma.ui.fragments.ChatFragment"
+        android:label="chatFragment"
+        tools:layout="@layout/fragment_chat" >
+        <argument
+            android:name="chatId"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_chatFragment_to_saveContactBottomSheet"
+            app:destination="@id/saveContactBottomSheet" />
+    </fragment>
 </navigation>

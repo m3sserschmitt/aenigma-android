@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools">
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <data>
         <variable
@@ -33,7 +32,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
             android:layout_marginBottom="8dp"
-            android:text="@{contact.name}"
+            contactNameAdapter="@{contact}"
             android:textSize="25sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/newMessageIcon"
@@ -43,11 +42,11 @@
 
         <ImageView
             android:id="@+id/newMessageIcon"
-            setNewMessageReceived="@{contact.hasNewMessage}"
+            messageNotReadBinding="@{contact}"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
-            android:contentDescription="has_new"
+            android:contentDescription="@string/unread_messages_from_this_contact"
             app:layout_constraintBottom_toBottomOf="@+id/contactNameTextView"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="@+id/contactNameTextView"

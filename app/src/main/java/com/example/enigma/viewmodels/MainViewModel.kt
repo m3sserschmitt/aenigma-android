@@ -55,8 +55,15 @@ class MainViewModel @Inject constructor(
 
     val qrCode: LiveData<Bitmap?> = generateQrCodeBitmap().asLiveData()
 
-    fun insertContact(contact: ContactEntity) =
+    fun insertContact(contact: ContactEntity) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.local.insertContact(contact)
         }
+    }
+
+    fun updateContact(contact: ContactEntity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.updateContact(contact)
+        }
+    }
 }

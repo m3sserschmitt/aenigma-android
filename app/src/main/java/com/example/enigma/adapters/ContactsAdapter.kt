@@ -1,32 +1,29 @@
 package com.example.enigma.adapters
 
-import android.content.Context
-import android.content.Intent
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.navigation.NavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.enigma.data.database.ContactEntity
-import com.example.enigma.databinding.ChatsItemBinding
-import com.example.enigma.ui.ChatActivity
-import com.example.enigma.util.Constants.Companion.SELECTED_CHAT_ID
+import com.example.enigma.databinding.ContactItemBinding
+import com.example.enigma.ui.fragments.contacts.ContactsFragmentDirections
 import com.example.enigma.util.ContactsDiffUtil
 
-class ChatsAdapter constructor(private val context: Context)
-    : RecyclerView.Adapter<ChatsAdapter.ChatsViewHolder>() {
+class ContactsAdapter constructor(private val navController: NavController)
+    : RecyclerView.Adapter<ContactsAdapter.ChatsViewHolder>() {
 
     private var contacts = emptyList<ContactEntity>()
 
-    class ChatsViewHolder(private val binding: ChatsItemBinding,
-                          private val context: Context)
+    class ChatsViewHolder(private val binding: ContactItemBinding,
+                          private val navController: NavController)
         :RecyclerView.ViewHolder(binding.root)
     {
         fun bind(contact: ContactEntity){
 
             binding.root.setOnClickListener{
-                val intent = Intent(context, ChatActivity::class.java)
-                intent.putExtra(SELECTED_CHAT_ID, binding.contact!!.address)
-                context.startActivity(intent)
+                val navigation = ContactsFragmentDirections.actionContactsFragmentToChatFragment(contact.address)
+                navController.navigate(navigation)
             }
 
             binding.contact = contact
@@ -34,17 +31,17 @@ class ChatsAdapter constructor(private val context: Context)
         }
 
         companion object {
-            fun from(parent: ViewGroup, context: Context): ChatsViewHolder {
+            fun from(parent: ViewGroup, navController: NavController): ChatsViewHolder {
                 val layoutInflater = LayoutInflater.from(parent.context)
-                val binding = ChatsItemBinding.inflate(layoutInflater, parent, false)
+                val binding = ContactItemBinding.inflate(layoutInflater, parent, false)
 
-                return ChatsViewHolder(binding, context)
+                return ChatsViewHolder(binding, navController)
             }
         }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatsViewHolder {
-        return ChatsViewHolder.from(parent, context)
+        return ChatsViewHolder.from(parent, navController)
     }
 
     override fun onBindViewHolder(holder: ChatsViewHolder, position: Int) {

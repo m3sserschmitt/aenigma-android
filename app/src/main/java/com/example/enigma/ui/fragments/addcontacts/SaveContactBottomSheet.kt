@@ -5,8 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.findNavController
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.navArgs
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.databinding.SaveContactBottomSheetBinding
@@ -21,11 +20,11 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class SaveContactBottomSheet : BottomSheetDialogFragment() {
 
-    private var _binding: SaveContactBottomSheetBinding? = null
+    private lateinit var _binding: SaveContactBottomSheetBinding
 
-    private val binding get() = _binding!!
+    private val binding get() = _binding
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel: MainViewModel by activityViewModels()
 
     private val args: SaveContactBottomSheetArgs by navArgs()
 
@@ -35,20 +34,17 @@ class SaveContactBottomSheet : BottomSheetDialogFragment() {
     ): View {
 
         _binding = SaveContactBottomSheetBinding.inflate(inflater, container, false)
-        viewModel = ViewModelProvider(requireActivity())[MainViewModel::class.java]
-
-        setFormInfo()
-        setupSaveButton()
 
         return binding.root
     }
 
-    private fun setFormInfo()
-    {
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        setFormInfo()
+        setupSaveButton()
+    }
+
+    private fun setFormInfo() {
         binding.contactNameEditText.requestFocus()
-        binding.guardAddressEditText.setText(args.guardAddress)
-        binding.contactAddressEditText
-            .setText(AddressHelper.getHexAddressFromPublicKey(args.publicKey))
     }
 
     private fun setupSaveButton()
@@ -68,12 +64,16 @@ class SaveContactBottomSheet : BottomSheetDialogFragment() {
                     false)
 
                 CoroutineScope(Dispatchers.IO).launch {
-                    viewModel.insertContact(contact)
+                    if(args.createNew) {
+                        viewModel.insertContact(contact)
+                    }
+                    else
+                    {
+                        viewModel.updateContact(contact)
+                    }
                 }
 
-                val destination = SaveContactBottomSheetDirections
-                    .actionSaveContactBottomSheetToChatsFragment()
-                findNavController().navigate(destination)
+                dismissNow()
             }
             else
             {

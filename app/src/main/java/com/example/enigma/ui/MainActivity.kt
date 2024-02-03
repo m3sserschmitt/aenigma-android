@@ -1,13 +1,10 @@
 package com.example.enigma.ui
 
 import android.os.Bundle
-import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.findNavController
-import androidx.navigation.ui.setupWithNavController
-import com.example.enigma.R
+import androidx.activity.viewModels
+import com.example.enigma.databinding.ActivityMainBinding
 import com.example.enigma.viewmodels.BaseViewModel
 import com.example.enigma.viewmodels.MainViewModel
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -17,24 +14,21 @@ class MainActivity : BaseActivity() {
         System.loadLibrary("cryptography-wrapper")
     }
 
-    private lateinit var mainViewModel: MainViewModel
+    private lateinit var _binding: ActivityMainBinding
+
+    private val binding get() = _binding
+
+    private val mainViewModel: MainViewModel by viewModels()
 
     override val viewModel: BaseViewModel get() = mainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        mainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
+        _binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(_binding.root)
 
+        supportActionBar?.hide()
         observeConnection()
-        setupNavigation()
-    }
-
-    private fun setupNavigation()
-    {
-        val navController = this.findNavController(R.id.navHostFragment)
-        val navView: BottomNavigationView = findViewById(R.id.bottomNavigationView)
-        navView.setupWithNavController(navController)
     }
 }

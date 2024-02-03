@@ -38,6 +38,11 @@ class LocalDataSource @Inject constructor(
         contactsDao.insert(contactEntity)
     }
 
+    suspend fun updateContact(contactEntity: ContactEntity)
+    {
+        contactsDao.update(contactEntity)
+    }
+
     suspend fun insertContacts(contacts: List<ContactEntity>): List<Long>
     {
         return contactsDao.insert(contacts)

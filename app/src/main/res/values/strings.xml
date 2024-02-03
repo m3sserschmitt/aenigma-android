@@ -3,4 +3,10 @@
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="chats">Chats</string>
     <string name="add_contacts">Add Contacts</string>
+    <string name="navigate_to_add_contact_screen">Navigate to add contact screen</string>
+    <string name="save">Save</string>
+    <string name="name">Name:</string>
+    <string name="contact_name">Contact name</string>
+    <string name="send">Send</string>
+    <string name="unread_messages_from_this_contact">Unread messages from this contact</string>
 </resources>
