@@ -47,6 +47,7 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         setScannerProperties()
         setupSwitchButtons()
+        setupExitButton()
     }
 
     private fun setupSwitchButtons()
@@ -58,6 +59,13 @@ class AddContactsFragment : Fragment(), ZXingScannerView.ResultHandler {
             } else {
                 switchToCamera()
             }
+        }
+    }
+
+    private fun setupExitButton()
+    {
+        binding.exitButton.setOnClickListener {
+            findNavController().navigateUp()
         }
     }
 

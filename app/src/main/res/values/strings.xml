@@ -9,4 +9,6 @@
     <string name="contact_name">Contact name</string>
     <string name="send">Send</string>
     <string name="unread_messages_from_this_contact">Unread messages from this contact</string>
+    <string name="exit">Exit</string>
+    <string name="qr_code">Qr Code</string>
 </resources>

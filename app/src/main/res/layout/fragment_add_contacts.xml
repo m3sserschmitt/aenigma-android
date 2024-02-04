@@ -36,7 +36,8 @@
             android:src="@drawable/ic_qr_code"
             android:visibility="invisible"
             android:layout_centerHorizontal="true"
-            qrCodeBinding="@{viewModel.qrCode}"/>
+            qrCodeBinding="@{viewModel.qrCode}"
+            android:contentDescription="@string/qr_code" />
 
         <TextView
             android:id="@+id/qrScannerTextView"
@@ -48,6 +49,24 @@
             android:textSize="25sp"
             android:layout_centerHorizontal="true"
             android:layout_alignParentTop="true" />
+
+        <FrameLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:padding="4dp"
+            android:layout_margin="8dp"
+            android:background="@drawable/round_transparent_shape">
+
+            <ImageButton
+                android:id="@+id/exitButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_close"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/exit" />
+        </FrameLayout>
 
     </RelativeLayout>
 </layout>
