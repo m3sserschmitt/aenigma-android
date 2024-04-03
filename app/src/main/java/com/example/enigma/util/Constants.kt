@@ -6,6 +6,10 @@ class Constants {
         const val ADDRESS_SIZE = 32 // bytes
         const val KEY_SIZE = 2048 // bits !!
 
+        // DataStore Preferences
+        const val DATA_STORE_PREFERENCE_NAME = "enigma-preferences"
+        const val GRAPH_VERSION_PREFERENCES_KEY = "graph-version"
+
         // Room Database
         const val DATABASE_NAME = "enigma-database"
         const val CONTACTS_TABLE = "Contacts"
@@ -15,6 +19,14 @@ class Constants {
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
         const val GRAPH_PATHS_TABLE = "GraphPaths"
+
+        // Screens
+        const val CONTACTS_SCREEN = "contacts"
+        const val CHAT_SCREEN = "chat/{chatId}"
+        const val ADD_CONTACT_SCREEN = "addContact"
+
+        // Screens Arguments
+        const val CHAT_ARGUMENT_KEY = "chatId"
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 

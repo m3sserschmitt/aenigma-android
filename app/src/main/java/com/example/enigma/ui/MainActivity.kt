@@ -1,34 +1,83 @@
 package com.example.enigma.ui
 
 import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.example.enigma.databinding.ActivityMainBinding
-import com.example.enigma.viewmodels.BaseViewModel
+import androidx.lifecycle.Observer
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
+import com.example.enigma.crypto.KeysManager
+import com.example.enigma.data.network.SignalRStatus
+import com.example.enigma.ui.navigation.SetupNavigation
+import com.example.enigma.ui.themes.ApplicationComposeTheme
 import com.example.enigma.viewmodels.MainViewModel
+import com.example.enigma.workers.GraphReaderWorker
+import com.example.enigma.workers.SignalRClientWorker
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : BaseActivity() {
+class MainActivity : ComponentActivity() {
 
     init {
         System.loadLibrary("cryptography-wrapper")
     }
 
-    private lateinit var _binding: ActivityMainBinding
-
-    private val binding get() = _binding
+    private lateinit var navController: NavHostController
 
     private val mainViewModel: MainViewModel by viewModels()
-
-    override val viewModel: BaseViewModel get() = mainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        _binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(_binding.root)
+        setContent {
+            ApplicationComposeTheme {
+                navController = rememberNavController()
+                SetupNavigation(
+                    navHostController = navController,
+                    mainViewModel = mainViewModel
+                )
+            }
+        }
 
-        supportActionBar?.hide()
-        observeConnection()
+        KeysManager.generateKeyIfNotExistent(this)
+        SignalRClientWorker.startPeriodicSync(this)
+
+        observeGuardAvailability()
+        observerClientConnectivity()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        observerClientConnectivity()
+    }
+
+    private val guardAvailabilityObserver = Observer<Boolean> { guardAvailable ->
+        when(guardAvailable) {
+            true -> {
+                SignalRClientWorker.startConnection(this)
+            }
+            else -> {
+                GraphReaderWorker.startOneTimeWorkRequest(this)
+            }
+        }
+    }
+
+    private val signalRStatusObserver = Observer<SignalRStatus> { client ->
+        when(client) {
+            is SignalRStatus.Disconnected,
+            is SignalRStatus.Error,
+            is SignalRStatus.NotConnected -> SignalRClientWorker.startConnection(this)
+        }
+    }
+
+    private fun observeGuardAvailability()
+    {
+        mainViewModel.guardAvailable.observe(this, guardAvailabilityObserver)
+    }
+
+    private fun observerClientConnectivity()
+    {
+        mainViewModel.signalRClientStatus.observe(this, signalRStatusObserver)
     }
 }

@@ -11,4 +11,24 @@
     <string name="unread_messages_from_this_contact">Unread messages from this contact</string>
     <string name="exit">Exit</string>
     <string name="qr_code">Qr Code</string>
+    <string name="contacts_floating_button_content_description">Add Contact Button</string>
+    <string name="search_contacts">"Search Contacts"</string>
+    <string name="contacts">Contacts</string>
+    <string name="search">Search</string>
+    <string name="close">Close</string>
+    <string name="contact">Contact</string>
+    <string name="no_contacts_found">No contacts found</string>
+    <string name="back">Back</string>
+    <string name="contact_qr_code">Contact QR Code</string>
+    <string name="qr_code_caption">Scan the code from other device to connect</string>
+    <string name="scan">Scan</string>
+    <string name="code">Code</string>
+    <string name="qr_code_scanned_successfully">QR Code scanned successfully</string>
+    <string name="save_contact_message">Would you like to save the contact?</string>
+    <string name="new_contact_name">New contact name</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="confirm">Confirm</string>
+    <string name="qr_code_not_available">Could not generate the QR code</string>
+    <string name="new_contact_available">This contact is new in your list</string>
+    <string name="give_name_to_contact">You have to give it a name</string>
 </resources>

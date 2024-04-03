@@ -33,13 +33,18 @@ class IncomingMessageSaver @Inject constructor(
 
     private suspend fun createContacts(contactsInfo: List<MessageExtended>): List<Long>
     {
-        val contacts = contactsInfo.map { item ->
-            ContactEntity(
-                AddressHelper.getHexAddressFromPublicKey(item.publicKey),
-                "",
-                item.publicKey,
-                item.guardHostname,
-                false)
+        val contacts = contactsInfo.mapNotNull { item ->
+            try {
+                ContactEntity(
+                    AddressHelper.getHexAddressFromPublicKey(item.publicKey),
+                    "",
+                    item.publicKey,
+                    item.guardHostname,
+                    false
+                )
+            } catch (_: Exception) {
+                null
+            }
         }
 
         return repository.local.insertContacts(contacts)
