@@ -33,6 +33,11 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get(address)
     }
 
+    suspend fun insertOrUpdateContact(contactEntity: ContactEntity)
+    {
+        contactsDao.insertOrUpdate(contactEntity)
+    }
+
     suspend fun insertContact(contactEntity: ContactEntity)
     {
         contactsDao.insert(contactEntity)
@@ -41,6 +46,11 @@ class LocalDataSource @Inject constructor(
     suspend fun updateContact(contactEntity: ContactEntity)
     {
         contactsDao.update(contactEntity)
+    }
+
+    suspend fun insertOrUpdateContacts(contacts: List<ContactEntity>): List<Long>
+    {
+        return contactsDao.insertOrUpdate(contacts)
     }
 
     suspend fun insertContacts(contacts: List<ContactEntity>): List<Long>

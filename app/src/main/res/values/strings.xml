@@ -31,4 +31,5 @@
     <string name="qr_code_not_available">Could not generate the QR code</string>
     <string name="new_contact_available">This contact is new in your list</string>
     <string name="give_name_to_contact">You have to give it a name</string>
+    <string name="no_message_available">No message available</string>
 </resources>

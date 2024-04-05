@@ -50,7 +50,7 @@ class ChatViewModel @Inject constructor(
 
     val pathsExist: MutableStateFlow<DatabaseRequestState<Boolean>> = _pathsExist
 
-    val inputTextState: MutableState<String> = mutableStateOf("")
+    val messageInputText: MutableState<String> = mutableStateOf("")
 
     fun loadContact(chatId: String) {
         viewModelScope.launch {
@@ -119,7 +119,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage() {
-        if (!signalRClient.isConnected()) {
+        if (!signalRClient.isConnected() || messageInputText.value.isEmpty()) {
             return
         }
 
@@ -129,7 +129,7 @@ class ChatViewModel @Inject constructor(
             }
 
             if (saveMessageToDatabase()) {
-                inputTextState.value = ""
+                messageInputText.value = ""
             }
         }
     }
@@ -147,7 +147,7 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun saveMessageToDatabase(): Boolean {
         val contact = getSelectedContactEntity() ?: return false
-        val message = MessageEntity(contact.address, inputTextState.value, false, Date())
+        val message = MessageEntity(contact.address, messageInputText.value, false, Date())
 
         repository.local.insertMessage(message)
 
@@ -204,11 +204,11 @@ class ChatViewModel @Inject constructor(
         val json = Gson()
         val message = if (publicKeyRequiredIntoOnion()) json.toJson(
             MessageExtended(
-                inputTextState.value,
+                messageInputText.value,
                 if (addressProvider.publicKey != null) addressProvider.publicKey!! else "",
                 guard.hostname
             )
-        ) else json.toJson(MessageBase(inputTextState.value))
+        ) else json.toJson(MessageBase(messageInputText.value))
 
         return CryptoProvider.buildOnion(message.toByteArray(), path.toTypedArray(), addresses)
     }

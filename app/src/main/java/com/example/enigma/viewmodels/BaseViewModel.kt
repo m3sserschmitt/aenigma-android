@@ -32,7 +32,7 @@ abstract class BaseViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val contact = createContactEntityForSaving() ?: return@launch
             resetNewContactDetails()
-            repository.local.insertContact(contact)
+            repository.local.insertOrUpdateContact(contact)
         }
     }
 }

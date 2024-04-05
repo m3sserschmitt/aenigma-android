@@ -7,12 +7,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import com.example.enigma.R
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.data.database.ContactEntity
-import com.example.enigma.ui.screens.common.EditContactDialog
+import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.ChatViewModel
+import java.util.Date
 
 @Composable
 fun ChatScreen(
@@ -20,7 +20,6 @@ fun ChatScreen(
     chatViewModel: ChatViewModel,
     chatId: String
 ) {
-
     LaunchedEffect(key1 = true)
     {
         chatViewModel.loadContact(chatId)
@@ -31,7 +30,14 @@ fun ChatScreen(
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.messages.collectAsState()
     val pathsExists by chatViewModel.pathsExist.collectAsState()
-    val inputTextState by chatViewModel.inputTextState
+    val messageInputText by chatViewModel.messageInputText
+    val newContactName by chatViewModel.newContactName
+
+    MarkConversationAsRead(
+        chatId = chatId,
+        messages = messages,
+        chatViewModel = chatViewModel
+    )
 
     CalculatePath(
         pathsExists = pathsExists,
@@ -39,14 +45,39 @@ fun ChatScreen(
         chatViewModel = chatViewModel
     )
 
-    LaunchedEffect(key1 = messages)
-    {
-        if(messages is DatabaseRequestState.Success)
-        {
-            chatViewModel.markConversationAsRead(chatId)
-        }
-    }
+    ChatScreen(
+        selectedContact = selectedContact,
+        messages = messages,
+        messageInputText = messageInputText,
+        newContactName = newContactName,
+        onInputTextChanged = {
+            newInputTextValue -> chatViewModel.messageInputText.value = newInputTextValue
+        },
+        onNewContactNameChanged = {
+            newContactNameValue -> chatViewModel.newContactName.value = newContactNameValue
+        },
+        onNewContactNameConfirmed = {
+            chatViewModel.saveNewContact()
+        },
+        onSendClicked = {
+            chatViewModel.sendMessage()
+        },
+        navigateToContactsScreen = navigateToContactsScreen
+    )
+}
 
+@Composable
+fun ChatScreen(
+    selectedContact: DatabaseRequestState<ContactEntity>,
+    messages: DatabaseRequestState<List<MessageEntity>>,
+    messageInputText: String,
+    newContactName: String,
+    onInputTextChanged: (String) -> Unit,
+    onNewContactNameChanged: (String) -> Unit,
+    onNewContactNameConfirmed: () -> Unit,
+    onSendClicked: () -> Unit,
+    navigateToContactsScreen: () -> Unit
+) {
     Scaffold (
         topBar = {
             ChatAppBar(
@@ -59,47 +90,30 @@ fun ChatScreen(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding()
                 ),
-                message = inputTextState,
-                messages = messages,
-                onSendPressed = {
-                    chatViewModel.sendMessage()
-                },
-                onInputMessageChanged = {
-                    newText -> chatViewModel.inputTextState.value = newText
-                }
-            )
-            RenameContactDialog(
                 contact = selectedContact,
-                chatViewModel = chatViewModel
+                messages = messages,
+                messageInputText = messageInputText,
+                newContactName = newContactName,
+                onInputTextChanged = onInputTextChanged,
+                onNewContactNameChanged = onNewContactNameChanged,
+                onNewNameConfirmClicked = onNewContactNameConfirmed,
+                onSendClicked = onSendClicked
             )
         }
     )
 }
 
 @Composable
-fun RenameContactDialog(
-    contact: DatabaseRequestState<ContactEntity>,
+fun MarkConversationAsRead(
+    chatId: String,
+    messages: DatabaseRequestState<List<MessageEntity>>,
     chatViewModel: ChatViewModel
 ) {
-    val contactName = chatViewModel.newContactName
-    if (contact is DatabaseRequestState.Success)
+    LaunchedEffect(key1 = messages)
     {
-        if(contact.data.name.isEmpty())
+        if(messages is DatabaseRequestState.Success)
         {
-            EditContactDialog(
-                contactName = contactName.value,
-                onContactNameChanged = {
-                        newValue -> chatViewModel.newContactName.value = newValue
-                },
-                title = stringResource(id = R.string.new_contact_available),
-                body = stringResource(id = R.string.give_name_to_contact),
-                dismissible = false,
-                onConfirmClicked = {
-                    chatViewModel.saveNewContact()
-                },
-                onDismissClicked = {  },
-                onDismissRequest = { }
-            )
+            chatViewModel.markConversationAsRead(chatId)
         }
     }
 }
@@ -121,4 +135,36 @@ fun CalculatePath(
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun ChatScreenPreview()
+{
+    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, Date())
+    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, Date())
+    message1.id = 1
+    message2.id = 2
+
+    ChatScreen(
+        selectedContact = DatabaseRequestState.Success(
+            ContactEntity(
+                address = "123",
+                name = "John",
+                publicKey = "key",
+                guardHostname = "host",
+                hasNewMessage = false
+            )
+        ),
+        messages = DatabaseRequestState.Success(
+            listOf(message1, message2)
+        ),
+        messageInputText = "Can't wait to see you on Monday",
+        newContactName = "",
+        onSendClicked = {},
+        onNewContactNameConfirmed = {},
+        onInputTextChanged = {},
+        onNewContactNameChanged = {},
+        navigateToContactsScreen = {}
+    )
 }

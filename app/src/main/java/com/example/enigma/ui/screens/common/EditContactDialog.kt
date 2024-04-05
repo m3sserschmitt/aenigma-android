@@ -165,7 +165,8 @@ fun ContactNameInput(
             Text(
                 text = stringResource(id = R.string.new_contact_name)
             )
-        }
+        },
+        maxLines = 1
     )
 }
 

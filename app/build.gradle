@@ -132,6 +132,9 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.6.5"
     debugImplementation "androidx.compose.ui:ui-tooling:1.6.5"
 
+    // PrettyTime
+    implementation 'org.ocpsoft.prettytime:prettytime:5.0.7.Final'
+
     // Kotlin
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.core:core-ktx:1.12.0'
