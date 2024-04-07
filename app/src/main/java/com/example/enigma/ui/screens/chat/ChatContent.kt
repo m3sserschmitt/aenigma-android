@@ -10,35 +10,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.enigma.R
-import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
-import com.example.enigma.ui.screens.common.EditContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import java.util.Date
 
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
-    contact: DatabaseRequestState<ContactEntity>,
     messages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
-    newContactName: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onNewContactNameChanged: (String) -> Unit,
-    onNewNameConfirmClicked: () -> Unit
 ) {
-    RenameContactDialog(
-        contact = contact,
-        newContactName = newContactName,
-        onNewContactNameChanged = onNewContactNameChanged,
-        onNewNameConfirmClicked = onNewNameConfirmClicked
-    )
-
     Surface(
         modifier = modifier.fillMaxSize(),
     ) {
@@ -53,31 +38,6 @@ fun ChatContent(
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = onSendClicked
-            )
-        }
-    }
-}
-
-@Composable
-fun RenameContactDialog(
-    contact: DatabaseRequestState<ContactEntity>,
-    newContactName: String,
-    onNewContactNameChanged: (String) -> Unit,
-    onNewNameConfirmClicked: () -> Unit
-) {
-    if (contact is DatabaseRequestState.Success)
-    {
-        if(contact.data.name.isEmpty())
-        {
-            EditContactDialog(
-                contactName = newContactName,
-                onContactNameChanged = onNewContactNameChanged,
-                title = stringResource(id = R.string.new_contact_available),
-                body = stringResource(id = R.string.give_name_to_contact),
-                dismissible = false,
-                onConfirmClicked = onNewNameConfirmClicked,
-                onDismissClicked = {  },
-                onDismissRequest = { }
             )
         }
     }
@@ -143,23 +103,11 @@ fun ChatContentPreview()
     message2.id = 2
 
     ChatContent(
-        contact = DatabaseRequestState.Success(
-            ContactEntity(
-                address = "123",
-                name = "John",
-                publicKey = "key",
-                guardHostname = "host",
-                hasNewMessage = false
-            )
-        ),
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
         messageInputText = "Can't wait to see you on Monday",
-        newContactName = "",
         onSendClicked = {},
         onInputTextChanged = {},
-        onNewContactNameChanged = {},
-        onNewNameConfirmClicked = {}
     )
 }

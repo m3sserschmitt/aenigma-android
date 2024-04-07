@@ -41,30 +41,12 @@ class MainViewModel @Inject constructor(
     val scannedContactDetails: MutableState<ExportedContactData>
     = mutableStateOf(ExportedContactData("", ""))
 
-    private val _allContacts =
-        MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)
-
     val allContacts: StateFlow<DatabaseRequestState<List<ContactEntity>>> = _allContacts
 
     private val _contactQrCode
     = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
 
     val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
-
-    fun getAllContacts()
-    {
-        viewModelScope.launch {
-            _allContacts.value = DatabaseRequestState.Loading
-            try {
-                repository.local.getContacts().collect {
-                    contacts -> _allContacts.value = DatabaseRequestState.Success(contacts)
-                }
-            } catch (ex: Exception)
-            {
-                _allContacts.value = DatabaseRequestState.Error(ex)
-            }
-        }
-    }
 
     fun generateCode()
     {

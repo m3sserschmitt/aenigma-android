@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.data.database.ContactEntity
@@ -22,6 +25,7 @@ fun ChatScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
+        chatViewModel.loadContacts()
         chatViewModel.loadContact(chatId)
         chatViewModel.loadConversation(chatId)
         chatViewModel.checkPathExistence(chatId)
@@ -46,7 +50,7 @@ fun ChatScreen(
     )
 
     ChatScreen(
-        selectedContact = selectedContact,
+        contact = selectedContact,
         messages = messages,
         messageInputText = messageInputText,
         newContactName = newContactName,
@@ -54,13 +58,19 @@ fun ChatScreen(
             newInputTextValue -> chatViewModel.messageInputText.value = newInputTextValue
         },
         onNewContactNameChanged = {
-            newContactNameValue -> chatViewModel.newContactName.value = newContactNameValue
+            newContactNameValue -> chatViewModel.updateNewContactName(newContactNameValue)
         },
-        onNewContactNameConfirmed = {
+        onRenameContactConfirmed = {
             chatViewModel.saveNewContact()
+        },
+        onRenameContactDismissed = {
+            chatViewModel.resetNewContactDetails()
         },
         onSendClicked = {
             chatViewModel.sendMessage()
+        },
+        onDeleteAllClicked = {
+            chatViewModel.clearConversation(chatId)
         },
         navigateToContactsScreen = navigateToContactsScreen
     )
@@ -68,21 +78,66 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    selectedContact: DatabaseRequestState<ContactEntity>,
+    contact: DatabaseRequestState<ContactEntity>,
     messages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
-    newContactName: String,
     onInputTextChanged: (String) -> Unit,
-    onNewContactNameChanged: (String) -> Unit,
-    onNewContactNameConfirmed: () -> Unit,
+    newContactName: String,
+    onNewContactNameChanged: (String) -> Boolean,
+    onRenameContactConfirmed: () -> Unit,
+    onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
+    onDeleteAllClicked: () -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
+    var renameContactDialogVisible by remember { mutableStateOf(false) }
+    var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
+
+    SaveNewContactDialog(
+        contact = contact,
+        newContactName = newContactName,
+        onNewContactNameChanged = onNewContactNameChanged,
+        onNewNameConfirmClicked = onRenameContactConfirmed,
+    )
+
+    RenameContactDialog(
+        visible = renameContactDialogVisible,
+        newContactName = newContactName,
+        onNewContactNameChanged = onNewContactNameChanged,
+        onNewNameConfirmClicked = {
+            renameContactDialogVisible = false
+            onRenameContactConfirmed()
+        },
+        onDismissClicked = {
+            onRenameContactDismissed()
+            renameContactDialogVisible = false
+        }
+    )
+
+    EraseConversationDialog(
+        visible = clearConversationConfirmationVisible,
+        onConfirmClicked = {
+            clearConversationConfirmationVisible = false
+            onDeleteAllClicked()
+        },
+        onDismissClicked = {
+            clearConversationConfirmationVisible = false
+        }
+    )
+
     Scaffold (
         topBar = {
             ChatAppBar(
-                contact = selectedContact,
-                navigateToContactsScreen = navigateToContactsScreen)
+                messages = messages,
+                contact = contact,
+                onRenameContactClicked = {
+                    renameContactDialogVisible = true
+                },
+                onDeleteAllClicked = {
+                    clearConversationConfirmationVisible = true
+                },
+                navigateToContactsScreen = navigateToContactsScreen
+            )
         },
         content = { paddingValues ->
             ChatContent(
@@ -90,14 +145,10 @@ fun ChatScreen(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding()
                 ),
-                contact = selectedContact,
                 messages = messages,
                 messageInputText = messageInputText,
-                newContactName = newContactName,
                 onInputTextChanged = onInputTextChanged,
-                onNewContactNameChanged = onNewContactNameChanged,
-                onNewNameConfirmClicked = onNewContactNameConfirmed,
-                onSendClicked = onSendClicked
+                onSendClicked = onSendClicked,
             )
         }
     )
@@ -147,7 +198,7 @@ fun ChatScreenPreview()
     message2.id = 2
 
     ChatScreen(
-        selectedContact = DatabaseRequestState.Success(
+        contact = DatabaseRequestState.Success(
             ContactEntity(
                 address = "123",
                 name = "John",
@@ -162,9 +213,11 @@ fun ChatScreenPreview()
         messageInputText = "Can't wait to see you on Monday",
         newContactName = "",
         onSendClicked = {},
-        onNewContactNameConfirmed = {},
+        onRenameContactConfirmed = {},
         onInputTextChanged = {},
-        onNewContactNameChanged = {},
+        onNewContactNameChanged = { true },
+        onDeleteAllClicked = {},
+        onRenameContactDismissed = {},
         navigateToContactsScreen = {}
     )
 }

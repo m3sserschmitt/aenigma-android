@@ -26,7 +26,7 @@ fun ContactsScreen(
 {
     LaunchedEffect(key1 = true)
     {
-        mainViewModel.getAllContacts()
+        mainViewModel.loadContacts()
     }
 
     val allContacts by mainViewModel.allContacts.collectAsState()

@@ -15,6 +15,9 @@ interface MessagesDao {
     @Insert
     suspend fun insert(messages: List<MessageEntity>)
 
+    @Query("DELETE FROM $MESSAGES_TABLE WHERE chatId = :chatId")
+    suspend fun clearConversation(chatId: String)
+
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId")
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
 }

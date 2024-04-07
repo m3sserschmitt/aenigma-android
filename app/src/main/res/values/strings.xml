@@ -25,11 +25,17 @@
     <string name="code">Code</string>
     <string name="qr_code_scanned_successfully">QR Code scanned successfully</string>
     <string name="save_contact_message">Would you like to save the contact?</string>
-    <string name="new_contact_name">New contact name</string>
     <string name="dismiss">Dismiss</string>
     <string name="confirm">Confirm</string>
     <string name="qr_code_not_available">Could not generate the QR code</string>
     <string name="new_contact_available">This contact is new in your list</string>
-    <string name="give_name_to_contact">You have to give it a name</string>
+    <string name="provide_new_name">Please provide a new name for it</string>
     <string name="no_message_available">No message available</string>
+    <string name="more_contact_actions">More contact actions</string>
+    <string name="clear_conversation">Clear conversation</string>
+    <string name="rename">Rename</string>
+    <string name="rename_contact">Rename Contact</string>
+    <string name="enter_new_contact_name">Enter new contact name</string>
+    <string name="erase_entire_conversation">Erase entire conversation?</string>
+    <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
 </resources>

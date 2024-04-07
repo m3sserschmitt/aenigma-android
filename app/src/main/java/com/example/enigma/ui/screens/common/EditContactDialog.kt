@@ -35,7 +35,7 @@ fun EditContactDialog(
     title: String,
     body: String,
     dismissible: Boolean,
-    onContactNameChanged: (String) -> Unit,
+    onContactNameChanged: (String) -> Boolean,
     onDismissRequest: () -> Unit,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
@@ -47,27 +47,25 @@ fun EditContactDialog(
             onDismissRequest()
         },
         properties = DialogProperties(
-            dismissOnClickOutside = false
+            dismissOnClickOutside = dismissible
         )
     ) {
-        DialogContent(
+        DialogContentTemplate(
             modifier = Modifier.padding(8.dp),
-            dialogContent = {
+            content = {
                 ContactNameInput(
                     contactName = contactName,
                     isError = isContactNameValidationError,
                     onContactNameChanged = {
-                        newValue ->
-                        onContactNameChanged(newValue)
-                        isContactNameValidationError = newValue.isEmpty()
+                        newValue -> isContactNameValidationError = !onContactNameChanged(newValue)
                     }
                 )
             },
-            dialogTitle = title,
-            dialogBody = body,
+            title = title,
+            body = body,
             dismissible = dismissible,
             onConfirmClicked = {
-                isContactNameValidationError = contactName.isEmpty()
+                isContactNameValidationError = isContactNameValidationError || contactName.isEmpty()
                 if(!isContactNameValidationError)
                 {
                     onConfirmClicked()
@@ -79,12 +77,12 @@ fun EditContactDialog(
 }
 
 @Composable
-fun DialogContent(
+fun DialogContentTemplate(
     modifier: Modifier = Modifier,
-    dialogTitle: String,
-    dialogBody: String,
+    title: String,
+    body: String,
+    content: @Composable () -> Unit,
     dismissible: Boolean,
-    dialogContent: @Composable () -> Unit,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
@@ -97,7 +95,7 @@ fun DialogContent(
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = dialogTitle,
+                text = title,
                 textAlign = TextAlign.Center,
                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
                 fontWeight = MaterialTheme.typography.titleMedium.fontWeight
@@ -105,15 +103,15 @@ fun DialogContent(
             HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
             Text(
                 modifier = Modifier.fillMaxWidth(),
-                text = dialogBody,
+                text = body,
                 textAlign = TextAlign.Center,
             )
             HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
-            dialogContent()
+            content()
             Row(
                 modifier = Modifier
                     .fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.Center
             ) {
                 if(dismissible)
                 {
@@ -153,17 +151,12 @@ fun ContactNameInput(
         modifier = Modifier.fillMaxWidth(),
         value = contactName,
         isError = isError,
-        placeholder = {
-            Text(
-                text = stringResource(id = R.string.new_contact_name)
-            )
-        },
         onValueChange = {
             newValue -> onContactNameChanged(newValue)
         },
         label = {
             Text(
-                text = stringResource(id = R.string.new_contact_name)
+                text = stringResource(id = R.string.contact_name)
             )
         },
         maxLines = 1
@@ -183,7 +176,7 @@ fun SaveContactDialogPreview()
             id = R.string.save_contact_message
         ),
         dismissible = false,
-        onContactNameChanged = {},
+        onContactNameChanged = { true },
         onDismissRequest = { },
         onConfirmClicked = { },
         onDismissClicked = { }

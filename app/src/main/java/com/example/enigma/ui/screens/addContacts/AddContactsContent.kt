@@ -75,7 +75,7 @@ fun DisplayQrCode(
         EditContactDialog(
             contactName = contactName,
             onContactNameChanged = {
-                    newContactName -> mainViewModel.newContactName.value = newContactName
+                newContactName -> mainViewModel.updateNewContactName(newContactName)
             },
             title = stringResource(
                 id = R.string.qr_code_scanned_successfully

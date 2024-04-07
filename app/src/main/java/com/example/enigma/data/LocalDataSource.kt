@@ -63,6 +63,11 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getConversation(chatId)
     }
 
+    suspend fun clearConversation(chatId: String)
+    {
+        messagesDao.clearConversation(chatId)
+    }
+
     suspend fun insertMessage(messageEntity: MessageEntity)
     {
         messagesDao.insert(messageEntity)

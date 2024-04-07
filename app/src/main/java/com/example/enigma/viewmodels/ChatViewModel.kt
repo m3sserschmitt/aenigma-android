@@ -99,6 +99,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun clearConversation(chatId: String)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.clearConversation(chatId)
+        }
+    }
+
     fun calculateCircuit() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
