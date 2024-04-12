@@ -38,4 +38,6 @@
     <string name="enter_new_contact_name">Enter new contact name</string>
     <string name="erase_entire_conversation">Erase entire conversation?</string>
     <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
+    <string name="delete">Delete</string>
+    <string name="delete_selected_messages">Delete selected messages?</string>
 </resources>

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -69,8 +70,11 @@ fun ChatScreen(
         onSendClicked = {
             chatViewModel.sendMessage()
         },
-        onDeleteAllClicked = {
+        onDeleteAll = {
             chatViewModel.clearConversation(chatId)
+        },
+        onDelete = {
+            selectedMessages -> chatViewModel.removeMessages(selectedMessages)
         },
         navigateToContactsScreen = navigateToContactsScreen
     )
@@ -87,11 +91,15 @@ fun ChatScreen(
     onRenameContactConfirmed: () -> Unit,
     onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
-    onDeleteAllClicked: () -> Unit,
+    onDeleteAll: () -> Unit,
+    onDelete: (List<MessageEntity>) -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
+    var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
+    var isSelectionMode by remember { mutableStateOf(false) }
+    val selectedItems = remember { mutableStateListOf<MessageEntity>() }
 
     SaveNewContactDialog(
         contact = contact,
@@ -118,23 +126,58 @@ fun ChatScreen(
         visible = clearConversationConfirmationVisible,
         onConfirmClicked = {
             clearConversationConfirmationVisible = false
-            onDeleteAllClicked()
+            onDeleteAll()
         },
         onDismissClicked = {
             clearConversationConfirmationVisible = false
         }
     )
 
+    DeleteSelectedMessagesDialog(
+        visible = deleteMessagesConfirmationVisible,
+        onConfirmClicked = {
+            onDelete(selectedItems)
+            deleteMessagesConfirmationVisible = false
+        },
+        onDismissClicked = {
+            deleteMessagesConfirmationVisible = false
+        }
+    )
+
+    ExitSelectionMode(
+        isSelectionMode = isSelectionMode,
+        selectedItems = selectedItems,
+        onSelectionModeExited = {
+            isSelectionMode = false
+        }
+    )
+
+    LaunchedEffect(key1 = messages)
+    {
+        if(messages is DatabaseRequestState.Success)
+        {
+            selectedItems.removeAll { item -> !messages.data.contains(item) }
+        }
+    }
+
     Scaffold (
         topBar = {
             ChatAppBar(
                 messages = messages,
                 contact = contact,
+                isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
                     renameContactDialogVisible = true
                 },
                 onDeleteAllClicked = {
                     clearConversationConfirmationVisible = true
+                },
+                selectedItemsCount = selectedItems.size,
+                onSelectionModeExited = {
+                    selectedItems.clear()
+                },
+                onDeleteClicked = {
+                    deleteMessagesConfirmationVisible = true
                 },
                 navigateToContactsScreen = navigateToContactsScreen
             )
@@ -145,10 +188,23 @@ fun ChatScreen(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding()
                 ),
+                isSelectionMode = isSelectionMode,
                 messages = messages,
+                selectedMessages = selectedItems,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = onSendClicked,
+                onMessageSelected = { selectedMessage ->
+                    if(!isSelectionMode)
+                    {
+                        isSelectionMode = true
+                    }
+
+                    selectedItems.add(selectedMessage)
+                },
+                onMessageDeselected = {
+                    deselectedMessage -> selectedItems.remove(deselectedMessage)
+                }
             )
         }
     )
@@ -188,6 +244,21 @@ fun CalculatePath(
     }
 }
 
+@Composable
+fun ExitSelectionMode(
+    isSelectionMode: Boolean,
+    selectedItems: List<MessageEntity>,
+    onSelectionModeExited: () -> Unit
+) {
+    LaunchedEffect(key1 = isSelectionMode, key2 = selectedItems.size)
+    {
+        if(isSelectionMode && selectedItems.isEmpty())
+        {
+            onSelectionModeExited()
+        }
+    }
+}
+
 @Preview
 @Composable
 fun ChatScreenPreview()
@@ -216,7 +287,8 @@ fun ChatScreenPreview()
         onRenameContactConfirmed = {},
         onInputTextChanged = {},
         onNewContactNameChanged = { true },
-        onDeleteAllClicked = {},
+        onDeleteAll = {},
+        onDelete = {},
         onRenameContactDismissed = {},
         navigateToContactsScreen = {}
     )

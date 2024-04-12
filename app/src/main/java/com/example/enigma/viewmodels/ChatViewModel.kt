@@ -106,6 +106,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun removeMessages(messages: List<MessageEntity>)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.removeMessages(messages)
+        }
+    }
+
     fun calculateCircuit() {
         viewModelScope.launch(Dispatchers.IO) {
             try {

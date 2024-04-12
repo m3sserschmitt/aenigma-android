@@ -1,6 +1,7 @@
 package com.example.enigma.data.database
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
 import com.example.enigma.util.Constants.Companion.MESSAGES_TABLE
@@ -17,6 +18,9 @@ interface MessagesDao {
 
     @Query("DELETE FROM $MESSAGES_TABLE WHERE chatId = :chatId")
     suspend fun clearConversation(chatId: String)
+
+    @Delete
+    suspend fun remove(messages: List<MessageEntity>)
 
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId")
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>

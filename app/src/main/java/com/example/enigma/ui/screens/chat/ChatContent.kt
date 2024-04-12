@@ -1,5 +1,7 @@
 package com.example.enigma.ui.screens.chat
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -19,10 +21,14 @@ import java.util.Date
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
+    isSelectionMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    selectedMessages: List<MessageEntity>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
+    onMessageSelected: (MessageEntity) -> Unit,
+    onMessageDeselected: (MessageEntity) -> Unit
 ) {
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -30,7 +36,11 @@ fun ChatContent(
         Column {
             DisplayMessages(
                 modifier = Modifier.weight(1f),
-                messages = messages
+                isSelectionMode = isSelectionMode,
+                messages = messages,
+                selectedMessages = selectedMessages,
+                onItemSelected = onMessageSelected,
+                onItemDeselected = onMessageDeselected
             )
 
             ChatInput(
@@ -46,14 +56,22 @@ fun ChatContent(
 @Composable
 fun DisplayMessages(
     modifier: Modifier,
-    messages: DatabaseRequestState<List<MessageEntity>>
+    isSelectionMode: Boolean,
+    messages: DatabaseRequestState<List<MessageEntity>>,
+    selectedMessages: List<MessageEntity>,
+    onItemSelected: (MessageEntity) -> Unit,
+    onItemDeselected: (MessageEntity) -> Unit
 ){
     if(messages is DatabaseRequestState.Success) {
         if(messages.data.isNotEmpty())
         {
             MessagesList(
                 modifier = modifier,
-                messages = messages.data
+                isSelectionMode = isSelectionMode,
+                messages = messages.data,
+                selectedMessages = selectedMessages,
+                onItemSelected = onItemSelected,
+                onItemDeselected = onItemDeselected
             )
         } else {
             NoMessageAvailable(modifier)
@@ -61,10 +79,15 @@ fun DisplayMessages(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessagesList(
     modifier: Modifier = Modifier,
-    messages: List<MessageEntity>
+    isSelectionMode: Boolean,
+    messages: List<MessageEntity>,
+    selectedMessages: List<MessageEntity>,
+    onItemSelected: (MessageEntity) -> Unit,
+    onItemDeselected: (MessageEntity) -> Unit
 ) {
 
     val columnState = rememberLazyListState()
@@ -79,7 +102,28 @@ fun MessagesList(
                 message.id
             }
         ) { message ->
+            val isSelected = selectedMessages.any { item -> item.id == message.id }
+
             MessageItem(
+                modifier = Modifier.combinedClickable(
+                    onClick = {
+                        if(isSelectionMode && !isSelected){
+                            onItemSelected(message)
+                        }
+                        else if(isSelectionMode)
+                        {
+                            onItemDeselected(message)
+                        }
+                    },
+                    onLongClick = {
+                        if(!isSelected)
+                        {
+                            onItemSelected(message)
+                        }
+                    }
+                ),
+                isSelectionMode = isSelectionMode,
+                isSelected = isSelected,
                 message = message
             )
         }
@@ -106,8 +150,12 @@ fun ChatContentPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},
         onInputTextChanged = {},
+        selectedMessages = listOf(),
+        onMessageDeselected = { },
+        onMessageSelected = { }
     )
 }

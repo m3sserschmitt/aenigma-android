@@ -3,7 +3,9 @@ package com.example.enigma.ui.screens.chat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,9 +27,39 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.util.DatabaseRequestState
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatAppBar(
+    messages: DatabaseRequestState<List<MessageEntity>>,
+    contact: DatabaseRequestState<ContactEntity>,
+    isSelectionMode: Boolean,
+    selectedItemsCount: Int,
+    onDeleteAllClicked: () -> Unit,
+    onDeleteClicked: () -> Unit,
+    onRenameContactClicked: () -> Unit,
+    onSelectionModeExited: () -> Unit,
+    navigateToContactsScreen: () -> Unit
+) {
+    if(isSelectionMode)
+    {
+        SelectionModeAppBar(
+            selectedItemsCount = selectedItemsCount,
+            onSelectionModeExited = onSelectionModeExited,
+            onDeleteClicked = onDeleteClicked
+        )
+    } else {
+        DefaultChatAppBar(
+            messages = messages,
+            contact = contact,
+            onDeleteAllClicked = onDeleteAllClicked,
+            onRenameContactClicked = onRenameContactClicked,
+            navigateToContactsScreen = navigateToContactsScreen
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DefaultChatAppBar(
     messages: DatabaseRequestState<List<MessageEntity>>,
     contact: DatabaseRequestState<ContactEntity>,
     onDeleteAllClicked: () -> Unit,
@@ -63,9 +95,7 @@ fun BackAction(
     onBackClicked: () -> Unit
 ) {
     IconButton(
-        onClick = { 
-            onBackClicked() 
-        }
+        onClick = onBackClicked
     ) {
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -132,12 +162,69 @@ fun MoreActions(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SelectionModeAppBar(
+    selectedItemsCount: Int,
+    onSelectionModeExited: () -> Unit,
+    onDeleteClicked: () -> Unit
+) {
+    TopAppBar(
+        navigationIcon = {
+            ExitSelectionModeAction(
+                onSelectionModeExited = onSelectionModeExited
+            )
+        },
+        title = {
+            Text(text = "$selectedItemsCount items selected")
+        },
+        actions = {
+            DeleteAction(
+                onDeleteClicked = onDeleteClicked
+            )
+        }
+    )
+}
+
+@Composable
+fun ExitSelectionModeAction(
+    onSelectionModeExited: () -> Unit
+) {
+    IconButton(
+        onClick = onSelectionModeExited
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Close,
+            contentDescription = stringResource(
+                id = R.string.back
+            ),
+        )
+    }
+}
+
+@Composable
+fun DeleteAction(
+    onDeleteClicked: () -> Unit
+) {
+    IconButton(
+        onClick = onDeleteClicked
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(
+                id = R.string.delete
+            ),
+        )
+    }
+}
+
 @Composable
 @Preview
-fun ChatAppBarPreview()
+fun DefaultChatAppBarPreview()
 {
     ChatAppBar(
         messages = DatabaseRequestState.Success(listOf()),
+        isSelectionMode = false,
         contact = DatabaseRequestState.Success(ContactEntity(
             "123456-5678-5678-123456",
             "John",
@@ -147,6 +234,32 @@ fun ChatAppBarPreview()
         )),
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
-        navigateToContactsScreen = {}
+        navigateToContactsScreen = {},
+        onDeleteClicked = {},
+        selectedItemsCount = 0,
+        onSelectionModeExited = {}
+    )
+}
+
+@Preview
+@Composable
+fun SelectionModeChatAppBarPreview()
+{
+    ChatAppBar(
+        messages = DatabaseRequestState.Success(listOf()),
+        isSelectionMode = true,
+        contact = DatabaseRequestState.Success(ContactEntity(
+            "123456-5678-5678-123456",
+            "John",
+            "public-key",
+            "guard-hostname",
+            true
+        )),
+        onDeleteAllClicked = {},
+        onRenameContactClicked = {},
+        navigateToContactsScreen = {},
+        onDeleteClicked = {},
+        selectedItemsCount = 3,
+        onSelectionModeExited = {}
     )
 }

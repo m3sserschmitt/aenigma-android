@@ -68,6 +68,11 @@ class LocalDataSource @Inject constructor(
         messagesDao.clearConversation(chatId)
     }
 
+    suspend fun removeMessages(messages: List<MessageEntity>)
+    {
+        messagesDao.remove(messages)
+    }
+
     suspend fun insertMessage(messageEntity: MessageEntity)
     {
         messagesDao.insert(messageEntity)

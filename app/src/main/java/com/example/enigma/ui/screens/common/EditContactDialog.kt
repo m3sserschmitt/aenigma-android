@@ -51,7 +51,6 @@ fun EditContactDialog(
         )
     ) {
         DialogContentTemplate(
-            modifier = Modifier.padding(8.dp),
             content = {
                 ContactNameInput(
                     contactName = contactName,
@@ -91,7 +90,7 @@ fun DialogContentTemplate(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(
-            modifier = modifier
+            modifier = modifier.padding(8.dp)
         ) {
             Text(
                 modifier = Modifier.fillMaxWidth(),
