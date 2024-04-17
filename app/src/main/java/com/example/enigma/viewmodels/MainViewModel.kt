@@ -15,8 +15,9 @@ import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.models.ExportedContactData
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
-import com.example.enigma.util.SearchAppBarState
+import com.example.enigma.util.copyBySerialization
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +34,8 @@ class MainViewModel @Inject constructor(
     signalRClient: SignalRClient
 ) : BaseViewModel(repository, application, signalRClient) {
 
-    val searchAppBarState: MutableState<SearchAppBarState> =
-        mutableStateOf(SearchAppBarState.CLOSED)
-
-    val contactsSearch: MutableState<String> = mutableStateOf("")
+    private val _searchedContacts
+    = MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)
 
     val scannedContactDetails: MutableState<ExportedContactData>
     = mutableStateOf(ExportedContactData("", ""))
@@ -47,6 +46,33 @@ class MainViewModel @Inject constructor(
     = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
 
     val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
+
+    val searchedContacts: StateFlow<DatabaseRequestState<List<ContactEntity>>> = _searchedContacts
+
+    fun searchContacts(searchQuery: String)
+    {
+        viewModelScope.launch {
+            _searchedContacts.value = DatabaseRequestState.Loading
+            try {
+                if(searchQuery.isEmpty())
+                {
+                    _searchedContacts.value = DatabaseRequestState.Success(listOf())
+                }else {
+                    repository.local.searchContacts(searchQuery).collect { contacts ->
+                        _searchedContacts.value = DatabaseRequestState.Success(contacts)
+                    }
+                }
+            } catch (ex: Exception)
+            {
+                _searchedContacts.value = DatabaseRequestState.Error(ex)
+            }
+        }
+    }
+
+    fun resetSearchResultResult()
+    {
+        _searchedContacts.value = DatabaseRequestState.Idle
+    }
 
     fun generateCode()
     {
@@ -107,6 +133,22 @@ class MainViewModel @Inject constructor(
             } else {
                 emit(null)
             }
+        }
+    }
+
+    fun deleteContacts(contacts: List<ContactEntity>)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.removeContacts(contacts)
+        }
+    }
+
+    fun renameContact(contact: ContactEntity, name: String)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            val updatedContact = copyBySerialization(contact)
+            updatedContact.name = name
+            repository.local.updateContact(updatedContact)
         }
     }
 }

@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.ui.screens.common.ExitSelectionMode
+import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.ChatViewModel
 import java.util.Date
@@ -112,11 +114,11 @@ fun ChatScreen(
         visible = renameContactDialogVisible,
         newContactName = newContactName,
         onNewContactNameChanged = onNewContactNameChanged,
-        onNewNameConfirmClicked = {
+        onConfirmClicked = {
             renameContactDialogVisible = false
             onRenameContactConfirmed()
         },
-        onDismissClicked = {
+        onDismiss = {
             onRenameContactDismissed()
             renameContactDialogVisible = false
         }
@@ -146,7 +148,7 @@ fun ChatScreen(
 
     ExitSelectionMode(
         isSelectionMode = isSelectionMode,
-        selectedItems = selectedItems,
+        selectedItemsCount = selectedItems.size,
         onSelectionModeExited = {
             isSelectionMode = false
         }
@@ -240,21 +242,6 @@ fun CalculatePath(
             {
                 chatViewModel.calculateCircuit()
             }
-        }
-    }
-}
-
-@Composable
-fun ExitSelectionMode(
-    isSelectionMode: Boolean,
-    selectedItems: List<MessageEntity>,
-    onSelectionModeExited: () -> Unit
-) {
-    LaunchedEffect(key1 = isSelectionMode, key2 = selectedItems.size)
-    {
-        if(isSelectionMode && selectedItems.isEmpty())
-        {
-            onSelectionModeExited()
         }
     }
 }

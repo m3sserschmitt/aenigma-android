@@ -1,18 +1,17 @@
-package com.example.enigma.ui.screens.chat
+package com.example.enigma.ui.screens.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
-import com.example.enigma.ui.screens.common.EditContactDialog
 
 @Composable
 fun RenameContactDialog(
     visible: Boolean,
     newContactName: String,
     onNewContactNameChanged: (String) -> Boolean,
-    onNewNameConfirmClicked: () -> Unit,
-    onDismissClicked: () -> Unit
+    onConfirmClicked: () -> Unit,
+    onDismiss: () -> Unit
 ) {
     if(visible) {
         EditContactDialog(
@@ -25,9 +24,9 @@ fun RenameContactDialog(
                 id = R.string.enter_new_contact_name
             ),
             dismissible = true,
-            onConfirmClicked = onNewNameConfirmClicked,
-            onDismissClicked = onDismissClicked,
-            onDismissRequest = onDismissClicked
+            onConfirmClicked = onConfirmClicked,
+            onDismissClicked = onDismiss,
+            onDismissRequest = onDismiss
         )
     }
 }
@@ -40,7 +39,7 @@ fun RenameContactDialogPreview()
         visible = true,
         newContactName = "John",
         onNewContactNameChanged = { true },
-        onNewNameConfirmClicked = {},
-        onDismissClicked = {}
+        onConfirmClicked = {},
+        onDismiss = {}
     )
 }

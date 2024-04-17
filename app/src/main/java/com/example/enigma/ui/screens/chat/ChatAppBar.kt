@@ -2,10 +2,7 @@ package com.example.enigma.ui.screens.chat
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,6 +22,9 @@ import androidx.compose.ui.unit.sp
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.ui.screens.common.DeleteAppBarAction
+import com.example.enigma.ui.screens.common.NavigateBackAppBarAction
+import com.example.enigma.ui.screens.common.SelectionModeAppBar
 import com.example.enigma.util.DatabaseRequestState
 
 @Composable
@@ -44,7 +44,11 @@ fun ChatAppBar(
         SelectionModeAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
-            onDeleteClicked = onDeleteClicked
+            actions = {
+                DeleteAppBarAction(
+                    onDeleteClicked = onDeleteClicked
+                )
+            }
         )
     } else {
         DefaultChatAppBar(
@@ -68,7 +72,7 @@ fun DefaultChatAppBar(
 ) {
     TopAppBar(
         navigationIcon = {
-            BackAction(
+            NavigateBackAppBarAction(
                 onBackClicked = navigateToContactsScreen
             )
         },
@@ -88,20 +92,6 @@ fun DefaultChatAppBar(
             )
         }
     )
-}
-
-@Composable
-fun BackAction(
-    onBackClicked: () -> Unit
-) {
-    IconButton(
-        onClick = onBackClicked
-    ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = stringResource(id = R.string.back),
-        )
-    }
 }
 
 @Composable
@@ -159,62 +149,6 @@ fun MoreActions(
                 }
             )
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SelectionModeAppBar(
-    selectedItemsCount: Int,
-    onSelectionModeExited: () -> Unit,
-    onDeleteClicked: () -> Unit
-) {
-    TopAppBar(
-        navigationIcon = {
-            ExitSelectionModeAction(
-                onSelectionModeExited = onSelectionModeExited
-            )
-        },
-        title = {
-            Text(text = "$selectedItemsCount items selected")
-        },
-        actions = {
-            DeleteAction(
-                onDeleteClicked = onDeleteClicked
-            )
-        }
-    )
-}
-
-@Composable
-fun ExitSelectionModeAction(
-    onSelectionModeExited: () -> Unit
-) {
-    IconButton(
-        onClick = onSelectionModeExited
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Close,
-            contentDescription = stringResource(
-                id = R.string.back
-            ),
-        )
-    }
-}
-
-@Composable
-fun DeleteAction(
-    onDeleteClicked: () -> Unit
-) {
-    IconButton(
-        onClick = onDeleteClicked
-    ) {
-        Icon(
-            imageVector = Icons.Filled.Delete,
-            contentDescription = stringResource(
-                id = R.string.delete
-            ),
-        )
     }
 }
 

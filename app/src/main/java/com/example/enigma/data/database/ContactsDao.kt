@@ -13,6 +13,9 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     fun get(address: String): Flow<ContactEntity?>
 
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE name LIKE '%' || :searchQuery || '%'")
+    fun search(searchQuery: String): Flow<List<ContactEntity>>
+
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = true WHERE address = :address")
     suspend fun markConversationAsUnread(address: String)
 
@@ -33,4 +36,7 @@ interface ContactsDao {
 
     @Update
     suspend fun update(contact: ContactEntity)
+
+    @Delete
+    suspend fun remove(contacts: List<ContactEntity>)
 }

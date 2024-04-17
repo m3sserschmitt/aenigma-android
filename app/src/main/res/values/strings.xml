@@ -40,4 +40,5 @@
     <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
     <string name="delete">Delete</string>
     <string name="delete_selected_messages">Delete selected messages?</string>
+    <string name="delete_selected_contacts">Delete selected contacts?</string>
 </resources>

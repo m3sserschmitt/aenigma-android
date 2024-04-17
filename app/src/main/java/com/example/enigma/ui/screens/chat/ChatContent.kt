@@ -1,20 +1,15 @@
 package com.example.enigma.ui.screens.chat
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.ui.screens.common.AutoScrollItemsList
 import com.example.enigma.util.DatabaseRequestState
 import java.util.Date
 
@@ -65,74 +60,25 @@ fun DisplayMessages(
     if(messages is DatabaseRequestState.Success) {
         if(messages.data.isNotEmpty())
         {
-            MessagesList(
+            AutoScrollItemsList(
                 modifier = modifier,
-                isSelectionMode = isSelectionMode,
-                messages = messages.data,
-                selectedMessages = selectedMessages,
-                onItemSelected = onItemSelected,
-                onItemDeselected = onItemDeselected
+                items = messages.data,
+                selectedItems = selectedMessages,
+                listItem = { messageEntity, isSelected ->
+                    MessageItem(
+                        isSelectionMode = isSelectionMode,
+                        isSelected = isSelected,
+                        message = messageEntity,
+                        onItemSelected = onItemSelected,
+                        onItemDeselected = onItemDeselected,
+                        onClick = {}
+                    )
+                },
+                itemEqualityChecker = { m1, m2 -> m1.id == m2.id},
+                itemKeyProvider = { m -> m.id }
             )
         } else {
             NoMessageAvailable(modifier)
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun MessagesList(
-    modifier: Modifier = Modifier,
-    isSelectionMode: Boolean,
-    messages: List<MessageEntity>,
-    selectedMessages: List<MessageEntity>,
-    onItemSelected: (MessageEntity) -> Unit,
-    onItemDeselected: (MessageEntity) -> Unit
-) {
-
-    val columnState = rememberLazyListState()
-
-    LazyColumn(
-        modifier = modifier,
-        state = columnState
-    ) {
-        items(
-            items = messages,
-            key = { message ->
-                message.id
-            }
-        ) { message ->
-            val isSelected = selectedMessages.any { item -> item.id == message.id }
-
-            MessageItem(
-                modifier = Modifier.combinedClickable(
-                    onClick = {
-                        if(isSelectionMode && !isSelected){
-                            onItemSelected(message)
-                        }
-                        else if(isSelectionMode)
-                        {
-                            onItemDeselected(message)
-                        }
-                    },
-                    onLongClick = {
-                        if(!isSelected)
-                        {
-                            onItemSelected(message)
-                        }
-                    }
-                ),
-                isSelectionMode = isSelectionMode,
-                isSelected = isSelected,
-                message = message
-            )
-        }
-    }
-
-    LaunchedEffect(key1 = messages.size)
-    {
-        if (messages.isNotEmpty()) {
-            columnState.scrollToItem(messages.size - 1)
         }
     }
 }

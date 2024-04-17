@@ -22,10 +22,15 @@ class LocalDataSource @Inject constructor(
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
     private val graphPathsDao: GraphPathsDao
-){
+) {
     fun getContacts() : Flow<List<ContactEntity>>
     {
         return contactsDao.get()
+    }
+
+    fun searchContacts(searchQuery: String): Flow<List<ContactEntity>>
+    {
+        return contactsDao.search(searchQuery)
     }
 
     fun getContact(address: String) : Flow<ContactEntity?>
@@ -56,6 +61,11 @@ class LocalDataSource @Inject constructor(
     suspend fun insertContacts(contacts: List<ContactEntity>): List<Long>
     {
         return contactsDao.insert(contacts)
+    }
+
+    suspend fun removeContacts(contacts: List<ContactEntity>)
+    {
+        contactsDao.remove(contacts)
     }
 
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>

@@ -29,15 +29,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.R
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.ui.screens.common.selectable
 import com.example.enigma.util.prettyDateFormatting
 import kotlinx.coroutines.delay
 import java.util.Date
 
 @Composable
 fun MessageItem(
-    modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSelected: Boolean,
+    onItemSelected: (MessageEntity) -> Unit,
+    onItemDeselected: (MessageEntity) -> Unit,
+    onClick: () -> Unit,
     message: MessageEntity
 ) {
     val paddingStart = if(message.incoming) 8.dp else 50.dp
@@ -53,7 +56,15 @@ fun MessageItem(
             Alignment.CenterEnd
     ) {
         Surface (
-            modifier = modifier,
+            modifier = Modifier
+                .selectable(
+                    item = message,
+                    isSelectionMode = isSelectionMode,
+                    isSelected = isSelected,
+                    onItemSelected = onItemSelected,
+                    onItemDeselected = onItemDeselected,
+                    onClick = onClick
+                ),
             color = if(message.incoming)
                 MaterialTheme.colorScheme.secondaryContainer
             else
@@ -143,7 +154,10 @@ fun MessageItemPreview()
             "Hello",
             true,
             Date()
-        )
+        ),
+        onItemDeselected = {},
+        onClick = {},
+        onItemSelected = {}
     )
 }
 
@@ -159,6 +173,9 @@ fun MessageItemSelectedPreview()
             "Hello",
             true,
             Date()
-        )
+        ),
+        onItemDeselected = {},
+        onClick = {},
+        onItemSelected = {}
     )
 }
