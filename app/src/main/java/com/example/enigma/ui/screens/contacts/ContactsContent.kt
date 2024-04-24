@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.ui.screens.common.ErrorScreen
 import com.example.enigma.ui.screens.common.ItemsList
 import com.example.enigma.util.DatabaseRequestState
 
@@ -11,7 +12,7 @@ import com.example.enigma.util.DatabaseRequestState
 fun ContactsContent(
     modifier: Modifier = Modifier,
     contacts: DatabaseRequestState<List<ContactEntity>>,
-    searchActivated: Boolean,
+    isSearchMode: Boolean,
     searchedContacts: DatabaseRequestState<List<ContactEntity>>,
     isSelectionMode: Boolean,
     selectedContacts: List<ContactEntity>,
@@ -20,7 +21,7 @@ fun ContactsContent(
     navigateToChatScreen: (chatId: String) -> Unit
 ) {
 
-    val contactsToDisplay = if(searchActivated)
+    val contactsToDisplay = if(isSearchMode && searchedContacts !is DatabaseRequestState.Idle)
     {
         searchedContacts
     } else
@@ -30,32 +31,42 @@ fun ContactsContent(
 
     if(contactsToDisplay is DatabaseRequestState.Success)
     {
-        if(contactsToDisplay.data.isEmpty())
+        if(contactsToDisplay.data.isNotEmpty())
         {
-            EmptyContent(
-                modifier = modifier
-            )
-        } else {
             ItemsList(
                 modifier = modifier,
                 items = contactsToDisplay.data,
                 listItem = { contact, isSelected ->
                     ContactItem(
-                       onItemSelected = onItemSelected,
-                       onItemDeselected = onItemDeselected,
-                       onClick = {
-                           navigateToChatScreen(contact.address)
-                       },
-                       contact = contact,
-                       isSelectionMode = isSelectionMode,
-                       isSelected = isSelected
+                        onItemSelected = onItemSelected,
+                        onItemDeselected = onItemDeselected,
+                        onClick = {
+                            navigateToChatScreen(contact.address)
+                        },
+                        contact = contact,
+                        isSelectionMode = isSelectionMode,
+                        isSelected = isSelected
                     )
                 },
                 selectedItems = selectedContacts,
                 itemEqualityChecker = { c1, c2 -> c1.address == c2.address},
                 itemKeyProvider = { c -> c.address }
             )
+
+        } else {
+            if(isSearchMode)
+            {
+                EmptySearchResult(modifier)
+            } else
+            {
+                EmptyContactsScreen(
+                    modifier = modifier
+                )
+            }
         }
+    } else if(contactsToDisplay is DatabaseRequestState.Error)
+    {
+        ErrorScreen(modifier)
     }
 }
 
@@ -82,7 +93,7 @@ fun ContactsContentPreview()
                 )
             )
         ),
-        searchActivated = false,
+        isSearchMode = false,
         searchedContacts = DatabaseRequestState.Success(listOf()),
         isSelectionMode = true,
         selectedContacts = listOf(ContactEntity(

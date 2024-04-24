@@ -9,16 +9,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.R
-import com.example.enigma.ui.screens.common.ErrorContent
+import com.example.enigma.ui.screens.common.SimpleInfoScreen
 
 @Composable
-fun NoMessageAvailable(
+fun EmptySearchResult(
     modifier: Modifier = Modifier
 ) {
-    ErrorContent(
+    SimpleInfoScreen(
         modifier = modifier,
         message = stringResource(
-            id = R.string.no_message_available
+            id = R.string.no_message_found
         ),
         icon = {
             Icon(
@@ -27,7 +27,7 @@ fun NoMessageAvailable(
                     id = R.drawable.ic_message
                 ),
                 contentDescription = stringResource(
-                    id = R.string.no_message_available
+                    id = R.string.no_message_found
                 )
             )
         }
@@ -36,7 +36,7 @@ fun NoMessageAvailable(
 
 @Preview
 @Composable
-fun NoMessageAvailablePreview()
+fun EmptySearchResultPreview()
 {
-    NoMessageAvailable()
+    EmptySearchResult()
 }

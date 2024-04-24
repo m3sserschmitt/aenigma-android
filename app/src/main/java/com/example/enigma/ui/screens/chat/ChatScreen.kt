@@ -1,5 +1,6 @@
 package com.example.enigma.ui.screens.chat
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ fun ChatScreen(
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.messages.collectAsState()
+    val searchedMessages by chatViewModel.searchedMessages.collectAsState()
     val pathsExists by chatViewModel.pathsExist.collectAsState()
     val messageInputText by chatViewModel.messageInputText
     val newContactName by chatViewModel.newContactName
@@ -55,6 +57,7 @@ fun ChatScreen(
     ChatScreen(
         contact = selectedContact,
         messages = messages,
+        searchedMessages = searchedMessages,
         messageInputText = messageInputText,
         newContactName = newContactName,
         onInputTextChanged = {
@@ -78,6 +81,9 @@ fun ChatScreen(
         onDelete = {
             selectedMessages -> chatViewModel.removeMessages(selectedMessages)
         },
+        onSearch = {
+            searchQuery -> chatViewModel.searchConversation(chatId, searchQuery)
+        },
         navigateToContactsScreen = navigateToContactsScreen
     )
 }
@@ -86,6 +92,7 @@ fun ChatScreen(
 fun ChatScreen(
     contact: DatabaseRequestState<ContactEntity>,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     newContactName: String,
@@ -95,12 +102,14 @@ fun ChatScreen(
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
     onDelete: (List<MessageEntity>) -> Unit,
+    onSearch: (String) -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
     var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
+    var isSearchMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<MessageEntity>() }
 
     SaveNewContactDialog(
@@ -154,6 +163,21 @@ fun ChatScreen(
         }
     )
 
+    BackHandler(
+        enabled = isSearchMode || isSelectionMode
+    ) {
+        if(isSearchMode)
+        {
+            isSearchMode = false
+        }
+
+        if(isSelectionMode)
+        {
+            selectedItems.clear()
+            isSelectionMode = false
+        }
+    }
+
     LaunchedEffect(key1 = messages)
     {
         if(messages is DatabaseRequestState.Success)
@@ -181,7 +205,17 @@ fun ChatScreen(
                 onDeleteClicked = {
                     deleteMessagesConfirmationVisible = true
                 },
-                navigateToContactsScreen = navigateToContactsScreen
+                navigateToContactsScreen = navigateToContactsScreen,
+                isSearchMode = isSearchMode,
+                onSearchModeClosed = {
+                    isSearchMode = false
+                },
+                onSearchClicked = {
+                    searchQuery -> onSearch(searchQuery)
+                },
+                onSearchModeTriggered = {
+                    isSearchMode = true
+                }
             )
         },
         content = { paddingValues ->
@@ -191,7 +225,9 @@ fun ChatScreen(
                     bottom = paddingValues.calculateBottomPadding()
                 ),
                 isSelectionMode = isSelectionMode,
+                isSearchMode = isSearchMode,
                 messages = messages,
+                searchedMessages = searchedMessages,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
@@ -268,6 +304,7 @@ fun ChatScreenPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        searchedMessages = DatabaseRequestState.Success(listOf()),
         messageInputText = "Can't wait to see you on Monday",
         newContactName = "",
         onSendClicked = {},
@@ -276,6 +313,7 @@ fun ChatScreenPreview()
         onNewContactNameChanged = { true },
         onDeleteAll = {},
         onDelete = {},
+        onSearch = {},
         onRenameContactDismissed = {},
         navigateToContactsScreen = {}
     )

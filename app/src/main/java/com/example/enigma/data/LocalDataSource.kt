@@ -73,6 +73,11 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getConversation(chatId)
     }
 
+    fun searchConversation(chatId: String, searchQuery: String): Flow<List<MessageEntity>>
+    {
+        return messagesDao.searchConversation(chatId, searchQuery)
+    }
+
     suspend fun clearConversation(chatId: String)
     {
         messagesDao.clearConversation(chatId)

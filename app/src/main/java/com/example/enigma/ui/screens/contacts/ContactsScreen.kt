@@ -1,6 +1,7 @@
 package com.example.enigma.ui.screens.contacts
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -22,7 +23,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.ui.screens.common.ExitSelectionMode
-import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.MainViewModel
 
@@ -115,9 +115,18 @@ fun ContactsScreen(
     )
 
     BackHandler(
-        enabled = isSearchMode
+        enabled = isSearchMode || isSelectionMode
     ) {
-        isSearchMode = false
+        if(isSearchMode)
+        {
+            isSearchMode = false
+        }
+
+        if(isSelectionMode)
+        {
+            selectedItems.clear()
+            isSelectionMode = false
+        }
     }
 
     ExitSelectionMode(
@@ -139,7 +148,7 @@ fun ContactsScreen(
                 onSearchClicked = {
                     searchQuery -> onSearch(searchQuery)
                 },
-                onSearchDeactivated = {
+                onSearchModeExited = {
                     isSearchMode = false
                 },
                 onSelectionModeExited = {
@@ -162,7 +171,7 @@ fun ContactsScreen(
                     bottom = paddingValues.calculateBottomPadding()
                 ),
                 contacts = contacts,
-                searchActivated = isSearchMode,
+                isSearchMode = isSearchMode,
                 searchedContacts = searchedContacts,
                 navigateToChatScreen = navigateToChatScreen,
                 onItemSelected = { selectedContact ->

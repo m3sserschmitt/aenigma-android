@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,13 +25,20 @@ fun ContactsAppBar(
     isSearchMode: Boolean,
     selectedItemsCount: Int,
     onSearchTriggered: () -> Unit,
-    onSearchDeactivated: () -> Unit,
+    onSearchModeExited: () -> Unit,
     onSearchClicked: (String) -> Unit,
     onSelectionModeExited: () -> Unit,
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit
 ) {
-    var text by remember { mutableStateOf("") }
+    var searchQueryState by remember { mutableStateOf("") }
+    LaunchedEffect(key1 = isSearchMode)
+    {
+        if(!isSearchMode)
+        {
+            searchQueryState = ""
+        }
+    }
 
     if(isSelectionMode)
     {
@@ -51,11 +59,11 @@ fun ContactsAppBar(
         )
     } else if (isSearchMode){
         SearchAppBar(
-            text = text,
-            onTextChanged = {
-                    newSearchText -> text = newSearchText
+            searchQuery = searchQueryState,
+            onSearchQueryChanged = {
+                    newSearchQuery -> searchQueryState = newSearchQuery
             },
-            onClose = onSearchDeactivated,
+            onClose = onSearchModeExited,
             onSearchClicked = {
                 searchQuery -> onSearchClicked(searchQuery)
             }
@@ -98,4 +106,3 @@ private fun DefaultContactsAppBarPreview()
         onSearchTriggered = {}
     )
 }
-

@@ -54,13 +54,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             _searchedContacts.value = DatabaseRequestState.Loading
             try {
-                if(searchQuery.isEmpty())
-                {
-                    _searchedContacts.value = DatabaseRequestState.Success(listOf())
-                }else {
-                    repository.local.searchContacts(searchQuery).collect { contacts ->
-                        _searchedContacts.value = DatabaseRequestState.Success(contacts)
-                    }
+                repository.local.searchContacts(searchQuery).collect { contacts ->
+                    _searchedContacts.value = DatabaseRequestState.Success(contacts)
                 }
             } catch (ex: Exception)
             {

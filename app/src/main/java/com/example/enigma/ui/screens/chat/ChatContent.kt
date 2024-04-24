@@ -10,6 +10,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.ui.screens.common.AutoScrollItemsList
+import com.example.enigma.ui.screens.common.ErrorScreen
 import com.example.enigma.util.DatabaseRequestState
 import java.util.Date
 
@@ -17,7 +18,9 @@ import java.util.Date
 fun ChatContent(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
+    isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     selectedMessages: List<MessageEntity>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
@@ -32,7 +35,9 @@ fun ChatContent(
             DisplayMessages(
                 modifier = Modifier.weight(1f),
                 isSelectionMode = isSelectionMode,
+                isSearchMode = isSearchMode,
                 messages = messages,
+                searchedMessages = searchedMessages,
                 selectedMessages = selectedMessages,
                 onItemSelected = onMessageSelected,
                 onItemDeselected = onMessageDeselected
@@ -52,17 +57,24 @@ fun ChatContent(
 fun DisplayMessages(
     modifier: Modifier,
     isSelectionMode: Boolean,
+    isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     selectedMessages: List<MessageEntity>,
     onItemSelected: (MessageEntity) -> Unit,
     onItemDeselected: (MessageEntity) -> Unit
-){
-    if(messages is DatabaseRequestState.Success) {
-        if(messages.data.isNotEmpty())
+) {
+    val messagesToDisplay = if(isSearchMode && searchedMessages !is DatabaseRequestState.Idle)
+        searchedMessages
+    else
+        messages
+
+    if(messagesToDisplay is DatabaseRequestState.Success) {
+        if(messagesToDisplay.data.isNotEmpty())
         {
             AutoScrollItemsList(
                 modifier = modifier,
-                items = messages.data,
+                items = messagesToDisplay.data,
                 selectedItems = selectedMessages,
                 listItem = { messageEntity, isSelected ->
                     MessageItem(
@@ -78,8 +90,19 @@ fun DisplayMessages(
                 itemKeyProvider = { m -> m.id }
             )
         } else {
-            NoMessageAvailable(modifier)
+            if(isSearchMode)
+            {
+                EmptySearchResult(modifier)
+            }
+            else
+            {
+                EmptyChatScreen(modifier)
+            }
         }
+    }
+    else if(messagesToDisplay is DatabaseRequestState.Error)
+    {
+        ErrorScreen(modifier)
     }
 }
 
@@ -102,6 +125,8 @@ fun ChatContentPreview()
         onInputTextChanged = {},
         selectedMessages = listOf(),
         onMessageDeselected = { },
-        onMessageSelected = { }
+        onMessageSelected = { },
+        isSearchMode = false,
+        searchedMessages = DatabaseRequestState.Success(listOf())
     )
 }

@@ -17,7 +17,6 @@
     <string name="search">Search</string>
     <string name="close">Close</string>
     <string name="contact">Contact</string>
-    <string name="no_contacts_found">No contacts found</string>
     <string name="back">Back</string>
     <string name="contact_qr_code">Contact QR Code</string>
     <string name="qr_code_caption">Scan the code from other device to connect</string>
@@ -30,7 +29,7 @@
     <string name="qr_code_not_available">Could not generate the QR code</string>
     <string name="new_contact_available">This contact is new in your list</string>
     <string name="provide_new_name">Please provide a new name for it</string>
-    <string name="no_message_available">No message available</string>
+    <string name="this_conversation_seems_empty">It looks like this conversation is empty</string>
     <string name="more_contact_actions">More contact actions</string>
     <string name="clear_conversation">Clear conversation</string>
     <string name="rename">Rename</string>
@@ -41,4 +40,8 @@
     <string name="delete">Delete</string>
     <string name="delete_selected_messages">Delete selected messages?</string>
     <string name="delete_selected_contacts">Delete selected contacts?</string>
+    <string name="no_message_found">We could not find any message out there</string>
+    <string name="something_went_wrong">Something went wrong</string>
+    <string name="no_contacts_found">We could not found any contact out there</string>
+    <string name="no_contact_available">You do not have any contacts yet</string>
 </resources>

@@ -44,11 +44,16 @@ class ChatViewModel @Inject constructor(
     private val _pathsExist =
         MutableStateFlow<DatabaseRequestState<Boolean>>(DatabaseRequestState.Idle)
 
+    private val _searchedMessages =
+        MutableStateFlow<DatabaseRequestState<List<MessageEntity>>>(DatabaseRequestState.Idle)
+
     val selectedContact: StateFlow<DatabaseRequestState<ContactEntity>> = _selectedContact
 
     val messages: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _messages
 
     val pathsExist: MutableStateFlow<DatabaseRequestState<Boolean>> = _pathsExist
+
+    val searchedMessages: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _searchedMessages
 
     val messageInputText: MutableState<String> = mutableStateOf("")
 
@@ -76,6 +81,19 @@ class ChatViewModel @Inject constructor(
                 }
             } catch (ex: Exception) {
                 _messages.value = DatabaseRequestState.Error(ex)
+            }
+        }
+    }
+
+    fun searchConversation(chatId: String, searchQuery: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _searchedMessages.value = DatabaseRequestState.Loading
+            try {
+                repository.local.searchConversation(chatId, searchQuery).collect { messages ->
+                    _searchedMessages.value = DatabaseRequestState.Success(messages)
+                }
+            } catch (ex: Exception) {
+                _searchedMessages.value = DatabaseRequestState.Error(ex)
             }
         }
     }

@@ -11,6 +11,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +23,10 @@ import androidx.compose.ui.unit.sp
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.ui.screens.common.ActivateSearchAppBarAction
 import com.example.enigma.ui.screens.common.DeleteAppBarAction
 import com.example.enigma.ui.screens.common.NavigateBackAppBarAction
+import com.example.enigma.ui.screens.common.SearchAppBar
 import com.example.enigma.ui.screens.common.SelectionModeAppBar
 import com.example.enigma.util.DatabaseRequestState
 
@@ -32,13 +35,26 @@ fun ChatAppBar(
     messages: DatabaseRequestState<List<MessageEntity>>,
     contact: DatabaseRequestState<ContactEntity>,
     isSelectionMode: Boolean,
+    isSearchMode: Boolean,
     selectedItemsCount: Int,
     onDeleteAllClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onSelectionModeExited: () -> Unit,
+    onSearchModeTriggered: () -> Unit,
+    onSearchModeClosed: () -> Unit,
+    onSearchClicked: (String) -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    LaunchedEffect(key1 = isSearchMode)
+    {
+        if(!isSearchMode)
+        {
+            searchQuery = ""
+        }
+    }
+
     if(isSelectionMode)
     {
         SelectionModeAppBar(
@@ -51,13 +67,26 @@ fun ChatAppBar(
             }
         )
     } else {
-        DefaultChatAppBar(
-            messages = messages,
-            contact = contact,
-            onDeleteAllClicked = onDeleteAllClicked,
-            onRenameContactClicked = onRenameContactClicked,
-            navigateToContactsScreen = navigateToContactsScreen
-        )
+        if(isSearchMode)
+        {
+            SearchAppBar(
+                searchQuery = searchQuery,
+                onSearchQueryChanged = {
+                    newSearchQuery -> searchQuery = newSearchQuery
+                },
+                onClose = onSearchModeClosed,
+                onSearchClicked = onSearchClicked
+            )
+        } else {
+            DefaultChatAppBar(
+                messages = messages,
+                contact = contact,
+                onDeleteAllClicked = onDeleteAllClicked,
+                onRenameContactClicked = onRenameContactClicked,
+                navigateToContactsScreen = navigateToContactsScreen,
+                onSearchModeTriggered = onSearchModeTriggered
+            )
+        }
     }
 }
 
@@ -68,6 +97,7 @@ fun DefaultChatAppBar(
     contact: DatabaseRequestState<ContactEntity>,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
+    onSearchModeTriggered: () -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
     TopAppBar(
@@ -85,6 +115,9 @@ fun DefaultChatAppBar(
             )
         },
         actions = {
+            ActivateSearchAppBarAction(
+                onSearchModeTriggered = onSearchModeTriggered
+            )
             MoreActions(
                 messages = messages,
                 onDeleteAllClicked = onDeleteAllClicked,
@@ -171,7 +204,11 @@ fun DefaultChatAppBarPreview()
         navigateToContactsScreen = {},
         onDeleteClicked = {},
         selectedItemsCount = 0,
-        onSelectionModeExited = {}
+        onSelectionModeExited = {},
+        onSearchModeTriggered = {},
+        onSearchClicked = {},
+        onSearchModeClosed = {},
+        isSearchMode = false
     )
 }
 
@@ -194,6 +231,10 @@ fun SelectionModeChatAppBarPreview()
         navigateToContactsScreen = {},
         onDeleteClicked = {},
         selectedItemsCount = 3,
-        onSelectionModeExited = {}
+        onSelectionModeExited = {},
+        onSearchModeTriggered = {},
+        onSearchClicked = {},
+        onSearchModeClosed = {},
+        isSearchMode = false
     )
 }

@@ -20,7 +20,13 @@ fun SelectionModeAppBar(
             )
         },
         title = {
-            Text(text = "$selectedItemsCount items selected")
+            Text(
+                text = when(selectedItemsCount) {
+                    0 -> "No item selected"
+                    1 -> "1 item selected"
+                    else -> "$selectedItemsCount items selected"
+                }
+            )
         },
         actions = {
             actions()

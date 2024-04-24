@@ -13,8 +13,12 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -24,17 +28,24 @@ import com.example.enigma.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchAppBar(
-    text: String,
-    onTextChanged: (String) -> Unit,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     onClose: () -> Unit,
     onSearchClicked: (String) -> Unit
 ) {
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(key1 = true)
+    {
+        focusRequester.requestFocus()
+    }
+
     TopAppBar(
         navigationIcon = {
             IconButton(
                 modifier = Modifier.alpha(0.5f),
                 onClick = {
-                    onSearchClicked(text)
+                    onSearchClicked(searchQuery)
                 }
             ) {
                 Icon(
@@ -45,10 +56,12 @@ fun SearchAppBar(
         },
         title = {
             TextField(
-                modifier = Modifier.fillMaxWidth(),
-                value = text,
+                modifier = Modifier
+                    .focusRequester(focusRequester)
+                    .fillMaxWidth(),
+                value = searchQuery,
                 onValueChange = { text ->
-                    onTextChanged(text)
+                    onSearchQueryChanged(text)
                 },
                 placeholder = {
                     Text(
@@ -65,7 +78,7 @@ fun SearchAppBar(
                 ),
                 keyboardActions = KeyboardActions(
                     onSearch = {
-                        onSearchClicked(text)
+                        onSearchClicked(searchQuery)
                     }
                 ),
                 colors = TextFieldDefaults.colors().copy(
@@ -79,10 +92,10 @@ fun SearchAppBar(
         },
         actions = {
             CloseSearchTopAppBarAction(
-                isEmptySearchQuery = text.isEmpty(),
+                isEmptySearchQuery = searchQuery.isEmpty(),
                 onClose = onClose,
                 onClearSearchQuery = {
-                    onTextChanged("")
+                    onSearchQueryChanged("")
                 }
             )
         }
@@ -94,8 +107,8 @@ fun SearchAppBar(
 private fun SearchAppBarPreview()
 {
     SearchAppBar(
-        text = "John",
-        onTextChanged = {},
+        searchQuery = "John",
+        onSearchQueryChanged = {},
         onClose = {},
         onSearchClicked = {},
     )

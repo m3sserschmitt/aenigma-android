@@ -54,7 +54,8 @@ fun <T> AutoScrollItemsList(
         itemKeyProvider = itemKeyProvider,
         selectedItems = selectedItems,
         itemEqualityChecker = itemEqualityChecker,
-        listItem = listItem
+        listItem = listItem,
+        state = columnState
     )
 
     LaunchedEffect(key1 = items.size)

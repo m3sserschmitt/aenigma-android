@@ -24,4 +24,7 @@ interface MessagesDao {
 
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId")
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
+
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%')")
+    fun searchConversation(chatId: String, searchQuery: String): Flow<List<MessageEntity>>
 }
