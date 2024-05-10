@@ -1,4 +1,4 @@
-package com.example.enigma.ui.screens.chat
+package com.example.enigma.ui.screens.common
 
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -6,24 +6,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
-import com.example.enigma.ui.screens.common.DialogContentTemplate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EraseConversationDialog(
+fun ErrorEstablishingConnectionDialog(
     visible: Boolean,
-    onConfirmClicked: () -> Unit,
+    onRetryNowClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
-    if (visible ) {
+    if(visible) {
         BasicAlertDialog(onDismissRequest = onDismissClicked) {
             DialogContentTemplate(
-                title = stringResource(id = R.string.erase_entire_conversation),
-                body = stringResource(id = R.string.this_action_is_permanent),
-                dismissible = true,
+                title = stringResource(id = R.string.connection_failed),
+                body = stringResource(id = R.string.connection_failed_reason),
+                content = {},
                 onNegativeButtonClicked = onDismissClicked,
-                onPositiveButtonClicked = onConfirmClicked,
-                content = { }
+                onPositiveButtonClicked = onRetryNowClicked,
+                positiveButtonText = stringResource(id = R.string.retry_now)
             )
         }
     }
@@ -31,11 +30,11 @@ fun EraseConversationDialog(
 
 @Preview
 @Composable
-fun EraseConversationDialogPreview()
+fun ErrorEstablishingConnectionDialogPreview()
 {
-    EraseConversationDialog(
+    ErrorEstablishingConnectionDialog(
         visible = true,
-        onDismissClicked = {},
-        onConfirmClicked = {}
+        onRetryNowClicked = {},
+        onDismissClicked = {}
     )
 }

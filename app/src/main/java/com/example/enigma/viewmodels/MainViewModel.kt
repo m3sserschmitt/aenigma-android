@@ -32,7 +32,7 @@ class MainViewModel @Inject constructor(
     private val addressProvider: AddressProvider,
     application: Application,
     signalRClient: SignalRClient
-) : BaseViewModel(repository, application, signalRClient) {
+) : BaseViewModel(repository, signalRClient, application) {
 
     private val _searchedContacts
     = MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)

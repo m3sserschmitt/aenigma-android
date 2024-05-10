@@ -17,9 +17,9 @@ import kotlinx.coroutines.launch
 import java.lang.Exception
 
 abstract class BaseViewModel(
-    val repository: Repository,
+    protected val repository: Repository,
+    private val signalRClient: SignalRClient,
     application: Application,
-    signalRClient: SignalRClient
 ): AndroidViewModel(application) {
 
     protected val _allContacts =
@@ -79,5 +79,10 @@ abstract class BaseViewModel(
         {
             return false
         }
+    }
+
+    fun resetClientStatus()
+    {
+        signalRClient.resetStatus()
     }
 }

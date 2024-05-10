@@ -3,18 +3,10 @@ package com.example.enigma.data.database
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import java.text.SimpleDateFormat
 import java.util.*
 
 class Converters {
-    @TypeConverter
-    fun fromTimestamp(value: Long): Date {
-        return Date(value)
-    }
-
-    @TypeConverter
-    fun dateToTimestamp(date: Date): Long {
-        return date.time
-    }
 
     @TypeConverter
     fun pathToString(path: List<String>): String
@@ -29,5 +21,21 @@ class Converters {
         val gson = Gson()
         val itemType = object : TypeToken<List<String>>() {}.type
         return gson.fromJson(stringPath, itemType)
+    }
+
+    @TypeConverter
+    fun dateToString(date: Date): String
+    {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
+
+        return dateFormat.format(date)
+    }
+
+    @TypeConverter
+    fun stringToDate(date: String): Date?
+    {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
+
+        return dateFormat.parse(date)
     }
 }

@@ -21,8 +21,8 @@ fun DeleteSelectedMessagesDialog(
                 title = stringResource(id = R.string.delete_selected_messages),
                 body = stringResource(id = R.string.this_action_is_permanent),
                 dismissible = true,
-                onDismissClicked = onDismissClicked,
-                onConfirmClicked = onConfirmClicked,
+                onNegativeButtonClicked = onDismissClicked,
+                onPositiveButtonClicked = onConfirmClicked,
                 content = { }
             )
         }

@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.screens.common.AutoScrollItemsList
 import com.example.enigma.ui.screens.common.ErrorScreen
 import com.example.enigma.util.DatabaseRequestState
@@ -19,6 +20,7 @@ fun ChatContent(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
+    connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
     searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     selectedMessages: List<MessageEntity>,
@@ -45,6 +47,7 @@ fun ChatContent(
 
             ChatInput(
                 modifier = Modifier.height(80.dp),
+                enabled = connectionStatus is SignalRStatus.Authenticated,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = onSendClicked
@@ -119,6 +122,7 @@ fun ChatContentPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        connectionStatus = SignalRStatus.Authenticated(SignalRStatus.NotConnected()),
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},

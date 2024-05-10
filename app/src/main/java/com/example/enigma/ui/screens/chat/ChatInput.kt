@@ -23,6 +23,7 @@ import com.example.enigma.R
 @Composable
 fun ChatInput(
     modifier: Modifier,
+    enabled: Boolean = true,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit
@@ -41,13 +42,15 @@ fun ChatInput(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent
-            )
+            ),
+            enabled = enabled
         )
         IconButton(
             modifier = Modifier
                 .size(64.dp)
                 .weight(1f),
-            onClick = onSendClicked
+            onClick = onSendClicked,
+            enabled = enabled
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
@@ -66,6 +69,7 @@ fun ChatInputPreview()
 {
     ChatInput(
         modifier = Modifier.fillMaxWidth(),
+        enabled = true,
         messageInputText = "Hello, John",
         onInputTextChanged = {},
         onSendClicked = {}

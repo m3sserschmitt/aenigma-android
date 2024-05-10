@@ -6,6 +6,8 @@ import com.example.enigma.data.database.EdgeEntity
 import com.example.enigma.data.database.EdgesDao
 import com.example.enigma.data.database.GraphPathEntity
 import com.example.enigma.data.database.GraphPathsDao
+import com.example.enigma.data.database.GraphVersionEntity
+import com.example.enigma.data.database.GraphVersionsDao
 import com.example.enigma.data.database.GuardEntity
 import com.example.enigma.data.database.GuardsDao
 import com.example.enigma.data.database.MessageEntity
@@ -21,7 +23,8 @@ class LocalDataSource @Inject constructor(
     private val guardsDao: GuardsDao,
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
-    private val graphPathsDao: GraphPathsDao
+    private val graphPathsDao: GraphPathsDao,
+    private val graphVersionsDao: GraphVersionsDao
 ) {
     fun getContacts() : Flow<List<ContactEntity>>
     {
@@ -121,6 +124,17 @@ class LocalDataSource @Inject constructor(
     suspend fun getGuard(): GuardEntity?
     {
         return guardsDao.getLastGuard()
+    }
+
+    suspend fun getGraphVersion(): GraphVersionEntity?
+    {
+        return graphVersionsDao.get()
+    }
+
+    suspend fun updateGraphVersion(graphVersion: GraphVersionEntity)
+    {
+        graphVersionsDao.remove()
+        graphVersionsDao.insert(graphVersion)
     }
 
     suspend fun removeVertices()

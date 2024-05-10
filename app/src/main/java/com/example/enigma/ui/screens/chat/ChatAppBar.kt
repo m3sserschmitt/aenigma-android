@@ -1,6 +1,7 @@
 package com.example.enigma.ui.screens.chat
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
@@ -16,16 +17,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.screens.common.ActivateSearchAppBarAction
 import com.example.enigma.ui.screens.common.DeleteAppBarAction
+import com.example.enigma.ui.screens.common.IndeterminateCircularIndicator
 import com.example.enigma.ui.screens.common.NavigateBackAppBarAction
+import com.example.enigma.ui.screens.common.RetryConnectionAppBarAction
 import com.example.enigma.ui.screens.common.SearchAppBar
 import com.example.enigma.ui.screens.common.SelectionModeAppBar
 import com.example.enigma.util.DatabaseRequestState
@@ -34,9 +40,11 @@ import com.example.enigma.util.DatabaseRequestState
 fun ChatAppBar(
     messages: DatabaseRequestState<List<MessageEntity>>,
     contact: DatabaseRequestState<ContactEntity>,
+    connectionStatus: SignalRStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
+    onRetryConnection: () -> Unit,
     onDeleteAllClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
@@ -81,6 +89,8 @@ fun ChatAppBar(
             DefaultChatAppBar(
                 messages = messages,
                 contact = contact,
+                connectionStatus = connectionStatus,
+                onRetryConnection = onRetryConnection,
                 onDeleteAllClicked = onDeleteAllClicked,
                 onRenameContactClicked = onRenameContactClicked,
                 navigateToContactsScreen = navigateToContactsScreen,
@@ -94,7 +104,9 @@ fun ChatAppBar(
 @Composable
 fun DefaultChatAppBar(
     messages: DatabaseRequestState<List<MessageEntity>>,
+    connectionStatus: SignalRStatus,
     contact: DatabaseRequestState<ContactEntity>,
+    onRetryConnection: () -> Unit,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onSearchModeTriggered: () -> Unit,
@@ -115,6 +127,17 @@ fun DefaultChatAppBar(
             )
         },
         actions = {
+            IndeterminateCircularIndicator(
+                modifier = Modifier.size(18.dp),
+                visible = connectionStatus !is SignalRStatus.Authenticated &&
+                        connectionStatus !is SignalRStatus.Aborted,
+                text = "",
+                fontSize = 12.sp
+            )
+            RetryConnectionAppBarAction(
+                visible = connectionStatus is SignalRStatus.Aborted,
+                onRetryConnection = onRetryConnection
+            )
             ActivateSearchAppBarAction(
                 onSearchModeTriggered = onSearchModeTriggered
             )
@@ -192,6 +215,7 @@ fun DefaultChatAppBarPreview()
     ChatAppBar(
         messages = DatabaseRequestState.Success(listOf()),
         isSelectionMode = false,
+        connectionStatus = SignalRStatus.NotConnected(),
         contact = DatabaseRequestState.Success(ContactEntity(
             "123456-5678-5678-123456",
             "John",
@@ -199,6 +223,7 @@ fun DefaultChatAppBarPreview()
             "guard-hostname",
             true
         )),
+        onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
         navigateToContactsScreen = {},
@@ -219,6 +244,7 @@ fun SelectionModeChatAppBarPreview()
     ChatAppBar(
         messages = DatabaseRequestState.Success(listOf()),
         isSelectionMode = true,
+        connectionStatus = SignalRStatus.NotConnected(),
         contact = DatabaseRequestState.Success(ContactEntity(
             "123456-5678-5678-123456",
             "John",
@@ -226,6 +252,7 @@ fun SelectionModeChatAppBarPreview()
             "guard-hostname",
             true
         )),
+        onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
         navigateToContactsScreen = {},

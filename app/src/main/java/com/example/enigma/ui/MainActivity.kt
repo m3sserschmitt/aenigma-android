@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
 
         KeysManager.generateKeyIfNotExistent(this)
         SignalRClientWorker.startPeriodicSync(this)
+        GraphReaderWorker.sync(this)
 
         observeGuardAvailability()
         observerClientConnectivity()
@@ -58,16 +59,23 @@ class MainActivity : ComponentActivity() {
                 SignalRClientWorker.startConnection(this)
             }
             else -> {
-                GraphReaderWorker.startOneTimeWorkRequest(this)
+                GraphReaderWorker.sync(this)
             }
         }
     }
 
-    private val signalRStatusObserver = Observer<SignalRStatus> { client ->
-        when(client) {
-            is SignalRStatus.Disconnected,
-            is SignalRStatus.Error,
-            is SignalRStatus.NotConnected -> SignalRClientWorker.startConnection(this)
+    private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
+        when(clientStatus) {
+            is SignalRStatus.Disconnected ->
+                SignalRClientWorker.startDelayedConnection(this)
+
+            is SignalRStatus.NotConnected ->
+                SignalRClientWorker.startConnection(this)
+
+            is SignalRStatus.Error.ConnectionRefused -> {
+                GraphReaderWorker.syncReplaceGuard(this)
+                SignalRClientWorker.startDelayedConnection(this)
+            }
         }
     }
 

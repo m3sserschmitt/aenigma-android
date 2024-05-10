@@ -33,7 +33,7 @@ class ChatViewModel @Inject constructor(
     private val signalRClient: SignalRClient,
     private val addressProvider: AddressProvider,
     application: Application,
-) : BaseViewModel(repository, application, signalRClient) {
+) : BaseViewModel(repository, signalRClient, application) {
 
     private val _selectedContact =
         MutableStateFlow<DatabaseRequestState<ContactEntity>>(DatabaseRequestState.Idle)

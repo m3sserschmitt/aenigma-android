@@ -1,9 +1,11 @@
 package com.example.enigma.data.network
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.IncomingMessageSaver
 import com.example.enigma.models.AuthenticationRequest
+import com.example.enigma.util.Constants.Companion.CLIENT_CONNECTION_RETRY_COUNT
 import com.google.gson.internal.LinkedTreeMap
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
@@ -30,6 +32,21 @@ class SignalRClient @Inject constructor(
         private const val ROUTE_MESSAGE_METHOD = "RouteMessage"
 
         private const val MESSAGES_SYNCHRONIZATION_METHOD = "Synchronize"
+
+        private const val MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
+        = "The maximum number of failed connection attempts has been reached."
+
+        private const val SIGNATURE_VERIFICATION_FAILED_ERROR
+        = "Signature verification failed."
+
+        private const val AUTHENTICATION_TOKEN_NULL_ERROR
+        = "Authentication token was null."
+
+        private const val CONNECTION_REFUSED_ERROR
+        = "Connection refused."
+
+        private const val COULD_NOT_CREATE_CONNECTION_ERROR
+        = "Could not create connection or invalid URL."
     }
 
     private lateinit var hubConnection: HubConnection
@@ -64,8 +81,7 @@ class SignalRClient @Inject constructor(
             configureConnection(hubConnection)
         }
         catch (ex: Exception) {
-            updateStatus(SignalRStatus.Error::class.java,
-                "Could not create connection or invalid URL.")
+            updateStatus(SignalRStatus.Error::class.java, COULD_NOT_CREATE_CONNECTION_ERROR)
         }
 
         start(true)
@@ -74,11 +90,44 @@ class SignalRClient @Inject constructor(
     private var _status: MutableLiveData<SignalRStatus> =
         MutableLiveData(SignalRStatus.NotConnected())
 
-    val status get() = _status
+    private var _consecutiveFailedAttempts: MutableLiveData<Int> =
+        MutableLiveData(0)
+
+    val status: LiveData<SignalRStatus> get() = _status
+
+    val consecutiveFailedAttempts: LiveData<Int> get() = _consecutiveFailedAttempts
+
+    fun resetStatus()
+    {
+        _consecutiveFailedAttempts.postValue(0)
+        updateStatus(SignalRStatus.NotConnected::class.java)
+    }
 
     private fun <T: SignalRStatus> updateStatus(clazz: Class<T>, error: String? = null)
     {
+        if(SignalRStatus.Error::class.java.isAssignableFrom(clazz))
+        {
+            val newValue = _consecutiveFailedAttempts.value?.plus(1)
+            _consecutiveFailedAttempts.postValue(newValue ?: 0)
+
+            if (newValue != null) {
+                if(newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
+                    _status.postValue(
+                        _status.value?.let {  previousStatus ->
+                            SignalRStatus.Aborted(
+                                previousStatus,
+                                MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
+                            )
+                        }
+                    )
+                    return
+                }
+            }
+        }
+
         when (clazz) {
+            SignalRStatus.Error.ConnectionRefused::class.java ->
+                _status.postValue(_status.value?.let { SignalRStatus.Error.ConnectionRefused(it, error) })
 
             SignalRStatus.Error::class.java ->
                 _status.postValue(_status.value?.let { SignalRStatus.Error(it, error) })
@@ -87,16 +136,18 @@ class SignalRClient @Inject constructor(
                 _status.postValue(_status.value?.let { SignalRStatus.NotConnected() })
 
             SignalRStatus.Connecting::class.java ->
-                _status.postValue(_status.value?.let { SignalRStatus.Connecting(it, error) })
+                _status.postValue(_status.value?.let { SignalRStatus.Connecting(it) })
 
             SignalRStatus.Connected::class.java ->
-                _status.postValue(_status.value?.let { SignalRStatus.Connected(it, error) })
+                _status.postValue(_status.value?.let { SignalRStatus.Connected(it) })
 
             SignalRStatus.Authenticating::class.java ->
-                _status.postValue(_status.value?.let { SignalRStatus.Authenticating(it, error) })
+                _status.postValue(_status.value?.let { SignalRStatus.Authenticating(it) })
 
-            SignalRStatus.Authenticated::class.java ->
-                _status.postValue(_status.value?.let { SignalRStatus.Authenticated(it, error) })
+            SignalRStatus.Authenticated::class.java -> {
+                _status.postValue(_status.value?.let { SignalRStatus.Authenticated(it) })
+                _consecutiveFailedAttempts.postValue(0)
+            }
 
             SignalRStatus.Disconnected::class.java ->
                 _status.postValue(_status.value?.let { SignalRStatus.Disconnected(it, error) })
@@ -135,13 +186,13 @@ class SignalRClient @Inject constructor(
                         } else {
                             updateStatus(
                                 SignalRStatus.Error::class.java,
-                                "Signature verification failed"
+                                SIGNATURE_VERIFICATION_FAILED_ERROR
                             )
                         }
                     }
                 }
             } else {
-                updateStatus(SignalRStatus.Error::class.java, "Authentication token was null")
+                updateStatus(SignalRStatus.Error::class.java, AUTHENTICATION_TOKEN_NULL_ERROR)
             }
         }
 
@@ -164,7 +215,10 @@ class SignalRClient @Inject constructor(
             }
 
             override fun onError(e: Throwable) {
-                updateStatus(SignalRStatus.Error::class.java, "Connection refused")
+                updateStatus(
+                    SignalRStatus.Error.ConnectionRefused::class.java,
+                    CONNECTION_REFUSED_ERROR
+                )
             }
         })
     }

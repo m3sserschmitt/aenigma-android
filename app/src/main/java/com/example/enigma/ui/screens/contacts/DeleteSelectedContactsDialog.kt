@@ -27,8 +27,8 @@ fun DeleteSelectedContactsDialog(
                 ),
                 content = { },
                 dismissible = true,
-                onConfirmClicked = onConfirmClicked,
-                onDismissClicked = onDismissClicked
+                onPositiveButtonClicked = onConfirmClicked,
+                onNegativeButtonClicked = onDismissClicked
             )
         }
     }

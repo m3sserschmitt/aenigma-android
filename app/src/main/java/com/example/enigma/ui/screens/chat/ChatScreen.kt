@@ -3,18 +3,25 @@ package com.example.enigma.ui.screens.chat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.data.network.SignalRStatus
+import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
@@ -41,6 +48,9 @@ fun ChatScreen(
     val pathsExists by chatViewModel.pathsExist.collectAsState()
     val messageInputText by chatViewModel.messageInputText
     val newContactName by chatViewModel.newContactName
+    val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
+        initial = SignalRStatus.NotConnected()
+    )
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -56,10 +66,14 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
+        connectionStatus = connectionStatus,
         messages = messages,
         searchedMessages = searchedMessages,
         messageInputText = messageInputText,
         newContactName = newContactName,
+        onRetryConnection = {
+            chatViewModel.resetClientStatus()
+        },
         onInputTextChanged = {
             newInputTextValue -> chatViewModel.messageInputText.value = newInputTextValue
         },
@@ -91,11 +105,13 @@ fun ChatScreen(
 @Composable
 fun ChatScreen(
     contact: DatabaseRequestState<ContactEntity>,
+    connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
     searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
-    onInputTextChanged: (String) -> Unit,
     newContactName: String,
+    onRetryConnection: () -> Unit,
+    onInputTextChanged: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onRenameContactConfirmed: () -> Unit,
     onRenameContactDismissed: () -> Unit,
@@ -111,6 +127,7 @@ fun ChatScreen(
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<MessageEntity>() }
+    val snackBarHostState = remember { SnackbarHostState() }
 
     SaveNewContactDialog(
         contact = contact,
@@ -163,6 +180,15 @@ fun ChatScreen(
         }
     )
 
+    ConnectionStatusSnackBar(
+        message = stringResource(id = R.string.conversation_read_only),
+        actionLabel = stringResource(id = R.string.retry),
+        connectionStatus = connectionStatus,
+        targetStatus = SignalRStatus.Aborted::class.java,
+        snackBarHostState = snackBarHostState,
+        onActionPerformed = onRetryConnection
+    )
+
     BackHandler(
         enabled = isSearchMode || isSelectionMode
     ) {
@@ -187,10 +213,14 @@ fun ChatScreen(
     }
 
     Scaffold (
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState)
+        },
         topBar = {
             ChatAppBar(
                 messages = messages,
                 contact = contact,
+                connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
                     renameContactDialogVisible = true
@@ -215,7 +245,8 @@ fun ChatScreen(
                 },
                 onSearchModeTriggered = {
                     isSearchMode = true
-                }
+                },
+                onRetryConnection = onRetryConnection
             )
         },
         content = { paddingValues ->
@@ -224,6 +255,7 @@ fun ChatScreen(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding()
                 ),
+                connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
@@ -301,9 +333,13 @@ fun ChatScreenPreview()
                 hasNewMessage = false
             )
         ),
+        connectionStatus = SignalRStatus.Connected(
+            previous = SignalRStatus.NotConnected()
+        ),
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        onRetryConnection = {},
         searchedMessages = DatabaseRequestState.Success(listOf()),
         messageInputText = "Can't wait to see you on Monday",
         newContactName = "",

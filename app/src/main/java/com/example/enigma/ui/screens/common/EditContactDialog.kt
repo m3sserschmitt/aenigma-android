@@ -63,14 +63,14 @@ fun EditContactDialog(
             title = title,
             body = body,
             dismissible = dismissible,
-            onConfirmClicked = {
+            onPositiveButtonClicked = {
                 isContactNameValidationError = isContactNameValidationError || contactName.isEmpty()
                 if(!isContactNameValidationError)
                 {
                     onConfirmClicked()
                 }
             },
-            onDismissClicked =  { onDismissClicked() }
+            onNegativeButtonClicked =  { onDismissClicked() }
         )
     }
 }
@@ -81,9 +81,11 @@ fun DialogContentTemplate(
     title: String,
     body: String,
     content: @Composable () -> Unit,
-    dismissible: Boolean,
-    onConfirmClicked: () -> Unit,
-    onDismissClicked: () -> Unit
+    dismissible: Boolean = true,
+    negativeButtonText: String = stringResource(id = R.string.dismiss),
+    positiveButtonText: String = stringResource(id = R.string.confirm),
+    onPositiveButtonClicked: () -> Unit,
+    onNegativeButtonClicked: () -> Unit
 ) {
     Surface(
         color = MaterialTheme.colorScheme.background,
@@ -117,22 +119,22 @@ fun DialogContentTemplate(
                     OutlinedButton(
                         modifier = Modifier.padding(4.dp),
                         onClick = {
-                            onDismissClicked()
+                            onNegativeButtonClicked()
                         }
                     ) {
                         Text(
-                            text = stringResource(id = R.string.dismiss)
+                            text = negativeButtonText
                         )
                     }
                 }
                 Button(
                     modifier = Modifier.padding(4.dp),
                     onClick = {
-                        onConfirmClicked()
+                        onPositiveButtonClicked()
                     }
                 ) {
                     Text(
-                        text = stringResource(id = R.string.confirm)
+                        text = positiveButtonText
                     )
                 }
             }

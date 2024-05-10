@@ -44,4 +44,11 @@
     <string name="something_went_wrong">Something went wrong</string>
     <string name="no_contacts_found">We could not found any contact out there</string>
     <string name="no_contact_available">You do not have any contacts yet</string>
+    <string name="connecting">Connecting…</string>
+    <string name="connection_failed">Connection failed</string>
+    <string name="connection_failed_reason">The service might be temporarily unavailable. You might try to restart the app or try again later</string>
+    <string name="retry_now">Retry now</string>
+    <string name="retry_connection">Retry connection</string>
+    <string name="conversation_read_only">"Connection failed. Conversation is read-only."</string>
+    <string name="retry">Retry</string>
 </resources>

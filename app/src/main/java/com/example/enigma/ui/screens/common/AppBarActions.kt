@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
@@ -74,6 +75,25 @@ fun ActivateSearchAppBarAction(
                 id = R.string.search
             )
         )
+    }
+}
+
+@Composable
+fun RetryConnectionAppBarAction(
+    visible: Boolean,
+    onRetryConnection: () -> Unit
+) {
+    if(visible) {
+        IconButton(onClick = {
+            onRetryConnection()
+        }) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = stringResource(
+                    id = R.string.retry_connection
+                )
+            )
+        }
     }
 }
 

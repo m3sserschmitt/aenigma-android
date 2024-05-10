@@ -1,17 +1,19 @@
 package com.example.enigma.ui.screens.contacts
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +24,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.network.SignalRStatus
+import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.MainViewModel
@@ -39,10 +43,17 @@ fun ContactsScreen(
 
     val allContacts by mainViewModel.allContacts.collectAsState()
     val searchedContacts by mainViewModel.searchedContacts.collectAsState()
+    val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
+        initial = SignalRStatus.NotConnected()
+    )
 
     ContactsScreen(
+        connectionStatus = connectionStatus,
         contacts = allContacts,
         searchedContacts = searchedContacts,
+        onRetryConnection = {
+            mainViewModel.resetClientStatus()
+        },
         onSearchTriggered = {
             mainViewModel.resetSearchResultResult()
         },
@@ -65,8 +76,10 @@ fun ContactsScreen(
 
 @Composable
 fun ContactsScreen(
+    connectionStatus: SignalRStatus,
     contacts: DatabaseRequestState<List<ContactEntity>>,
     searchedContacts: DatabaseRequestState<List<ContactEntity>>,
+    onRetryConnection: () -> Unit,
     onSearchTriggered: () -> Unit,
     onSearch: (String) -> Unit,
     onDeleteSelectedItems: (List<ContactEntity>) -> Unit,
@@ -79,6 +92,7 @@ fun ContactsScreen(
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<ContactEntity>() }
+    val snackBarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(key1 = contacts)
     {
@@ -137,9 +151,22 @@ fun ContactsScreen(
         }
     )
 
+    ConnectionStatusSnackBar(
+        message = stringResource(id = R.string.connection_failed),
+        actionLabel = stringResource(id = R.string.retry),
+        connectionStatus = connectionStatus,
+        targetStatus = SignalRStatus.Aborted::class.java,
+        snackBarHostState = snackBarHostState,
+        onActionPerformed = onRetryConnection
+    )
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackBarHostState)
+        },
         topBar = {
             ContactsAppBar(
+                connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
                 onSearchTriggered = {
                     isSearchMode = true
@@ -161,7 +188,8 @@ fun ContactsScreen(
                 },
                 onRenameSelectedItemClicked = {
                     renameContactDialogVisible = true
-                }
+                },
+                onRetryConnection = onRetryConnection
             )
         },
         content = { paddingValues ->
@@ -219,6 +247,10 @@ fun ContactsFab(
 fun ContactsScreenPreview()
 {
     ContactsScreen(
+        connectionStatus = SignalRStatus.Connected(
+            previous = SignalRStatus.NotConnected()
+        ),
+        onRetryConnection = {},
         onContactRenamed = { _, _ -> },
         onDeleteSelectedItems = {},
         onSearch = {},
