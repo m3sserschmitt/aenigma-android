@@ -61,7 +61,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _selectedContact.value = DatabaseRequestState.Loading
             try {
-                repository.local.getContact(chatId).collect { contact ->
+                repository.local.getContactFlow(chatId).collect { contact ->
                     _selectedContact.value =
                         if (contact != null) DatabaseRequestState.Success(contact)
                         else DatabaseRequestState.Error(Exception("Contact not found."))

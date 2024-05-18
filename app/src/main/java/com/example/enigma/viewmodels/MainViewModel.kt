@@ -28,11 +28,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    repository: Repository,
     private val addressProvider: AddressProvider,
+    repository: Repository,
     application: Application,
     signalRClient: SignalRClient
-) : BaseViewModel(repository, signalRClient, application) {
+) : BaseViewModel(
+    repository,
+    signalRClient,
+    application) {
 
     private val _searchedContacts
     = MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)
@@ -48,6 +51,8 @@ class MainViewModel @Inject constructor(
     val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
 
     val searchedContacts: StateFlow<DatabaseRequestState<List<ContactEntity>>> = _searchedContacts
+
+    val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
 
     fun searchContacts(searchQuery: String)
     {
@@ -144,6 +149,13 @@ class MainViewModel @Inject constructor(
             val updatedContact = copyBySerialization(contact)
             updatedContact.name = name
             repository.local.updateContact(updatedContact)
+        }
+    }
+
+    fun saveNotificationsPreference(granted: Boolean)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.local.saveNotificationsAllowed(granted)
         }
     }
 }

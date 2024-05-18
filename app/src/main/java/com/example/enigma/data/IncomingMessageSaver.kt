@@ -5,14 +5,15 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.models.MessageExtended
 import com.example.enigma.util.AddressHelper
+import com.example.enigma.util.NotificationService
 import com.google.gson.Gson
 import javax.inject.Inject
 
 class IncomingMessageSaver @Inject constructor(
     private val repository: Repository,
-    private val onionParsingService: OnionParsingService)
+    private val onionParsingService: OnionParsingService,
+    private val notificationService: NotificationService)
 {
-
     suspend fun handleIncomingMessages(messages: List<String>)
     {
         val parsedData = messages.mapNotNull { message -> onionParsingService.parse(message) }
@@ -52,11 +53,25 @@ class IncomingMessageSaver @Inject constructor(
 
     private suspend fun saveMessages(messages: List<MessageEntity>)
     {
-        if(!messages.any()) return
+        if(messages.isEmpty()) return
 
         repository.local.insertMessages(messages)
+        markConversationAsUnread(messages)
+        notify(messages)
+    }
 
+    private suspend fun markConversationAsUnread(messages: List<MessageEntity>)
+    {
         val modifiedConversations = messages.map { item -> item.chatId }.toSet()
         modifiedConversations.map { id ->  repository.local.markConversationAsUnread(id)}
+    }
+
+    private suspend fun notify(messages: List<MessageEntity>)
+    {
+        for (message in messages)
+        {
+            val contact = repository.local.getContact(message.chatId) ?: continue
+            notificationService.notify(contact, message.text)
+        }
     }
 }

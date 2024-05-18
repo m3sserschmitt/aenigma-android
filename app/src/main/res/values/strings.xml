@@ -51,4 +51,9 @@
     <string name="retry_connection">Retry connection</string>
     <string name="conversation_read_only">"Connection failed. Conversation is read-only."</string>
     <string name="retry">Retry</string>
+    <string name="permission_required">Permission required</string>
+    <string name="notifications_permission_required">This app needs permission to show notifications. For the best experience, please grant the required permission from settings.</string>
+    <string name="settings">Settings</string>
+    <string name="remember_decision">Remember my decision</string>
+    <string name="do_not_allow">Don\'t allow</string>
 </resources>

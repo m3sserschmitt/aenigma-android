@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
@@ -27,7 +28,10 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
+import com.example.enigma.ui.screens.common.NotificationsPermissionRequiredDialog
+import com.example.enigma.ui.screens.common.CheckNotificationsPermission
 import com.example.enigma.util.DatabaseRequestState
+import com.example.enigma.util.openApplicationDetails
 import com.example.enigma.viewmodels.MainViewModel
 
 @Composable
@@ -46,11 +50,18 @@ fun ContactsScreen(
     val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
+    val notificationsAllowed by mainViewModel.notificationsPermissionGranted.collectAsState(
+        initial = true
+    )
 
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
         searchedContacts = searchedContacts,
+        notificationsAllowed = notificationsAllowed,
+        onNotificationsPreferenceChanged = {
+            allowed -> mainViewModel.saveNotificationsPreference(allowed)
+        },
         onRetryConnection = {
             mainViewModel.resetClientStatus()
         },
@@ -79,6 +90,8 @@ fun ContactsScreen(
     connectionStatus: SignalRStatus,
     contacts: DatabaseRequestState<List<ContactEntity>>,
     searchedContacts: DatabaseRequestState<List<ContactEntity>>,
+    notificationsAllowed: Boolean,
+    onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearchTriggered: () -> Unit,
     onSearch: (String) -> Unit,
@@ -87,12 +100,14 @@ fun ContactsScreen(
     navigateToAddContactScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
+    var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<ContactEntity>() }
     val snackBarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
 
     LaunchedEffect(key1 = contacts)
     {
@@ -101,6 +116,27 @@ fun ContactsScreen(
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
+
+    CheckNotificationsPermission(
+        onPermissionGranted = {
+            granted ->
+            permissionRequiredDialogVisible = !granted && notificationsAllowed
+            if(granted) onNotificationsPreferenceChanged(true)
+        }
+    )
+
+    NotificationsPermissionRequiredDialog(
+        visible = permissionRequiredDialogVisible,
+        onPositiveButtonClicked = {
+            permissionRequiredDialogVisible = false
+            context.openApplicationDetails()
+        },
+        onNegativeButtonClicked = {
+            rememberDecision ->
+            if(rememberDecision) onNotificationsPreferenceChanged(false)
+            permissionRequiredDialogVisible = false
+        }
+    )
 
     DeleteSelectedContactsDialog(
         visible = deleteContactsConfirmationVisible,
@@ -250,6 +286,8 @@ fun ContactsScreenPreview()
         connectionStatus = SignalRStatus.Connected(
             previous = SignalRStatus.NotConnected()
         ),
+        notificationsAllowed = true,
+        onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },
         onDeleteSelectedItems = {},

@@ -3,6 +3,10 @@ package com.example.enigma.util
 class Constants {
     companion object {
 
+        // datastore
+        const val DATASTORE_PREFERENCES = "datastore-preference"
+        const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"
+
         const val ADDRESS_SIZE = 32 // bytes
         const val KEY_SIZE = 2048 // bits !!
         const val CLIENT_CONNECTION_RETRY_COUNT = 3
@@ -18,11 +22,6 @@ class Constants {
         const val EDGES_TABLE = "Edges"
         const val GRAPH_PATHS_TABLE = "GraphPaths"
         const val GRAPH_VERSIONS_TABLE = "GraphVersions"
-
-        // Screens
-        const val CONTACTS_SCREEN = "contacts"
-        const val CHAT_SCREEN = "chat/{chatId}"
-        const val ADD_CONTACT_SCREEN = "addContact"
 
         // Screens Arguments
         const val CHAT_ARGUMENT_KEY = "chatId"

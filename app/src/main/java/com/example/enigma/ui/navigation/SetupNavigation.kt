@@ -7,11 +7,12 @@ import androidx.navigation.compose.NavHost
 import com.example.enigma.ui.navigation.destinations.addContactComposable
 import com.example.enigma.ui.navigation.destinations.chatComposable
 import com.example.enigma.ui.navigation.destinations.contactsComposable
-import com.example.enigma.util.Constants.Companion.CONTACTS_SCREEN
+import com.example.enigma.util.NavigationTracker
 import com.example.enigma.viewmodels.MainViewModel
 
 @Composable
 fun SetupNavigation(
+    navigationTracker: NavigationTracker,
     navHostController: NavHostController,
     mainViewModel: MainViewModel
 ) {
@@ -21,17 +22,20 @@ fun SetupNavigation(
 
     NavHost(
         navController = navHostController,
-        startDestination = CONTACTS_SCREEN
+        startDestination = Screens.STARTING_SCREEN
     ) {
         contactsComposable(
+            navigationTracker = navigationTracker,
             navigateToChatScreen = screen.chat,
             navigateToAddContactScreen = screen.addContact,
             mainViewModel = mainViewModel
         )
         chatComposable(
+            navigationTracker = navigationTracker,
             navigateToContactsScreen = screen.contacts
         )
         addContactComposable(
+            navigationTracker = navigationTracker,
             navigateToChatsScreen = screen.contacts,
             mainViewModel = mainViewModel
         )

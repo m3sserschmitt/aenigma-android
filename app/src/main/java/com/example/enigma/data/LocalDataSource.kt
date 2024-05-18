@@ -24,8 +24,17 @@ class LocalDataSource @Inject constructor(
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
     private val graphPathsDao: GraphPathsDao,
-    private val graphVersionsDao: GraphVersionsDao
+    private val graphVersionsDao: GraphVersionsDao,
+    private val preferencesDataStore: PreferencesDataStore
 ) {
+    suspend fun saveNotificationsAllowed(granted: Boolean)
+    {
+        preferencesDataStore.saveNotificationsAllowed(granted)
+    }
+
+    val notificationsAllowed: Flow<Boolean>
+    = preferencesDataStore.notificationsAllowed
+
     fun getContacts() : Flow<List<ContactEntity>>
     {
         return contactsDao.get()
@@ -36,9 +45,14 @@ class LocalDataSource @Inject constructor(
         return contactsDao.search(searchQuery)
     }
 
-    fun getContact(address: String) : Flow<ContactEntity?>
+    suspend fun getContact(address: String) : ContactEntity?
     {
         return contactsDao.get(address)
+    }
+
+    fun getContactFlow(address: String): Flow<ContactEntity?>
+    {
+        return contactsDao.getFlow(address)
     }
 
     suspend fun insertOrUpdateContact(contactEntity: ContactEntity)

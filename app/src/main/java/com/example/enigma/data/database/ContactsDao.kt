@@ -11,7 +11,10 @@ interface ContactsDao {
     fun get(): Flow<List<ContactEntity>>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
-    fun get(address: String): Flow<ContactEntity?>
+    suspend fun get(address: String): ContactEntity?
+
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
+    fun getFlow(address: String): Flow<ContactEntity?>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%'")
     fun search(searchQuery: String): Flow<List<ContactEntity>>
