@@ -25,9 +25,6 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId LIMIT $CONVERSATION_PAGE_SIZE")
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
 
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id > :infIndex AND chatId = :chatId LIMIT $CONVERSATION_PAGE_SIZE")
-    suspend fun getConversation(chatId: String, infIndex: Long): List<MessageEntity>
-
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%')")
-    suspend fun searchConversation(chatId: String, searchQuery: String): List<MessageEntity>
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id > :infIndex AND chatId = :chatId AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%') LIMIT $CONVERSATION_PAGE_SIZE")
+    suspend fun getConversation(chatId: String, infIndex: Long, searchQuery: String = ""): List<MessageEntity>
 }

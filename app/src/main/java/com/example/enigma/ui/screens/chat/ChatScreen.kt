@@ -44,14 +44,13 @@ fun ChatScreen(
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
-    val searchedMessages by chatViewModel.searchedMessages.collectAsState()
     val pathsExists by chatViewModel.pathsExist.collectAsState()
     val messageInputText by chatViewModel.messageInputText
     val newContactName by chatViewModel.newContactName
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
-    val nextConversationPageAvailable by chatViewModel.nextPageAvailable
+    val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -70,7 +69,6 @@ fun ChatScreen(
         connectionStatus = connectionStatus,
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
-        searchedMessages = searchedMessages,
         messageInputText = messageInputText,
         newContactName = newContactName,
         onRetryConnection = {
@@ -113,7 +111,6 @@ fun ChatScreen(
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
     nextConversationPageAvailable: Boolean,
-    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
     newContactName: String,
     onRetryConnection: () -> Unit,
@@ -202,6 +199,7 @@ fun ChatScreen(
         if(isSearchMode)
         {
             isSearchMode = false
+            onSearch("")
         }
 
         if(isSelectionMode)
@@ -246,6 +244,7 @@ fun ChatScreen(
                 isSearchMode = isSearchMode,
                 onSearchModeClosed = {
                     isSearchMode = false
+                    onSearch("")
                 },
                 onSearchClicked = {
                     searchQuery -> onSearch(searchQuery)
@@ -267,7 +266,6 @@ fun ChatScreen(
                 isSearchMode = isSearchMode,
                 messages = messages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
-                searchedMessages = searchedMessages,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
@@ -350,7 +348,6 @@ fun ChatScreenPreview()
         ),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
-        searchedMessages = DatabaseRequestState.Success(listOf()),
         messageInputText = "Can't wait to see you on Monday",
         newContactName = "",
         onSendClicked = {},

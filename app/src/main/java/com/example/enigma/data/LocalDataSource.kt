@@ -91,14 +91,9 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getConversation(chatId)
     }
 
-    suspend fun getConversation(chatId: String, infIndex: Long): List<MessageEntity>
+    suspend fun getConversation(chatId: String, infIndex: Long, searchQuery: String = ""): List<MessageEntity>
     {
-        return messagesDao.getConversation(chatId, infIndex)
-    }
-
-    suspend fun searchConversation(chatId: String, searchQuery: String): List<MessageEntity>
-    {
-        return messagesDao.searchConversation(chatId, searchQuery)
+        return messagesDao.getConversation(chatId, infIndex, searchQuery)
     }
 
     suspend fun clearConversation(chatId: String)
@@ -110,16 +105,6 @@ class LocalDataSource @Inject constructor(
     {
         messagesDao.remove(messages)
     }
-
-//    suspend fun insertMessage(messageEntity: MessageEntity)
-//    {
-//        messagesDao.insert(messageEntity)
-//    }
-//
-//    suspend fun insertMessages(messageEntities: List<MessageEntity>)
-//    {
-//        messagesDao.insert(messageEntities)
-//    }
 
     suspend fun insertMessage(message: MessageEntity)
     {

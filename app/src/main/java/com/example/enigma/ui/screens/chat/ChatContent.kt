@@ -31,7 +31,6 @@ fun ChatContent(
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
     nextConversationPageAvailable: Boolean,
-    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     selectedMessages: List<MessageEntity>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
@@ -63,7 +62,6 @@ fun ChatContent(
                 messages = messages,
                 conversationListState = conversationListState,
                 nextConversationPageAvailable = nextConversationPageAvailable,
-                searchedMessages = searchedMessages,
                 selectedMessages = selectedMessages,
                 onItemSelected = onMessageSelected,
                 onItemDeselected = onMessageDeselected,
@@ -91,26 +89,20 @@ fun DisplayMessages(
     isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
     nextConversationPageAvailable: Boolean,
-    searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     selectedMessages: List<MessageEntity>,
     conversationListState: LazyListState = rememberLazyListState(),
     onItemSelected: (MessageEntity) -> Unit,
     onItemDeselected: (MessageEntity) -> Unit,
     loadNextPage: () -> Unit
 ) {
-    val messagesToDisplay = if(isSearchMode && searchedMessages !is DatabaseRequestState.Idle)
-        searchedMessages
-    else
-        messages
-
-    when(messagesToDisplay)
+    when(messages)
     {
         is DatabaseRequestState.Success -> {
-            if(messagesToDisplay.data.isNotEmpty())
+            if(messages.data.isNotEmpty())
             {
                 AutoScrollItemsList(
                     modifier = modifier,
-                    items = messagesToDisplay.data,
+                    items = messages.data,
                     nextPageAvailable = nextConversationPageAvailable,
                     selectedItems = selectedMessages,
                     listItem = { messageEntity, isSelected ->
@@ -169,6 +161,5 @@ fun ChatContentPreview()
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
-        searchedMessages = DatabaseRequestState.Success(listOf())
     )
 }
