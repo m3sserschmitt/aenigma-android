@@ -3,7 +3,7 @@ package com.example.enigma.data.network
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.crypto.SignatureService
-import com.example.enigma.data.IncomingMessageSaver
+import com.example.enigma.data.MessageSaver
 import com.example.enigma.models.AuthenticationRequest
 import com.example.enigma.util.Constants.Companion.CLIENT_CONNECTION_RETRY_COUNT
 import com.google.gson.internal.LinkedTreeMap
@@ -19,7 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class SignalRClient @Inject constructor(
     private val signatureService: SignatureService,
-    private val messageSaver: IncomingMessageSaver
+    private val messageSaver: MessageSaver
 ) {
     companion object {
 

@@ -43,7 +43,7 @@ fun ChatScreen(
     }
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
-    val messages by chatViewModel.messages.collectAsState()
+    val messages by chatViewModel.conversation.collectAsState()
     val searchedMessages by chatViewModel.searchedMessages.collectAsState()
     val pathsExists by chatViewModel.pathsExist.collectAsState()
     val messageInputText by chatViewModel.messageInputText
@@ -51,6 +51,7 @@ fun ChatScreen(
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
+    val nextConversationPageAvailable by chatViewModel.nextPageAvailable
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -68,6 +69,7 @@ fun ChatScreen(
         contact = selectedContact,
         connectionStatus = connectionStatus,
         messages = messages,
+        nextConversationPageAvailable = nextConversationPageAvailable,
         searchedMessages = searchedMessages,
         messageInputText = messageInputText,
         newContactName = newContactName,
@@ -98,6 +100,9 @@ fun ChatScreen(
         onSearch = {
             searchQuery -> chatViewModel.searchConversation(chatId, searchQuery)
         },
+        loadNextPage = {
+            chatViewModel.loadNextPage(chatId)
+        },
         navigateToContactsScreen = navigateToContactsScreen
     )
 }
@@ -107,6 +112,7 @@ fun ChatScreen(
     contact: DatabaseRequestState<ContactEntity>,
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    nextConversationPageAvailable: Boolean,
     searchedMessages: DatabaseRequestState<List<MessageEntity>>,
     messageInputText: String,
     newContactName: String,
@@ -119,6 +125,7 @@ fun ChatScreen(
     onDeleteAll: () -> Unit,
     onDelete: (List<MessageEntity>) -> Unit,
     onSearch: (String) -> Unit,
+    loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
@@ -259,6 +266,7 @@ fun ChatScreen(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
+                nextConversationPageAvailable = nextConversationPageAvailable,
                 searchedMessages = searchedMessages,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
@@ -274,7 +282,8 @@ fun ChatScreen(
                 },
                 onMessageDeselected = {
                     deselectedMessage -> selectedItems.remove(deselectedMessage)
-                }
+                },
+                loadNextPage = loadNextPage
             )
         }
     )
@@ -339,6 +348,7 @@ fun ChatScreenPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        nextConversationPageAvailable = true,
         onRetryConnection = {},
         searchedMessages = DatabaseRequestState.Success(listOf()),
         messageInputText = "Can't wait to see you on Monday",
@@ -351,6 +361,7 @@ fun ChatScreenPreview()
         onDelete = {},
         onSearch = {},
         onRenameContactDismissed = {},
+        loadNextPage = { },
         navigateToContactsScreen = {}
     )
 }

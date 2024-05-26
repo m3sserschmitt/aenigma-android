@@ -1,5 +1,6 @@
 package com.example.enigma.data.database
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.enigma.util.Constants
@@ -11,7 +12,18 @@ data class MessageEntity (
     val text: String,
     val incoming: Boolean,
     val date: Date
-)
-{
-    @PrimaryKey(autoGenerate = true) var id: Long = 0
+) {
+    @PrimaryKey
+    @ColumnInfo(index = true)
+    var id: Long = 0
+
+    override fun hashCode(): Int {
+        return id.hashCode()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is MessageEntity) return false
+        return id == other.id
+    }
 }

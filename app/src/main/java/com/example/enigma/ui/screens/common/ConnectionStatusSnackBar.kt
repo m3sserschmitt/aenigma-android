@@ -30,7 +30,7 @@ fun <T> ConnectionStatusSnackBar(
                         message = message,
                         actionLabel = actionLabel,
                         withDismissAction = true,
-                        duration = SnackbarDuration.Indefinite
+                        duration = SnackbarDuration.Short
                     )
 
                     when (result) {

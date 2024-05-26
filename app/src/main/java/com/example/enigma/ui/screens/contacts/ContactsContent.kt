@@ -49,7 +49,6 @@ fun ContactsContent(
                     )
                 },
                 selectedItems = selectedContacts,
-                itemEqualityChecker = { c1, c2 -> c1.address == c2.address},
                 itemKeyProvider = { c -> c.address }
             )
 

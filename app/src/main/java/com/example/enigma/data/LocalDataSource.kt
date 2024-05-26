@@ -2,6 +2,7 @@ package com.example.enigma.data
 
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactsDao
+import com.example.enigma.data.database.Converters
 import com.example.enigma.data.database.EdgeEntity
 import com.example.enigma.data.database.EdgesDao
 import com.example.enigma.data.database.GraphPathEntity
@@ -90,7 +91,12 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getConversation(chatId)
     }
 
-    fun searchConversation(chatId: String, searchQuery: String): Flow<List<MessageEntity>>
+    suspend fun getConversation(chatId: String, infIndex: Long): List<MessageEntity>
+    {
+        return messagesDao.getConversation(chatId, infIndex)
+    }
+
+    suspend fun searchConversation(chatId: String, searchQuery: String): List<MessageEntity>
     {
         return messagesDao.searchConversation(chatId, searchQuery)
     }
@@ -105,14 +111,24 @@ class LocalDataSource @Inject constructor(
         messagesDao.remove(messages)
     }
 
-    suspend fun insertMessage(messageEntity: MessageEntity)
-    {
-        messagesDao.insert(messageEntity)
-    }
+//    suspend fun insertMessage(messageEntity: MessageEntity)
+//    {
+//        messagesDao.insert(messageEntity)
+//    }
+//
+//    suspend fun insertMessages(messageEntities: List<MessageEntity>)
+//    {
+//        messagesDao.insert(messageEntities)
+//    }
 
-    suspend fun insertMessages(messageEntities: List<MessageEntity>)
+    suspend fun insertMessage(message: MessageEntity)
     {
-        messagesDao.insert(messageEntities)
+        messagesDao.insert(
+            message.chatId,
+            message.text,
+            message.incoming,
+            Converters().dateToString(message.date)
+        )
     }
 
     suspend fun markConversationAsUnread(address: String)

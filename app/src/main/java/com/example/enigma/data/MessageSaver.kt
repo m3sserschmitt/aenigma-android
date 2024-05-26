@@ -8,8 +8,10 @@ import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.NotificationService
 import com.google.gson.Gson
 import javax.inject.Inject
+import javax.inject.Singleton
 
-class IncomingMessageSaver @Inject constructor(
+@Singleton
+class MessageSaver @Inject constructor(
     private val repository: Repository,
     private val onionParsingService: OnionParsingService,
     private val notificationService: NotificationService)
@@ -30,6 +32,11 @@ class IncomingMessageSaver @Inject constructor(
 
         val a = createContacts(parsedData.map { item -> item.second })
         saveMessages(parsedData.map { item -> item.first })
+    }
+
+    suspend fun saveOutgoingMessage(message: MessageEntity)
+    {
+        saveMessages(listOf(message))
     }
 
     private suspend fun createContacts(contactsInfo: List<MessageExtended>): List<Long>
@@ -53,9 +60,7 @@ class IncomingMessageSaver @Inject constructor(
 
     private suspend fun saveMessages(messages: List<MessageEntity>)
     {
-        if(messages.isEmpty()) return
-
-        repository.local.insertMessages(messages)
+        messages.map { item -> repository.local.insertMessage(item) }
         markConversationAsUnread(messages)
         notify(messages)
     }

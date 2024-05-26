@@ -16,7 +16,7 @@ class Constants {
         const val DATABASE_NAME = "enigma-database"
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
-        const val KEYS_TABLE = "Keys"
+        const val CONVERSATION_PAGE_SIZE = 50
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"

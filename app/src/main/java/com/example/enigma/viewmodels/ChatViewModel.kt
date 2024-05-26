@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.*
 import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.crypto.CryptoProvider
+import com.example.enigma.data.MessageSaver
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
@@ -16,6 +17,7 @@ import com.example.enigma.routing.PathFinder
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.copyBySerialization
+import com.example.enigma.util.isFullPage
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -24,21 +26,28 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.lang.Exception
 import java.util.Date
+import java.util.SortedSet
 import javax.inject.Inject
 import kotlin.random.Random
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    repository: Repository,
+    private val messageSaver: MessageSaver,
     private val signalRClient: SignalRClient,
     private val addressProvider: AddressProvider,
+    repository: Repository,
     application: Application,
 ) : BaseViewModel(repository, signalRClient, application) {
 
     private val _selectedContact =
         MutableStateFlow<DatabaseRequestState<ContactEntity>>(DatabaseRequestState.Idle)
 
-    private val _messages =
+    private val _conversationSupportListComparator = compareBy<MessageEntity> { item -> item.id }
+
+    private val _conversationSupportList: SortedSet<MessageEntity>
+    = sortedSetOf(_conversationSupportListComparator)
+
+    private val _conversation =
         MutableStateFlow<DatabaseRequestState<List<MessageEntity>>>(DatabaseRequestState.Idle)
 
     private val _pathsExist =
@@ -49,7 +58,7 @@ class ChatViewModel @Inject constructor(
 
     val selectedContact: StateFlow<DatabaseRequestState<ContactEntity>> = _selectedContact
 
-    val messages: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _messages
+    val conversation: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _conversation
 
     val pathsExist: MutableStateFlow<DatabaseRequestState<Boolean>> = _pathsExist
 
@@ -57,7 +66,12 @@ class ChatViewModel @Inject constructor(
 
     val messageInputText: MutableState<String> = mutableStateOf("")
 
+    val nextPageAvailable: MutableState<Boolean> = mutableStateOf(false)
+
     fun loadContact(chatId: String) {
+        if(_selectedContact.value is DatabaseRequestState.Success
+            || _selectedContact.value is DatabaseRequestState.Loading) return
+
         viewModelScope.launch {
             _selectedContact.value = DatabaseRequestState.Loading
             try {
@@ -73,14 +87,48 @@ class ChatViewModel @Inject constructor(
     }
 
     fun loadConversation(chatId: String) {
-        viewModelScope.launch {
-            _messages.value = DatabaseRequestState.Loading
+        if(_conversation.value is DatabaseRequestState.Success
+            || _conversation.value is DatabaseRequestState.Loading) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _conversation.value = DatabaseRequestState.Loading
             try {
                 repository.local.getConversation(chatId).collect { messages ->
-                    _messages.value = DatabaseRequestState.Success(messages)
+                    if(_conversationSupportList.isEmpty()) {
+                        nextPageAvailable.value = messages.isFullPage()
+                    }
+                    _conversationSupportList.addAll(messages)
+                    _conversation.value = DatabaseRequestState.Success(
+                        _conversationSupportList.toList()
+                    )
                 }
             } catch (ex: Exception) {
-                _messages.value = DatabaseRequestState.Error(ex)
+                _conversation.value = DatabaseRequestState.Error(ex)
+            }
+        }
+    }
+
+    fun loadNextPage(chatId: String)
+    {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val lastIndex = _conversationSupportList.last().id
+                val nextPage = repository.local.getConversation(chatId, lastIndex)
+
+                if (nextPage.isEmpty())
+                {
+                    nextPageAvailable.value = false
+                }
+                else
+                {
+                    _conversationSupportList.addAll(nextPage)
+                    _conversation.value = DatabaseRequestState.Success(
+                        _conversationSupportList.toList()
+                    )
+                    nextPageAvailable.value = nextPage.isFullPage()
+                }
+            } catch (ex: Exception) {
+                _conversation.value = DatabaseRequestState.Error(ex)
             }
         }
     }
@@ -89,9 +137,9 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             _searchedMessages.value = DatabaseRequestState.Loading
             try {
-                repository.local.searchConversation(chatId, searchQuery).collect { messages ->
-                    _searchedMessages.value = DatabaseRequestState.Success(messages)
-                }
+                _searchedMessages.value = DatabaseRequestState.Success(
+                    repository.local.searchConversation(chatId, searchQuery)
+                )
             } catch (ex: Exception) {
                 _searchedMessages.value = DatabaseRequestState.Error(ex)
             }
@@ -99,6 +147,9 @@ class ChatViewModel @Inject constructor(
     }
 
     fun checkPathExistence(chatId: String) {
+        if(_pathsExist.value is DatabaseRequestState.Success
+            || _pathsExist.value is DatabaseRequestState.Loading) return
+
         viewModelScope.launch {
             _pathsExist.value = DatabaseRequestState.Loading
             try {
@@ -145,7 +196,7 @@ class ChatViewModel @Inject constructor(
                     (selectedContact.value as DatabaseRequestState.Success).data
                 )
             } catch (_: Exception) {
-
+                // TODO: inform user about error
             }
         }
     }
@@ -181,7 +232,7 @@ class ChatViewModel @Inject constructor(
         val contact = getSelectedContactEntity() ?: return false
         val message = MessageEntity(contact.address, messageInputText.value, false, Date())
 
-        repository.local.insertMessage(message)
+        messageSaver.saveOutgoingMessage(message)
 
         return true
     }
@@ -212,11 +263,11 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun getMessageEntities(): List<MessageEntity> {
-        if (messages.value !is DatabaseRequestState.Success) {
+        if (conversation.value !is DatabaseRequestState.Success) {
             return listOf()
         }
 
-        return (messages.value as DatabaseRequestState.Success<List<MessageEntity>>).data
+        return (conversation.value as DatabaseRequestState.Success<List<MessageEntity>>).data
     }
 
     private fun publicKeyRequiredIntoOnion(): Boolean
