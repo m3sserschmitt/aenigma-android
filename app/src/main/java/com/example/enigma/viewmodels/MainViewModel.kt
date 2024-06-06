@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.models.ExportedContactData
@@ -17,11 +18,11 @@ import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.copyBySerialization
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.lang.Exception
 import javax.inject.Inject
@@ -37,46 +38,91 @@ class MainViewModel @Inject constructor(
     signalRClient,
     application) {
 
-    private val _searchedContacts
-    = MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)
+    private val contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
+
+    private val _allContacts =
+        MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(DatabaseRequestState.Idle)
 
     val scannedContactDetails: MutableState<ExportedContactData>
     = mutableStateOf(ExportedContactData("", ""))
 
-    val allContacts: StateFlow<DatabaseRequestState<List<ContactEntity>>> = _allContacts
+    val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> = _allContacts
 
     private val _contactQrCode
     = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
 
     val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
 
-    val searchedContacts: StateFlow<DatabaseRequestState<List<ContactEntity>>> = _searchedContacts
-
     val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
 
-    fun searchContacts(searchQuery: String)
+    val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
+
+    fun loadContacts()
     {
-        viewModelScope.launch {
-            _searchedContacts.value = DatabaseRequestState.Loading
+        if(_allContacts.value is DatabaseRequestState.Success
+            || _allContacts.value is DatabaseRequestState.Loading) return
+
+        _allContacts.value = DatabaseRequestState.Loading
+        collectContacts()
+        collectSearches()
+    }
+
+    private fun collectContacts()
+    {
+        viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.searchContacts(searchQuery).collect { contacts ->
-                    _searchedContacts.value = DatabaseRequestState.Success(contacts)
+                repository.local.getContactsWithConversationPreviewFlow().collect { contacts ->
+                    val query = contactsSearchQuery.value
+                    val result = if(query.isNotBlank())
+                        contacts.filter { contact -> contact.name.contains(query) }
+                    else
+                        contacts
+
+                    _allContacts.value = DatabaseRequestState.Success(result)
                 }
-            } catch (ex: Exception)
+            }
+            catch (ex: Exception)
             {
-                _searchedContacts.value = DatabaseRequestState.Error(ex)
+                _allContacts.value = DatabaseRequestState.Error(ex)
             }
         }
     }
 
-    fun resetSearchResultResult()
+    private fun collectSearches()
     {
-        _searchedContacts.value = DatabaseRequestState.Idle
+        viewModelScope.launch(defaultDispatcher) {
+            contactsSearchQuery.collect { query ->
+                _allContacts.value = DatabaseRequestState.Loading
+                try {
+                    val searchResult = if(query.isBlank())
+                        repository.local.getContactsWithConversationPreview()
+                    else
+                        repository.local.searchContacts(query).map {
+                            item -> item.toContactWithPreview()
+                        }
+                    _allContacts.value = DatabaseRequestState.Success(searchResult)
+                }
+                catch (ex: Exception)
+                {
+                    _allContacts.value = DatabaseRequestState.Error(ex)
+                }
+            }
+        }
+    }
+
+    fun searchContacts(searchQuery: String)
+    {
+        contactsSearchQuery.update { searchQuery }
+    }
+
+    fun resetSearchQuery()
+    {
+        searchContacts("")
     }
 
     fun generateCode()
     {
-        viewModelScope.launch {
+        viewModelScope.launch(ioDispatcher) {
             _contactQrCode.value = DatabaseRequestState.Loading
             try {
                generateQrCodeBitmap().collect {
@@ -111,7 +157,15 @@ class MainViewModel @Inject constructor(
         scannedContactDetails.value = ExportedContactData("", "")
     }
 
-    val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
+    override fun checkIfContactNameExists(name: String): Boolean {
+        return try {
+            (_allContacts.value as DatabaseRequestState.Success).data.all { item ->
+                item.name != name
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     private fun generateQrCodeBitmap(): Flow<Bitmap?>
     {
@@ -136,25 +190,25 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun deleteContacts(contacts: List<ContactEntity>)
+    fun deleteContacts(contacts: List<ContactWithConversationPreview>)
     {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.local.removeContacts(contacts)
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.removeContacts(contacts.map { contact -> contact.toContact() })
         }
     }
 
-    fun renameContact(contact: ContactEntity, name: String)
+    fun renameContact(contact: ContactWithConversationPreview, name: String)
     {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val updatedContact = copyBySerialization(contact)
             updatedContact.name = name
-            repository.local.updateContact(updatedContact)
+            repository.local.updateContact(updatedContact.toContact())
         }
     }
 
     fun saveNotificationsPreference(granted: Boolean)
     {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             repository.local.saveNotificationsAllowed(granted)
         }
     }

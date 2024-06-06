@@ -2,6 +2,7 @@ package com.example.enigma.data.database
 
 import androidx.room.*
 import com.example.enigma.util.Constants.Companion.CONTACTS_TABLE
+import com.example.enigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -10,6 +11,20 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE")
     fun get(): Flow<List<ContactEntity>>
 
+    @Query(
+        "SELECT c.address, c.name, c.guardHostname, c.publicKey, c.hasNewMessage, c.lastMessageId," +
+                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
+                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
+    )
+    fun getWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
+
+    @Query(
+        "SELECT c.address, c.name, c.guardHostname, c.publicKey, c.hasNewMessage, c.lastMessageId," +
+                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
+                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
+    )
+    suspend fun getWithConversationPreview(): List<ContactWithConversationPreview>
+
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?
 
@@ -17,7 +32,7 @@ interface ContactsDao {
     fun getFlow(address: String): Flow<ContactEntity?>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%'")
-    fun search(searchQuery: String): Flow<List<ContactEntity>>
+    suspend fun search(searchQuery: String): List<ContactEntity>
 
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = true WHERE address = :address")
     suspend fun markConversationAsUnread(address: String)

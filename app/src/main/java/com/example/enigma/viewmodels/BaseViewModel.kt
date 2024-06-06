@@ -10,9 +10,7 @@ import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.data.network.SignalRStatus
-import com.example.enigma.util.DatabaseRequestState
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.lang.Exception
 
@@ -22,8 +20,9 @@ abstract class BaseViewModel(
     application: Application,
 ): AndroidViewModel(application) {
 
-    protected val _allContacts =
-        MutableStateFlow<DatabaseRequestState<List<ContactEntity>>>(DatabaseRequestState.Idle)
+    protected var ioDispatcher = Dispatchers.IO
+
+    protected var defaultDispatcher = Dispatchers.Default
 
     val signalRClientStatus: LiveData<SignalRStatus> = signalRClient.status
 
@@ -33,27 +32,14 @@ abstract class BaseViewModel(
 
     abstract fun resetNewContactDetails()
 
+    abstract fun checkIfContactNameExists(name: String): Boolean
+
     fun saveNewContact()
     {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val contact = createContactEntityForSaving() ?: return@launch
             resetNewContactDetails()
             repository.local.insertOrUpdateContact(contact)
-        }
-    }
-
-    fun loadContacts()
-    {
-        viewModelScope.launch {
-            _allContacts.value = DatabaseRequestState.Loading
-            try {
-                repository.local.getContacts().collect {
-                        contacts -> _allContacts.value = DatabaseRequestState.Success(contacts)
-                }
-            } catch (ex: Exception)
-            {
-                _allContacts.value = DatabaseRequestState.Error(ex)
-            }
         }
     }
 
@@ -67,13 +53,7 @@ abstract class BaseViewModel(
                 return false
             }
 
-            if (_allContacts.value is DatabaseRequestState.Success) {
-                return (_allContacts.value as DatabaseRequestState.Success)
-                    .data
-                    .all { item -> item.name != newValue }
-            }
-
-            return false
+            return checkIfContactNameExists(newValue)
         }
         catch (_: Exception)
         {

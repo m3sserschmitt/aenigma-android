@@ -6,13 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.tooling.preview.Preview
-import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.util.DatabaseRequestState
 
 @Composable
 fun RenameContactDialog (
     visible: Boolean,
-    contacts: DatabaseRequestState<List<ContactEntity>>,
+    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
     onContactRenamed: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
