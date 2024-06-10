@@ -2,8 +2,6 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import android.graphics.Bitmap
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -17,6 +15,7 @@ import com.example.enigma.models.ExportedContactData
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.copyBySerialization
+import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.lang.Exception
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,18 +36,17 @@ class MainViewModel @Inject constructor(
     signalRClient,
     application) {
 
-    private val contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
+    private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
     private val _allContacts =
         MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(DatabaseRequestState.Idle)
 
-    val scannedContactDetails: MutableState<ExportedContactData>
-    = mutableStateOf(ExportedContactData("", ""))
+    private val _contactQrCode
+            = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
+
+    private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", ""))
 
     val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> = _allContacts
-
-    private val _contactQrCode
-    = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
 
     val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
 
@@ -72,7 +69,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getContactsWithConversationPreviewFlow().collect { contacts ->
-                    val query = contactsSearchQuery.value
+                    val query = _contactsSearchQuery.value
                     val result = if(query.isNotBlank())
                         contacts.filter { contact -> contact.name.contains(query) }
                     else
@@ -91,7 +88,7 @@ class MainViewModel @Inject constructor(
     private fun collectSearches()
     {
         viewModelScope.launch(defaultDispatcher) {
-            contactsSearchQuery.collect { query ->
+            _contactsSearchQuery.collect { query ->
                 _allContacts.value = DatabaseRequestState.Loading
                 try {
                     val searchResult = if(query.isBlank())
@@ -112,7 +109,7 @@ class MainViewModel @Inject constructor(
 
     fun searchContacts(searchQuery: String)
     {
-        contactsSearchQuery.update { searchQuery }
+        _contactsSearchQuery.update { searchQuery }
     }
 
     fun resetSearchQuery()
@@ -141,24 +138,24 @@ class MainViewModel @Inject constructor(
     }
 
     override fun createContactEntityForSaving(): ContactEntity {
-        val contactAddress = AddressHelper.getHexAddressFromPublicKey(scannedContactDetails.value.publicKey)
+        val contactAddress = AddressHelper.getHexAddressFromPublicKey(_scannedContactDetails.value.publicKey)
 
         return ContactEntity(
             contactAddress,
             newContactName.value,
-            scannedContactDetails.value.publicKey,
-            scannedContactDetails.value.guardHostname,
+            _scannedContactDetails.value.publicKey,
+            _scannedContactDetails.value.guardHostname,
             false
         )
     }
 
     override fun resetNewContactDetails() {
-        newContactName.value = ""
-        scannedContactDetails.value = ExportedContactData("", "")
+        super.resetNewContactDetails()
+        resetScannedContactDetails()
     }
 
-    override fun checkIfContactNameExists(name: String): Boolean {
-        return try {
+    override fun validateNewContactName(name: String): Boolean {
+        return super.validateNewContactName(name) && try {
             (_allContacts.value as DatabaseRequestState.Success).data.all { item ->
                 item.name != name
             }
@@ -197,11 +194,11 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun renameContact(contact: ContactWithConversationPreview, name: String)
+    fun renameContact(contact: ContactWithConversationPreview)
     {
         viewModelScope.launch(ioDispatcher) {
             val updatedContact = copyBySerialization(contact)
-            updatedContact.name = name
+            updatedContact.name = newContactName.value
             repository.local.updateContact(updatedContact.toContact())
         }
     }
@@ -211,5 +208,27 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             repository.local.saveNotificationsAllowed(granted)
         }
+    }
+
+    fun setScannedContactDetails(scannedDetails: String): Boolean
+    {
+        return try {
+            _scannedContactDetails.value = Gson().fromJson(scannedDetails, ExportedContactData::class.java)
+            true
+        } catch (_: Exception) {
+            resetScannedContactDetails()
+            false
+        }
+    }
+
+    fun resetScannedContactDetails()
+    {
+        _scannedContactDetails.value = ExportedContactData("", "")
+    }
+
+    override fun reset()
+    {
+        super.reset()
+        resetSearchQuery()
     }
 }

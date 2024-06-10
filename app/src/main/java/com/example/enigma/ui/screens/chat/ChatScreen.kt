@@ -36,8 +36,8 @@ fun ChatScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
-        chatViewModel.loadContacts()
-        chatViewModel.loadContact(chatId)
+        chatViewModel.reset()
+        chatViewModel.loadContacts(chatId)
         chatViewModel.loadConversation(chatId)
         chatViewModel.checkPathExistence(chatId)
     }
@@ -45,8 +45,7 @@ fun ChatScreen(
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
     val pathsExists by chatViewModel.pathsExist.collectAsState()
-    val messageInputText by chatViewModel.messageInputText
-    val newContactName by chatViewModel.newContactName
+    val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
@@ -70,12 +69,11 @@ fun ChatScreen(
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
-        newContactName = newContactName,
         onRetryConnection = {
             chatViewModel.resetClientStatus()
         },
         onInputTextChanged = {
-            newInputTextValue -> chatViewModel.messageInputText.value = newInputTextValue
+            newInputTextValue -> chatViewModel.setMessageInputText(newInputTextValue)
         },
         onNewContactNameChanged = {
             newContactNameValue -> chatViewModel.updateNewContactName(newContactNameValue)
@@ -96,7 +94,7 @@ fun ChatScreen(
             selectedMessages -> chatViewModel.removeMessages(selectedMessages)
         },
         onSearch = {
-            searchQuery -> chatViewModel.searchConversation(chatId, searchQuery)
+            searchQuery -> chatViewModel.searchConversation(searchQuery)
         },
         loadNextPage = {
             chatViewModel.loadNextPage(chatId)
@@ -112,7 +110,6 @@ fun ChatScreen(
     messages: DatabaseRequestState<List<MessageEntity>>,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
-    newContactName: String,
     onRetryConnection: () -> Unit,
     onInputTextChanged: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
@@ -135,14 +132,12 @@ fun ChatScreen(
 
     SaveNewContactDialog(
         contact = contact,
-        newContactName = newContactName,
         onNewContactNameChanged = onNewContactNameChanged,
         onNewNameConfirmClicked = onRenameContactConfirmed,
     )
 
     RenameContactDialog(
         visible = renameContactDialogVisible,
-        newContactName = newContactName,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = {
             renameContactDialogVisible = false
@@ -349,7 +344,6 @@ fun ChatScreenPreview()
         nextConversationPageAvailable = true,
         onRetryConnection = {},
         messageInputText = "Can't wait to see you on Monday",
-        newContactName = "",
         onSendClicked = {},
         onRenameContactConfirmed = {},
         onInputTextChanged = {},

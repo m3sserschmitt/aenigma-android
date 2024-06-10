@@ -110,11 +110,21 @@ class LocalDataSource @Inject constructor(
     suspend fun clearConversation(chatId: String)
     {
         messagesDao.clearConversation(chatId)
+
+        val contact = contactsDao.get(chatId) ?: return
+        contact.lastMessageId = null
+        contactsDao.update(contact)
     }
 
-    suspend fun removeMessages(messages: List<MessageEntity>)
+    suspend fun removeMessages(messages: List<MessageEntity>, lastMessageId: Long?): Boolean
     {
+        if(messages.map { item -> item.chatId }.toSet().size != 1) return false
+
         messagesDao.remove(messages)
+        val contact = contactsDao.get(messages.first().chatId) ?: return true
+        contact.lastMessageId = lastMessageId
+        contactsDao.update(contact)
+        return true
     }
 
     suspend fun insertMessage(message: MessageEntity)

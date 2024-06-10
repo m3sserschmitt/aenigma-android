@@ -30,6 +30,7 @@ import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import com.example.enigma.ui.screens.common.CheckNotificationsPermission
+import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.openApplicationDetails
 import com.example.enigma.viewmodels.MainViewModel
@@ -42,7 +43,7 @@ fun ContactsScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
-        mainViewModel.resetSearchQuery()
+        mainViewModel.reset()
         mainViewModel.loadContacts()
     }
 
@@ -79,7 +80,10 @@ fun ContactsScreen(
         },
         navigateToAddContactScreen = navigateToAddContactScreen,
         onContactRenamed = {
-            contact, newName -> mainViewModel.renameContact(contact, newName)
+            contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
+        },
+        onNewContactNameChanged =  {
+            newValue -> mainViewModel.updateNewContactName(newValue)
         }
     )
 }
@@ -94,7 +98,8 @@ fun ContactsScreen(
     onSearchTriggered: () -> Unit,
     onSearch: (String) -> Unit,
     onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
-    onContactRenamed: (ContactWithConversationPreview, String) -> Unit,
+    onContactRenamed: (ContactWithConversationPreview) -> Unit,
+    onNewContactNameChanged: (String) -> Boolean,
     navigateToAddContactScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
@@ -156,11 +161,11 @@ fun ContactsScreen(
 
     RenameContactDialog(
         visible = renameContactDialogVisible,
-        contacts = contacts,
-        onContactRenamed = {
-            newContactName -> if(selectedItems.size == 1)
+        onNewContactNameChanged = onNewContactNameChanged,
+        onConfirmClicked = {
+            if(selectedItems.size == 1)
             {
-                onContactRenamed(selectedItems.single(), newContactName)
+               onContactRenamed(selectedItems.single())
             }
             renameContactDialogVisible = false
         },
@@ -293,7 +298,8 @@ fun ContactsScreenPreview()
         notificationsAllowed = true,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
-        onContactRenamed = { _, _ -> },
+        onContactRenamed = { },
+        onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
         onSearchTriggered = {},

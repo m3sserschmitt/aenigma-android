@@ -1,8 +1,6 @@
 package com.example.enigma.viewmodels
 
 import android.app.Application
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
@@ -11,6 +9,8 @@ import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.data.network.SignalRStatus
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.lang.Exception
 
@@ -20,19 +20,37 @@ abstract class BaseViewModel(
     application: Application,
 ): AndroidViewModel(application) {
 
+    private val _newContactName: MutableStateFlow<String> = MutableStateFlow("")
+
     protected var ioDispatcher = Dispatchers.IO
 
     protected var defaultDispatcher = Dispatchers.Default
 
     val signalRClientStatus: LiveData<SignalRStatus> = signalRClient.status
 
-    val newContactName: MutableState<String> = mutableStateOf("")
+    val newContactName: StateFlow<String> = _newContactName
 
     abstract fun createContactEntityForSaving(): ContactEntity?
 
-    abstract fun resetNewContactDetails()
+    open fun resetNewContactDetails()
+    {
+        resetNewContactName()
+    }
 
-    abstract fun checkIfContactNameExists(name: String): Boolean
+    open fun reset()
+    {
+        resetNewContactDetails()
+    }
+
+    fun resetNewContactName()
+    {
+        setNewContactName("")
+    }
+
+    open fun validateNewContactName(name: String): Boolean
+    {
+        return name.isNotBlank()
+    }
 
     fun saveNewContact()
     {
@@ -45,7 +63,7 @@ abstract class BaseViewModel(
 
     fun updateNewContactName(newValue: String): Boolean
     {
-        newContactName.value = newValue
+        _newContactName.value = newValue
         try {
 
             if(newValue.isEmpty())
@@ -53,7 +71,7 @@ abstract class BaseViewModel(
                 return false
             }
 
-            return checkIfContactNameExists(newValue)
+            return validateNewContactName(newValue)
         }
         catch (_: Exception)
         {
@@ -64,5 +82,10 @@ abstract class BaseViewModel(
     fun resetClientStatus()
     {
         signalRClient.resetStatus()
+    }
+
+    fun setNewContactName(name: String)
+    {
+        _newContactName.value = name
     }
 }

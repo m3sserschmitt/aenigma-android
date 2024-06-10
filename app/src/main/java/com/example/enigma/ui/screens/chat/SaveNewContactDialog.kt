@@ -1,6 +1,10 @@
 package com.example.enigma.ui.screens.chat
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
@@ -11,15 +15,19 @@ import com.example.enigma.util.DatabaseRequestState
 @Composable
 fun SaveNewContactDialog(
     contact: DatabaseRequestState<ContactEntity>,
-    newContactName: String,
     onNewContactNameChanged: (String) -> Boolean,
     onNewNameConfirmClicked: () -> Unit
 ) {
+    var newContactName by remember { mutableStateOf("") }
+
     if (contact is DatabaseRequestState.Success && contact.data.name.isEmpty())
     {
         EditContactDialog(
             contactName = newContactName,
-            onContactNameChanged = onNewContactNameChanged,
+            onContactNameChanged = {  newValue ->
+                newContactName = newValue
+                onNewContactNameChanged(newValue)
+            },
             title = stringResource(
                 id = R.string.new_contact_available
             ),
@@ -48,7 +56,6 @@ fun SaveNewContactDialogPreview()
                 hasNewMessage = false
             )
         ),
-        newContactName = "John",
         onNewContactNameChanged = { true },
         onNewNameConfirmClicked = {}
     )

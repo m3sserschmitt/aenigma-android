@@ -2,20 +2,21 @@ package com.example.enigma.ui.screens.addContacts
 
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.example.enigma.R
-import com.example.enigma.models.ExportedContactData
 import com.example.enigma.ui.screens.common.EditContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.QrCodeScannerState
 import com.example.enigma.viewmodels.MainViewModel
-import com.google.gson.Gson
 
 @Composable
 fun AddContactsContent(
     modifier: Modifier = Modifier,
-    newContactName: String,
     scannerState: QrCodeScannerState,
     contactCode: DatabaseRequestState<Bitmap>,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
@@ -27,7 +28,6 @@ fun AddContactsContent(
         QrCodeScannerState.SAVE -> {
             DisplayQrCode(
                 modifier = modifier,
-                contactName = newContactName,
                 scannerState = scannerState,
                 contactCode = contactCode,
                 onScannerStateChanged = {
@@ -38,13 +38,10 @@ fun AddContactsContent(
         }
         QrCodeScannerState.SCAN_CODE -> {
             QrCodeScanner(
-                onCodeFound = { code ->
-                    try {
-                        val gson = Gson()
-                        mainViewModel.scannedContactDetails.value = gson.fromJson(code, ExportedContactData::class.java)
+                onCodeFound = {
+                    code -> if(mainViewModel.setScannedContactDetails(code))
+                    {
                         onScannerStateChanged(QrCodeScannerState.SAVE)
-                    } catch (ex: Exception) {
-                        // TODO: Inform the user that scanned qr code is invalid
                     }
                 }
             )
@@ -55,12 +52,13 @@ fun AddContactsContent(
 @Composable
 fun DisplayQrCode(
     modifier: Modifier = Modifier,
-    contactName: String,
     scannerState: QrCodeScannerState,
     contactCode: DatabaseRequestState<Bitmap>,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     mainViewModel: MainViewModel
 ) {
+    var contactName by remember { mutableStateOf("") }
+
     if(contactCode is DatabaseRequestState.Success) {
         ContactQrCode(
             modifier = modifier,
@@ -74,8 +72,9 @@ fun DisplayQrCode(
     {
         EditContactDialog(
             contactName = contactName,
-            onContactNameChanged = {
-                newContactName -> mainViewModel.updateNewContactName(newContactName)
+            onContactNameChanged = { newContactName ->
+                contactName = newContactName
+                mainViewModel.updateNewContactName(newContactName)
             },
             title = stringResource(
                 id = R.string.qr_code_scanned_successfully
