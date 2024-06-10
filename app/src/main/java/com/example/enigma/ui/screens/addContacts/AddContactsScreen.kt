@@ -29,7 +29,6 @@ fun AddContactsScreen(
 
     var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
     val contactCode by mainViewModel.contactQrCode.collectAsState()
-    val contactName by mainViewModel.newContactName
 
     Scaffold (
         topBar = {
@@ -43,7 +42,6 @@ fun AddContactsScreen(
                     .padding(
                         top = paddingValues.calculateTopPadding()
                     ),
-                newContactName = contactName,
                 scannerState = scannerState,
                 contactCode = contactCode,
                 onScannerStateChanged = {

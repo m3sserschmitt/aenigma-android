@@ -24,12 +24,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
-import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import com.example.enigma.ui.screens.common.CheckNotificationsPermission
+import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.openApplicationDetails
 import com.example.enigma.viewmodels.MainViewModel
@@ -42,11 +43,11 @@ fun ContactsScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
+        mainViewModel.reset()
         mainViewModel.loadContacts()
     }
 
     val allContacts by mainViewModel.allContacts.collectAsState()
-    val searchedContacts by mainViewModel.searchedContacts.collectAsState()
     val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
@@ -57,7 +58,6 @@ fun ContactsScreen(
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
-        searchedContacts = searchedContacts,
         notificationsAllowed = notificationsAllowed,
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
@@ -66,7 +66,7 @@ fun ContactsScreen(
             mainViewModel.resetClientStatus()
         },
         onSearchTriggered = {
-            mainViewModel.resetSearchResultResult()
+            mainViewModel.resetSearchQuery()
         },
         onSearch = {
             searchQuery ->
@@ -80,7 +80,10 @@ fun ContactsScreen(
         },
         navigateToAddContactScreen = navigateToAddContactScreen,
         onContactRenamed = {
-            contact, newName -> mainViewModel.renameContact(contact, newName)
+            contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
+        },
+        onNewContactNameChanged =  {
+            newValue -> mainViewModel.updateNewContactName(newValue)
         }
     )
 }
@@ -88,15 +91,15 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: DatabaseRequestState<List<ContactEntity>>,
-    searchedContacts: DatabaseRequestState<List<ContactEntity>>,
+    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
     notificationsAllowed: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearchTriggered: () -> Unit,
     onSearch: (String) -> Unit,
-    onDeleteSelectedItems: (List<ContactEntity>) -> Unit,
-    onContactRenamed: (ContactEntity, String) -> Unit,
+    onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
+    onContactRenamed: (ContactWithConversationPreview) -> Unit,
+    onNewContactNameChanged: (String) -> Boolean,
     navigateToAddContactScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
@@ -105,7 +108,7 @@ fun ContactsScreen(
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<ContactEntity>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithConversationPreview>() }
     val snackBarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -114,6 +117,13 @@ fun ContactsScreen(
         if(contacts is DatabaseRequestState.Success)
         {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
+        }
+    }
+
+    LaunchedEffect(key1 = isSearchMode) {
+        if(!isSearchMode)
+        {
+            onSearch("")
         }
     }
 
@@ -151,11 +161,11 @@ fun ContactsScreen(
 
     RenameContactDialog(
         visible = renameContactDialogVisible,
-        contacts = contacts,
-        onContactRenamed = {
-            newContactName -> if(selectedItems.size == 1)
+        onNewContactNameChanged = onNewContactNameChanged,
+        onConfirmClicked = {
+            if(selectedItems.size == 1)
             {
-                onContactRenamed(selectedItems.single(), newContactName)
+               onContactRenamed(selectedItems.single())
             }
             renameContactDialogVisible = false
         },
@@ -236,7 +246,6 @@ fun ContactsScreen(
                 ),
                 contacts = contacts,
                 isSearchMode = isSearchMode,
-                searchedContacts = searchedContacts,
                 navigateToChatScreen = navigateToChatScreen,
                 onItemSelected = { selectedContact ->
                     if(!isSelectionMode)
@@ -289,20 +298,21 @@ fun ContactsScreenPreview()
         notificationsAllowed = true,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
-        onContactRenamed = { _, _ -> },
+        onContactRenamed = { },
+        onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
         onSearchTriggered = {},
         contacts = DatabaseRequestState.Success(
             listOf(
-                ContactEntity(
+                ContactWithConversationPreview(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     hasNewMessage = true
                 ),
-                ContactEntity(
+                ContactWithConversationPreview(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
@@ -311,7 +321,6 @@ fun ContactsScreenPreview()
                 )
             )
         ),
-        searchedContacts = DatabaseRequestState.Success(listOf()),
         navigateToChatScreen = {},
         navigateToAddContactScreen = {}
     )

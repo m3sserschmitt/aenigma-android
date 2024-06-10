@@ -1,6 +1,7 @@
 package com.example.enigma.data
 
 import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.database.ContactsDao
 import com.example.enigma.data.database.Converters
 import com.example.enigma.data.database.EdgeEntity
@@ -41,7 +42,17 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get()
     }
 
-    fun searchContacts(searchQuery: String): Flow<List<ContactEntity>>
+    fun getContactsWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
+    {
+        return contactsDao.getWithConversationPreviewFlow()
+    }
+
+    suspend fun getContactsWithConversationPreview(): List<ContactWithConversationPreview>
+    {
+        return contactsDao.getWithConversationPreview()
+    }
+
+    suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity>
     {
         return contactsDao.search(searchQuery)
     }
@@ -99,21 +110,37 @@ class LocalDataSource @Inject constructor(
     suspend fun clearConversation(chatId: String)
     {
         messagesDao.clearConversation(chatId)
+
+        val contact = contactsDao.get(chatId) ?: return
+        contact.lastMessageId = null
+        contactsDao.update(contact)
     }
 
-    suspend fun removeMessages(messages: List<MessageEntity>)
+    suspend fun removeMessages(messages: List<MessageEntity>, lastMessageId: Long?): Boolean
     {
+        if(messages.map { item -> item.chatId }.toSet().size != 1) return false
+
         messagesDao.remove(messages)
+        val contact = contactsDao.get(messages.first().chatId) ?: return true
+        contact.lastMessageId = lastMessageId
+        contactsDao.update(contact)
+        return true
     }
 
     suspend fun insertMessage(message: MessageEntity)
     {
-        messagesDao.insert(
+        val messageId = messagesDao.insert(
             message.chatId,
             message.text,
             message.incoming,
             Converters().dateToString(message.date)
         )
+
+        if(messageId <= 0) return
+        val contact = contactsDao.get(message.chatId) ?: return
+
+        contact.lastMessageId = messageId
+        contactsDao.update(contact)
     }
 
     suspend fun markConversationAsUnread(address: String)

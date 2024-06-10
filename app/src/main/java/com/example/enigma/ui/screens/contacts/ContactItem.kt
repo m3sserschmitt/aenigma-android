@@ -1,5 +1,6 @@
 package com.example.enigma.ui.screens.contacts
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,18 +19,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.R
-import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.ui.screens.common.selectable
 
 @Composable
 fun ContactItem(
-    onItemSelected: (ContactEntity) -> Unit,
-    onItemDeselected: (ContactEntity) -> Unit,
+    onItemSelected: (ContactWithConversationPreview) -> Unit,
+    onItemDeselected: (ContactWithConversationPreview) -> Unit,
     onClick: () -> Unit,
-    contact: ContactEntity,
+    contact: ContactWithConversationPreview,
     isSelectionMode: Boolean,
     isSelected: Boolean
 ) {
@@ -42,7 +44,7 @@ fun ContactItem(
                 onItemSelected = onItemSelected,
                 onItemDeselected = onItemDeselected,
                 onClick = onClick
-            ).fillMaxWidth().height(56.dp),
+            ).fillMaxWidth().height(64.dp),
         color = MaterialTheme.colorScheme.background
     ) {
         Row(
@@ -75,7 +77,7 @@ fun ContactItem(
             Icon(
                 modifier = Modifier
                     .weight(1f)
-                    .size(32.dp),
+                    .size(64.dp),
                 imageVector = Icons.Filled.AccountCircle,
                 contentDescription = stringResource(
                     id = R.string.contact
@@ -84,13 +86,30 @@ fun ContactItem(
 
             val contactNameTextWeight = if(contact.hasNewMessage) 8f else 9f
 
-            Text(
+            Column(
                 modifier = Modifier
-                    .weight(contactNameTextWeight),
-                text = contact.name,
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                maxLines = 1
-            )
+                    .weight(contactNameTextWeight)
+                    .padding(start = 8.dp)
+            ) {
+                Text(
+                    text = contact.name,
+                    fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+                    maxLines = 1
+                )
+                if(contact.lastMessageText != null)
+                {
+                    Text(
+                        text = if(contact.lastMessageIncoming != null && !contact.lastMessageIncoming)
+                            "You: " + contact.lastMessageText
+                        else
+                            contact.lastMessageText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontSize = MaterialTheme.typography.bodySmall.fontSize
+                    )
+                }
+            }
+
             if(contact.hasNewMessage)
             {
                 Icon(
@@ -108,12 +127,14 @@ fun ContactItem(
 fun ContactItemPreview()
 {
     ContactItem(
-        contact = ContactEntity(
+        contact = ContactWithConversationPreview(
             address = "12345-5678-5678-12345",
             name = "John",
             publicKey = "public-key",
             guardHostname = "guard-hostname",
-            hasNewMessage = true
+            hasNewMessage = true,
+            lastMessageText = "Hey, how are you?",
+            lastMessageIncoming = false
         ),
         isSelectionMode = false,
         isSelected = false,
@@ -128,12 +149,13 @@ fun ContactItemPreview()
 fun ContactItemSelectedPreview()
 {
     ContactItem(
-        contact = ContactEntity(
+        contact = ContactWithConversationPreview(
             address = "12345-5678-5678-12345",
             name = "John",
             publicKey = "public-key",
             guardHostname = "guard-hostname",
-            hasNewMessage = true
+            hasNewMessage = true,
+            lastMessageText = "Hey, how are you?"
         ),
         isSelectionMode = true,
         isSelected = true,

@@ -12,9 +12,9 @@ interface MessagesDao {
 
     @Query("INSERT INTO $MESSAGES_TABLE(chatId, text, incoming, date, id)" +
             "VALUES(:chatId, :text, :incoming, :date, (" +
-            "SELECT CASE WHEN MIN(id) IS NULL THEN CAST(9223372036854775807 AS INTEGER) ELSE MIN(id) - 1 END AS min_value FROM $MESSAGES_TABLE)" +
-            ")")
-    suspend fun insert(chatId: String, text: String, incoming: Boolean, date: String)
+            "SELECT CASE WHEN MIN(id) IS NULL THEN CAST(9223372036854775807 AS INTEGER) ELSE MIN(id) - 1 END AS min_value FROM $MESSAGES_TABLE))"
+    )
+    suspend fun insert(chatId: String, text: String, incoming: Boolean, date: String): Long
 
     @Query("DELETE FROM $MESSAGES_TABLE WHERE chatId = :chatId")
     suspend fun clearConversation(chatId: String)
@@ -25,6 +25,10 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId LIMIT $CONVERSATION_PAGE_SIZE")
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
 
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id > :infIndex AND chatId = :chatId AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%') LIMIT $CONVERSATION_PAGE_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE " +
+            "WHERE id > :infIndex " +
+            "AND chatId = :chatId " +
+            "AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%') " +
+            "LIMIT $CONVERSATION_PAGE_SIZE")
     suspend fun getConversation(chatId: String, infIndex: Long, searchQuery: String = ""): List<MessageEntity>
 }

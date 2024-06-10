@@ -11,4 +11,18 @@ data class ContactEntity(
     var publicKey: String,
     var guardHostname: String,
     var hasNewMessage: Boolean
-)
+) {
+    var lastMessageId: Long? = null
+
+    fun toContactWithPreview(): ContactWithConversationPreview
+    {
+        return ContactWithConversationPreview(
+            address,
+            name,
+            publicKey,
+            guardHostname,
+            hasNewMessage,
+            lastMessageId
+        )
+    }
+}
