@@ -47,7 +47,7 @@ fun <T> ItemsList(
     selectedItems: List<T>,
     reversedLayout: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
-    listItem: @Composable (entity: T, isSelected: Boolean) -> Unit,
+    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { }
 ) {
     if(nextPageAvailable) {
@@ -68,9 +68,14 @@ fun <T> ItemsList(
         itemsIndexed(
             items = items,
             key = { _, item -> itemKeyProvider(item) }
-        ) { _, message ->
+        ) { index, message ->
             val isSelected = selectedItems.any { item -> item == message }
-            listItem(message, isSelected)
+            val nextItem = if(index < items.size - 1)
+                items[index + 1]
+            else
+                null
+
+            listItem(nextItem, message, isSelected)
         }
     }
 }
@@ -84,7 +89,7 @@ fun <T> AutoScrollItemsList(
     reversedLayout: Boolean = false,
     itemKeyProvider: (T) -> Any,
     selectedItems: List<T>,
-    listItem: @Composable (entity: T, isSelected: Boolean) -> Unit,
+    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { },
 ) {
     ItemsList(

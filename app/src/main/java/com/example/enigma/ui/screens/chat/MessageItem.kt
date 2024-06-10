@@ -15,11 +15,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -30,8 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.example.enigma.R
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.ui.screens.common.selectable
-import com.example.enigma.util.prettyDateFormatting
-import kotlinx.coroutines.delay
+import com.example.enigma.util.PrettyDateFormatter
 import java.util.Date
 
 @Composable
@@ -109,37 +103,17 @@ fun MessageItem(
                             TextAlign.End
                     )
 
-                    MessageLiveDate(
-                        message = message
+                    Text(
+                        modifier = Modifier
+                            .alpha(0.5f)
+                            .fillMaxWidth(),
+                        textAlign = TextAlign.End,
+                        text = PrettyDateFormatter.getTime(message.date)
                     )
                 }
             }
         }
     }
-}
-
-@Composable
-fun MessageLiveDate(
-    message: MessageEntity
-) {
-    var textDate by remember {
-        mutableStateOf(prettyDateFormatting(message.date))
-    }
-
-    LaunchedEffect(key1 = true) {
-        while (true) {
-            delay(1000 * 60)
-            textDate = prettyDateFormatting(message.date)
-        }
-    }
-
-    Text(
-        modifier = Modifier
-            .alpha(0.5f)
-            .fillMaxWidth(),
-        textAlign = TextAlign.End,
-        text = textDate
-    )
 }
 
 @Composable

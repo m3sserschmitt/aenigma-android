@@ -28,7 +28,7 @@ fun ContactsContent(
                 ItemsList(
                     modifier = modifier,
                     items = contacts.data,
-                    listItem = { contact, isSelected ->
+                    listItem = { _, contact, isSelected ->
                         ContactItem(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
