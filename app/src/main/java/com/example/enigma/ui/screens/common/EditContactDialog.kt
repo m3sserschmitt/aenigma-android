@@ -31,7 +31,6 @@ import com.example.enigma.R
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditContactDialog(
-    contactName: String,
     title: String,
     body: String,
     dismissible: Boolean,
@@ -41,10 +40,12 @@ fun EditContactDialog(
     onDismissClicked: () -> Unit
 ) {
     var isContactNameValidationError by remember { mutableStateOf(false) }
+    var contactName by remember { mutableStateOf("") }
 
     BasicAlertDialog(
         onDismissRequest = {
             onDismissRequest()
+            contactName = ""
         },
         properties = DialogProperties(
             dismissOnClickOutside = dismissible
@@ -57,6 +58,7 @@ fun EditContactDialog(
                     isError = isContactNameValidationError,
                     onContactNameChanged = {
                         newValue -> isContactNameValidationError = !onContactNameChanged(newValue)
+                        contactName = newValue
                     }
                 )
             },
@@ -68,9 +70,13 @@ fun EditContactDialog(
                 if(!isContactNameValidationError)
                 {
                     onConfirmClicked()
+                    contactName = ""
                 }
             },
-            onNegativeButtonClicked =  { onDismissClicked() }
+            onNegativeButtonClicked =  {
+                onDismissClicked()
+                contactName = ""
+            }
         )
     }
 }
@@ -169,7 +175,6 @@ fun ContactNameInput(
 fun SaveContactDialogPreview()
 {
     EditContactDialog(
-        contactName = "",
         title = stringResource(
             id = R.string.qr_code_scanned_successfully
         ),

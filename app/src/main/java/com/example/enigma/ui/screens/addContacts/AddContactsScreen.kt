@@ -1,5 +1,7 @@
 package com.example.enigma.ui.screens.addContacts
 
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -13,7 +15,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
+import com.example.enigma.util.DatabaseRequestState
+import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.QrCodeScannerState
 import com.example.enigma.viewmodels.MainViewModel
 
@@ -24,12 +29,49 @@ fun AddContactsScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
+        mainViewModel.reset()
         mainViewModel.generateCode()
     }
 
     var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
-    val contactCode by mainViewModel.contactQrCode.collectAsState()
+    val qrCode by mainViewModel.contactQrCode.collectAsState()
 
+    AddContactsScreen(
+        scannerState = scannerState,
+        qrCode = qrCode,
+        onScannerStateChanged = {
+            newState -> scannerState = newState
+        },
+        onQrCodeFound = {
+            scannedData -> if(mainViewModel.setScannedContactDetails(scannedData))
+            scannerState = QrCodeScannerState.SAVE
+        },
+        onSaveContact = {
+            scannerState = QrCodeScannerState.SHARE_CODE
+            mainViewModel.saveNewContact()
+        },
+        onSaveContactDismissed = {
+            mainViewModel.resetNewContactDetails()
+            scannerState = QrCodeScannerState.SHARE_CODE
+        },
+        onNewContactNameChanged = {
+            newContactName -> mainViewModel.updateNewContactName(newContactName)
+        },
+        navigateToContactsScreen = navigateToContactsScreen
+    )
+}
+
+@Composable
+fun AddContactsScreen(
+    scannerState: QrCodeScannerState,
+    qrCode: DatabaseRequestState<Bitmap>,
+    onScannerStateChanged: (QrCodeScannerState) -> Unit,
+    onQrCodeFound: (String) -> Unit,
+    onSaveContact: () -> Unit,
+    onSaveContactDismissed: () -> Unit,
+    onNewContactNameChanged: (String) -> Boolean,
+    navigateToContactsScreen: () -> Unit
+) {
     Scaffold (
         topBar = {
             AddContactsAppBar(
@@ -43,11 +85,11 @@ fun AddContactsScreen(
                         top = paddingValues.calculateTopPadding()
                     ),
                 scannerState = scannerState,
-                contactCode = contactCode,
-                onScannerStateChanged = {
-                    newScannerState -> scannerState = newScannerState
-                },
-                mainViewModel = mainViewModel
+                qrCode = qrCode,
+                onSaveContact = onSaveContact,
+                onSaveContactDismissed = onSaveContactDismissed,
+                onQrCodeFound = onQrCodeFound,
+                onNewContactNameChanged = onNewContactNameChanged
             )
         },
         floatingActionButton = {
@@ -56,10 +98,11 @@ fun AddContactsScreen(
                 onClick = {
                     if(scannerState == QrCodeScannerState.SHARE_CODE)
                     {
-                        scannerState = QrCodeScannerState.SCAN_CODE
-                    } else if(scannerState == QrCodeScannerState.SCAN_CODE)
+                        onScannerStateChanged(QrCodeScannerState.SCAN_CODE)
+                    }
+                    else if(scannerState == QrCodeScannerState.SCAN_CODE)
                     {
-                        scannerState = QrCodeScannerState.SHARE_CODE
+                        onScannerStateChanged(QrCodeScannerState.SHARE_CODE)
                     }
                 }
             )
@@ -83,6 +126,26 @@ fun QrScannerFab(
             else
                 painterResource(id = R.drawable.ic_qr_code),
             contentDescription = ""
+        )
+    }
+}
+
+@SuppressLint("UseCompatLoadingForDrawables")
+@Preview
+@Composable
+fun AddContactsScreenPreview()
+{
+    val bitmap = QrCodeGenerator(400, 400).encodeAsBitmap("Hello world!")
+    if(bitmap != null) {
+        AddContactsScreen(
+            scannerState = QrCodeScannerState.SHARE_CODE,
+            qrCode = DatabaseRequestState.Success(bitmap),
+            onNewContactNameChanged = { true },
+            onQrCodeFound = { },
+            onSaveContact = { },
+            onScannerStateChanged = { },
+            onSaveContactDismissed = { },
+            navigateToContactsScreen = { }
         )
     }
 }

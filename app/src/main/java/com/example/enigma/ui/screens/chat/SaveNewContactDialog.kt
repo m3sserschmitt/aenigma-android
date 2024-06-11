@@ -18,16 +18,10 @@ fun SaveNewContactDialog(
     onNewContactNameChanged: (String) -> Boolean,
     onNewNameConfirmClicked: () -> Unit
 ) {
-    var newContactName by remember { mutableStateOf("") }
-
     if (contact is DatabaseRequestState.Success && contact.data.name.isEmpty())
     {
         EditContactDialog(
-            contactName = newContactName,
-            onContactNameChanged = {  newValue ->
-                newContactName = newValue
-                onNewContactNameChanged(newValue)
-            },
+            onContactNameChanged = onNewContactNameChanged,
             title = stringResource(
                 id = R.string.new_contact_available
             ),

@@ -18,11 +18,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.enigma.R
+import com.example.enigma.ui.themes.ApplicationComposeTheme
+import com.example.enigma.util.QrCodeGenerator
 
 @Composable
-fun ContactQrCode(
+fun QrCode(
     modifier: Modifier = Modifier,
     qrCode: Bitmap
 ) {
@@ -60,3 +63,14 @@ fun ContactQrCode(
     }
 }
 
+@Preview
+@Composable
+fun QrCodePreview()
+{
+    val bitmap = QrCodeGenerator(400, 400).encodeAsBitmap("Hello world!")
+    if(bitmap != null) {
+        ApplicationComposeTheme(darkTheme = true) {
+            QrCode(qrCode = bitmap)
+        }
+    }
+}

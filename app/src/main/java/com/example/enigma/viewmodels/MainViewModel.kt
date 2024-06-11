@@ -119,8 +119,9 @@ class MainViewModel @Inject constructor(
 
     fun generateCode()
     {
+        if(_contactQrCode.value is DatabaseRequestState.Loading) return
+        _contactQrCode.value = DatabaseRequestState.Loading
         viewModelScope.launch(ioDispatcher) {
-            _contactQrCode.value = DatabaseRequestState.Loading
             try {
                generateQrCodeBitmap().collect {
                    qrCode -> if(qrCode != null)

@@ -25,7 +25,7 @@ import com.example.enigma.util.QrCodeAnalyzer
 
 @Composable
 fun QrCodeScanner(
-    onCodeFound: (String) -> Unit
+    onQrCodeFound: (String) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -69,7 +69,7 @@ fun QrCodeScanner(
                     QrCodeAnalyzer { result ->
                         result?.let { decodedData ->
                             cameraProviderFuture.get().unbindAll()
-                            onCodeFound(decodedData)
+                            onQrCodeFound(decodedData)
                         }
                     }
                 )
