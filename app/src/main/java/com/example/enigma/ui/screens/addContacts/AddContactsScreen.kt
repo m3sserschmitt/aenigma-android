@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
+import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.QrCodeScannerState
@@ -24,21 +25,26 @@ import com.example.enigma.viewmodels.MainViewModel
 
 @Composable
 fun AddContactsScreen(
+    profileToShare: String,
     navigateToContactsScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
+    var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
+    val qrCode by mainViewModel.qrCode.collectAsState()
+    val qrCodeLabel by mainViewModel.qrCodeLabel.collectAsState()
+    val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+
     LaunchedEffect(key1 = true)
     {
         mainViewModel.reset()
-        mainViewModel.generateCode()
+        mainViewModel.generateCode(profileToShare)
     }
-
-    var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
-    val qrCode by mainViewModel.contactQrCode.collectAsState()
 
     AddContactsScreen(
         scannerState = scannerState,
         qrCode = qrCode,
+        qrCodeLabel = qrCodeLabel,
+        floatingButtonVisible = floatingButtonVisible,
         onScannerStateChanged = {
             newState -> scannerState = newState
         },
@@ -65,6 +71,8 @@ fun AddContactsScreen(
 fun AddContactsScreen(
     scannerState: QrCodeScannerState,
     qrCode: DatabaseRequestState<Bitmap>,
+    qrCodeLabel: String,
+    floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     onQrCodeFound: (String) -> Unit,
     onSaveContact: () -> Unit,
@@ -86,6 +94,7 @@ fun AddContactsScreen(
                     ),
                 scannerState = scannerState,
                 qrCode = qrCode,
+                qrCodeLabel = qrCodeLabel,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
@@ -95,6 +104,7 @@ fun AddContactsScreen(
         floatingActionButton = {
             QrScannerFab(
                 scannerState = scannerState,
+                visible = floatingButtonVisible,
                 onClick = {
                     if(scannerState == QrCodeScannerState.SHARE_CODE)
                     {
@@ -112,21 +122,24 @@ fun AddContactsScreen(
 
 @Composable
 fun QrScannerFab(
+    visible: Boolean,
     scannerState: QrCodeScannerState,
     onClick: () -> Unit
 ) {
-    FloatingActionButton(
-        onClick = {
-            onClick()
+    if(visible) {
+        FloatingActionButton(
+            onClick = {
+                onClick()
+            }
+        ) {
+            Icon(
+                painter = if (scannerState == QrCodeScannerState.SHARE_CODE)
+                    painterResource(id = R.drawable.ic_qr_scanner)
+                else
+                    painterResource(id = R.drawable.ic_qr_code),
+                contentDescription = ""
+            )
         }
-    ) {
-        Icon(
-            painter = if(scannerState == QrCodeScannerState.SHARE_CODE)
-                painterResource(id = R.drawable.ic_qr_scanner)
-            else
-                painterResource(id = R.drawable.ic_qr_code),
-            contentDescription = ""
-        )
     }
 }
 
@@ -140,6 +153,8 @@ fun AddContactsScreenPreview()
         AddContactsScreen(
             scannerState = QrCodeScannerState.SHARE_CODE,
             qrCode = DatabaseRequestState.Success(bitmap),
+            qrCodeLabel = "John",
+            floatingButtonVisible = true,
             onNewContactNameChanged = { true },
             onQrCodeFound = { },
             onSaveContact = { },

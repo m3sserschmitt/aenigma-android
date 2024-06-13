@@ -11,13 +11,13 @@ import com.example.enigma.viewmodels.MainViewModel
 fun NavGraphBuilder.contactsComposable(
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
-    navigateToAddContactScreen: () -> Unit,
+    navigateToAddContactScreen: (String?) -> Unit,
     navigateToChatScreen: (String) -> Unit,
 ) {
-    composable(route = Screens.CONTACTS_SCREEN) {
+    composable(route = Screens.CONTACTS_SCREEN_ROUTE_FULL) {
         LaunchedEffect(key1 = true)
         {
-            navigationTracker.postCurrentRoute(Screens.CONTACTS_SCREEN)
+            navigationTracker.postCurrentRoute(Screens.CONTACTS_SCREEN_ROUTE_FULL)
         }
 
         ContactsScreen(

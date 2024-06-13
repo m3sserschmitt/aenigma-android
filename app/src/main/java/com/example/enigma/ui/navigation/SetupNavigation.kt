@@ -32,7 +32,8 @@ fun SetupNavigation(
         )
         chatComposable(
             navigationTracker = navigationTracker,
-            navigateToContactsScreen = screen.contacts
+            navigateToContactsScreen = screen.contacts,
+            navigateToAddContactsScreen = screen.addContact
         )
         addContactComposable(
             navigationTracker = navigationTracker,

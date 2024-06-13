@@ -23,9 +23,6 @@ class Constants {
         const val GRAPH_PATHS_TABLE = "GraphPaths"
         const val GRAPH_VERSIONS_TABLE = "GraphVersions"
 
-        // Screens Arguments
-        const val CHAT_ARGUMENT_KEY = "chatId"
-
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
         const val SERVER_URL = "http://10.52.145.90:5000"

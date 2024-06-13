@@ -15,6 +15,7 @@ import com.example.enigma.util.QrCodeScannerState
 fun AddContactsContent(
     modifier: Modifier = Modifier,
     scannerState: QrCodeScannerState,
+    qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
     onQrCodeFound: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
@@ -35,7 +36,8 @@ fun AddContactsContent(
         QrCodeScannerState.SAVE -> {
             DisplayQrCode(
                 modifier = modifier,
-                qrCode = qrCode
+                qrCode = qrCode,
+                qrCodeLabel = qrCodeLabel
             )
         }
         QrCodeScannerState.SCAN_CODE -> {
@@ -49,11 +51,13 @@ fun AddContactsContent(
 @Composable
 fun DisplayQrCode(
     modifier: Modifier = Modifier,
+    qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
 ) {
     when(qrCode) {
         is DatabaseRequestState.Success -> QrCode(
             modifier = modifier,
+            qrCodeLabel = qrCodeLabel,
             qrCode = qrCode.data
         )
         is DatabaseRequestState.Error -> CodeNotAvailableError()
@@ -73,6 +77,7 @@ fun AddContactsContentPreview()
             AddContactsContent(
                 scannerState = QrCodeScannerState.SHARE_CODE,
                 qrCode = DatabaseRequestState.Success(bitmap),
+                qrCodeLabel = "John",
                 onQrCodeFound = { },
                 onNewContactNameChanged = { true },
                 onSaveContact = { },

@@ -38,7 +38,7 @@ import com.example.enigma.viewmodels.MainViewModel
 @Composable
 fun ContactsScreen(
     navigateToChatScreen: (String) -> Unit,
-    navigateToAddContactScreen: () -> Unit,
+    navigateToAddContactScreen: (String?) -> Unit,
     mainViewModel: MainViewModel
 ) {
     LaunchedEffect(key1 = true)
@@ -100,7 +100,7 @@ fun ContactsScreen(
     onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
     onContactRenamed: (ContactWithConversationPreview) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    navigateToAddContactScreen: () -> Unit,
+    navigateToAddContactScreen: (String?) -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
@@ -235,6 +235,12 @@ fun ContactsScreen(
                 onRenameSelectedItemClicked = {
                     renameContactDialogVisible = true
                 },
+                onShareSelectedItemsClicked = {
+                    if(selectedItems.size == 1)
+                    {
+                      navigateToAddContactScreen(selectedItems.single().address)
+                    }
+                },
                 onRetryConnection = onRetryConnection
             )
         },
@@ -264,7 +270,9 @@ fun ContactsScreen(
         },
         floatingActionButton = {
             ContactsFab(
-                onFabClicked = navigateToAddContactScreen
+                onFabClicked = {
+                    navigateToAddContactScreen(null)
+                }
             )
         }
     )

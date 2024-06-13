@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -124,15 +125,34 @@ fun CloseSearchTopAppBarAction(
 
 @Composable
 fun EditTopAppBarAction(
+    visible: Boolean,
     onRenameClicked: () -> Unit
 ) {
+    if(visible) {
+        IconButton(
+            onClick = onRenameClicked
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Edit,
+                contentDescription = stringResource(
+                    id = R.string.rename
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+fun ShareTopAppBarAction(
+    onShareContactClick: () -> Unit
+) {
     IconButton(
-        onClick = onRenameClicked
+        onClick = onShareContactClick
     ) {
         Icon(
-            imageVector = Icons.Filled.Edit,
+            imageVector = Icons.Filled.Share,
             contentDescription = stringResource(
-                id = R.string.rename
+                id = R.string.share
             ),
         )
     }

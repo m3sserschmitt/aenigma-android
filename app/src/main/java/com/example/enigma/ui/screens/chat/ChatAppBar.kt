@@ -3,7 +3,10 @@ package com.example.enigma.ui.screens.chat
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,7 +55,8 @@ fun ChatAppBar(
     onSearchModeTriggered: () -> Unit,
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
-    navigateToContactsScreen: () -> Unit
+    navigateToContactsScreen: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     LaunchedEffect(key1 = isSearchMode)
@@ -94,7 +98,8 @@ fun ChatAppBar(
                 onDeleteAllClicked = onDeleteAllClicked,
                 onRenameContactClicked = onRenameContactClicked,
                 navigateToContactsScreen = navigateToContactsScreen,
-                onSearchModeTriggered = onSearchModeTriggered
+                onSearchModeTriggered = onSearchModeTriggered,
+                navigateToAddContactsScreen = navigateToAddContactsScreen
             )
         }
     }
@@ -110,7 +115,8 @@ fun DefaultChatAppBar(
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onSearchModeTriggered: () -> Unit,
-    navigateToContactsScreen: () -> Unit
+    navigateToContactsScreen: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit
 ) {
     TopAppBar(
         navigationIcon = {
@@ -144,7 +150,13 @@ fun DefaultChatAppBar(
             MoreActions(
                 messages = messages,
                 onDeleteAllClicked = onDeleteAllClicked,
-                onRenameContactClicked = onRenameContactClicked
+                onRenameContactClicked = onRenameContactClicked,
+                onShareContactClicked = {
+                    if (contact is DatabaseRequestState.Success)
+                    {
+                        navigateToAddContactsScreen(contact.data.address)
+                    }
+                }
             )
         }
     )
@@ -154,7 +166,8 @@ fun DefaultChatAppBar(
 fun MoreActions(
     messages: DatabaseRequestState<List<MessageEntity>>,
     onDeleteAllClicked: () -> Unit,
-    onRenameContactClicked: () -> Unit
+    onRenameContactClicked: () -> Unit,
+    onShareContactClicked: () -> Unit
 ) {
     var moreActionsDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -178,6 +191,14 @@ fun MoreActions(
             }
         ) {
             DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = stringResource(
+                            id = R.string.rename
+                        ),
+                    )
+                },
                 text = {
                     Text(
                         text = stringResource(
@@ -191,6 +212,35 @@ fun MoreActions(
                 }
             )
             DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Share,
+                        contentDescription = stringResource(
+                            id = R.string.share
+                        ),
+                    )
+                },
+                text = {
+                    Text(
+                        text = stringResource(
+                            id = R.string.share
+                        )
+                    )
+                },
+                onClick = {
+                    onShareContactClicked()
+                    moreActionsDropdownExpanded = false
+                }
+            )
+            DropdownMenuItem(
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = stringResource(
+                            id = R.string.delete
+                        ),
+                    )
+                },
                 enabled = messages is DatabaseRequestState.Success && messages.data.isNotEmpty(),
                 text = {
                     Text(
@@ -233,7 +283,8 @@ fun DefaultChatAppBarPreview()
         onSearchModeTriggered = {},
         onSearchClicked = {},
         onSearchModeClosed = {},
-        isSearchMode = false
+        isSearchMode = false,
+        navigateToAddContactsScreen = {}
     )
 }
 
@@ -262,6 +313,7 @@ fun SelectionModeChatAppBarPreview()
         onSearchModeTriggered = {},
         onSearchClicked = {},
         onSearchModeClosed = {},
-        isSearchMode = false
+        isSearchMode = false,
+        navigateToAddContactsScreen = {}
     )
 }

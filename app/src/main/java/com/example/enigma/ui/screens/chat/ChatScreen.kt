@@ -30,9 +30,10 @@ import java.util.Date
 
 @Composable
 fun ChatScreen(
-    navigateToContactsScreen: () -> Unit,
+    chatId: String,
     chatViewModel: ChatViewModel,
-    chatId: String
+    navigateToContactsScreen: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit
 ) {
     LaunchedEffect(key1 = true)
     {
@@ -99,7 +100,8 @@ fun ChatScreen(
         loadNextPage = {
             chatViewModel.loadNextPage(chatId)
         },
-        navigateToContactsScreen = navigateToContactsScreen
+        navigateToContactsScreen = navigateToContactsScreen,
+        navigateToAddContactsScreen = navigateToAddContactsScreen
     )
 }
 
@@ -120,7 +122,8 @@ fun ChatScreen(
     onDelete: (List<MessageEntity>) -> Unit,
     onSearch: (String) -> Unit,
     loadNextPage: () -> Unit,
-    navigateToContactsScreen: () -> Unit
+    navigateToContactsScreen: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
@@ -247,7 +250,8 @@ fun ChatScreen(
                 onSearchModeTriggered = {
                     isSearchMode = true
                 },
-                onRetryConnection = onRetryConnection
+                onRetryConnection = onRetryConnection,
+                navigateToAddContactsScreen = navigateToAddContactsScreen
             )
         },
         content = { paddingValues ->
@@ -353,6 +357,7 @@ fun ChatScreenPreview()
         onSearch = {},
         onRenameContactDismissed = {},
         loadNextPage = { },
-        navigateToContactsScreen = {}
+        navigateToContactsScreen = {},
+        navigateToAddContactsScreen = {}
     )
 }

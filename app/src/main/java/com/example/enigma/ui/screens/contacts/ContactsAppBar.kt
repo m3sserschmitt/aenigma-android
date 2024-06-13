@@ -25,6 +25,7 @@ import com.example.enigma.ui.screens.common.IndeterminateCircularIndicator
 import com.example.enigma.ui.screens.common.RetryConnectionAppBarAction
 import com.example.enigma.ui.screens.common.SearchAppBar
 import com.example.enigma.ui.screens.common.SelectionModeAppBar
+import com.example.enigma.ui.screens.common.ShareTopAppBarAction
 
 @Composable
 fun ContactsAppBar(
@@ -38,7 +39,8 @@ fun ContactsAppBar(
     onSearchClicked: (String) -> Unit,
     onSelectionModeExited: () -> Unit,
     onDeleteSelectedItemsClicked: () -> Unit,
-    onRenameSelectedItemClicked: () -> Unit
+    onRenameSelectedItemClicked: () -> Unit,
+    onShareSelectedItemsClicked: () -> Unit,
 ) {
     var searchQueryState by remember { mutableStateOf("") }
     LaunchedEffect(key1 = isSearchMode)
@@ -58,12 +60,13 @@ fun ContactsAppBar(
                 DeleteAppBarAction(
                     onDeleteClicked = onDeleteSelectedItemsClicked
                 )
-                if(selectedItemsCount == 1)
-                {
-                    EditTopAppBarAction(
-                        onRenameClicked = onRenameSelectedItemClicked
-                    )
-                }
+                EditTopAppBarAction(
+                    visible = selectedItemsCount == 1,
+                    onRenameClicked = onRenameSelectedItemClicked
+                )
+                ShareTopAppBarAction(
+                    onShareContactClick = onShareSelectedItemsClicked
+                )
             }
         )
     } else if (isSearchMode){

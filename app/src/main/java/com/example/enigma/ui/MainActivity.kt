@@ -133,16 +133,23 @@ class MainActivity : ComponentActivity() {
 
     private fun manageNotifications(route: String)
     {
-        when (route) {
-            Screens.CONTACTS_SCREEN -> disableNotifications()
-            Screens.ADD_CONTACT_SCREEN,
-            Screens.NO_SCREEN -> enableNotifications()
-            else -> {
-                val chatId = Screens.getChatIdFromChatRoute(route) ?: return
+        if(NavigationTracker.isChatScreenRoute(route))
+        {
+            val chatId = Screens.getChatIdFromChatRoute(route) ?: return
 
-                disableNotifications(chatId)
-                dismissNotifications(chatId)
-            }
+            disableNotifications(chatId)
+            dismissNotifications(chatId)
+        }
+        else if (NavigationTracker.isAddContactsScreenRoute(route))
+        {
+            enableNotifications()
+        }
+        else if (NavigationTracker.isContactsScreenRoute(route))
+        {
+            disableNotifications()
+        }
+        else {
+            enableNotifications()
         }
     }
 }

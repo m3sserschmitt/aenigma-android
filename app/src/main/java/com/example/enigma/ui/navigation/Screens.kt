@@ -6,17 +6,37 @@ class Screens(navController: NavController) {
 
     companion object
     {
-        const val CONTACTS_SCREEN = "contacts"
-        const val CHAT_SCREEN_CHAT_ID_ARG = "{chatId}"
-        const val CHAT_SCREEN = "chat/$CHAT_SCREEN_CHAT_ID_ARG"
-        const val ADD_CONTACT_SCREEN = "addContact"
-        const val STARTING_SCREEN = CONTACTS_SCREEN
+        const val CHAT_SCREEN_CHAT_ID_ARG = "chatId"
+        const val ADD_CONTACTS_SCREEN_CONTACT_ID_ARG = "contactId"
+        const val ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE = "me"
+
+        const val CONTACTS_SCREEN_BASE_ROUTE = "contacts"
+        const val CHAT_SCREEN_BASE_ROUTE = "chat"
+        const val ADD_CONTACTS_BASE_ROUTE = "addContacts"
+
+        const val CONTACTS_SCREEN_ROUTE_FULL = CONTACTS_SCREEN_BASE_ROUTE
+        const val CHAT_SCREEN_ROUTE_FULL = "$CHAT_SCREEN_BASE_ROUTE/{$CHAT_SCREEN_CHAT_ID_ARG}"
+        const val ADD_CONTACT_SCREEN_ROUTE_FULL = "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}"
+
+        const val STARTING_SCREEN = CONTACTS_SCREEN_ROUTE_FULL
         const val NO_SCREEN = "none"
 
         @JvmStatic
         fun getChatScreenRoute(chatId: String): String
         {
-            return CHAT_SCREEN.replace(CHAT_SCREEN_CHAT_ID_ARG, chatId)
+            return CHAT_SCREEN_ROUTE_FULL.replace("{$CHAT_SCREEN_CHAT_ID_ARG}", chatId)
+        }
+
+        @JvmStatic
+        fun getAddContactsScreenRoute(contactId: String?): String
+        {
+            return if(contactId.isNullOrBlank())
+                ADD_CONTACT_SCREEN_ROUTE_FULL.replace(
+                    "{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}",
+                    ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+                )
+            else
+                ADD_CONTACT_SCREEN_ROUTE_FULL.replace("{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}", contactId)
         }
 
         @JvmStatic
@@ -29,8 +49,8 @@ class Screens(navController: NavController) {
     }
 
     val contacts: () -> Unit = {
-        navController.navigate(CONTACTS_SCREEN) {
-            popUpTo(CONTACTS_SCREEN) { inclusive = true }
+        navController.navigate(CONTACTS_SCREEN_ROUTE_FULL) {
+            popUpTo(CONTACTS_SCREEN_ROUTE_FULL) { inclusive = true }
         }
     }
 
@@ -38,7 +58,7 @@ class Screens(navController: NavController) {
         chatId -> navController.navigate(getChatScreenRoute(chatId))
     }
 
-    val addContact: () -> Unit = {
-        navController.navigate(ADD_CONTACT_SCREEN)
+    val addContact: (String?) -> Unit = {
+        contactId -> navController.navigate(getAddContactsScreenRoute(contactId))
     }
 }

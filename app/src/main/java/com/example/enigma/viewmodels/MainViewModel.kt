@@ -12,6 +12,7 @@ import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.models.ExportedContactData
+import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.copyBySerialization
@@ -41,14 +42,18 @@ class MainViewModel @Inject constructor(
     private val _allContacts =
         MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(DatabaseRequestState.Idle)
 
-    private val _contactQrCode
+    private val _qrCode
             = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
+
+    private val _qrCodeLabel = MutableStateFlow("")
 
     private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", ""))
 
     val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> = _allContacts
 
-    val contactQrCode: StateFlow<DatabaseRequestState<Bitmap>> = _contactQrCode
+    val qrCode: StateFlow<DatabaseRequestState<Bitmap>> = _qrCode
+
+    val qrCodeLabel: StateFlow<String> = _qrCodeLabel
 
     val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
 
@@ -117,23 +122,23 @@ class MainViewModel @Inject constructor(
         searchContacts("")
     }
 
-    fun generateCode()
+    fun generateCode(profileId: String)
     {
-        if(_contactQrCode.value is DatabaseRequestState.Loading) return
-        _contactQrCode.value = DatabaseRequestState.Loading
+        if(_qrCode.value is DatabaseRequestState.Loading) return
+        _qrCode.value = DatabaseRequestState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
-               generateQrCodeBitmap().collect {
+               generateQrCodeBitmap(profileId).collect {
                    qrCode -> if(qrCode != null)
-                       _contactQrCode.value = DatabaseRequestState.Success(qrCode)
+                       _qrCode.value = DatabaseRequestState.Success(qrCode)
                    else
-                       _contactQrCode.value = DatabaseRequestState.Error(
+                       _qrCode.value = DatabaseRequestState.Error(
                            Exception("Failed to generate contact QR Code")
                        )
                }
             } catch (ex: Exception)
             {
-                _contactQrCode.value = DatabaseRequestState.Error(ex)
+                _qrCode.value = DatabaseRequestState.Error(ex)
             }
         }
     }
@@ -165,7 +170,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun generateQrCodeBitmap(): Flow<Bitmap?>
+    private fun getMyProfileBitmap(): Flow<Bitmap?>
     {
         return flow {
             val guard = repository.local.getGuard()
@@ -176,14 +181,65 @@ class MainViewModel @Inject constructor(
                     addressProvider.publicKey!!
                 )
 
-                val bitmap = QrCodeGenerator(400, 400)
-                    .encodeAsBitmap(exportedData.toString())
-
-                if (bitmap != null) {
-                    emit(bitmap)
-                }
+                emit(QrCodeGenerator(400, 400).encodeAsBitmap(exportedData.toString()))
             } else {
                 emit(null)
+            }
+        }
+    }
+
+    private fun getProfileBitmap(profileId: String): Flow<Bitmap?>
+    {
+        return flow {
+            val contact = repository.local.getContact(profileId)
+
+            if(contact != null)
+            {
+                val exportedData = ExportedContactData(
+                    contact.guardHostname,
+                    contact.publicKey
+                )
+
+                emit(QrCodeGenerator(400, 400).encodeAsBitmap(exportedData.toString()))
+            }
+            else {
+                emit(null)
+            }
+        }
+    }
+
+    private fun getQrCodeLabel(address: String): String
+    {
+        return if (address == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE)
+        {
+            "Sharing @My code"
+        }
+        else try {
+            val contact = (allContacts.value as DatabaseRequestState.Success).data.find { item -> item.address == address }
+            if(contact != null)
+            {
+                "Sharing @${contact.name}"
+            }
+            else
+            {
+                ""
+            }
+        }
+        catch (_: Exception)
+        {
+            ""
+        }
+    }
+
+    private fun generateQrCodeBitmap(profileId: String): Flow<Bitmap?>
+    {
+        _qrCodeLabel.value = getQrCodeLabel(profileId)
+        return when(profileId) {
+            Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE -> {
+                getMyProfileBitmap()
+            }
+            else -> {
+                getProfileBitmap(profileId)
             }
         }
     }
