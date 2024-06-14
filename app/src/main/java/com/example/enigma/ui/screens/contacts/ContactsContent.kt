@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.data.database.ContactWithConversationPreview
-import com.example.enigma.ui.screens.common.ErrorScreen
+import com.example.enigma.ui.screens.common.GenericErrorScreen
 import com.example.enigma.ui.screens.common.ItemsList
 import com.example.enigma.ui.screens.common.LoadingScreen
 import com.example.enigma.util.DatabaseRequestState
@@ -56,7 +56,7 @@ fun ContactsContent(
                 }
             }
         }
-        is DatabaseRequestState.Error -> ErrorScreen(modifier)
+        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
         is DatabaseRequestState.Loading -> LoadingScreen(modifier)
         is DatabaseRequestState.Idle -> { }
     }

@@ -22,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.screens.common.AutoScrollItemsList
-import com.example.enigma.ui.screens.common.ErrorScreen
+import com.example.enigma.ui.screens.common.GenericErrorScreen
 import com.example.enigma.ui.screens.common.LoadingScreen
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.PrettyDateFormatter
@@ -155,7 +155,7 @@ fun DisplayMessages(
             }
         }
         is DatabaseRequestState.Loading -> LoadingScreen(modifier)
-        is DatabaseRequestState.Error -> ErrorScreen(modifier)
+        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
         is DatabaseRequestState.Idle -> {  }
     }
 }

@@ -12,13 +12,12 @@ import com.example.enigma.R
 
 @Composable
 fun ErrorScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    text: String
 ) {
     SimpleInfoScreen(
         modifier = modifier,
-        message = stringResource(
-            id = R.string.something_went_wrong
-        ),
+        message = text,
         icon = {
             Icon(
                 modifier = Modifier.size(120.dp),
@@ -33,9 +32,21 @@ fun ErrorScreen(
     )
 }
 
+@Composable
+fun GenericErrorScreen(
+    modifier: Modifier = Modifier
+) {
+    ErrorScreen(
+        modifier = modifier,
+        text = stringResource(
+            id = R.string.something_went_wrong
+        )
+    )
+}
+
 @Preview
 @Composable
 fun ErrorScreenPreview()
 {
-    ErrorScreen()
+    GenericErrorScreen()
 }

@@ -19,8 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.example.enigma.R
+import com.example.enigma.ui.screens.common.ErrorScreen
 import com.example.enigma.util.QrCodeAnalyzer
 
 @Composable
@@ -88,6 +91,12 @@ fun QrCodeScanner(
 
                 return@AndroidView previewView
             }
+        )
+    }
+    else
+    {
+        ErrorScreen(
+            text = stringResource(id = R.string.camera_permission_required)
         )
     }
 }
