@@ -133,12 +133,6 @@ fun ChatScreen(
     val selectedItems = remember { mutableStateListOf<MessageEntity>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
-    SaveNewContactDialog(
-        contact = contact,
-        onNewContactNameChanged = onNewContactNameChanged,
-        onNewNameConfirmClicked = onRenameContactConfirmed,
-    )
-
     RenameContactDialog(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,

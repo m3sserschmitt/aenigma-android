@@ -45,7 +45,7 @@ class MessageSaver @Inject constructor(
             try {
                 ContactEntity(
                     AddressHelper.getHexAddressFromPublicKey(item.publicKey),
-                    "",
+                    "unknown",
                     item.publicKey,
                     item.guardHostname,
                     false
