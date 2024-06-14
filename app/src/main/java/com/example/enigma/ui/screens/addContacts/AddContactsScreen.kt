@@ -2,6 +2,7 @@ package com.example.enigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -14,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
@@ -33,6 +35,7 @@ fun AddContactsScreen(
     val qrCode by mainViewModel.qrCode.collectAsState()
     val qrCodeLabel by mainViewModel.qrCodeLabel.collectAsState()
     val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+    val context = LocalContext.current
 
     LaunchedEffect(key1 = true)
     {
@@ -55,6 +58,8 @@ fun AddContactsScreen(
         onSaveContact = {
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact()
+            Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
+            navigateToContactsScreen()
         },
         onSaveContactDismissed = {
             mainViewModel.resetNewContactDetails()
