@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OPENSSL_DIR=openssl
-OPENSSL_VERSION=openssl-1.1.1q
+OPENSSL_VERSION=openssl-3.0.14
 BIN=openssl-bin
 
 rm -rf $OPENSSL_DIR
