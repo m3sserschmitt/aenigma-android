@@ -387,3 +387,10 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sealOnion(
 
     return out;
 }
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_getDefaultPKeySize(JNIEnv *env,
+                                                                                jobject thiz) {
+    return (int)GetDefaultPKeySize();
+}

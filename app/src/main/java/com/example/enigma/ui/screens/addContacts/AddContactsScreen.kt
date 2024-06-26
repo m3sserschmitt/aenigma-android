@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
+import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.QrCodeGenerator
@@ -33,19 +34,20 @@ fun AddContactsScreen(
 ) {
     var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
     val qrCode by mainViewModel.qrCode.collectAsState()
+    val sharedData by mainViewModel.sharedDataCreateResult.collectAsState()
     val qrCodeLabel by mainViewModel.qrCodeLabel.collectAsState()
     val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
     val context = LocalContext.current
 
     LaunchedEffect(key1 = true)
     {
-        mainViewModel.reset()
         mainViewModel.generateCode(profileToShare)
     }
 
     AddContactsScreen(
         scannerState = scannerState,
         qrCode = qrCode,
+        sharedData = sharedData,
         qrCodeLabel = qrCodeLabel,
         floatingButtonVisible = floatingButtonVisible,
         onScannerStateChanged = {
@@ -57,16 +59,22 @@ fun AddContactsScreen(
         },
         onSaveContact = {
             scannerState = QrCodeScannerState.SHARE_CODE
-            mainViewModel.saveNewContact()
+            mainViewModel.saveContactChanges()
             Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
             navigateToContactsScreen()
         },
         onSaveContactDismissed = {
-            mainViewModel.resetNewContactDetails()
+            mainViewModel.cleanupContactChanges()
             scannerState = QrCodeScannerState.SHARE_CODE
         },
         onNewContactNameChanged = {
-            newContactName -> mainViewModel.updateNewContactName(newContactName)
+            newContactName -> mainViewModel.setNewContactName(newContactName)
+        },
+        onCreateLinkClicked = {
+            mainViewModel.createContactShareLink()
+        },
+        onSharedDataConfirm = {
+            mainViewModel.cleanupContactChanges()
         },
         navigateToContactsScreen = navigateToContactsScreen
     )
@@ -76,6 +84,7 @@ fun AddContactsScreen(
 fun AddContactsScreen(
     scannerState: QrCodeScannerState,
     qrCode: DatabaseRequestState<Bitmap>,
+    sharedData: DatabaseRequestState<CreatedSharedData>,
     qrCodeLabel: String,
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
@@ -83,6 +92,8 @@ fun AddContactsScreen(
     onSaveContact: () -> Unit,
     onSaveContactDismissed: () -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
+    onCreateLinkClicked: () -> Unit,
+    onSharedDataConfirm: () -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
     Scaffold (
@@ -99,11 +110,14 @@ fun AddContactsScreen(
                     ),
                 scannerState = scannerState,
                 qrCode = qrCode,
+                sharedData = sharedData,
                 qrCodeLabel = qrCodeLabel,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
-                onNewContactNameChanged = onNewContactNameChanged
+                onNewContactNameChanged = onNewContactNameChanged,
+                onCreateLinkClicked = onCreateLinkClicked,
+                onSharedDataConfirm = onSharedDataConfirm
             )
         },
         floatingActionButton = {
@@ -158,6 +172,7 @@ fun AddContactsScreenPreview()
         AddContactsScreen(
             scannerState = QrCodeScannerState.SHARE_CODE,
             qrCode = DatabaseRequestState.Success(bitmap),
+            sharedData = DatabaseRequestState.Idle,
             qrCodeLabel = "John",
             floatingButtonVisible = true,
             onNewContactNameChanged = { true },
@@ -165,7 +180,9 @@ fun AddContactsScreenPreview()
             onSaveContact = { },
             onScannerStateChanged = { },
             onSaveContactDismissed = { },
-            navigateToContactsScreen = { }
+            navigateToContactsScreen = { },
+            onCreateLinkClicked = { },
+            onSharedDataConfirm = { }
         )
     }
 }

@@ -31,6 +31,7 @@ fun NavGraphBuilder.addContactComposable(
         LaunchedEffect(key1 = true)
         {
             navigationTracker.postCurrentRoute(Screens.ADD_CONTACT_SCREEN_ROUTE_FULL)
+            mainViewModel.init()
         }
 
         AddContactsScreen(

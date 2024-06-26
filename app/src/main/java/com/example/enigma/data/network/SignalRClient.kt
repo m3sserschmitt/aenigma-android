@@ -1,5 +1,6 @@
 package com.example.enigma.data.network
 
+import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.crypto.SignatureService
@@ -41,6 +42,9 @@ class SignalRClient @Inject constructor(
 
         private const val AUTHENTICATION_TOKEN_NULL_ERROR
         = "Authentication token was null."
+
+        private const val TOKEN_SIGNATURE_FAILED_ERROR
+        = "Token signature failed."
 
         private const val CONNECTION_REFUSED_ERROR
         = "Connection refused."
@@ -168,7 +172,8 @@ class SignalRClient @Inject constructor(
         updateStatus(SignalRStatus.Authenticating::class.java)
         hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).blockingSubscribe { token ->
             if(token != null) {
-                val signature = signatureService.sign(token)
+                val decodedToken = Base64.decode(token, Base64.DEFAULT)
+                val signature = if(decodedToken != null ) signatureService.sign(decodedToken) else null
 
                 if(signature != null) {
                     hubConnection.invoke(
@@ -190,6 +195,10 @@ class SignalRClient @Inject constructor(
                             )
                         }
                     }
+                }
+                else
+                {
+                    updateStatus(SignalRStatus.Error::class.java, TOKEN_SIGNATURE_FAILED_ERROR)
                 }
             } else {
                 updateStatus(SignalRStatus.Error::class.java, AUTHENTICATION_TOKEN_NULL_ERROR)

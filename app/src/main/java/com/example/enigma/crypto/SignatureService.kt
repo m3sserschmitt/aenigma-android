@@ -7,20 +7,14 @@ import javax.inject.Inject
 
 class SignatureService @Inject constructor(@ApplicationContext context: Context) {
 
-    private val publicKey: String?
+    private val publicKey: String? = KeysManager.readPublicKey(context)
 
-    private val privateKey: String?
+    private val privateKey: String? = KeysManager.readPrivateKey(context)
 
-    init {
-        publicKey = KeysManager.readPublicKey(context)
-        privateKey = KeysManager.readPrivateKey(context)
-    }
-    fun sign(token: String): Pair<String, String>?
+    fun sign(data: ByteArray): Pair<String, String>?
     {
-
-        val decodedToken = Base64.decode(token, Base64.DEFAULT)
         val signature = if(privateKey != null && publicKey != null)
-            CryptoProvider.sign(privateKey, "", decodedToken) else null
+            CryptoProvider.sign(privateKey, "", data) else null
         val encodedSignature = if(signature != null)
             Base64.encodeToString(signature, Base64.DEFAULT) else null
 

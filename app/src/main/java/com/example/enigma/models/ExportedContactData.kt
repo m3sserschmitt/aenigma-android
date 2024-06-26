@@ -1,6 +1,5 @@
 package com.example.enigma.models
 
-import com.example.enigma.util.AddressHelper
 import org.json.JSONObject
 
 class ExportedContactData (

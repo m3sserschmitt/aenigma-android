@@ -20,6 +20,8 @@ class CryptoProvider {
 
         private external fun calculateEnvelopeSize(currentSize: Int): Int
 
+        private external fun getDefaultPKeySize(): Int
+
         @JvmStatic
         private fun throwError(requiredHandleType: String?)
         {
@@ -126,6 +128,30 @@ class CryptoProvider {
             val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT) ?: return null
 
             return unsealOnion(handle.handle, decodedMessage)
+        }
+
+        @JvmStatic
+        fun getDefaultPublicKeySize(): Int
+        {
+            return getDefaultPKeySize()
+        }
+
+        @JvmStatic
+        fun getDataFromSignature(signedData: ByteArray?): ByteArray?
+        {
+            if(signedData == null)
+            {
+                return null
+            }
+
+            val digestSize = getDefaultPublicKeySize() / 8
+
+            if(signedData.size < digestSize + 1)
+            {
+                return null
+            }
+
+            return signedData.sliceArray(0 until signedData.size - digestSize)
         }
     }
 }

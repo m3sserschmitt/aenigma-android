@@ -35,6 +35,7 @@ fun NavGraphBuilder.chatComposable(
 
         LaunchedEffect(key1 = true)
         {
+            chatViewModel.init()
             if (chatId != null) {
                 navigationTracker.postCurrentRoute(Screens.getChatScreenRoute(chatId))
             }

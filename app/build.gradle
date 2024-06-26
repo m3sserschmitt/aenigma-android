@@ -14,7 +14,7 @@ android {
     compileSdk 34
     defaultConfig {
         applicationId "com.example.enigma"
-        minSdk 24
+        minSdk 26
         targetSdk 34
         versionCode 1
         versionName "1.0"
@@ -124,6 +124,9 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.6.8"
     debugImplementation "androidx.compose.ui:ui-tooling:1.6.8"
     implementation 'androidx.compose.runtime:runtime-livedata:1.6.8'
+
+    // Pretty Time
+    implementation 'org.ocpsoft.prettytime:prettytime:5.0.4.Final'
 
     // Kotlin
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'

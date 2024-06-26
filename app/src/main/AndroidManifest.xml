@@ -38,12 +38,22 @@
             android:screenOrientation="portrait"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            tools:ignore="LockedOrientationActivity">
+            tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:host="enigma-app.com"/>
+                <data android:scheme="http"/>
+                <data android:path="/Share"/>
+                <data android:path="/share"/>
+            </intent-filter>
+
         </activity>
     </application>
 

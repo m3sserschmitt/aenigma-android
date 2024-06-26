@@ -59,4 +59,19 @@
     <string name="loading">Loading…</string>
     <string name="share">Share</string>
     <string name="camera_permission_required">Camera permission required</string>
+    <string name="or">or</string>
+    <string name="create_link">Create link</string>
+    <string name="saved">Saved</string>
+    <string name="copy">Copy</string>
+    <string name="error">Error</string>
+    <string name="link_successfully_created">Link successfully created</string>
+    <string name="failure">Failure</string>
+    <string name="copy_link_or_share_to_other_apps">Copy the resource link or share to other apps.</string>
+    <string name="link_could_not_be_created">Link could not be created.</string>
+    <string name="share_link_via">Share link via</string>
+    <string name="ok">OK</string>
+    <string name="link_valid_for">Valid for %s.</string>
+    <string name="request_successfully_completed">Request successfully completed</string>
+    <string name="save_contact_no_return">Save the contact? Take note that the link might not be available for further requests.</string>
+    <string name="request_completed_with_errors">Request completed with errors</string>
 </resources>

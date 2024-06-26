@@ -30,62 +30,45 @@ abstract class BaseViewModel(
 
     val newContactName: StateFlow<String> = _newContactName
 
-    abstract fun createContactEntityForSaving(): ContactEntity?
+    protected abstract fun validateNewContactName(name: String): Boolean
 
-    open fun resetNewContactDetails()
+    protected abstract fun getContactEntityForSaving(): ContactEntity?
+
+    protected abstract fun resetContactChanges()
+
+    abstract fun init()
+
+    protected fun resetNewContactName()
     {
-        resetNewContactName()
+        _newContactName.value = ""
     }
 
-    open fun reset()
+    fun saveContactChanges()
     {
-        resetNewContactDetails()
-    }
-
-    fun resetNewContactName()
-    {
-        setNewContactName("")
-    }
-
-    open fun validateNewContactName(name: String): Boolean
-    {
-        return name.isNotBlank()
-    }
-
-    fun saveNewContact()
-    {
+        val contact = getContactEntityForSaving() ?: return
         viewModelScope.launch(ioDispatcher) {
-            val contact = createContactEntityForSaving() ?: return@launch
-            resetNewContactDetails()
             repository.local.insertOrUpdateContact(contact)
         }
+        resetContactChanges()
     }
 
-    fun updateNewContactName(newValue: String): Boolean
+    fun setNewContactName(newValue: String): Boolean
     {
         _newContactName.value = newValue
-        try {
-
-            if(newValue.isEmpty())
-            {
-                return false
-            }
-
-            return validateNewContactName(newValue)
-        }
-        catch (_: Exception)
-        {
-            return false
+        return try {
+            validateNewContactName(newValue)
+        } catch (_: Exception) {
+            false
         }
     }
 
-    fun resetClientStatus()
+    fun retryClientConnection()
     {
         signalRClient.resetStatus()
     }
 
-    fun setNewContactName(name: String)
+    fun cleanupContactChanges()
     {
-        _newContactName.value = name
+        resetContactChanges()
     }
 }

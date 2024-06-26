@@ -2,9 +2,19 @@ package com.example.enigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.enigma.R
+import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.ui.screens.common.LoadingScreen
 import com.example.enigma.ui.themes.ApplicationComposeTheme
 import com.example.enigma.util.DatabaseRequestState
@@ -17,17 +27,24 @@ fun AddContactsContent(
     scannerState: QrCodeScannerState,
     qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
+    sharedData: DatabaseRequestState<CreatedSharedData>,
     onQrCodeFound: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: () -> Unit,
     onSaveContactDismissed: () -> Unit,
+    onCreateLinkClicked: () -> Unit,
+    onSharedDataConfirm: () ->  Unit
 ) {
     SaveNewContactDialog(
         scannerState = scannerState,
         onContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = onSaveContact,
         onDismissClicked = onSaveContactDismissed,
-        onDismissRequest = onSaveContactDismissed
+    )
+
+    CreateLinkDialog(
+        sharedData = sharedData,
+        onConfirmButtonClick = onSharedDataConfirm
     )
 
     when(scannerState)
@@ -37,7 +54,8 @@ fun AddContactsContent(
             DisplayQrCode(
                 modifier = modifier,
                 qrCode = qrCode,
-                qrCodeLabel = qrCodeLabel
+                qrCodeLabel = qrCodeLabel,
+                onCreateLinkClicked = onCreateLinkClicked
             )
         }
         QrCodeScannerState.SCAN_CODE -> {
@@ -53,13 +71,36 @@ fun DisplayQrCode(
     modifier: Modifier = Modifier,
     qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
+    onCreateLinkClicked: () -> Unit
 ) {
     when(qrCode) {
-        is DatabaseRequestState.Success -> QrCode(
-            modifier = modifier,
-            qrCodeLabel = qrCodeLabel,
-            qrCode = qrCode.data
-        )
+        is DatabaseRequestState.Success -> {
+            Column(
+                modifier = modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceAround
+            ) {
+                QrCode(
+                    qrCodeLabel = qrCodeLabel,
+                    qrCode = qrCode.data
+                )
+                Text(
+                    text = stringResource(
+                        id = R.string.or
+                    )
+                )
+                TextButton(
+                    onClick = onCreateLinkClicked
+                ) {
+                    Text(
+                        text = stringResource(
+                            id = R.string.create_link
+                        ),
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                    )
+                }
+            }
+        }
         is DatabaseRequestState.Error -> CodeNotAvailableError()
         is DatabaseRequestState.Loading -> LoadingScreen()
         is DatabaseRequestState.Idle -> {  }
@@ -81,7 +122,10 @@ fun AddContactsContentPreview()
                 onQrCodeFound = { },
                 onNewContactNameChanged = { true },
                 onSaveContact = { },
-                onSaveContactDismissed = { }
+                onSaveContactDismissed = { },
+                onCreateLinkClicked = { },
+                sharedData = DatabaseRequestState.Idle,
+                onSharedDataConfirm = { }
             )
         }
     }

@@ -1,5 +1,7 @@
 package com.example.enigma.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -56,6 +58,7 @@ class MainActivity : ComponentActivity() {
         observeGuardAvailability()
         observeClientConnectivity()
         observeNavigation()
+        handleIntent()
     }
 
     override fun onResume() {
@@ -150,6 +153,24 @@ class MainActivity : ComponentActivity() {
         }
         else {
             enableNotifications()
+        }
+    }
+
+    private fun handleIntent()
+    {
+        val intent = intent
+        val action = intent.action
+        val data: Uri? = intent.data
+
+        if (action == Intent.ACTION_VIEW && data != null) {
+            val path = data.path
+            val tag = data.getQueryParameter("Tag") ?: data.getQueryParameter("tag")
+
+            if (path != null) {
+                if(path.lowercase() == "/share" && tag != null) {
+                    mainViewModel.openContactSharedData(tag)
+                }
+            }
         }
     }
 }

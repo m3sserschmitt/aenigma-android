@@ -33,9 +33,7 @@ import com.example.enigma.R
 fun EditContactDialog(
     title: String,
     body: String,
-    dismissible: Boolean,
     onContactNameChanged: (String) -> Boolean,
-    onDismissRequest: () -> Unit,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
@@ -43,12 +41,9 @@ fun EditContactDialog(
     var contactName by remember { mutableStateOf("") }
 
     BasicAlertDialog(
-        onDismissRequest = {
-            onDismissRequest()
-            contactName = ""
-        },
+        onDismissRequest = {  },
         properties = DialogProperties(
-            dismissOnClickOutside = dismissible
+            dismissOnClickOutside = false
         )
     ) {
         DialogContentTemplate(
@@ -64,7 +59,7 @@ fun EditContactDialog(
             },
             title = title,
             body = body,
-            dismissible = dismissible,
+            dismissible = true,
             onPositiveButtonClicked = {
                 isContactNameValidationError = isContactNameValidationError || contactName.isEmpty()
                 if(!isContactNameValidationError)
@@ -181,9 +176,7 @@ fun SaveContactDialogPreview()
         body = stringResource(
             id = R.string.save_contact_message
         ),
-        dismissible = false,
         onContactNameChanged = { true },
-        onDismissRequest = { },
         onConfirmClicked = { },
         onDismissClicked = { }
     )

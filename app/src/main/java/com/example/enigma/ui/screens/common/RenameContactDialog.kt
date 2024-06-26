@@ -21,10 +21,8 @@ fun RenameContactDialog(
             body = stringResource(
                 id = R.string.enter_new_contact_name
             ),
-            dismissible = true,
             onConfirmClicked = onConfirmClicked,
             onDismissClicked = onDismiss,
-            onDismissRequest = onDismiss
         )
     }
 }

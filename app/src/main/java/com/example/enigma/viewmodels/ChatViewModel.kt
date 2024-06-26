@@ -108,7 +108,7 @@ class ChatViewModel @Inject constructor(
     }
 
     override fun validateNewContactName(name: String): Boolean {
-        return super.validateNewContactName(name) && try {
+        return name.isNotBlank() && try {
             (_contactNames.value as DatabaseRequestState.Success).data.all { item -> item != name }
         }
         catch (_: Exception)
@@ -374,7 +374,7 @@ class ChatViewModel @Inject constructor(
         return CryptoProvider.buildOnion(message.toByteArray(), path.toTypedArray(), addresses)
     }
 
-    override fun createContactEntityForSaving(): ContactEntity? {
+    override fun getContactEntityForSaving(): ContactEntity? {
         return try {
             val newContact = copyBySerialization(
                 (selectedContact.value as DatabaseRequestState.Success).data
@@ -392,14 +392,18 @@ class ChatViewModel @Inject constructor(
         _messageInputText.value = text
     }
 
-    fun resetSearchQuery()
+    private fun resetSearchQuery()
     {
         searchConversation("")
     }
 
-    override fun reset()
+    override fun resetContactChanges() {
+        resetNewContactName()
+    }
+
+    override fun init()
     {
-        super.reset()
         resetSearchQuery()
+        resetNewContactName()
     }
 }

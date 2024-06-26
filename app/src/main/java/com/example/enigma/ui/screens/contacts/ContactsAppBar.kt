@@ -65,6 +65,7 @@ fun ContactsAppBar(
                     onRenameClicked = onRenameSelectedItemClicked
                 )
                 ShareTopAppBarAction(
+                    visible = selectedItemsCount == 1,
                     onShareContactClick = onShareSelectedItemsClicked
                 )
             }

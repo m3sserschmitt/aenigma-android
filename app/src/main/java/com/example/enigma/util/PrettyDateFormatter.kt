@@ -1,9 +1,9 @@
 package com.example.enigma.util
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import org.ocpsoft.prettytime.PrettyTime
 import java.text.SimpleDateFormat
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
@@ -19,7 +19,6 @@ class PrettyDateFormatter
         }
 
         @JvmStatic
-        @RequiresApi(Build.VERSION_CODES.O)
         fun formatPastDate(date: Date): String {
             val currentDate = LocalDate.now()
             val inputDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
@@ -36,34 +35,42 @@ class PrettyDateFormatter
         }
 
         @JvmStatic
-        @RequiresApi(Build.VERSION_CODES.O)
         fun getMonth(date: LocalDate): String
         {
             return date.month.name.lowercase().replaceFirstChar { char -> char.uppercase() }
         }
 
         @JvmStatic
-        @RequiresApi(Build.VERSION_CODES.O)
         fun getDayOfWeek(date: LocalDate): String
         {
             return date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
         }
 
         @JvmStatic
-        @RequiresApi(Build.VERSION_CODES.O)
         fun getDayOfWeekShort(date: LocalDate): String
         {
             return getDayOfWeek(date).substring(0 until 2)
         }
 
         @JvmStatic
-        @RequiresApi(Build.VERSION_CODES.O)
         fun getDayOfMonthSuffix(date: LocalDate): String {
             return when {
                 date.dayOfMonth % 10 == 1 -> "st"
                 date.dayOfMonth % 10 == 2 -> "nd"
                 date.dayOfMonth % 10 == 3 -> "rd"
                 else -> "th"
+            }
+        }
+
+        @JvmStatic
+        fun prettyTimeFormat(dateTimeOffset: String): String?
+        {
+            try {
+                val date = OffsetDateTime.parse(dateTimeOffset)
+                return PrettyTime().format(date.toLocalDateTime())
+            } catch (_: Exception)
+            {
+                return null
             }
         }
     }

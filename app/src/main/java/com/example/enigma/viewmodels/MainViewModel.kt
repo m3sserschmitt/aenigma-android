@@ -2,16 +2,22 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.enigma.crypto.AddressProvider
+import com.example.enigma.crypto.CryptoProvider
+import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRClient
+import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.models.ExportedContactData
+import com.example.enigma.models.SharedData
+import com.example.enigma.models.SharedDataCreate
 import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
@@ -29,6 +35,7 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val addressProvider: AddressProvider,
+    private val signatureService: SignatureService,
     repository: Repository,
     application: Application,
     signalRClient: SignalRClient
@@ -49,6 +56,14 @@ class MainViewModel @Inject constructor(
 
     private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", ""))
 
+    private val _contactExportedData = MutableStateFlow(ExportedContactData("", ""))
+
+    private val _sharedDataCreateResult
+        = MutableStateFlow<DatabaseRequestState<CreatedSharedData>>(DatabaseRequestState.Idle)
+
+    private val _sharedDataRequestResult
+        = MutableStateFlow<DatabaseRequestState<SharedData>>(DatabaseRequestState.Idle)
+
     val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> = _allContacts
 
     val qrCode: StateFlow<DatabaseRequestState<Bitmap>> = _qrCode
@@ -56,6 +71,10 @@ class MainViewModel @Inject constructor(
     val qrCodeLabel: StateFlow<String> = _qrCodeLabel
 
     val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
+
+    val sharedDataCreateResult: StateFlow<DatabaseRequestState<CreatedSharedData>> = _sharedDataCreateResult
+
+    val sharedDataRequest: StateFlow<DatabaseRequestState<SharedData>> = _sharedDataRequestResult
 
     val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
 
@@ -117,11 +136,6 @@ class MainViewModel @Inject constructor(
         _contactsSearchQuery.update { searchQuery }
     }
 
-    fun resetSearchQuery()
-    {
-        searchContacts("")
-    }
-
     fun generateCode(profileId: String)
     {
         if(_qrCode.value is DatabaseRequestState.Loading) return
@@ -143,7 +157,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun createContactEntityForSaving(): ContactEntity {
+    override fun getContactEntityForSaving(): ContactEntity {
         val contactAddress = AddressHelper.getHexAddressFromPublicKey(_scannedContactDetails.value.publicKey)
 
         return ContactEntity(
@@ -155,13 +169,8 @@ class MainViewModel @Inject constructor(
         )
     }
 
-    override fun resetNewContactDetails() {
-        super.resetNewContactDetails()
-        resetScannedContactDetails()
-    }
-
     override fun validateNewContactName(name: String): Boolean {
-        return super.validateNewContactName(name) && try {
+        return name.isNotBlank() && try {
             (_allContacts.value as DatabaseRequestState.Success).data.all { item ->
                 item.name != name
             }
@@ -176,12 +185,12 @@ class MainViewModel @Inject constructor(
             val guard = repository.local.getGuard()
 
             if (guard != null && addressProvider.address != null) {
-                val exportedData = ExportedContactData(
+                _contactExportedData.value = ExportedContactData(
                     guard.hostname,
                     addressProvider.publicKey!!
                 )
 
-                emit(QrCodeGenerator(400, 400).encodeAsBitmap(exportedData.toString()))
+                emit(QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString()))
             } else {
                 emit(null)
             }
@@ -195,12 +204,12 @@ class MainViewModel @Inject constructor(
 
             if(contact != null)
             {
-                val exportedData = ExportedContactData(
+                _contactExportedData.value = ExportedContactData(
                     contact.guardHostname,
                     contact.publicKey
                 )
 
-                emit(QrCodeGenerator(400, 400).encodeAsBitmap(exportedData.toString()))
+                emit(QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString()))
             }
             else {
                 emit(null)
@@ -278,14 +287,93 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun resetScannedContactDetails()
+    fun createContactShareLink()
+    {
+        _sharedDataCreateResult.value = DatabaseRequestState.Loading
+        viewModelScope.launch(defaultDispatcher) {
+            try {
+                val signature = signatureService.sign(_contactExportedData.value.toString().toByteArray())
+
+                if (signature != null) {
+                    val sharedDataCreate = SharedDataCreate(signature.first, signature.second)
+                    val response = repository.remote.createSharedData(sharedDataCreate)
+                    val body = response.body()
+
+                    if (response.code() == 200 && body != null) {
+                        _sharedDataCreateResult.value = DatabaseRequestState.Success(body)
+                    }
+                    else throw Exception()
+                }
+                else throw Exception()
+            }
+            catch (_: Exception) {
+                _sharedDataCreateResult.value = DatabaseRequestState.Error(
+                    Exception("Something went wrong while trying to create a link.")
+                )
+            }
+        }
+    }
+
+    fun openContactSharedData(tag: String)
+    {
+        _sharedDataRequestResult.value = DatabaseRequestState.Loading
+        viewModelScope.launch(defaultDispatcher) {
+            try {
+                val response = repository.remote.getSharedData(tag)
+                val body = response.body()
+
+                if(response.code() == 200 && body != null)
+                {
+                    val decodedData = Base64.decode(body.data, Base64.DEFAULT) ?: throw Exception()
+                    val content = CryptoProvider.getDataFromSignature(decodedData) ?: throw Exception()
+                    val stringContent = String(content, Charsets.UTF_8)
+                    _scannedContactDetails.value = Gson().fromJson(
+                        stringContent,
+                        ExportedContactData::class.java
+                    )
+                    _sharedDataRequestResult.value = DatabaseRequestState.Success(body)
+                } else throw Exception()
+            }
+            catch (ex: Exception)
+            {
+                _sharedDataRequestResult.value = DatabaseRequestState.Error(
+                    Exception("Could not process shared data. Invalid content or link.")
+                )
+            }
+        }
+    }
+
+    private fun resetSearchQuery()
+    {
+        searchContacts("")
+    }
+
+    private fun resetSharedDataCreateResult()
+    {
+        _sharedDataCreateResult.value = DatabaseRequestState.Idle
+    }
+
+    private fun resetSharedDataRequestResult()
+    {
+        _sharedDataRequestResult.value = DatabaseRequestState.Idle
+    }
+
+    private fun resetScannedContactDetails()
     {
         _scannedContactDetails.value = ExportedContactData("", "")
     }
 
-    override fun reset()
+    override fun resetContactChanges()
     {
-        super.reset()
+        resetNewContactName()
+        resetScannedContactDetails()
+        resetSharedDataRequestResult()
+        resetSharedDataCreateResult()
+    }
+
+    override fun init()
+    {
+        resetNewContactName()
         resetSearchQuery()
     }
 }

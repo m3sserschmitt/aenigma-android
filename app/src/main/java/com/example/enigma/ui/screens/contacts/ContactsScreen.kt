@@ -1,5 +1,6 @@
 package com.example.enigma.ui.screens.contacts
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRStatus
+import com.example.enigma.models.SharedData
 import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.NotificationsPermissionRequiredDialog
@@ -43,7 +45,6 @@ fun ContactsScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
-        mainViewModel.reset()
         mainViewModel.loadContacts()
     }
 
@@ -54,25 +55,21 @@ fun ContactsScreen(
     val notificationsAllowed by mainViewModel.notificationsPermissionGranted.collectAsState(
         initial = true
     )
+    val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
+        sharedDataRequest = sharedDataRequest,
         notificationsAllowed = notificationsAllowed,
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
         onRetryConnection = {
-            mainViewModel.resetClientStatus()
-        },
-        onSearchTriggered = {
-            mainViewModel.resetSearchQuery()
+            mainViewModel.retryClientConnection()
         },
         onSearch = {
-            searchQuery ->
-            mainViewModel.searchContacts(
-                searchQuery = searchQuery
-            )
+            searchQuery -> mainViewModel.searchContacts(searchQuery)
         },
         navigateToChatScreen = navigateToChatScreen,
         onDeleteSelectedItems = {
@@ -83,7 +80,13 @@ fun ContactsScreen(
             contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
         },
         onNewContactNameChanged =  {
-            newValue -> mainViewModel.updateNewContactName(newValue)
+            newValue -> mainViewModel.setNewContactName(newValue)
+        },
+        onContactSaved = {
+            mainViewModel.saveContactChanges()
+        },
+        onContactSaveDismissed = {
+            mainViewModel.cleanupContactChanges()
         }
     )
 }
@@ -92,14 +95,16 @@ fun ContactsScreen(
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
     contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
+    sharedDataRequest: DatabaseRequestState<SharedData>,
     notificationsAllowed: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
-    onSearchTriggered: () -> Unit,
     onSearch: (String) -> Unit,
     onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
     onContactRenamed: (ContactWithConversationPreview) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
+    onContactSaved: () -> Unit,
+    onContactSaveDismissed: () -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
@@ -124,6 +129,13 @@ fun ContactsScreen(
         if(!isSearchMode)
         {
             onSearch("")
+        }
+    }
+
+    LaunchedEffect(key1 = sharedDataRequest) {
+        if(sharedDataRequest is DatabaseRequestState.Error)
+        {
+            Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -174,6 +186,13 @@ fun ContactsScreen(
         }
     )
 
+    SaveNewContactDialog(
+        visible = sharedDataRequest is DatabaseRequestState.Success,
+        onContactNameChanged = onNewContactNameChanged,
+        onConfirmClicked = onContactSaved,
+        onDismissClicked = onContactSaveDismissed
+    )
+
     BackHandler(
         enabled = isSearchMode || isSelectionMode
     ) {
@@ -216,7 +235,6 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 onSearchTriggered = {
                     isSearchMode = true
-                    onSearchTriggered()
                 },
                 onSearchClicked = {
                     searchQuery -> onSearch(searchQuery)
@@ -310,7 +328,6 @@ fun ContactsScreenPreview()
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
-        onSearchTriggered = {},
         contacts = DatabaseRequestState.Success(
             listOf(
                 ContactWithConversationPreview(
@@ -330,6 +347,9 @@ fun ContactsScreenPreview()
             )
         ),
         navigateToChatScreen = {},
-        navigateToAddContactScreen = {}
+        navigateToAddContactScreen = {},
+        onContactSaved = {},
+        onContactSaveDismissed = {},
+        sharedDataRequest = DatabaseRequestState.Idle
     )
 }

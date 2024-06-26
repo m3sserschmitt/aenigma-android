@@ -37,7 +37,6 @@ fun ChatScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
-        chatViewModel.reset()
         chatViewModel.loadContacts(chatId)
         chatViewModel.loadConversation(chatId)
         chatViewModel.checkPathExistence(chatId)
@@ -71,19 +70,19 @@ fun ChatScreen(
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         onRetryConnection = {
-            chatViewModel.resetClientStatus()
+            chatViewModel.retryClientConnection()
         },
         onInputTextChanged = {
             newInputTextValue -> chatViewModel.setMessageInputText(newInputTextValue)
         },
         onNewContactNameChanged = {
-            newContactNameValue -> chatViewModel.updateNewContactName(newContactNameValue)
+            newContactNameValue -> chatViewModel.setNewContactName(newContactNameValue)
         },
         onRenameContactConfirmed = {
-            chatViewModel.saveNewContact()
+            chatViewModel.saveContactChanges()
         },
         onRenameContactDismissed = {
-            chatViewModel.resetNewContactDetails()
+            chatViewModel.cleanupContactChanges()
         },
         onSendClicked = {
             chatViewModel.sendMessage()
@@ -191,7 +190,6 @@ fun ChatScreen(
         if(isSearchMode)
         {
             isSearchMode = false
-            onSearch("")
         }
 
         if(isSelectionMode)
@@ -206,6 +204,13 @@ fun ChatScreen(
         if(messages is DatabaseRequestState.Success)
         {
             selectedItems.removeAll { item -> !messages.data.contains(item) }
+        }
+    }
+
+    LaunchedEffect(key1 = isSearchMode) {
+        if(!isSearchMode)
+        {
+            onSearch("")
         }
     }
 
