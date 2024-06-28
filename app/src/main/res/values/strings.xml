@@ -74,4 +74,5 @@
     <string name="request_successfully_completed">Request successfully completed</string>
     <string name="save_contact_no_return">Save the contact? Take note that the link might not be available for further requests.</string>
     <string name="request_completed_with_errors">Request completed with errors</string>
+    <string name="camera_permission_required_to_scan">Please provide Camera permission from Settings to scan QR Codes.</string>
 </resources>

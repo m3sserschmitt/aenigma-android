@@ -22,9 +22,10 @@ import com.example.enigma.R
 @Composable
 fun PermissionRequiredDialog(
     visible: Boolean,
+    bodyText: String,
+    rememberDecisionCheckboxVisible: Boolean,
     onPositiveButtonClicked: () -> Unit,
-    onNegativeButtonClicked: (Boolean) -> Unit,
-    bodyText: String
+    onNegativeButtonClicked: (Boolean) -> Unit
 ) {
     if(visible)
     {
@@ -42,12 +43,14 @@ fun PermissionRequiredDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Checkbox(
-                            checked = rememberDecisionChecked,
-                            onCheckedChange = {
-                                rememberDecisionChecked = !rememberDecisionChecked
-                            })
-                        Text(text = stringResource(id = R.string.remember_decision))
+                        if (rememberDecisionCheckboxVisible) {
+                            Checkbox(
+                                checked = rememberDecisionChecked,
+                                onCheckedChange = {
+                                    rememberDecisionChecked = !rememberDecisionChecked
+                                })
+                            Text(text = stringResource(id = R.string.remember_decision))
+                        }
                     }
                 },
                 onPositiveButtonClicked = onPositiveButtonClicked,
@@ -69,7 +72,23 @@ fun NotificationsPermissionRequiredDialog(
 ) {
     PermissionRequiredDialog(
         visible = visible,
+        rememberDecisionCheckboxVisible = true,
         bodyText = stringResource(id = R.string.notifications_permission_required),
+        onPositiveButtonClicked = onPositiveButtonClicked,
+        onNegativeButtonClicked = onNegativeButtonClicked
+    )
+}
+
+@Composable
+fun CameraPermissionRequiredDialog(
+    visible: Boolean,
+    onPositiveButtonClicked: () -> Unit,
+    onNegativeButtonClicked: (Boolean) -> Unit
+) {
+    PermissionRequiredDialog(
+        visible = visible,
+        bodyText = stringResource(id = R.string.camera_permission_required_to_scan),
+        rememberDecisionCheckboxVisible = false,
         onPositiveButtonClicked = onPositiveButtonClicked,
         onNegativeButtonClicked = onNegativeButtonClicked
     )
@@ -92,6 +111,7 @@ fun PermissionRequiredDialogPreview()
 {
     PermissionRequiredDialog(
         visible = true,
+        rememberDecisionCheckboxVisible = true,
         onPositiveButtonClicked = {},
         onNegativeButtonClicked = {},
         bodyText = stringResource(id = R.string.notifications_permission_required)
