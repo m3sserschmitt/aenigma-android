@@ -26,6 +26,7 @@ import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.ChatViewModel
+import java.time.ZonedDateTime
 import java.util.Date
 
 @Composable
@@ -39,12 +40,10 @@ fun ChatScreen(
     {
         chatViewModel.loadContacts(chatId)
         chatViewModel.loadConversation(chatId)
-        chatViewModel.checkPathExistence(chatId)
     }
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
-    val pathsExists by chatViewModel.pathsExist.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
@@ -54,12 +53,6 @@ fun ChatScreen(
     MarkConversationAsRead(
         chatId = chatId,
         messages = messages,
-        chatViewModel = chatViewModel
-    )
-
-    CalculatePath(
-        pathsExists = pathsExists,
-        selectedContact = selectedContact,
         chatViewModel = chatViewModel
     )
 
@@ -300,31 +293,12 @@ fun MarkConversationAsRead(
     }
 }
 
-@Composable
-fun CalculatePath(
-    pathsExists: DatabaseRequestState<Boolean>,
-    selectedContact: DatabaseRequestState<ContactEntity>,
-    chatViewModel: ChatViewModel)
-{
-    LaunchedEffect(key1 = pathsExists)
-    {
-        if(pathsExists is DatabaseRequestState.Success
-            && selectedContact is DatabaseRequestState.Success)
-        {
-            if(!pathsExists.data)
-            {
-                chatViewModel.calculateCircuit()
-            }
-        }
-    }
-}
-
 @Preview
 @Composable
 fun ChatScreenPreview()
 {
-    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, Date())
-    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, Date())
+    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, Date())
+    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, Date())
     message1.id = 1
     message2.id = 2
 
@@ -335,7 +309,9 @@ fun ChatScreenPreview()
                 name = "John",
                 publicKey = "key",
                 guardHostname = "host",
-                hasNewMessage = false
+                guardAddress = "guard-address",
+                hasNewMessage = false,
+                lastSynchronized = ZonedDateTime.now()
             )
         ),
         connectionStatus = SignalRStatus.Connected(

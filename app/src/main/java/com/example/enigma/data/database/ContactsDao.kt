@@ -12,14 +12,14 @@ interface ContactsDao {
     fun get(): Flow<List<ContactEntity>>
 
     @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.publicKey, c.hasNewMessage, c.lastMessageId," +
+        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId," +
                 "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
                 "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
     )
     fun getWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
 
     @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.publicKey, c.hasNewMessage, c.lastMessageId," +
+        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId," +
                 "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
                 "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
     )
@@ -34,10 +34,10 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%'")
     suspend fun search(searchQuery: String): List<ContactEntity>
 
-    @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = true WHERE address = :address")
+    @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = 1 WHERE address = :address")
     suspend fun markConversationAsUnread(address: String)
 
-    @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = false WHERE address = :address")
+    @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = 0 WHERE address = :address")
     suspend fun markConversationAsRead(address: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

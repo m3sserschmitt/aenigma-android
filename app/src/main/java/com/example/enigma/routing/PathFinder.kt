@@ -2,64 +2,70 @@ package com.example.enigma.routing
 
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
-import com.example.enigma.data.database.GraphPathEntity
 import com.example.enigma.data.database.VertexEntity
 import org.jgrapht.Graph
+import org.jgrapht.GraphPath
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import javax.inject.Inject
 
-class PathFinder @Inject constructor(private val repository: Repository) {
-
-    private val graph: Graph<VertexEntity, DefaultEdge> = DefaultDirectedGraph(DefaultEdge::class.java)
+class PathFinder @Inject constructor(
+    private val repository: Repository
+) {
+    private var graph: Graph<VertexEntity, DefaultEdge>? = null
 
     private var _guardAddress: String? = null
 
-    private lateinit var _vertices: List<VertexEntity>
+    private var _vertices: List<VertexEntity>? = null
 
-    suspend fun load(): Boolean
-    {
-        val guard = repository.local.getGuard() ?: return false
-        val vertices = repository.local.getVertices()
-        val edges = repository.local.getEdges()
-
-        vertices.forEach { vertex ->
-            graph.addVertex(vertex)
-        }
-
-        edges.forEach { edge ->
-            graph.addEdge(
-                vertices.find { item -> item.address == edge.sourceAddress },
-                vertices.find { item -> item.address == edge.targetAddress }
-            )
-        }
-
-        _guardAddress = guard.address
-        _vertices = vertices
-
-        return true
+    companion object {
+        const val MAX_PATH_LENGTH = 6
     }
 
-    suspend fun calculatePaths(destination: ContactEntity): Boolean
-    {
-        val s = _vertices.find { item -> item.address == _guardAddress } ?: return false
-        val d = _vertices.find { item -> item.hostname == destination.guardHostname } ?: return false
+    suspend fun load(): Boolean {
+        return try {
+            val guard = repository.local.getGuard() ?: return false
+            val vertices = repository.local.getVertices()
+            val edges = repository.local.getEdges()
 
-        val algorithm = AllDirectedPaths(graph)
-        val paths = algorithm.getAllPaths(s, d, true, 6)
+            graph = DefaultDirectedGraph(DefaultEdge::class.java)
 
-        if(paths.isEmpty())
-        {
-            return false
+            vertices.forEach { vertex ->
+                graph?.addVertex(vertex)
+            }
+
+            edges.forEach { edge ->
+                graph?.addEdge(
+                    vertices.find { item -> item.address == edge.sourceAddress },
+                    vertices.find { item -> item.address == edge.targetAddress }
+                )
+            }
+
+            _guardAddress = guard.address
+            _vertices = vertices
+
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun calculatePaths(destination: ContactEntity): List<GraphPath<VertexEntity, DefaultEdge>> {
+        if (graph == null) {
+            return listOf()
         }
 
-        for (path in paths)
-        {
-            val p = listOf(destination.publicKey) + path.vertexList.map { v -> v.publicKey }.reversed()
-            repository.local.insertGraphPath(GraphPathEntity(destination.address, p))
-        }
+        return try {
+            val s = _vertices?.find { item -> item.address == _guardAddress } ?: return listOf()
+            val d = _vertices?.find {
+                item -> item.address == destination.guardAddress || item.hostname == destination.guardHostname
+            } ?: return listOf()
 
-        return true
+            val algorithm = AllDirectedPaths(graph)
+            algorithm.getAllPaths(s, d, true, MAX_PATH_LENGTH)
+        } catch (_: Exception) {
+            listOf()
+        }
     }
 }

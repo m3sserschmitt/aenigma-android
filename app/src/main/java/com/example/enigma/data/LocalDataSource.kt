@@ -3,11 +3,8 @@ package com.example.enigma.data
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.database.ContactsDao
-import com.example.enigma.data.database.Converters
 import com.example.enigma.data.database.EdgeEntity
 import com.example.enigma.data.database.EdgesDao
-import com.example.enigma.data.database.GraphPathEntity
-import com.example.enigma.data.database.GraphPathsDao
 import com.example.enigma.data.database.GraphVersionEntity
 import com.example.enigma.data.database.GraphVersionsDao
 import com.example.enigma.data.database.GuardEntity
@@ -25,7 +22,6 @@ class LocalDataSource @Inject constructor(
     private val guardsDao: GuardsDao,
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
-    private val graphPathsDao: GraphPathsDao,
     private val graphVersionsDao: GraphVersionsDao,
     private val preferencesDataStore: PreferencesDataStore
 ) {
@@ -97,6 +93,11 @@ class LocalDataSource @Inject constructor(
         contactsDao.remove(contacts)
     }
 
+    suspend fun getMessage(id: Long): MessageEntity?
+    {
+        return messagesDao.get(id)
+    }
+
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
     {
         return messagesDao.getConversation(chatId)
@@ -133,7 +134,8 @@ class LocalDataSource @Inject constructor(
             message.chatId,
             message.text,
             message.incoming,
-            Converters().dateToString(message.date)
+            message.sent,
+            message.date
         )
 
         if(messageId <= 0) return
@@ -141,6 +143,14 @@ class LocalDataSource @Inject constructor(
 
         contact.lastMessageId = messageId
         contactsDao.update(contact)
+    }
+
+    fun getOutgoingMessages(): Flow<List<MessageEntity>> {
+        return messagesDao.getOutgoingMessages()
+    }
+
+    suspend fun updateMessage(message: MessageEntity) {
+        return messagesDao.update(message)
     }
 
     suspend fun markConversationAsUnread(address: String)
@@ -212,30 +222,5 @@ class LocalDataSource @Inject constructor(
     suspend fun getEdges(): List<EdgeEntity>
     {
         return edgesDao.get()
-    }
-
-    fun graphPathExists(destination: String): Flow<Boolean>
-    {
-        return graphPathsDao.pathExists(destination)
-    }
-
-    suspend fun removeGraphPaths()
-    {
-        graphPathsDao.remove()
-    }
-
-    suspend fun insertGraphPaths(paths: List<GraphPathEntity>)
-    {
-        graphPathsDao.insert(paths)
-    }
-
-    suspend fun insertGraphPath(path: GraphPathEntity)
-    {
-        graphPathsDao.insert(path)
-    }
-
-    suspend fun getGraphPath(destination: String): List<GraphPathEntity>
-    {
-        return graphPathsDao.get(destination)
     }
 }

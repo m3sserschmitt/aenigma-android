@@ -18,9 +18,9 @@ class RemoteDataSource @Inject constructor(
         return enigmaApi.getServerInfo()
     }
 
-    suspend fun getNetworkGraph(): Response<List<Vertex>?>
+    suspend fun getVertices(): Response<List<Vertex>?>
     {
-        return enigmaApi.getNetworkGraph()
+        return enigmaApi.getVertices()
     }
 
     suspend fun createSharedData(sharedDataCreate: SharedDataCreate): Response<CreatedSharedData?>
@@ -31,5 +31,10 @@ class RemoteDataSource @Inject constructor(
     suspend fun getSharedData(tag: String): Response<SharedData?>
     {
         return enigmaApi.getSharedData(tag)
+    }
+
+    suspend fun getVertex(address: String): Response<Vertex?>
+    {
+        return enigmaApi.getVertex(address)
     }
 }

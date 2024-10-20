@@ -12,6 +12,7 @@ import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactWithConversationPreview
+import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.util.DatabaseRequestState
@@ -21,7 +22,6 @@ import com.example.enigma.models.SharedDataCreate
 import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
-import com.example.enigma.util.copyBySerialization
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -54,9 +55,9 @@ class MainViewModel @Inject constructor(
 
     private val _qrCodeLabel = MutableStateFlow("")
 
-    private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", ""))
+    private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", "", ""))
 
-    private val _contactExportedData = MutableStateFlow(ExportedContactData("", ""))
+    private val _contactExportedData = MutableStateFlow(ExportedContactData("", "", ""))
 
     private val _sharedDataCreateResult
         = MutableStateFlow<DatabaseRequestState<CreatedSharedData>>(DatabaseRequestState.Idle)
@@ -77,6 +78,8 @@ class MainViewModel @Inject constructor(
     val sharedDataRequest: StateFlow<DatabaseRequestState<SharedData>> = _sharedDataRequestResult
 
     val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
+
+    val outgoingMessages: LiveData<List<MessageEntity>> get() = repository.local.getOutgoingMessages().asLiveData()
 
     fun loadContacts()
     {
@@ -165,7 +168,9 @@ class MainViewModel @Inject constructor(
             newContactName.value,
             _scannedContactDetails.value.publicKey,
             _scannedContactDetails.value.guardHostname,
-            false
+            _scannedContactDetails.value.guardAddress,
+            false,
+            ZonedDateTime.now()
         )
     }
 
@@ -187,6 +192,7 @@ class MainViewModel @Inject constructor(
             if (guard != null && addressProvider.address != null) {
                 _contactExportedData.value = ExportedContactData(
                     guard.hostname,
+                    guard.address,
                     addressProvider.publicKey!!
                 )
 
@@ -206,6 +212,7 @@ class MainViewModel @Inject constructor(
             {
                 _contactExportedData.value = ExportedContactData(
                     contact.guardHostname,
+                    contact.guardAddress,
                     contact.publicKey
                 )
 
@@ -263,9 +270,9 @@ class MainViewModel @Inject constructor(
     fun renameContact(contact: ContactWithConversationPreview)
     {
         viewModelScope.launch(ioDispatcher) {
-            val updatedContact = copyBySerialization(contact)
-            updatedContact.name = newContactName.value
-            repository.local.updateContact(updatedContact.toContact())
+            val contactToUpdate = contact.toContact()
+            contactToUpdate.name = newContactName.value
+            repository.local.updateContact(contactToUpdate)
         }
     }
 
@@ -360,7 +367,7 @@ class MainViewModel @Inject constructor(
 
     private fun resetScannedContactDetails()
     {
-        _scannedContactDetails.value = ExportedContactData("", "")
+        _scannedContactDetails.value = ExportedContactData("", "", "")
     }
 
     override fun resetContactChanges()

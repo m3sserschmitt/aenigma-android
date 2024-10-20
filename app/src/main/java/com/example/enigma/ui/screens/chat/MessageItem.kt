@@ -126,7 +126,8 @@ fun MessageItemPreview()
         message = MessageEntity(
             "123-123-123-123",
             "Hello",
-            true,
+            incoming = true,
+            sent = true,
             Date()
         ),
         onItemDeselected = {},
@@ -145,7 +146,8 @@ fun MessageItemSelectedPreview()
         message = MessageEntity(
             "123-123-123-123",
             "Hello",
-            true,
+            incoming = true,
+            sent = false,
             Date()
         ),
         onItemDeselected = {},

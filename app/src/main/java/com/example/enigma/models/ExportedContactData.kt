@@ -4,6 +4,7 @@ import org.json.JSONObject
 
 class ExportedContactData (
     val guardHostname: String,
+    val guardAddress: String,
     val publicKey: String) {
 
     override fun toString(): String {
@@ -12,6 +13,7 @@ class ExportedContactData (
         try {
             data.put("guardHostname", guardHostname)
             data.put("publicKey", publicKey)
+            data.put("guardAddress", guardAddress)
         } catch (e: Exception) {
             return ""
         }

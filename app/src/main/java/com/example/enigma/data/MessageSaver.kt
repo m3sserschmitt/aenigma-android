@@ -3,10 +3,10 @@ package com.example.enigma.data
 import com.example.enigma.crypto.OnionParsingService
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
-import com.example.enigma.models.MessageExtended
-import com.example.enigma.util.AddressHelper
+import com.example.enigma.models.OnionDetails
 import com.example.enigma.util.NotificationService
 import com.google.gson.Gson
+import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,20 +18,20 @@ class MessageSaver @Inject constructor(
 {
     suspend fun handleIncomingMessages(messages: List<String>)
     {
-        val parsedData = messages.mapNotNull { message -> onionParsingService.parse(message) }
+        val messageEntities = messages
+            .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item ->
                 try {
                     val gson = Gson()
-                    val parsedContent = gson.fromJson(item.text, MessageExtended::class.java)
-
-                    Pair(MessageEntity(item.chatId, parsedContent.text, true, item.date), parsedContent)
+                    val parsedContent = gson.fromJson(item.text, OnionDetails::class.java)
+                    createContact(parsedContent)
+                    MessageEntity(item.chatId, parsedContent.text, incoming = true, sent = false, item.date)
                 } catch (ex: Exception) {
                     null
                 }
             }
 
-        val a = createContacts(parsedData.map { item -> item.second })
-        saveMessages(parsedData.map { item -> item.first })
+        saveMessages(messageEntities)
     }
 
     suspend fun saveOutgoingMessage(message: MessageEntity)
@@ -39,23 +39,18 @@ class MessageSaver @Inject constructor(
         saveMessages(listOf(message))
     }
 
-    private suspend fun createContacts(contactsInfo: List<MessageExtended>): List<Long>
+    private suspend fun createContact(messageDetails: OnionDetails)
     {
-        val contacts = contactsInfo.mapNotNull { item ->
-            try {
-                ContactEntity(
-                    AddressHelper.getHexAddressFromPublicKey(item.publicKey),
-                    "unknown",
-                    item.publicKey,
-                    item.guardHostname,
-                    false
-                )
-            } catch (_: Exception) {
-                null
-            }
-        }
-
-        return repository.local.insertContacts(contacts)
+        val contact = ContactEntity(
+            messageDetails.address,
+            "unknown",
+            messageDetails.publicKey,
+            messageDetails.guardHostname,
+            messageDetails.guardAddress,
+            false,
+            ZonedDateTime.now()
+        )
+        repository.local.insertContact(contact)
     }
 
     private suspend fun saveMessages(messages: List<MessageEntity>)

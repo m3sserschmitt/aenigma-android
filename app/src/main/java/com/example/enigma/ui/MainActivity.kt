@@ -10,6 +10,7 @@ import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.enigma.crypto.KeysManager
+import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.ui.navigation.Screens
 import com.example.enigma.ui.navigation.SetupNavigation
@@ -18,6 +19,7 @@ import com.example.enigma.util.NavigationTracker
 import com.example.enigma.util.NotificationService
 import com.example.enigma.viewmodels.MainViewModel
 import com.example.enigma.workers.GraphReaderWorker
+import com.example.enigma.workers.MessageSenderWorker
 import com.example.enigma.workers.SignalRClientWorker
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -57,6 +59,7 @@ class MainActivity : ComponentActivity() {
 
         observeGuardAvailability()
         observeClientConnectivity()
+        observeOutgoingMessages()
         observeNavigation()
         handleIntent()
     }
@@ -82,6 +85,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val outgoingMessagesObserver = Observer<List<MessageEntity>> { messages ->
+        for (message in messages)
+        {
+            MessageSenderWorker.sendMessage(this, message)
+        }
+    }
+
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
         when(clientStatus) {
             is SignalRStatus.Disconnected ->
@@ -102,6 +112,11 @@ class MainActivity : ComponentActivity() {
     private fun observeGuardAvailability()
     {
         mainViewModel.guardAvailable.observe(this, guardAvailabilityObserver)
+    }
+
+    private fun observeOutgoingMessages()
+    {
+        mainViewModel.outgoingMessages.observe(this, outgoingMessagesObserver)
     }
 
     private fun observeClientConnectivity()

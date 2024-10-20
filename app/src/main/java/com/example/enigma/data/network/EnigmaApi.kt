@@ -13,15 +13,18 @@ import retrofit2.http.Query
 
 interface EnigmaApi {
 
-    @GET("/ServerInfo")
+    @GET("/Info")
     suspend fun getServerInfo(): Response<ServerInfo?>
 
-    @GET("/NetworkGraph")
-    suspend fun getNetworkGraph(): Response<List<Vertex>?>
+    @GET("/Vertices")
+    suspend fun getVertices(): Response<List<Vertex>?>
 
     @GET("/Share")
     suspend fun getSharedData(@Query("Tag") tag: String): Response<SharedData?>
 
     @POST("/Share")
     suspend fun createSharedData(@Body sharedDataCreate: SharedDataCreate): Response<CreatedSharedData?>
+
+    @GET("Vertex")
+    suspend fun getVertex(@Query("Vertex") vertex: String): Response<Vertex?>
 }

@@ -3,6 +3,7 @@ package com.example.enigma.data.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.enigma.util.Constants.Companion.CONTACTS_TABLE
+import java.time.ZonedDateTime
 
 @Entity(tableName = CONTACTS_TABLE)
 data class ContactEntity(
@@ -10,7 +11,9 @@ data class ContactEntity(
     var name: String,
     var publicKey: String,
     var guardHostname: String,
-    var hasNewMessage: Boolean
+    var guardAddress: String,
+    var hasNewMessage: Boolean,
+    var lastSynchronized: ZonedDateTime
 ) {
     var lastMessageId: Long? = null
 
@@ -21,7 +24,9 @@ data class ContactEntity(
             name,
             publicKey,
             guardHostname,
+            guardAddress,
             hasNewMessage,
+            lastSynchronized,
             lastMessageId
         )
     }

@@ -5,7 +5,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.MessageSaver
-import com.example.enigma.models.AuthenticationRequest
+import com.example.enigma.models.hubInvocation.AuthenticationRequest
+import com.example.enigma.models.hubInvocation.AuthenticateResult
+import com.example.enigma.models.hubInvocation.GenerateTokenResult
+import com.example.enigma.models.hubInvocation.RoutingRequest
 import com.example.enigma.util.Constants.Companion.CLIENT_CONNECTION_RETRY_COUNT
 import com.google.gson.internal.LinkedTreeMap
 import com.microsoft.signalr.HubConnection
@@ -61,11 +64,13 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Disconnected::class.java)
         }
 
-        connection.on(ROUTE_MESSAGE_METHOD, { data: String ->
-            CoroutineScope(Dispatchers.IO).launch {
-                messageSaver.handleIncomingMessages(listOf(data))
+        connection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
+            if(data.payload != null) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    messageSaver.handleIncomingMessages(listOf(data.payload))
+                }
             }
-        }, String::class.java)
+        }, RoutingRequest::class.java)
 
         connection.on(MESSAGES_SYNCHRONIZATION_METHOD, { data: List<LinkedTreeMap<String, String>> ->
             CoroutineScope(Dispatchers.IO).launch {
@@ -88,7 +93,7 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Error::class.java, COULD_NOT_CREATE_CONNECTION_ERROR)
         }
 
-        start(true)
+        start()
     }
 
     private var _status: MutableLiveData<SignalRStatus> =
@@ -168,25 +173,23 @@ class SignalRClient @Inject constructor(
     }
 
     private fun authenticate(): Boolean {
-
         updateStatus(SignalRStatus.Authenticating::class.java)
-        hubConnection.invoke(String::class.java, GENERATE_TOKEN_METHOD).blockingSubscribe { token ->
-            if(token != null) {
-                val decodedToken = Base64.decode(token, Base64.DEFAULT)
+        hubConnection.invoke(GenerateTokenResult::class.java, GENERATE_TOKEN_METHOD).blockingSubscribe { generateTokenResult ->
+            if(generateTokenResult != null && generateTokenResult.success == true) {
+                val decodedToken = Base64.decode(generateTokenResult.data, Base64.DEFAULT)
                 val signature = if(decodedToken != null ) signatureService.sign(decodedToken) else null
 
                 if(signature != null) {
                     hubConnection.invoke(
-                        Boolean::class.java,
+                        AuthenticateResult::class.java,
                         AUTHENTICATION_METHOD,
                         AuthenticationRequest(
                             signature.first,
                             signature.second,
-                            syncMessagesOnSuccess = true,
-                            updateNetworkGraph = false
+                            syncMessagesOnSuccess = true
                         )
-                    ).blockingSubscribe { authenticated ->
-                        if (authenticated) {
+                    ).blockingSubscribe { authenticateResultResult ->
+                        if (authenticateResultResult != null && authenticateResultResult.success == true) {
                             updateStatus(SignalRStatus.Authenticated::class.java)
                         } else {
                             updateStatus(
@@ -208,7 +211,7 @@ class SignalRClient @Inject constructor(
         return true
     }
 
-    private fun start(authenticateOnSuccess: Boolean)
+    private fun start(authenticateOnSuccess: Boolean = true)
     {
         updateStatus(SignalRStatus.Connecting::class.java)
         hubConnection.start().blockingSubscribe(object : CompletableObserver {
@@ -240,7 +243,7 @@ class SignalRClient @Inject constructor(
         }
 
         try {
-            hubConnection.invoke(ROUTE_MESSAGE_METHOD, message).blockingAwait()
+            hubConnection.invoke(ROUTE_MESSAGE_METHOD, RoutingRequest(message)).blockingAwait()
         } catch (ex: Exception)
         {
             return false

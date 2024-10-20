@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.ui.screens.common.selectable
+import java.time.ZonedDateTime
 
 @Composable
 fun ContactItem(
@@ -132,9 +133,11 @@ fun ContactItemPreview()
             name = "John",
             publicKey = "public-key",
             guardHostname = "guard-hostname",
+            guardAddress = "guard-address",
             hasNewMessage = true,
             lastMessageText = "Hey, how are you?",
-            lastMessageIncoming = false
+            lastMessageIncoming = false,
+            lastSynchronized = ZonedDateTime.now()
         ),
         isSelectionMode = false,
         isSelected = false,
@@ -154,8 +157,10 @@ fun ContactItemSelectedPreview()
             name = "John",
             publicKey = "public-key",
             guardHostname = "guard-hostname",
+            guardAddress = "guard-address",
             hasNewMessage = true,
-            lastMessageText = "Hey, how are you?"
+            lastMessageText = "Hey, how are you?",
+            lastSynchronized = ZonedDateTime.now()
         ),
         isSelectionMode = true,
         isSelected = true,

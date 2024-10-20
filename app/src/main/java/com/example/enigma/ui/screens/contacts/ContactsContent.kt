@@ -8,6 +8,7 @@ import com.example.enigma.ui.screens.common.GenericErrorScreen
 import com.example.enigma.ui.screens.common.ItemsList
 import com.example.enigma.ui.screens.common.LoadingScreen
 import com.example.enigma.util.DatabaseRequestState
+import java.time.ZonedDateTime
 
 @Composable
 fun ContactsContent(
@@ -74,14 +75,18 @@ fun ContactsContentPreview()
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
-                    hasNewMessage = true
+                    guardAddress = "",
+                    hasNewMessage = true,
+                    lastSynchronized = ZonedDateTime.now()
                 ),
                 ContactWithConversationPreview(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
-                    hasNewMessage = false
+                    guardAddress = "",
+                    hasNewMessage = false,
+                    lastSynchronized = ZonedDateTime.now()
                 )
             )
         ),
@@ -92,7 +97,9 @@ fun ContactsContentPreview()
             name = "John",
             publicKey = "",
             guardHostname = "",
-            hasNewMessage = true
+            guardAddress = "",
+            hasNewMessage = true,
+            lastSynchronized = ZonedDateTime.now()
         )),
         onItemSelected = { },
         onItemDeselected = { },

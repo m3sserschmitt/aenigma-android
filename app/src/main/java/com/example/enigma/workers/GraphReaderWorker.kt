@@ -81,7 +81,7 @@ class GraphReaderWorker @AssistedInject constructor(
     private fun guardChangeRequired(currentGuard: GuardEntity?, graph: List<Vertex>): Boolean
     {
         return currentGuard == null ||
-                !graph.any { item -> item.neighborhood.address == currentGuard.address }
+                !graph.any { item -> item.neighborhood?.address == currentGuard.address }
     }
 
     private suspend fun selectGuard(graph: List<Vertex>): GuardSelectionResult {
@@ -89,8 +89,12 @@ class GraphReaderWorker @AssistedInject constructor(
             val currentGuard = repository.local.getGuard()
 
             if (forceChangeGuard || guardChangeRequired(currentGuard, graph)) {
-                val availableGuards = graph.filter { item ->
-                    !item.neighborhood.hostname.isNullOrBlank()
+                val availableGuards = graph.filter {
+                    item -> item.neighborhood != null
+                            && !item.neighborhood.hostname.isNullOrBlank()
+                            && !item.neighborhood.address.isNullOrBlank()
+                            && !item.publicKey.isNullOrBlank()
+                            && !item.signedData.isNullOrBlank()
                             && currentGuard?.address != item.neighborhood.address
                 }
 
@@ -120,8 +124,8 @@ class GraphReaderWorker @AssistedInject constructor(
             val chosenGuard = graphRequestResult.guardSelectionResult.chosenGuard!!
             repository.local.insertGuard(
                 GuardEntity(
-                    chosenGuard.neighborhood.address,
-                    chosenGuard.publicKey,
+                    chosenGuard.neighborhood!!.address!!,
+                    chosenGuard.publicKey!!,
                     chosenGuard.neighborhood.hostname!!,
                     Date()
                 )
@@ -131,14 +135,14 @@ class GraphReaderWorker @AssistedInject constructor(
         val graph = graphRequestResult.graph!!
 
         val vertices = graph.map { vertex ->
-            VertexEntity(vertex.neighborhood.address, vertex.publicKey, vertex.neighborhood.hostname)
+            VertexEntity(vertex.neighborhood?.address ?: "", vertex.publicKey ?: "", vertex.neighborhood?.hostname)
         }
 
         repository.local.insertVertices(vertices)
 
         graph.map { vertex ->
-            vertex.neighborhood.neighbors.map { neighbor ->
-                repository.local.insertEdge(EdgeEntity(vertex.neighborhood.address, neighbor))
+            vertex.neighborhood?.neighbors?.map { neighbor ->
+                repository.local.insertEdge(EdgeEntity(vertex.neighborhood.address ?: "", neighbor))
             }
         }
     }
@@ -147,22 +151,20 @@ class GraphReaderWorker @AssistedInject constructor(
     {
         repository.local.removeVertices()
         repository.local.removeEdges()
-        repository.local.removeGraphPaths()
     }
 
     private suspend fun requestNewGraph(): GraphRequestResult {
         return try {
-            val response = repository.remote.getNetworkGraph()
-            val graph = response.body()
+            val response = repository.remote.getVertices()
+            val vertices = response.body()
 
-            if (response.code() == 200 && graph != null) {
-
-                val guardSelectionResult = selectGuard(graph)
+            if (response.code() == 200 && vertices != null) {
+                val guardSelectionResult = selectGuard(vertices)
 
                 if(guardSelectionResult is GuardSelectionResult.Error)
                     GraphRequestResult.Error()
                 else
-                    GraphRequestResult.Success(graph, guardSelectionResult)
+                    GraphRequestResult.Success(vertices, guardSelectionResult)
             }
             else {
                 GraphRequestResult.Error()
@@ -191,6 +193,10 @@ class GraphReaderWorker @AssistedInject constructor(
         serverInfo: ServerInfo,
         graphRequestResult: GraphRequestResult): Boolean
     {
+        if(serverInfo.graphVersion == null)
+        {
+            return false
+        }
         try {
             val graphVersion = repository.local.getGraphVersion()
             val currentGuard = repository.local.getGuard()

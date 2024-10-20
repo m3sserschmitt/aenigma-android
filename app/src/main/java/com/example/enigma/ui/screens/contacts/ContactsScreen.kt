@@ -36,6 +36,7 @@ import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.openApplicationDetails
 import com.example.enigma.viewmodels.MainViewModel
+import java.time.ZonedDateTime
 
 @Composable
 fun ContactsScreen(
@@ -335,14 +336,18 @@ fun ContactsScreenPreview()
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
-                    hasNewMessage = true
+                    guardAddress = "",
+                    hasNewMessage = true,
+                    lastSynchronized = ZonedDateTime.now()
                 ),
                 ContactWithConversationPreview(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
-                    hasNewMessage = false
+                    guardAddress = "",
+                    hasNewMessage = false,
+                    lastSynchronized = ZonedDateTime.now()
                 )
             )
         ),

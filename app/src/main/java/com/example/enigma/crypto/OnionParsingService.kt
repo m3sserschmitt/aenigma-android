@@ -15,24 +15,26 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
 
     init {
         val key = KeysManager.readPrivateKey(context)
-        cryptoContextHandle = if(key != null) {
+        cryptoContextHandle = if (key != null) {
             CryptoContext.Factory.createDecryptionContext(key, "")
-        }else {
+        } else {
             null
         }
     }
 
     val isReady: Boolean get() = cryptoContextHandle != null
 
-    fun parse(ciphertext: String): Message?
-    {
-        if(cryptoContextHandle == null) return null
-
-        val decryptedData = CryptoProvider.parseOnion(cryptoContextHandle, ciphertext) ?: return null
-
-        val address = HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE))
-        val content = String(decryptedData.sliceArray(Constants.ADDRESS_SIZE until decryptedData.size))
-
-        return Message(address, content, true)
+    fun parse(ciphertext: String): Message? {
+        if (cryptoContextHandle == null) {
+            return null
+        }
+        return try {
+            val decryptedData = CryptoProvider.parseOnion(cryptoContextHandle, ciphertext) ?: return null
+            val address = HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE))
+            val content = String(decryptedData.sliceArray(Constants.ADDRESS_SIZE until decryptedData.size))
+            Message(address, content, true)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

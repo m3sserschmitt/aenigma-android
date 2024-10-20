@@ -66,8 +66,11 @@ fun CreateLinkDialog(
             )
             else -> ""
         }
-        // TODO: use resourceUrl property returned by the server, after the domain is registered; this is for dev/testing only
-        val link = if(sharedData is DatabaseRequestState.Success) "http://enigma-app.com/Share?Tag=${sharedData.data.tag}" else ""
+
+        val link = if(sharedData is DatabaseRequestState.Success)
+            sharedData.data.resourceUrl ?: "Link not available"
+        else
+            "Link not available"
         val context = LocalContext.current
 
         BasicAlertDialog(

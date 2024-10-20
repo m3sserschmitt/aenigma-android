@@ -1,3 +1,7 @@
 package com.example.enigma.models
 
-class ServerInfo (val publicKey: String, val address: String, val graphVersion: String)
+data class ServerInfo (
+    val publicKey: String? = null,
+    val address: String? = null,
+    val graphVersion: String? = null
+)

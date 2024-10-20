@@ -1,3 +1,6 @@
 package com.example.enigma.models
 
-class SharedData(val tag: String, val data: String)
+data class SharedData(
+    val tag: String? = null,
+    val data: String? = null
+)

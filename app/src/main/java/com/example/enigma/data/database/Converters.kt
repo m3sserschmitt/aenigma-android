@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.text.SimpleDateFormat
+import java.time.ZonedDateTime
 import java.util.*
 
 class Converters {
@@ -37,5 +38,17 @@ class Converters {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
 
         return dateFormat.parse(date)
+    }
+
+    @TypeConverter
+    fun zonedDateTimeToString(date: ZonedDateTime): String
+    {
+        return date.toString()
+    }
+
+    @TypeConverter
+    fun stringToZonedDateTime(date: String): ZonedDateTime?
+    {
+        return ZonedDateTime.parse(date)
     }
 }

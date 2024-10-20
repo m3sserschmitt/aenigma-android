@@ -11,14 +11,13 @@ class AddressProvider @Inject constructor(@ApplicationContext context: Context) 
 
     private val _address: String?
 
-    private val _publicKey: String?
+    private val _publicKey: String? = KeysManager.readPublicKey(context)
 
     val address: String? get() = _address
 
     val publicKey: String? get() = _publicKey
 
     init {
-        _publicKey = KeysManager.readPublicKey(context)
         _address = if(_publicKey != null) getHexAddressFromPublicKey(_publicKey) else null
     }
 }

@@ -63,8 +63,12 @@ class PrettyDateFormatter
         }
 
         @JvmStatic
-        fun prettyTimeFormat(dateTimeOffset: String): String?
+        fun prettyTimeFormat(dateTimeOffset: String?): String?
         {
+            if(dateTimeOffset == null)
+            {
+                return null
+            }
             try {
                 val date = OffsetDateTime.parse(dateTimeOffset)
                 return PrettyTime().format(date.toLocalDateTime())

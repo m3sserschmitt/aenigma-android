@@ -38,6 +38,7 @@ import com.example.enigma.ui.screens.common.RetryConnectionAppBarAction
 import com.example.enigma.ui.screens.common.SearchAppBar
 import com.example.enigma.ui.screens.common.SelectionModeAppBar
 import com.example.enigma.util.DatabaseRequestState
+import java.time.ZonedDateTime
 
 @Composable
 fun ChatAppBar(
@@ -271,7 +272,9 @@ fun DefaultChatAppBarPreview()
             "John",
             "public-key",
             "guard-hostname",
-            true
+            "guard-address",
+            true,
+            ZonedDateTime.now()
         )),
         onRetryConnection = {},
         onDeleteAllClicked = {},
@@ -301,7 +304,9 @@ fun SelectionModeChatAppBarPreview()
             "John",
             "public-key",
             "guard-hostname",
-            true
+            "guard-address",
+            true,
+            ZonedDateTime.now()
         )),
         onRetryConnection = {},
         onDeleteAllClicked = {},

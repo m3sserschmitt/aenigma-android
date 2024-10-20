@@ -11,6 +11,7 @@ data class MessageEntity (
     val chatId: String,
     val text: String,
     val incoming: Boolean,
+    var sent: Boolean,
     val date: Date
 ) {
     @PrimaryKey

@@ -1,7 +1,7 @@
 package com.example.enigma.models
 
-class Neighborhood (
-    val address: String,
-    val hostname: String?,
-    val neighbors: List<String>
+data class Neighborhood (
+    val address: String? = null,
+    val hostname: String? = null,
+    val neighbors: List<String>? = null,
 )

@@ -47,9 +47,5 @@ object DatabaseModule {
 
     @Singleton
     @Provides
-    fun provideGraphPathsDao(database: AppDatabase) = database.graphPathsDao()
-
-    @Singleton
-    @Provides
     fun provideGraphVersionsDao(database: AppDatabase) = database.graphVersionsDao()
 }
