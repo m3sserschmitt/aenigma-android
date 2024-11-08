@@ -1,4 +1,1 @@
-[submodule "app/src/main/cpp/libcryptography7"]
-	path = app/src/main/cpp/libcryptography7
-	url = https://github.com/m3sserschmitt/libcryptography7.git
 
