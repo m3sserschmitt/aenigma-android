@@ -15,7 +15,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.enigma.data.Repository
 import com.example.enigma.data.network.SignalRClient
-import com.example.enigma.util.Constants.Companion.CLIENT_CONNECTION_RETRY_DELAY
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -37,11 +36,11 @@ class SignalRClientWorker @AssistedInject constructor(
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
         private const val INITIAL_PERIODIC_WORK_DELAY: Long = 10 // Minutes
         private const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15 // Minutes
-        private const val DELAY_BETWEEN_RETRIES: Long = 10 // Seconds
+        private const val DELAY_BETWEEN_RETRIES: Long = 3 // Seconds
         private const val MAX_RETRY_COUNT = 5 // Seconds
 
         @JvmStatic
-        fun startPeriodicSync(context: Context)
+        fun schedulePeriodicSync(context: Context)
         {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -65,10 +64,8 @@ class SignalRClientWorker @AssistedInject constructor(
         }
 
         @JvmStatic
-        fun startConnection(
-            context: Context,
-            delaySeconds: Int = 0
-        ) {
+        fun createConnectionRequest(initialDelay: Long = 0): OneTimeWorkRequest
+        {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -81,26 +78,35 @@ class SignalRClientWorker @AssistedInject constructor(
                     TimeUnit.SECONDS
                 )
 
-            if(delaySeconds > 0)
+            if(initialDelay > 0)
             {
-                workRequest.setInitialDelay(delaySeconds.toLong(), TimeUnit.SECONDS)
+                workRequest.setInitialDelay(initialDelay, TimeUnit.SECONDS)
             }
             else
             {
                 workRequest.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             }
 
+            return workRequest.build()
+        }
+
+        @JvmStatic
+        fun startConnection(
+            context: Context,
+            initialDelay: Long = 0
+        ) {
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_ONE_TIME_REQUEST,
                     ExistingWorkPolicy.KEEP,
-                    workRequest.build()
+                    createConnectionRequest(initialDelay)
                 )
         }
 
+        @JvmStatic
         fun startDelayedConnection(context: Context)
         {
-            startConnection(context, CLIENT_CONNECTION_RETRY_DELAY)
+            startConnection(context, DELAY_BETWEEN_RETRIES)
         }
     }
 

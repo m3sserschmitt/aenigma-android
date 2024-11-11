@@ -25,6 +25,8 @@ class Constants {
 
         const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
+        const val APP_DOMAIN = "aenigma.ro"
+
         const val SERVER_URL = "http://aenigma.ro"
 
         const val ONION_ROUTING_ENDPOINT = "$SERVER_URL/OnionRouting"

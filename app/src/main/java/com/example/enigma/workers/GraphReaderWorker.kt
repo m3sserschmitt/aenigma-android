@@ -5,9 +5,9 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
@@ -21,6 +21,7 @@ import com.example.enigma.models.ServerInfo
 import com.example.enigma.models.Vertex
 import com.example.enigma.util.GraphRequestResult
 import com.example.enigma.util.GuardSelectionResult
+import com.example.enigma.util.isAppDomain
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.Date
@@ -34,68 +35,52 @@ class GraphReaderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
     companion object {
 
-        const val FORCE_CHANGE_GUARD_PARAMETER = "force-change-guard"
-
         private const val UNIQUE_REQUEST_IDENTIFIER = "GraphReaderWorkerRequest"
 
         private const val MAX_RETRY_COUNT = 5
 
-        private const val DELAY_BETWEEN_RETRIES: Long = 10
+        private const val DELAY_BETWEEN_RETRIES: Long = 3
+
+        @JvmStatic
+        fun createSyncRequest() : OneTimeWorkRequest
+        {
+            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+
+            return OneTimeWorkRequestBuilder<GraphReaderWorker>()
+                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .setConstraints(constraints)
+                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
+                .build()
+        }
 
         @JvmStatic
         fun sync(
             context: Context,
-            forceReplaceGuard: Boolean = false
         ) {
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val parameters = Data.Builder()
-                .putBoolean(FORCE_CHANGE_GUARD_PARAMETER, forceReplaceGuard)
-                .build()
-
-            val workRequest = OneTimeWorkRequestBuilder<GraphReaderWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_REQUEST_IDENTIFIER,
                     ExistingWorkPolicy.KEEP,
-                    workRequest
+                    createSyncRequest()
                 )
-        }
-
-        @JvmStatic
-        fun syncReplaceGuard(context: Context)
-        {
-            sync(context, true)
         }
     }
 
-    private val forceChangeGuard get() = inputData.getBoolean(FORCE_CHANGE_GUARD_PARAMETER, false)
-
-    private fun guardChangeRequired(currentGuard: GuardEntity?, graph: List<Vertex>): Boolean
+    private suspend fun guardSelectionRequired(graph: List<Vertex>): Boolean
     {
-        return currentGuard == null ||
-                !graph.any { item -> item.neighborhood?.address == currentGuard.address }
+        val currentGuard = repository.local.getGuard() ?: return true
+        return !graph.any { item -> item.neighborhood?.address == currentGuard.address }
     }
 
     private suspend fun selectGuard(graph: List<Vertex>): GuardSelectionResult {
         try {
-            val currentGuard = repository.local.getGuard()
-
-            if (forceChangeGuard || guardChangeRequired(currentGuard, graph)) {
-                val availableGuards = graph.filter {
-                    item -> item.neighborhood != null
-                            && !item.neighborhood.hostname.isNullOrBlank()
-                            && !item.neighborhood.address.isNullOrBlank()
-                            && !item.publicKey.isNullOrBlank()
-                            && !item.signedData.isNullOrBlank()
-                            && currentGuard?.address != item.neighborhood.address
+            if (guardSelectionRequired(graph)) {
+                val availableGuards = graph.filter { item -> item.neighborhood != null
+                        && item.neighborhood.hostname.isAppDomain()
+                        && !item.neighborhood.address.isNullOrBlank()
+                        && !item.publicKey.isNullOrBlank()
+                        && !item.signedData.isNullOrBlank()
                 }
 
                 return try {
@@ -201,10 +186,7 @@ class GraphReaderWorker @AssistedInject constructor(
             val graphVersion = repository.local.getGraphVersion()
             val currentGuard = repository.local.getGuard()
 
-            if (serverInfo.graphVersion != graphVersion?.version ||
-                forceChangeGuard ||
-                currentGuard == null
-            ) {
+            if (serverInfo.graphVersion != graphVersion?.version || currentGuard == null) {
                 clearDatabase()
                 saveGraph(graphRequestResult)
             }
