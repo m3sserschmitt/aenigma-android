@@ -16,7 +16,7 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
     init {
         val key = KeysManager.readPrivateKey(context)
         cryptoContextHandle = if (key != null) {
-            CryptoContext.Factory.createDecryptionContext(key, "")
+            CryptoProvider.createDecryptionCtx(key, "")
         } else {
             null
         }

@@ -329,10 +329,10 @@ class MainViewModel @Inject constructor(
                 val response = repository.remote.getSharedData(tag)
                 val body = response.body()
 
-                if(response.code() == 200 && body != null)
+                if(response.code() == 200 && body != null && body.data != null && body.publicKey != null)
                 {
                     val decodedData = Base64.decode(body.data, Base64.DEFAULT) ?: throw Exception()
-                    val content = CryptoProvider.getDataFromSignature(decodedData) ?: throw Exception()
+                    val content = CryptoProvider.getDataFromSignature(decodedData, body.publicKey) ?: throw Exception()
                     val stringContent = String(content, Charsets.UTF_8)
                     _scannedContactDetails.value = Gson().fromJson(
                         stringContent,

@@ -1,7 +1,7 @@
 #include <jni.h>
 #include <map>
 
-#include "./libcryptography7/include/cryptography/Libcryptography.hh"
+#include "cryptography/Aenigma.hh"
 
 using namespace std;
 
@@ -103,7 +103,7 @@ static void releaseStrings(const char **strings, int count)
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoContext_00024Companion_createEncryptionContext(
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createEncryptionContext(
         JNIEnv *env,
         jobject thiz,
         jstring key) {
@@ -117,7 +117,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createEncryptionCont
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoContext_00024Companion_createDecryptionContext(
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createDecryptionContext(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -142,7 +142,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createDecryptionCont
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureContext(
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createSignatureContext(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -167,7 +167,7 @@ Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureConte
 
 extern "C"
 JNIEXPORT jlong JNICALL
-Java_com_example_enigma_crypto_CryptoContext_00024Companion_createSignatureVerificationContext(
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_createSignatureVerificationContext(
         JNIEnv *env,
         jobject thiz,
         jstring key) {
@@ -308,16 +308,6 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
 }
 
 extern "C"
-JNIEXPORT jint JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_calculateEnvelopeSize(
-        JNIEnv *env,
-        jobject thiz,
-        jint current_size) {
-
-    return (int)GetEnvelopeSize(current_size);
-}
-
-extern "C"
 JNIEXPORT jbyteArray JNICALL
 Java_com_example_enigma_crypto_CryptoProvider_00024Companion_unsealOnion(
         JNIEnv *env, jobject thiz,
@@ -390,7 +380,11 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sealOnion(
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_getDefaultPKeySize(JNIEnv *env,
-                                                                                jobject thiz) {
-    return (int)GetDefaultPKeySize();
+Java_com_example_enigma_crypto_CryptoProvider_00024Companion_getPKeySize(JNIEnv *env,
+                                                                         jobject thiz,
+                                                                         jstring publicKey) {
+    const char *key = env->GetStringUTFChars(publicKey, nullptr);
+    int result = GetPKeySize(key);
+    env->ReleaseStringUTFChars(publicKey, key);
+    return result;
 }

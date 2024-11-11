@@ -6,6 +6,14 @@ class CryptoProvider {
 
     companion object {
 
+        private external fun createEncryptionContext(key : String) : Long
+
+        private external fun createDecryptionContext(key : String, passphrase : String) : Long
+
+        private external fun createSignatureContext(key: String, passphrase: String) : Long
+
+        private external fun createSignatureVerificationContext(key: String): Long
+
         private external fun encrypt(handle: Long, plaintext: ByteArray) : ByteArray?
 
         private external fun decrypt(handle: Long, ciphertext: ByteArray) : ByteArray?
@@ -18,9 +26,7 @@ class CryptoProvider {
 
         private external fun sealOnion(plaintext: ByteArray, keys: Array<String>, addresses: Array<String>): ByteArray?
 
-        private external fun calculateEnvelopeSize(currentSize: Int): Int
-
-        private external fun getDefaultPKeySize(): Int
+        private external fun getPKeySize(publicKey: String): Int
 
         @JvmStatic
         private fun throwError(requiredHandleType: String?)
@@ -29,15 +35,27 @@ class CryptoProvider {
         }
 
         @JvmStatic
-        fun envelopeSizeExceeded(currentSize: Int): Boolean
+        fun createEncryptionCtx(key: String) : CryptoContextHandle
         {
-            return currentSize > UShort.MAX_VALUE.toInt()
+            return CryptoContextHandle.EncryptionContextHandle(createEncryptionContext(key))
         }
 
         @JvmStatic
-        fun canAddLayer(currentSize: Int): Boolean
+        fun createDecryptionCtx(key : String, passphrase : String) : CryptoContextHandle
         {
-            return calculateEnvelopeSize(currentSize) < UShort.MAX_VALUE.toInt()
+            return CryptoContextHandle.DecryptionContextHandle(createDecryptionContext(key, passphrase))
+        }
+
+        @JvmStatic
+        fun createSignatureCtx(key: String, passphrase: String) : CryptoContextHandle
+        {
+            return CryptoContextHandle.SignatureContextHandle(createSignatureContext(key, passphrase))
+        }
+
+        @JvmStatic
+        fun createSignatureVerificationCtx(key: String): CryptoContextHandle
+        {
+            return CryptoContextHandle.SignatureVerificationContextHandle(createSignatureVerificationContext(key))
         }
 
         @JvmStatic
@@ -49,17 +67,6 @@ class CryptoProvider {
             }
 
             return encrypt(handle.handle, plaintext)
-        }
-
-        @JvmStatic
-        fun encrypt(key: String, plaintext: ByteArray): ByteArray?
-        {
-            val context = CryptoContext.Factory.createEncryptionContext(key)
-
-            val result = encrypt(context, plaintext)
-
-            context.dispose()
-            return result
         }
 
         @JvmStatic
@@ -87,11 +94,10 @@ class CryptoProvider {
         @JvmStatic
         fun sign(key: String, passphrase: String, data: ByteArray) : ByteArray?
         {
-            val context = CryptoContext.Factory.createSignatureContext(key, passphrase)
-
+            val context = createSignatureCtx(key, passphrase)
             val result = sign(context, data)
-
             context.dispose()
+
             return result
         }
 
@@ -131,20 +137,14 @@ class CryptoProvider {
         }
 
         @JvmStatic
-        fun getDefaultPublicKeySize(): Int
-        {
-            return getDefaultPKeySize()
-        }
-
-        @JvmStatic
-        fun getDataFromSignature(signedData: ByteArray?): ByteArray?
+        fun getDataFromSignature(signedData: ByteArray?, publicKey: String): ByteArray?
         {
             if(signedData == null)
             {
                 return null
             }
 
-            val digestSize = getDefaultPublicKeySize() / 8
+            val digestSize = getPKeySize(publicKey) / 8
 
             if(signedData.size < digestSize + 1)
             {
