@@ -20,18 +20,11 @@ class Constants {
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
-        const val GRAPH_PATHS_TABLE = "GraphPaths"
         const val GRAPH_VERSIONS_TABLE = "GraphVersions"
-
-        const val SELECTED_CHAT_ID = "Selected-Chat-Id"
 
         const val APP_DOMAIN = "aenigma.ro"
 
-        const val SERVER_URL = "http://aenigma.ro"
-
-        const val ONION_ROUTING_ENDPOINT = "$SERVER_URL/OnionRouting"
-
-        const val SERVER_ADDRESS = "server-address"
+        const val SERVER_URL = "http://$APP_DOMAIN"
 
         // TODO: Keys for testing. To be removed!!
         const val PUBLIC_KEY =

@@ -48,10 +48,12 @@ class KeysManager {
         private fun readKey(context: Context, key: String): ByteArray?
         {
             return try {
-                val privateKeyFile = File(context.filesDir, key)
-                val privateInputStream = FileInputStream(privateKeyFile)
+                val file = File(context.filesDir, key)
+                val stream = FileInputStream(file)
 
-                privateInputStream.readBytes()
+                val data = stream.readBytes()
+                stream.close()
+                data
             } catch (ex: Exception) {
                 null
             }

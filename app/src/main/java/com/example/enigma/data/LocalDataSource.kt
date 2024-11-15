@@ -13,6 +13,7 @@ import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.data.database.MessagesDao
 import com.example.enigma.data.database.VertexEntity
 import com.example.enigma.data.database.VerticesDao
+import com.example.enigma.data.network.BaseUrlInterceptor
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
@@ -23,7 +24,8 @@ class LocalDataSource @Inject constructor(
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
     private val graphVersionsDao: GraphVersionsDao,
-    private val preferencesDataStore: PreferencesDataStore
+    private val preferencesDataStore: PreferencesDataStore,
+    private val baseUrlInterceptor: BaseUrlInterceptor
 ) {
     suspend fun saveNotificationsAllowed(granted: Boolean)
     {
@@ -170,12 +172,17 @@ class LocalDataSource @Inject constructor(
 
     suspend fun insertGuard(guard: GuardEntity)
     {
+        baseUrlInterceptor.setBaseUrl(guard.hostname)
         return guardsDao.insert(guard)
     }
 
     suspend fun getGuard(): GuardEntity?
     {
-        return guardsDao.getLastGuard()
+        val guard = guardsDao.getLastGuard()
+        if (guard != null) {
+            baseUrlInterceptor.setBaseUrl(guard.hostname)
+        }
+        return guard
     }
 
     suspend fun getGraphVersion(): GraphVersionEntity?

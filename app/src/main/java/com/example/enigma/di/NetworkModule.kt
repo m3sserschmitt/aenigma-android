@@ -1,5 +1,6 @@
 package com.example.enigma.di
 
+import com.example.enigma.data.network.BaseUrlInterceptor
 import com.example.enigma.data.network.EnigmaApi
 import com.example.enigma.util.Constants.Companion.SERVER_URL
 import dagger.Module
@@ -17,13 +18,20 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    @Provides
+    @Singleton
+    fun provideBaseUrlInterceptor(): BaseUrlInterceptor {
+        return BaseUrlInterceptor()
+    }
+
     @Singleton
     @Provides
-    fun provideHttpClient(): OkHttpClient
+    fun provideHttpClient(baseUrlInterceptor: BaseUrlInterceptor): OkHttpClient
     {
         return OkHttpClient.Builder()
             .readTimeout(15, TimeUnit.SECONDS)
             .connectTimeout(15, TimeUnit.SECONDS)
+            .addInterceptor(baseUrlInterceptor)
             .build()
     }
 

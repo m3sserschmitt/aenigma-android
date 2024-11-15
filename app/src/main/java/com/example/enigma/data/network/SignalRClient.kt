@@ -83,6 +83,7 @@ class SignalRClient @Inject constructor(
     fun createConnection(hostname: String)
     {
         try {
+            closeConnection()
             hubConnection = HubConnectionBuilder
                 .create("${hostname.trim()}/$ONION_ROUTING_ENDPOINT")
                 .build()
@@ -94,6 +95,19 @@ class SignalRClient @Inject constructor(
         }
 
         start()
+    }
+
+    fun closeConnection()
+    {
+        if(::hubConnection.isInitialized) {
+            try {
+                hubConnection.close()
+            }
+            catch (_: Exception) { }
+            finally {
+                _consecutiveFailedAttempts.postValue(0)
+            }
+        }
     }
 
     private var _status: MutableLiveData<SignalRStatus> =
