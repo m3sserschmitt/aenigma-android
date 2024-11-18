@@ -137,12 +137,12 @@ fun DefaultChatAppBar(
             IndeterminateCircularIndicator(
                 modifier = Modifier.size(18.dp),
                 visible = connectionStatus !is SignalRStatus.Authenticated &&
-                        connectionStatus !is SignalRStatus.Aborted,
+                        connectionStatus !is SignalRStatus.Error.Aborted,
                 text = "",
                 fontSize = 12.sp
             )
             RetryConnectionAppBarAction(
-                visible = connectionStatus is SignalRStatus.Aborted,
+                visible = connectionStatus is SignalRStatus.Error.Aborted,
                 onRetryConnection = onRetryConnection
             )
             ActivateSearchAppBarAction(

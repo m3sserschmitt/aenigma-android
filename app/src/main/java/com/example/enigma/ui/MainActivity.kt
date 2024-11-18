@@ -113,7 +113,7 @@ class MainActivity : ComponentActivity() {
 
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
         when(clientStatus) {
-            is SignalRStatus.Disconnected -> { onClientDisconnected() }
+            is SignalRStatus.Error.Disconnected -> { onClientDisconnected() }
             is SignalRStatus.Error.ConnectionRefused -> { onClientConnectionRefused() }
             is SignalRStatus.Authenticated -> { onClientAuthenticated() }
         }

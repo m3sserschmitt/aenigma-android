@@ -1,30 +1,24 @@
 package com.example.enigma.data.network
 
 abstract class SignalRStatus(
-    val previous: SignalRStatus?,
     val error: String?
 ) {
-    class NotConnected:
-        SignalRStatus(null, null)
+    class NotConnected: SignalRStatus(null)
 
-    class Connecting(previous: SignalRStatus):
-        SignalRStatus(previous, null)
+    class Connecting: SignalRStatus(null)
 
-    class Connected(previous: SignalRStatus):
-        SignalRStatus(previous, null)
+    class Connected: SignalRStatus(null)
 
-    class Authenticating(previous: SignalRStatus):
-        SignalRStatus(previous, null)
+    class Authenticating: SignalRStatus(null)
 
-    class Authenticated(previous: SignalRStatus):
-        SignalRStatus(previous, null)
+    class Authenticated: SignalRStatus(null)
 
-    class Disconnected(previous: SignalRStatus, error: String?):
-        SignalRStatus(previous, error)
+    open class Error(error: String?): SignalRStatus(error)
+    {
+        class ConnectionRefused(error: String?): Error(error)
 
-    open class Error(previous: SignalRStatus, error: String?): SignalRStatus(previous, error)
-    { class ConnectionRefused(previous: SignalRStatus, error: String?): Error(previous, error) }
+        class Disconnected(error: String?): SignalRStatus(error)
 
-    class Aborted(previous: SignalRStatus, error: String?):
-        SignalRStatus(previous, error)
+        class Aborted(error: String?): SignalRStatus(error)
+    }
 }

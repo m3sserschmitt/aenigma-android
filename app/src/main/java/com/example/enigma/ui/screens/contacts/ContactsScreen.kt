@@ -221,7 +221,7 @@ fun ContactsScreen(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
         connectionStatus = connectionStatus,
-        targetStatus = SignalRStatus.Aborted::class.java,
+        targetStatus = SignalRStatus.Error.Aborted::class.java,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
@@ -319,9 +319,7 @@ fun ContactsFab(
 fun ContactsScreenPreview()
 {
     ContactsScreen(
-        connectionStatus = SignalRStatus.Connected(
-            previous = SignalRStatus.NotConnected()
-        ),
+        connectionStatus = SignalRStatus.Connected(),
         notificationsAllowed = true,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},

@@ -8,7 +8,7 @@ open class GuardSelectionResult(val chosenGuard: Vertex?) {
 
     class NoGuardAvailable: GuardSelectionResult(null)
 
-    class SelectionNotRequired: GuardSelectionResult(null)
+    class SelectionNotRequired(currentGuard: Vertex): GuardSelectionResult(currentGuard)
 
     class Success(chosenGuard: Vertex): GuardSelectionResult(chosenGuard)
 }

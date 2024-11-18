@@ -67,15 +67,18 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun guardSelectionRequired(graph: List<Vertex>): Boolean
+    private fun guardSelectionRequired(graph: List<Vertex>, currentGuard: GuardEntity?): Boolean
     {
-        val currentGuard = repository.local.getGuard() ?: return true
-        return !graph.any { item -> item.neighborhood?.address == currentGuard.address }
+        return currentGuard == null || !graph.any { item -> item.neighborhood?.address == currentGuard.address
+                && item.publicKey == currentGuard.publicKey
+                && item.neighborhood.hostname == currentGuard.hostname
+        }
     }
 
     private suspend fun selectGuard(graph: List<Vertex>): GuardSelectionResult {
         try {
-            if (guardSelectionRequired(graph)) {
+            val currentGuard = repository.local.getGuard()
+            if (guardSelectionRequired(graph, currentGuard)) {
                 val availableGuards = graph.filter { item -> item.neighborhood != null
                         && item.neighborhood.hostname.isAppDomain()
                         && !item.neighborhood.address.isNullOrBlank()
@@ -93,7 +96,15 @@ class GraphReaderWorker @AssistedInject constructor(
                 }
             }
 
-            return GuardSelectionResult.SelectionNotRequired()
+            val currentGuardVertex = if(currentGuard != null) graph.find {
+                item -> item.neighborhood?.address == currentGuard.address
+            }
+            else
+                null
+            return if(currentGuardVertex != null)
+                GuardSelectionResult.SelectionNotRequired(currentGuardVertex)
+            else
+                GuardSelectionResult.Error()
         } catch (_: Exception)
         {
             return GuardSelectionResult.Error()

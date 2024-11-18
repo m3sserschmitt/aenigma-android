@@ -174,7 +174,7 @@ fun ChatContentPreview()
             listOf(message1, message2)
         ),
         nextConversationPageAvailable = true,
-        connectionStatus = SignalRStatus.Authenticated(SignalRStatus.NotConnected()),
+        connectionStatus = SignalRStatus.Authenticated(),
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},

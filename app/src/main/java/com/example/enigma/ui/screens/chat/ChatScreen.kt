@@ -172,7 +172,7 @@ fun ChatScreen(
         message = stringResource(id = R.string.conversation_read_only),
         actionLabel = stringResource(id = R.string.retry),
         connectionStatus = connectionStatus,
-        targetStatus = SignalRStatus.Aborted::class.java,
+        targetStatus = SignalRStatus.Error.Aborted::class.java,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
@@ -314,9 +314,7 @@ fun ChatScreenPreview()
                 lastSynchronized = ZonedDateTime.now()
             )
         ),
-        connectionStatus = SignalRStatus.Connected(
-            previous = SignalRStatus.NotConnected()
-        ),
+        connectionStatus = SignalRStatus.Connected(),
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
