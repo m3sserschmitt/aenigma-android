@@ -100,6 +100,11 @@ class LocalDataSource @Inject constructor(
         return messagesDao.get(id)
     }
 
+    suspend fun getMessage(uuid: String): MessageEntity?
+    {
+        return messagesDao.get(uuid)
+    }
+
     fun getConversation(chatId: String) : Flow<List<MessageEntity>>
     {
         return messagesDao.getConversation(chatId)
@@ -130,21 +135,19 @@ class LocalDataSource @Inject constructor(
         return true
     }
 
-    suspend fun insertMessage(message: MessageEntity)
+    suspend fun insertMessages(messages: List<MessageEntity>)
     {
-        val messageId = messagesDao.insert(
-            message.chatId,
-            message.text,
-            message.incoming,
-            message.sent,
-            message.date
-        )
-
-        if(messageId <= 0) return
-        val contact = contactsDao.get(message.chatId) ?: return
-
-        contact.lastMessageId = messageId
-        contactsDao.update(contact)
+        messages.forEach { item ->
+            val messageId = messagesDao.insert(item.chatId, item.text, item.incoming, item.sent, item.date, item.dateReceivedOnServer, item.uuid)
+            if(messageId > 0)
+            {
+                val contact = contactsDao.get(item.chatId)
+                if (contact != null) {
+                    contact.lastMessageId = messageId
+                    contactsDao.update(contact)
+                }
+            }
+        }
     }
 
     fun getOutgoingMessages(): Flow<List<MessageEntity>> {

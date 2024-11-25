@@ -1,6 +1,5 @@
 package com.example.enigma.ui.screens.chat
 
-import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +26,7 @@ import com.example.enigma.ui.screens.common.LoadingScreen
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.PrettyDateFormatter
 import java.time.ZoneId
-import java.util.Date
+import java.time.ZonedDateTime
 
 @Composable
 fun ChatContent(
@@ -90,17 +89,15 @@ fun ChatContent(
 
 @Composable
 fun MessageDate(next: MessageEntity?, message: MessageEntity) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        val localDate1 = next?.date?.toInstant()?.atZone(ZoneId.systemDefault())?.toLocalDate()
-        val localDate2 = message.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+    val localDate1 = next?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+    val localDate2 = message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
-        if (localDate1 == null || localDate1 != localDate2) {
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center,
-                text = PrettyDateFormatter.formatPastDate(message.date)
-            )
-        }
+    if (localDate1 == null || localDate1 != localDate2) {
+        Text(
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            text = PrettyDateFormatter.formatPastDate(message.date)
+        )
     }
 }
 
@@ -164,8 +161,8 @@ fun DisplayMessages(
 @Composable
 fun ChatContentPreview()
 {
-    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, Date())
-    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, Date())
+    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, ZonedDateTime.now())
+    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, ZonedDateTime.now())
     message1.id = 1
     message2.id = 2
 

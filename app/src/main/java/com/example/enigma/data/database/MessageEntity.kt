@@ -4,7 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.enigma.util.Constants
-import java.util.*
+import java.time.ZonedDateTime
 
 @Entity(tableName = Constants.MESSAGES_TABLE)
 data class MessageEntity (
@@ -12,7 +12,9 @@ data class MessageEntity (
     val text: String,
     val incoming: Boolean,
     var sent: Boolean,
-    val date: Date
+    val date: ZonedDateTime = ZonedDateTime.now(),
+    @ColumnInfo(index = true) val uuid: String? = null,
+    val dateReceivedOnServer: ZonedDateTime? = null
 ) {
     @PrimaryKey
     @ColumnInfo(index = true)

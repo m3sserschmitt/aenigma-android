@@ -47,6 +47,8 @@ class SignalRClient @Inject constructor(
 
         private const val PULL_METHOD = "Pull"
 
+        private const val CLEANUP_METHOD = "Cleanup"
+
         private const val SIGNING_DATA_ERROR = "Error while signing data."
 
         private const val BROADCAST_ERROR = "Broadcast failed."
@@ -103,7 +105,7 @@ class SignalRClient @Inject constructor(
         _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
             if(data.payload != null) {
                 CoroutineScope(Dispatchers.IO).launch {
-                    messageSaver.handleIncomingMessages(listOf(data.payload))
+                    messageSaver.handleRoutingRequest(data)
                 }
             }
         }, RoutingRequest::class.java)
@@ -223,9 +225,14 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    private fun pull()
+    fun pull()
     {
         _hubConnection.invoke(PullResult::class.java, PULL_METHOD).subscribe(pullResultObserver)
+    }
+
+    private fun cleanup()
+    {
+        _hubConnection.invoke(CLEANUP_METHOD)
     }
 
     private val connectionsEstablishedObserver: CompletableObserver = object: CompletableObserver
@@ -328,7 +335,7 @@ class SignalRClient @Inject constructor(
 
         override fun onError(e: Throwable)
         {
-            updateStatus(SignalRStatus.Error::class.java, BROADCAST_INVOCATION_ERROR)
+            // updateStatus(SignalRStatus.Error::class.java, BROADCAST_INVOCATION_ERROR)
             subscription?.dispose()
         }
 
@@ -350,7 +357,7 @@ class SignalRClient @Inject constructor(
 
         override fun onError(e: Throwable)
         {
-            updateStatus(SignalRStatus.Error::class.java, PULL_INVOCATION_ERROR)
+            // updateStatus(SignalRStatus.Error::class.java, PULL_INVOCATION_ERROR)
             subscription?.dispose()
         }
 
@@ -358,8 +365,9 @@ class SignalRClient @Inject constructor(
             if(result.success == true && result.data != null)
             {
                 CoroutineScope(Dispatchers.IO).launch {
-                    messageSaver.handleIncomingMessages(result.data.map { item -> item.content })
+                    messageSaver.handlePendingMessages(result.data)
                 }
+                cleanup()
             }
             subscription?.dispose()
         }

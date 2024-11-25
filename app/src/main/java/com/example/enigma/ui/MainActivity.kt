@@ -67,6 +67,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         onRouteChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
+        SignalRClientWorker.startConnection(this)
     }
 
     override fun onPause() {

@@ -3,7 +3,10 @@ package com.example.enigma.data
 import com.example.enigma.crypto.OnionParsingService
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.models.Message
 import com.example.enigma.models.OnionDetails
+import com.example.enigma.models.PendingMessage
+import com.example.enigma.models.hubInvocation.RoutingRequest
 import com.example.enigma.util.NotificationService
 import com.google.gson.Gson
 import java.time.ZonedDateTime
@@ -16,21 +19,39 @@ class MessageSaver @Inject constructor(
     private val onionParsingService: OnionParsingService,
     private val notificationService: NotificationService)
 {
-    suspend fun handleIncomingMessages(messages: List<String>)
+    private suspend fun deserialize(message: Message): MessageEntity?
+    {
+        return try {
+            val parsedContent = Gson().fromJson(message.text, OnionDetails::class.java)
+            createContact(parsedContent)
+            MessageEntity(
+                message.chatId,
+                parsedContent.text,
+                incoming = true,
+                sent = false,
+                uuid = message.uuid,
+                dateReceivedOnServer = message.dateReceivedOnServer
+            )
+        }
+        catch (_: Exception)
+        {
+            null
+        }
+    }
+
+    suspend fun handleRoutingRequest(routingRequest: RoutingRequest)
+    {
+        val parsedMessage = onionParsingService.parse(routingRequest) ?: return
+        val messageEntity = deserialize(parsedMessage) ?: return
+        saveMessages(listOf(messageEntity))
+    }
+
+    suspend fun handlePendingMessages(messages: List<PendingMessage>)
     {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
-            .mapNotNull { item ->
-                try {
-                    val gson = Gson()
-                    val parsedContent = gson.fromJson(item.text, OnionDetails::class.java)
-                    createContact(parsedContent)
-                    MessageEntity(item.chatId, parsedContent.text, incoming = true, sent = false, item.date)
-                } catch (ex: Exception) {
-                    null
-                }
-            }
-
+            .mapNotNull { item -> deserialize(item) }
+            .filter { item -> item.uuid == null || repository.local.getMessage(item.uuid) == null }
         saveMessages(messageEntities)
     }
 
@@ -55,7 +76,7 @@ class MessageSaver @Inject constructor(
 
     private suspend fun saveMessages(messages: List<MessageEntity>)
     {
-        messages.map { item -> repository.local.insertMessage(item) }
+        repository.local.insertMessages(messages)
         markConversationAsUnread(messages)
         notify(messages)
     }

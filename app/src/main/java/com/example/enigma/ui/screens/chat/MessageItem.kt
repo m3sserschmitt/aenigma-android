@@ -127,8 +127,7 @@ fun MessageItemPreview()
             "123-123-123-123",
             "Hello",
             incoming = true,
-            sent = true,
-            Date()
+            sent = true
         ),
         onItemDeselected = {},
         onClick = {},
@@ -147,8 +146,7 @@ fun MessageItemSelectedPreview()
             "123-123-123-123",
             "Hello",
             incoming = true,
-            sent = false,
-            Date()
+            sent = false
         ),
         onItemDeselected = {},
         onClick = {},

@@ -1,27 +1,26 @@
 package com.example.enigma.util
 
 import org.ocpsoft.prettytime.PrettyTime
-import java.text.SimpleDateFormat
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.time.ZoneId
-import java.util.Date
-import java.util.Locale
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 
 class PrettyDateFormatter
 {
     companion object {
 
         @JvmStatic
-        fun getTime(date: Date): String
+        fun getTime(date: ZonedDateTime): String
         {
-            return SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
+            val formatter = DateTimeFormatter.ofPattern("HH:mm")
+            return date.withZoneSameInstant(ZoneId.systemDefault()).format(formatter)
         }
 
         @JvmStatic
-        fun formatPastDate(date: Date): String {
-            val currentDate = LocalDate.now()
-            val inputDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        fun formatPastDate(date: ZonedDateTime): String {
+            val currentDate = ZonedDateTime.now().toLocalDate()
+            val inputDate = date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
             return when {
                 inputDate.isEqual(currentDate) -> "Today"
@@ -69,10 +68,10 @@ class PrettyDateFormatter
             {
                 return null
             }
-            try {
-                val date = OffsetDateTime.parse(dateTimeOffset)
-                return PrettyTime().format(date.toLocalDateTime())
-            } catch (_: Exception)
+            return try {
+                PrettyTime().format(ZonedDateTime.parse(dateTimeOffset))
+            }
+            catch (_: Exception)
             {
                 return null
             }

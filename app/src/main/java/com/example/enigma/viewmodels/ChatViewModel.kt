@@ -229,8 +229,7 @@ class ChatViewModel @Inject constructor(
             contact.address,
             messageInputText.value,
             incoming = false,
-            sent = false,
-            Date())
+            sent = false)
 
         messageSaver.saveOutgoingMessage(message)
 

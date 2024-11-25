@@ -127,6 +127,10 @@ class SignalRClientWorker @AssistedInject constructor(
         {
             signalRClient.connect(guard.hostname, guard.address)
         }
+        else
+        {
+            signalRClient.pull()
+        }
 
         return Result.success()
     }
