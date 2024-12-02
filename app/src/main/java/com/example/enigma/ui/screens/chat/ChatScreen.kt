@@ -27,7 +27,6 @@ import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
-import java.util.Date
 
 @Composable
 fun ChatScreen(
@@ -44,6 +43,7 @@ fun ChatScreen(
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
+    val notSentMessages by chatViewModel.notSentMessages.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
@@ -60,6 +60,7 @@ fun ChatScreen(
         contact = selectedContact,
         connectionStatus = connectionStatus,
         messages = messages,
+        notSentMessages = notSentMessages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         onRetryConnection = {
@@ -102,6 +103,7 @@ fun ChatScreen(
     contact: DatabaseRequestState<ContactEntity>,
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     onRetryConnection: () -> Unit,
@@ -256,6 +258,7 @@ fun ChatScreen(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
+                notSentMessages = notSentMessages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
@@ -318,6 +321,7 @@ fun ChatScreenPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
         messageInputText = "Can't wait to see you on Monday",

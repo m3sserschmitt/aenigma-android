@@ -77,8 +77,6 @@ class MainViewModel @Inject constructor(
 
     val sharedDataRequest: StateFlow<DatabaseRequestState<SharedData>> = _sharedDataRequestResult
 
-    val guardAvailable: LiveData<Boolean> get() = repository.local.isGuardAvailable().asLiveData()
-
     val outgoingMessages: LiveData<List<MessageEntity>> get() = repository.local.getOutgoingMessages().asLiveData()
 
     fun loadContacts()

@@ -2,7 +2,6 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.*
-import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.data.MessageSaver
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
@@ -15,25 +14,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import java.util.Date
 import java.util.SortedSet
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
-    private val signalRClient: SignalRClient,
+    signalRClient: SignalRClient,
     repository: Repository,
     application: Application,
 ) : BaseViewModel(repository, signalRClient, application) {
 
-    private val _conversationSupportListMutex = Mutex(false)
-
     private val _conversationSupportListComparator = compareBy<MessageEntity> { item -> item.id }
 
-    private val _conversationSupportList: SortedSet<MessageEntity>
+    private val _conversationSortedSet: SortedSet<MessageEntity>
             = sortedSetOf(_conversationSupportListComparator)
 
     private var _filterQuery = MutableStateFlow("")
@@ -47,6 +41,8 @@ class ChatViewModel @Inject constructor(
     private val _conversation =
         MutableStateFlow<DatabaseRequestState<List<MessageEntity>>>(DatabaseRequestState.Idle)
 
+    private val _notSentMessages = MutableStateFlow<List<MessageEntity>>(listOf())
+
     private val _nextPageAvailable = MutableStateFlow(false)
 
     private val _messageInputText = MutableStateFlow("")
@@ -54,6 +50,8 @@ class ChatViewModel @Inject constructor(
     val selectedContact: StateFlow<DatabaseRequestState<ContactEntity>> = _selectedContact
 
     val conversation: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _conversation
+
+    val notSentMessages: StateFlow<List<MessageEntity>> = _notSentMessages
 
     val messageInputText: StateFlow<String> = _messageInputText
 
@@ -118,15 +116,16 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getConversation(chatId).collect { messages ->
-                    _conversationSupportListMutex.withLock {
-                        if (_conversationSupportList.isEmpty()) {
+                    synchronized(_conversationSortedSet) {
+                        if (_conversationSortedSet.isEmpty()) {
                             _nextPageAvailable.value = messages.isFullPage()
                         }
-                        _conversationSupportList.addAll(
+                        _conversationSortedSet.addAll(
                             messages.filter { item -> item.text.contains(_filterQuery.value) }
                         )
+                        _notSentMessages.value = messages.filter { item -> !item.sent }
                         _conversation.value = DatabaseRequestState.Success(
-                            _conversationSupportList.toList()
+                            _conversationSortedSet.toList()
                         )
                     }
                 }
@@ -140,47 +139,41 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             _filterQuery.collect { query ->
                 _conversation.value = DatabaseRequestState.Loading
-                _conversationSupportListMutex.withLock {
-                    try {
-                        val searchResult = repository.local.getConversation(
-                            chatId,
-                            getLastMessageId() - 1,
-                            query
-                        )
-                        _conversationSupportList.clear()
-                        _conversationSupportList.addAll(searchResult)
+                try {
+                    val searchResult = repository.local.getConversation(chatId, getLastMessageId() - 1, query)
+                    synchronized(_conversationSortedSet) {
+                        _conversationSortedSet.clear()
+                        _conversationSortedSet.addAll(searchResult)
                         _conversation.value = DatabaseRequestState.Success(
-                            _conversationSupportList.toList()
+                            _conversationSortedSet.toList()
                         )
                         _nextPageAvailable.value = searchResult.isFullPage()
-                    } catch (ex: Exception) {
-                        _conversation.value = DatabaseRequestState.Error(ex)
                     }
+                } catch (ex: Exception) {
+                    _conversation.value = DatabaseRequestState.Error(ex)
                 }
             }
         }
     }
 
-    fun loadNextPage(chatId: String)
-    {
+    fun loadNextPage(chatId: String) {
         viewModelScope.launch(ioDispatcher) {
-            _conversationSupportListMutex.withLock {
-                try {
-                    val lastIndex = _conversationSupportList.last().id
-                    val nextPage = repository.local.getConversation(chatId, lastIndex, _filterQuery.value)
-
+            try {
+                val lastIndex = _conversationSortedSet.last().id
+                val nextPage = repository.local.getConversation(chatId, lastIndex, _filterQuery.value)
+                synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
                     } else {
-                        _conversationSupportList.addAll(nextPage)
+                        _conversationSortedSet.addAll(nextPage)
                         _conversation.value = DatabaseRequestState.Success(
-                            _conversationSupportList.toList()
+                            _conversationSortedSet.toList()
                         )
                         _nextPageAvailable.value = nextPage.isFullPage()
                     }
-                } catch (ex: Exception) {
-                    _conversation.value = DatabaseRequestState.Error(ex)
                 }
+            } catch (ex: Exception) {
+                _conversation.value = DatabaseRequestState.Error(ex)
             }
         }
     }
@@ -190,28 +183,20 @@ class ChatViewModel @Inject constructor(
     }
 
     fun markConversationAsRead(chatId: String) {
-        viewModelScope.launch(ioDispatcher) {
-            repository.local.markConversationAsRead(chatId)
-        }
+        viewModelScope.launch(ioDispatcher) { repository.local.markConversationAsRead(chatId) }
     }
 
     fun clearConversation(chatId: String)
     {
-        viewModelScope.launch(ioDispatcher) {
-            _conversationSupportListMutex.withLock {
-                _conversationSupportList.clear()
-                repository.local.clearConversation(chatId)
-            }
-        }
+        synchronized(_conversationSortedSet) { _conversationSortedSet.clear() }
+        viewModelScope.launch(ioDispatcher) { repository.local.clearConversation(chatId) }
     }
 
     fun removeMessages(messages: List<MessageEntity>)
     {
+        synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
-            _conversationSupportListMutex.withLock {
-                _conversationSupportList.removeAll(messages.toSet())
-                repository.local.removeMessages(messages, _conversationSupportList.firstOrNull()?.id)
-            }
+            repository.local.removeMessages(messages, _conversationSortedSet.firstOrNull()?.id)
         }
     }
 
@@ -224,6 +209,10 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun saveMessageToDatabase(): Boolean {
+        if(messageInputText.value.isBlank())
+        {
+            return false
+        }
         val contact = getSelectedContactEntity() ?: return false
         val message = MessageEntity(
             contact.address,

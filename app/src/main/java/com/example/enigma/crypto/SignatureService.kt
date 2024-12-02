@@ -11,14 +11,19 @@ class SignatureService @Inject constructor(@ApplicationContext context: Context)
 
     private val privateKey: String? = KeysManager.readPrivateKey(context)
 
-    fun sign(data: ByteArray): Pair<String, String>?
-    {
-        val signature = if(privateKey != null && publicKey != null)
-            CryptoProvider.sign(privateKey, "", data) else null
-        val encodedSignature = if(signature != null)
-            Base64.encodeToString(signature, Base64.DEFAULT) else null
+    fun sign(data: ByteArray): Pair<String, String>? {
+        if(publicKey == null || privateKey == null)
+        {
+            return null
+        }
+        synchronized(publicKey)
+        {
+            val signature = CryptoProvider.sign(privateKey, "", data)
+            val encodedSignature = if (signature != null)
+                Base64.encodeToString(signature, Base64.DEFAULT) else null
 
-        return if (encodedSignature != null && publicKey != null)
-            Pair(publicKey, encodedSignature) else null
+            return if (encodedSignature != null)
+                Pair(publicKey, encodedSignature) else null
+        }
     }
 }

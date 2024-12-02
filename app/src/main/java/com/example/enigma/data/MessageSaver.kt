@@ -92,7 +92,7 @@ class MessageSaver @Inject constructor(
         for (message in messages)
         {
             val contact = repository.local.getContact(message.chatId) ?: continue
-            notificationService.notify(contact, message.text)
+            notificationService.notify(contact, message)
         }
     }
 }

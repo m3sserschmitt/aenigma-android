@@ -1,24 +1,59 @@
 package com.example.enigma.data.network
 
 abstract class SignalRStatus(
-    val error: String?
+    val error: String?,
+    private val level: Int
 ) {
-    class NotConnected: SignalRStatus(null)
-
-    class Connecting: SignalRStatus(null)
-
-    class Connected: SignalRStatus(null)
-
-    class Authenticating: SignalRStatus(null)
-
-    class Authenticated: SignalRStatus(null)
-
-    open class Error(error: String?): SignalRStatus(error)
+    infix fun smallerOrEqualThan(status: SignalRStatus): Boolean
     {
-        class ConnectionRefused(error: String?): Error(error)
+        return this smallerThan status || level == status.level
+    }
 
-        class Disconnected(error: String?): SignalRStatus(error)
+    infix fun smallerThan(status: SignalRStatus): Boolean
+    {
+        return level < status.level
+    }
 
-        class Aborted(error: String?): SignalRStatus(error)
+    infix fun greaterOrEqualThan(status: SignalRStatus): Boolean
+    {
+        return this greaterThan status || level == status.level
+    }
+
+    infix fun greaterThan(status: SignalRStatus): Boolean
+    {
+        return level > status.level
+    }
+
+    class NotConnected: SignalRStatus(null, 0)
+
+    class Connecting: SignalRStatus(null, 1)
+
+    class Connected: SignalRStatus(null, 2)
+
+    class Authenticating: SignalRStatus(null, 3)
+
+    class Authenticated: SignalRStatus(null, 4)
+
+    class Pulling: SignalRStatus(null, 5)
+
+    class Cleaning: SignalRStatus(null, 5)
+
+    class Broadcasting: SignalRStatus(null, 5)
+
+    class Synchronized: SignalRStatus(null, 6)
+
+    class Clean: SignalRStatus(null, 6)
+
+    class Broadcasted: SignalRStatus(null, 6)
+
+    class Reset(status: SignalRStatus?): SignalRStatus(null, status?.level ?: 0)
+
+    open class Error(status: SignalRStatus?, error: String? = null): SignalRStatus(error, status?.level ?: 0)
+    {
+        class ConnectionRefused(error: String? = null): Error(Connecting(), error)
+
+        class Disconnected(status: SignalRStatus?, error: String? = null): Error(status, error)
+
+        class Aborted(error: String? = null): SignalRStatus(error, Int.MAX_VALUE)
     }
 }

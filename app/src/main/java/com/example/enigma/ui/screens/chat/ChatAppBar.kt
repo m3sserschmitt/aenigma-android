@@ -136,8 +136,8 @@ fun DefaultChatAppBar(
         actions = {
             IndeterminateCircularIndicator(
                 modifier = Modifier.size(18.dp),
-                visible = connectionStatus !is SignalRStatus.Authenticated &&
-                        connectionStatus !is SignalRStatus.Error.Aborted,
+                visible = connectionStatus greaterOrEqualThan connectionStatus
+                        && connectionStatus smallerThan SignalRStatus.Authenticated(),
                 text = "",
                 fontSize = 12.sp
             )

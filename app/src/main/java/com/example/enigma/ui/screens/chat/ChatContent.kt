@@ -35,6 +35,7 @@ fun ChatContent(
     isSearchMode: Boolean,
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
     messageInputText: String,
@@ -65,6 +66,7 @@ fun ChatContent(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
+                notSentMessages = notSentMessages,
                 conversationListState = conversationListState,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedMessages,
@@ -75,7 +77,6 @@ fun ChatContent(
 
             ChatInput(
                 modifier = Modifier.height(80.dp),
-                enabled = connectionStatus is SignalRStatus.Authenticated,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = {
@@ -107,6 +108,7 @@ fun DisplayMessages(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
     conversationListState: LazyListState = rememberLazyListState(),
@@ -128,6 +130,7 @@ fun DisplayMessages(
                         MessageItem(
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
+                            isSent = notSentMessages.contains(messageEntity),
                             message = messageEntity,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
@@ -170,6 +173,7 @@ fun ChatContentPreview()
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         connectionStatus = SignalRStatus.Authenticated(),
         isSelectionMode = false,

@@ -37,7 +37,7 @@ class GraphReaderWorker @AssistedInject constructor(
 
         private const val UNIQUE_REQUEST_IDENTIFIER = "GraphReaderWorkerRequest"
 
-        private const val MAX_RETRY_COUNT = 5
+        private const val MAX_RETRY_COUNT = 2
 
         private const val DELAY_BETWEEN_RETRIES: Long = 3
 
@@ -224,7 +224,7 @@ class GraphReaderWorker @AssistedInject constructor(
             return if(runAttemptCount < MAX_RETRY_COUNT) {
                 Result.retry()
             } else {
-                Result.failure()
+                Result.success()
             }
         }
 

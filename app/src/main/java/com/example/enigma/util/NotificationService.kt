@@ -8,7 +8,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -16,6 +15,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.example.enigma.R
 import com.example.enigma.data.database.ContactEntity
+import com.example.enigma.data.database.MessageEntity
 import com.example.enigma.ui.MainActivity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -48,18 +48,15 @@ class NotificationService @Inject constructor(
                 .bigText(text))
     }
 
-    private fun createNotificationChannel(channel: String, name: String, description: String, importance: Int)
-    {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val notificationChannel = NotificationChannel(channel, name, importance).apply {
-                this.description = description
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            }
-
-            val notificationManager: NotificationManager =
-                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(notificationChannel)
+    private fun createNotificationChannel(channel: String, name: String, description: String, importance: Int) {
+        val notificationChannel = NotificationChannel(channel, name, importance).apply {
+            this.description = description
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
+
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(notificationChannel)
     }
 
     private fun createChatNavigationIntent(): PendingIntent
@@ -74,7 +71,7 @@ class NotificationService @Inject constructor(
 
     val blockedNotificationsSource: LiveData<String> = _blockedNotificationsSource
 
-    fun notify(contact: ContactEntity, text: String)
+    fun notify(contact: ContactEntity, messageEntity: MessageEntity)
     {
         if (listOf(NOTIFICATIONS_DISABLE_ALL, contact.address)
             .contains(blockedNotificationsSource.value))
@@ -89,9 +86,7 @@ class NotificationService @Inject constructor(
             NotificationManager.IMPORTANCE_MAX
         )
         val intent = createChatNavigationIntent()
-        val notification = createBasicNotification(
-            contact.name,
-            text,
+        val notification = createBasicNotification(contact.name, messageEntity.text,
             R.drawable.ic_message,
             NEW_MESSAGE_CHANNEL_ID
         )
@@ -101,7 +96,6 @@ class NotificationService @Inject constructor(
             .build()
 
         with(NotificationManagerCompat.from(context)) {
-
             if (ActivityCompat.checkSelfPermission(
                     context,
                     Manifest.permission.POST_NOTIFICATIONS

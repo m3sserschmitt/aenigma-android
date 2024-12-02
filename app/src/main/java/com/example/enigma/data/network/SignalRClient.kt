@@ -10,12 +10,13 @@ import com.example.enigma.models.Neighborhood
 import com.example.enigma.models.VertexBroadcastRequest
 import com.example.enigma.models.hubInvocation.AuthenticationRequest
 import com.example.enigma.models.hubInvocation.AuthenticateResult
+import com.example.enigma.models.hubInvocation.CleanupResult
 import com.example.enigma.models.hubInvocation.GenerateTokenResult
 import com.example.enigma.models.hubInvocation.PullResult
+import com.example.enigma.models.hubInvocation.RouteResult
 import com.example.enigma.models.hubInvocation.RoutingRequest
 import com.example.enigma.models.hubInvocation.VertexBroadcastResult
 import com.example.enigma.util.CapitalizedFieldNamingStrategy
-import com.example.enigma.util.Constants.Companion.CLIENT_CONNECTION_RETRY_COUNT
 import com.google.gson.GsonBuilder
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
@@ -34,6 +35,7 @@ class SignalRClient @Inject constructor(
     private val addressProvider: AddressProvider
 ) {
     companion object {
+        const val CLIENT_CONNECTION_RETRY_COUNT = 3
 
         private const val ONION_ROUTING_ENDPOINT = "OnionRouting"
 
@@ -49,34 +51,24 @@ class SignalRClient @Inject constructor(
 
         private const val CLEANUP_METHOD = "Cleanup"
 
-        private const val SIGNING_DATA_ERROR = "Error while signing data."
-
-        private const val BROADCAST_ERROR = "Broadcast failed."
-
         private const val INTERNAL_ERROR = "Internal error occurred."
 
-        private const val MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
-        = "The maximum number of failed connection attempts has been reached."
-
-        private const val AUTHENTICATION_FAILED = "Authentication failed."
+        private const val MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR =
+            "The maximum number of failed connection attempts has been reached."
 
         private const val AUTHENTICATION_NONCE_NULL_ERROR = "Authentication nonce was null."
 
-        private const val GENERATE_NONCE_INVOCATION_ERROR = "Error while invoking $GENERATE_NONCE_METHOD method."
+        private const val PULL_DATA_NULL_ERROR =
+            "Data returned from $PULL_METHOD invocation was null."
 
-        private const val AUTHENTICATE_INVOCATION_ERROR = "Error while invoking $AUTHENTICATE_METHOD method."
+        private const val GENERATE_NONCE_INVOCATION_ERROR =
+            "Error while invoking $GENERATE_NONCE_METHOD method."
 
-        private const val PULL_INVOCATION_ERROR = "Error while invoking $PULL_METHOD method."
-
-        private const val BROADCAST_INVOCATION_ERROR = "Error while invoking $BROADCAST_METHOD method."
-
-        private const val CONNECTION_REFUSED_ERROR = "Connection refused."
-
-        private const val COULD_NOT_CREATE_CONNECTION_ERROR = "Could not create connection or invalid URL."
+        private const val COULD_NOT_CREATE_CONNECTION_ERROR =
+            "Could not create connection or invalid URL."
 
         @JvmStatic
-        private fun createConnection(hostname: String): HubConnection
-        {
+        private fun createConnection(hostname: String): HubConnection {
             return HubConnectionBuilder
                 .create("${hostname.trim('/', ' ')}/$ONION_ROUTING_ENDPOINT")
                 .build()
@@ -87,7 +79,8 @@ class SignalRClient @Inject constructor(
 
     private lateinit var _guardAddress: String
 
-    private var _status: MutableLiveData<SignalRStatus> = MutableLiveData(SignalRStatus.NotConnected())
+    private var _status: MutableLiveData<SignalRStatus> =
+        MutableLiveData(SignalRStatus.NotConnected())
 
     private var _failedAttempts: MutableLiveData<Int> =
         MutableLiveData(0)
@@ -96,116 +89,127 @@ class SignalRClient @Inject constructor(
 
     val failedAttempts: LiveData<Int> get() = _failedAttempts
 
-    private fun configureConnection()
-    {
-        _hubConnection.onClosed {
-            updateStatus(SignalRStatus.Error.Disconnected::class.java)
-        }
-
-        _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
-            if(data.payload != null) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    messageSaver.handleRoutingRequest(data)
-                }
+    private fun configureConnection() {
+        synchronized(_hubConnection) {
+            _hubConnection.onClosed {
+                updateStatus(SignalRStatus.Error.Disconnected(_status.value))
             }
-        }, RoutingRequest::class.java)
+        }
+        synchronized(_hubConnection) {
+            _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
+                if (data.payload != null) {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        messageSaver.handleRoutingRequest(data)
+                    }
+                }
+            }, RoutingRequest::class.java)
+        }
     }
 
-    fun connect(hostname: String, guardAddress: String)
-    {
-        disconnect()
+    fun connect(hostname: String, guardAddress: String) {
+        if (isConnected()) {
+            return
+        }
         try {
             _hubConnection = createConnection(hostname)
             this._guardAddress = guardAddress
             configureConnection()
+        } catch (ex: Exception) {
+            updateStatus(SignalRStatus.Error(_status.value!!, COULD_NOT_CREATE_CONNECTION_ERROR))
         }
-        catch (ex: Exception) {
-            updateStatus(SignalRStatus.Error::class.java, COULD_NOT_CREATE_CONNECTION_ERROR)
-        }
-        start()
+        return start()
     }
 
-    fun disconnect()
-    {
-        if(::_hubConnection.isInitialized) {
+    fun disconnect() {
+        if (!isConnected()) {
+            return
+        }
+        if (::_hubConnection.isInitialized) {
             try {
-                _hubConnection.close()
-            }
-            catch (_: Exception) { }
-            finally {
+                synchronized(_hubConnection)
+                {
+                    return _hubConnection.close()
+                }
+            } catch (_: Exception) {
+            } finally {
                 _failedAttempts.postValue(0)
             }
         }
     }
 
-    fun resetStatus()
-    {
-        _failedAttempts.postValue(0)
-        updateStatus(SignalRStatus.NotConnected::class.java)
+    fun resetStatus() {
+        if (status.value is SignalRStatus.Error.Aborted) {
+            _failedAttempts.postValue(0)
+            updateStatus(SignalRStatus.Reset(_status.value))
+        }
     }
 
-    private fun <T: SignalRStatus> updateStatus(clazz: Class<T>, error: String? = null)
-    {
-        if(SignalRStatus.Error::class.java.isAssignableFrom(clazz)) {
+    private fun updateStatus(status: SignalRStatus) {
+        if (status is SignalRStatus.Error) {
             val newValue = _failedAttempts.value?.plus(1)
             _failedAttempts.postValue(newValue ?: 0)
 
-            if (newValue != null) {
-                if (newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
-                    _status.postValue(
-                        SignalRStatus.Error.Aborted(
-                            MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
-                        )
+            if (newValue != null && newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
+                _status.postValue(
+                    SignalRStatus.Error.Aborted(
+                        MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
                     )
-                    return
-                }
+                )
+                return
             }
         }
-
-        when (clazz) {
-            SignalRStatus.Error.ConnectionRefused::class.java -> _status.postValue(SignalRStatus.Error.ConnectionRefused(error))
-            SignalRStatus.Error::class.java -> _status.postValue(SignalRStatus.Error(error))
-            SignalRStatus.NotConnected::class.java -> _status.postValue(SignalRStatus.NotConnected())
-            SignalRStatus.Connecting::class.java -> _status.postValue(SignalRStatus.Connecting())
-            SignalRStatus.Connected::class.java -> _status.postValue(SignalRStatus.Connected())
-            SignalRStatus.Authenticating::class.java -> _status.postValue(SignalRStatus.Authenticating())
-            SignalRStatus.Authenticated::class.java -> {
-                _status.postValue(SignalRStatus.Authenticated())
-                _failedAttempts.postValue(0)
-            }
-            SignalRStatus.Error.Disconnected::class.java -> _status.postValue(SignalRStatus.Error.Disconnected(error))
-        }
+        _status.postValue(status)
     }
 
     fun isConnected(): Boolean {
-        if(::_hubConnection.isInitialized)
-        {
-            return _hubConnection.connectionState == HubConnectionState.CONNECTED
+        if (::_hubConnection.isInitialized) {
+            synchronized(_hubConnection) {
+                return _hubConnection.connectionState == HubConnectionState.CONNECTED
+            }
         }
 
         return false
     }
 
-    private fun start()
-    {
-        updateStatus(SignalRStatus.Connecting::class.java)
-        _hubConnection.start().subscribe(connectionsEstablishedObserver)
+    private fun start() {
+        if (!isConnected()) {
+            updateStatus(SignalRStatus.Connecting())
+            synchronized(_hubConnection)
+            {
+                return _hubConnection.start().blockingSubscribe(connectionsEstablishedObserver)
+            }
+        }
     }
 
     private fun generateNonce() {
-        updateStatus(SignalRStatus.Authenticating::class.java)
-        _hubConnection.invoke(GenerateTokenResult::class.java, GENERATE_NONCE_METHOD).subscribe(nonceObserver)
+        if (isConnected()) {
+            updateStatus(SignalRStatus.Authenticating())
+            synchronized(_hubConnection) {
+                return _hubConnection.invoke(GenerateTokenResult::class.java, GENERATE_NONCE_METHOD)
+                    .blockingSubscribe(nonceObserver)
+            }
+        }
     }
 
-    private fun authenticate(publicKey: String, signedData: String)
-    {
-        _hubConnection.invoke(AuthenticateResult::class.java, AUTHENTICATE_METHOD, AuthenticationRequest(publicKey, signedData))
-            .subscribe(authenticationResultObserver)
+    private fun authenticate(publicKey: String, signedData: String) {
+        if (isConnected()) {
+            synchronized(_hubConnection) {
+                return _hubConnection.invoke(
+                    AuthenticateResult::class.java, AUTHENTICATE_METHOD,
+                    AuthenticationRequest(publicKey, signedData)
+                ).blockingSubscribe(authenticationResultObserver)
+            }
+        }
     }
 
-    private fun broadcast() {
+    fun broadcast() {
+        if (!isConnected()) {
+            return
+        }
         try {
-            val neighborhood = Neighborhood(addressProvider.address, null, listOf(_guardAddress))
+            updateStatus(SignalRStatus.Broadcasting())
+            val neighborhood =
+                Neighborhood(addressProvider.address, null, listOf(_guardAddress))
             val serializedNeighborhood = GsonBuilder()
                 .setFieldNamingStrategy(CapitalizedFieldNamingStrategy())
                 .create()
@@ -213,180 +217,204 @@ class SignalRClient @Inject constructor(
             val signature = signatureService.sign(serializedNeighborhood.toByteArray())
 
             if (signature == null) {
-                updateStatus(SignalRStatus.Error::class.java, SIGNING_DATA_ERROR)
+                updateStatus(SignalRStatus.Error(_status.value))
                 return
             }
 
             val broadcastRequest = VertexBroadcastRequest(signature.first, signature.second)
-            _hubConnection.invoke(VertexBroadcastResult::class.java, BROADCAST_METHOD, broadcastRequest)
-                .subscribe(broadcastResultObserver)
-        } catch (_: Exception) {
-            updateStatus(SignalRStatus.Error::class.java, INTERNAL_ERROR)
-        }
-    }
-
-    fun pull()
-    {
-        _hubConnection.invoke(PullResult::class.java, PULL_METHOD).subscribe(pullResultObserver)
-    }
-
-    private fun cleanup()
-    {
-        _hubConnection.invoke(CLEANUP_METHOD)
-    }
-
-    private val connectionsEstablishedObserver: CompletableObserver = object: CompletableObserver
-    {
-        private var subscription: Disposable? = null
-
-        override fun onSubscribe(d: Disposable)
-        {
-            subscription = d
-        }
-
-        override fun onComplete() {
-            updateStatus(SignalRStatus.Connected::class.java)
-            generateNonce()
-            subscription?.dispose()
-        }
-
-        override fun onError(e: Throwable) {
-            updateStatus(SignalRStatus.Error.ConnectionRefused::class.java, CONNECTION_REFUSED_ERROR)
-            subscription?.dispose()
-        }
-    }
-
-    private val nonceObserver = object: SingleObserver<GenerateTokenResult> {
-        private var subscription: Disposable? = null
-
-        override fun onSubscribe(d: Disposable)
-        {
-            subscription = d
-        }
-
-        override fun onError(e: Throwable)
-        {
-            updateStatus(SignalRStatus.Error::class.java, GENERATE_NONCE_INVOCATION_ERROR)
-            subscription?.dispose()
-        }
-
-        override fun onSuccess(result: GenerateTokenResult) {
-            if (result.success != true || result.data == null) {
-                updateStatus(SignalRStatus.Error::class.java, AUTHENTICATION_NONCE_NULL_ERROR)
-                subscription?.dispose()
-                return
+            synchronized(_hubConnection) {
+                return _hubConnection.invoke(
+                    VertexBroadcastResult::class.java, BROADCAST_METHOD,
+                    broadcastRequest
+                ).blockingSubscribe(broadcastResultObserver)
             }
-
-            try {
-                val decodedToken = Base64.decode(result.data, Base64.DEFAULT)
-                val signature = if (decodedToken != null) signatureService.sign(decodedToken) else null
-
-                if (signature == null) {
-                    updateStatus(SignalRStatus.Error::class.java, INTERNAL_ERROR)
-                    subscription?.dispose()
-                    return
-                }
-
-                authenticate(signature.first, signature.second)
-            } catch (_: Exception) {
-                updateStatus(SignalRStatus.Error::class.java, INTERNAL_ERROR)
-            }
-            subscription?.dispose()
+        } catch (ex: Exception) {
+            updateStatus(SignalRStatus.Error(_status.value, ex.message))
         }
     }
 
-    private val authenticationResultObserver = object: SingleObserver<AuthenticateResult>
-    {
-        private var subscription: Disposable? = null
-
-        override fun onSubscribe(d: Disposable)
-        {
-            subscription = d
-        }
-
-        override fun onError(e: Throwable)
-        {
-            updateStatus(SignalRStatus.Error::class.java, AUTHENTICATE_INVOCATION_ERROR)
-            subscription?.dispose()
-        }
-
-        override fun onSuccess(result: AuthenticateResult) {
-            if (result.success != true) {
-                updateStatus(SignalRStatus.Error::class.java, AUTHENTICATION_FAILED)
-                subscription?.dispose()
-                return
+    fun pull() {
+        if (isConnected()) {
+            updateStatus(SignalRStatus.Pulling())
+            synchronized(_hubConnection) {
+                return _hubConnection.invoke(PullResult::class.java, PULL_METHOD)
+                    .blockingSubscribe(pullResultObserver)
             }
-
-            updateStatus(SignalRStatus.Authenticated::class.java)
-            pull()
-            broadcast()
-            subscription?.dispose()
         }
     }
 
-    private val broadcastResultObserver = object: SingleObserver<VertexBroadcastResult>
-    {
-        private var subscription: Disposable? = null
-
-        override fun onSubscribe(d: Disposable)
-        {
-            subscription = d
-        }
-
-        override fun onError(e: Throwable)
-        {
-            // updateStatus(SignalRStatus.Error::class.java, BROADCAST_INVOCATION_ERROR)
-            subscription?.dispose()
-        }
-
-        override fun onSuccess(result: VertexBroadcastResult) {
-            if (result.success != true) {
-                updateStatus(SignalRStatus.Error::class.java, BROADCAST_ERROR)
+    fun cleanup() {
+        if (isConnected()) {
+            updateStatus(SignalRStatus.Cleaning())
+            synchronized(_hubConnection) {
+                return _hubConnection.invoke(CleanupResult::class.java, CLEANUP_METHOD)
+                    .blockingSubscribe(cleanupResultObserver)
             }
-            subscription?.dispose()
         }
     }
 
-    private val pullResultObserver = object: SingleObserver<PullResult>
-    {
+    private val connectionsEstablishedObserver: CompletableObserver = object : CompletableObserver {
         private var subscription: Disposable? = null
 
         override fun onSubscribe(d: Disposable) {
             subscription = d
         }
 
-        override fun onError(e: Throwable)
-        {
-            // updateStatus(SignalRStatus.Error::class.java, PULL_INVOCATION_ERROR)
+        override fun onComplete() {
+            updateStatus(SignalRStatus.Connected())
+            generateNonce()
             subscription?.dispose()
         }
 
-        override fun onSuccess(result: PullResult) {
-            if(result.success == true && result.data != null)
-            {
-                CoroutineScope(Dispatchers.IO).launch {
-                    messageSaver.handlePendingMessages(result.data)
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error.ConnectionRefused(e.message))
+            subscription?.dispose()
+        }
+    }
+
+    private val nonceObserver = object : SingleObserver<GenerateTokenResult> {
+        private var subscription: Disposable? = null
+
+        override fun onSubscribe(d: Disposable) {
+            subscription = d
+        }
+
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error(_status.value, e.message))
+            subscription?.dispose()
+        }
+
+        override fun onSuccess(result: GenerateTokenResult) {
+            if (result.success != true) {
+                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            } else if (result.data == null) {
+                updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
+            } else {
+                try {
+                    val decodedToken = Base64.decode(result.data, Base64.DEFAULT)
+                    val signature =
+                        if (decodedToken != null) signatureService.sign(decodedToken) else null
+
+                    if (signature != null) {
+                        authenticate(signature.first, signature.second)
+                    } else {
+                        updateStatus(SignalRStatus.Error(_status.value, INTERNAL_ERROR))
+                    }
+                } catch (ex: Exception) {
+                    updateStatus(SignalRStatus.Error(_status.value, ex.message))
                 }
-                cleanup()
             }
             subscription?.dispose()
         }
     }
 
-    fun sendMessage(message: String): Boolean
-    {
-        if(!::_hubConnection.isInitialized)
-        {
-            return false
+    private val authenticationResultObserver = object : SingleObserver<AuthenticateResult> {
+        private var subscription: Disposable? = null
+
+        override fun onSubscribe(d: Disposable) {
+            subscription = d
         }
 
-        try {
-            _hubConnection.invoke(ROUTE_MESSAGE_METHOD, RoutingRequest(message)).blockingAwait()
-        } catch (ex: Exception)
-        {
-            return false
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error(_status.value, e.message))
+            subscription?.dispose()
         }
 
-        return true
+        override fun onSuccess(result: AuthenticateResult) {
+            if (result.success != true) {
+                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+                subscription?.dispose()
+            } else {
+                updateStatus(SignalRStatus.Authenticated())
+            }
+            subscription?.dispose()
+        }
+    }
+
+    private val broadcastResultObserver = object : SingleObserver<VertexBroadcastResult> {
+        private var subscription: Disposable? = null
+
+        override fun onSubscribe(d: Disposable) {
+            subscription = d
+        }
+
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error(_status.value, e.message))
+            subscription?.dispose()
+        }
+
+        override fun onSuccess(result: VertexBroadcastResult) {
+            if (result.success != true) {
+                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            } else {
+                updateStatus(SignalRStatus.Broadcasted())
+            }
+            subscription?.dispose()
+        }
+    }
+
+    private val pullResultObserver = object : SingleObserver<PullResult> {
+        private var subscription: Disposable? = null
+
+        override fun onSubscribe(d: Disposable) {
+            subscription = d
+        }
+
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error(_status.value, e.message))
+            subscription?.dispose()
+        }
+
+        override fun onSuccess(result: PullResult) {
+            if (result.success != true) {
+                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            } else if (result.data == null) {
+                updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
+            } else {
+                updateStatus(SignalRStatus.Synchronized())
+                CoroutineScope(Dispatchers.IO).launch {
+                    messageSaver.handlePendingMessages(result.data)
+                }
+            }
+            subscription?.dispose()
+        }
+    }
+
+    private val cleanupResultObserver = object : SingleObserver<CleanupResult> {
+        private var subscription: Disposable? = null
+
+        override fun onSubscribe(d: Disposable) {
+            subscription = d
+        }
+
+        override fun onError(e: Throwable) {
+            updateStatus(SignalRStatus.Error(_status.value, e.message))
+            subscription?.dispose()
+        }
+
+        override fun onSuccess(result: CleanupResult) {
+            if (result.success != true) {
+                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            } else {
+                updateStatus(SignalRStatus.Clean())
+            }
+            subscription?.dispose()
+        }
+    }
+
+    fun sendMessage(message: String): Boolean {
+        var r = false
+        if (isConnected()) {
+            synchronized(_hubConnection) {
+                _hubConnection.invoke(
+                    RouteResult::class.java, ROUTE_MESSAGE_METHOD,
+                    RoutingRequest(message)
+                ).blockingSubscribe(
+                    { result -> r = result.success == true },
+                    { _ -> r = false }
+                )
+            }
+        }
+        return r
     }
 }

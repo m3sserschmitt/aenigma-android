@@ -22,6 +22,7 @@ import com.example.enigma.viewmodels.MainViewModel
 import com.example.enigma.workers.GraphReaderWorker
 import com.example.enigma.workers.MessageSenderWorker
 import com.example.enigma.workers.SignalRClientWorker
+import com.example.enigma.workers.SignalRWorkerAction
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -55,24 +56,28 @@ class MainActivity : ComponentActivity() {
         }
 
         KeysManager.generateKeyIfNotExistent(this)
-
-        schedulePeriodicSync()
         startConnection()
         observeClientConnectivity()
-
         observeNavigation()
         handleIntent()
     }
 
     override fun onResume() {
         super.onResume()
-        onRouteChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
-        SignalRClientWorker.startConnection(this)
+        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
+        SignalRClientWorker.start(this,
+            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
+        )
     }
 
     override fun onPause() {
         super.onPause()
-        onRouteChanged(Screens.NO_SCREEN)
+        onScreenChanged(Screens.NO_SCREEN)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        schedulePeriodicSync()
     }
 
     private fun schedulePeriodicSync()
@@ -83,10 +88,10 @@ class MainActivity : ComponentActivity() {
     private fun startConnection()
     {
         val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
-        val startConnectionWorkRequest = SignalRClientWorker.createConnectionRequest()
-        val workManagerInstance = WorkManager.getInstance(this)
-
-        workManagerInstance.beginWith(syncGraphWorkRequest).then(startConnectionWorkRequest)
+        val startConnectionWorkRequest = SignalRClientWorker.createRequest(
+            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast())
+        WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
+            .then(startConnectionWorkRequest)
             .enqueue()
     }
 
@@ -114,13 +119,18 @@ class MainActivity : ComponentActivity() {
 
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
         when(clientStatus) {
+            is SignalRStatus.Reset -> { onSignalRClientReset() }
             is SignalRStatus.Error.Disconnected -> { onClientDisconnected() }
             is SignalRStatus.Error.ConnectionRefused -> { onClientConnectionRefused() }
-            is SignalRStatus.Authenticated -> { onClientAuthenticated() }
+            is SignalRStatus.Error -> { onClientError() }
+        }
+        if(clientStatus greaterOrEqualThan SignalRStatus.Authenticated())
+        {
+            onClientAuthenticated()
         }
     }
 
-    private val navigationObserver = Observer<String> { route -> onRouteChanged(route) }
+    private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
 
     private fun onClientAuthenticated()
     {
@@ -129,12 +139,23 @@ class MainActivity : ComponentActivity() {
 
     private fun onClientConnectionRefused()
     {
-        SignalRClientWorker.startDelayedConnection(this)
+        SignalRClientWorker.startDelayed(this)
     }
 
     private fun onClientDisconnected()
     {
-        SignalRClientWorker.startDelayedConnection(this)
+        SignalRClientWorker.startDelayed(this)
+    }
+
+    private fun onClientError()
+    {
+        SignalRClientWorker.startDelayed(this,
+            SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup())
+    }
+
+    private fun onSignalRClientReset()
+    {
+        SignalRClientWorker.startDelayed(this)
     }
 
     private fun onOutgoingMessage(message: MessageEntity)
@@ -142,7 +163,7 @@ class MainActivity : ComponentActivity() {
         MessageSenderWorker.sendMessage(this, message)
     }
 
-    private fun onRouteChanged(route: String)
+    private fun onScreenChanged(route: String)
     {
         if(NavigationTracker.isChatScreenRoute(route))
         {

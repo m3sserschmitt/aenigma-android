@@ -110,8 +110,8 @@ fun DefaultContactsAppBar(
         actions = {
             IndeterminateCircularIndicator(
                 modifier = Modifier.size(18.dp),
-                visible = connectionStatus !is SignalRStatus.Authenticated &&
-                        connectionStatus !is SignalRStatus.Error.Aborted,
+                visible = connectionStatus greaterOrEqualThan connectionStatus
+                        && connectionStatus smallerThan SignalRStatus.Authenticated(),
                 text = stringResource(id = R.string.connecting),
                 fontSize = 12.sp
             )
@@ -131,7 +131,18 @@ fun DefaultContactsAppBar(
 private fun DefaultContactsAppBarPreview()
 {
     DefaultContactsAppBar(
-        connectionStatus = SignalRStatus.Connected(),
+        connectionStatus = SignalRStatus.Authenticated(),
+        onRetryConnection = {},
+        onSearchTriggered = {}
+    )
+}
+
+@Composable
+@Preview
+private fun DefaultConnectingContactsAppBarPreview()
+{
+    DefaultContactsAppBar(
+        connectionStatus = SignalRStatus.Connecting(),
         onRetryConnection = {},
         onSearchTriggered = {}
     )
