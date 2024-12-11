@@ -10,7 +10,7 @@ data class ContactEntity(
     @PrimaryKey val address: String,
     var name: String,
     var publicKey: String,
-    var guardHostname: String,
+    var guardHostname: String?,
     var guardAddress: String,
     var hasNewMessage: Boolean,
     var lastSynchronized: ZonedDateTime

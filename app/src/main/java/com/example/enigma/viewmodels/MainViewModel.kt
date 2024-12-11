@@ -8,6 +8,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.crypto.CryptoProvider
+import com.example.enigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
@@ -20,7 +21,6 @@ import com.example.enigma.models.ExportedContactData
 import com.example.enigma.models.SharedData
 import com.example.enigma.models.SharedDataCreate
 import com.example.enigma.ui.navigation.Screens
-import com.example.enigma.util.AddressHelper
 import com.example.enigma.util.QrCodeGenerator
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -158,8 +158,8 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun getContactEntityForSaving(): ContactEntity {
-        val contactAddress = AddressHelper.getHexAddressFromPublicKey(_scannedContactDetails.value.publicKey)
+    override fun getContactEntityForSaving(): ContactEntity? {
+        val contactAddress = _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return null
 
         return ContactEntity(
             contactAddress,

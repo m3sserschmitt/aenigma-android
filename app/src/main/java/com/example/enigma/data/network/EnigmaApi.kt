@@ -26,5 +26,5 @@ interface EnigmaApi {
     suspend fun createSharedData(@Body sharedDataCreate: SharedDataCreate): Response<CreatedSharedData?>
 
     @GET("Vertex")
-    suspend fun getVertex(@Query("Vertex") vertex: String): Response<Vertex?>
+    suspend fun getVertex(@Query("Address") address: String): Response<Vertex?>
 }

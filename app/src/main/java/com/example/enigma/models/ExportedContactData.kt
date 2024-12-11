@@ -3,7 +3,7 @@ package com.example.enigma.models
 import org.json.JSONObject
 
 class ExportedContactData (
-    val guardHostname: String,
+    val guardHostname: String?,
     val guardAddress: String,
     val publicKey: String) {
 

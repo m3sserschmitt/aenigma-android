@@ -6,7 +6,7 @@ data class ContactWithConversationPreview (
     val address: String,
     var name: String,
     val publicKey: String,
-    val guardHostname: String,
+    val guardHostname: String?,
     val guardAddress: String,
     val hasNewMessage: Boolean,
     val lastSynchronized: ZonedDateTime,

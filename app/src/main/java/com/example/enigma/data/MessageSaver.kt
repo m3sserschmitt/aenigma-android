@@ -23,7 +23,7 @@ class MessageSaver @Inject constructor(
     {
         return try {
             val parsedContent = Gson().fromJson(message.text, OnionDetails::class.java)
-            createContact(parsedContent)
+            createOrUpdateContact(parsedContent)
             MessageEntity(
                 message.chatId,
                 parsedContent.text,
@@ -60,18 +60,22 @@ class MessageSaver @Inject constructor(
         saveMessages(listOf(message))
     }
 
-    private suspend fun createContact(messageDetails: OnionDetails)
+    private suspend fun createOrUpdateContact(onionDetails: OnionDetails)
     {
-        val contact = ContactEntity(
-            messageDetails.address,
+        val contact = repository.local.getContact(onionDetails.address) ?: ContactEntity(
+            onionDetails.address,
             "unknown",
-            messageDetails.publicKey,
-            messageDetails.guardHostname,
-            messageDetails.guardAddress,
+            onionDetails.publicKey,
+            onionDetails.guardHostname,
+            onionDetails.guardAddress,
             false,
             ZonedDateTime.now()
         )
-        repository.local.insertContact(contact)
+        contact.guardAddress = onionDetails.guardAddress
+        contact.guardHostname = onionDetails.guardHostname
+        contact.lastSynchronized = ZonedDateTime.now()
+
+        repository.local.insertOrUpdateContact(contact)
     }
 
     private suspend fun saveMessages(messages: List<MessageEntity>)
