@@ -29,10 +29,6 @@ class SignalRClientWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        init {
-            System.loadLibrary("cryptography-wrapper")
-        }
-
         private const val ACTION_ARG = "Action"
         private const val UNIQUE_ONE_TIME_REQUEST = "SIGNALR_ONE_TIME_REQUEST"
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"

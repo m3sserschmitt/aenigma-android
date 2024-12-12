@@ -2,11 +2,9 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.crypto.CryptoProvider
 import com.example.enigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import com.example.enigma.crypto.SignatureService
@@ -35,7 +33,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val addressProvider: AddressProvider,
     private val signatureService: SignatureService,
     repository: Repository,
     application: Application,
@@ -187,11 +184,11 @@ class MainViewModel @Inject constructor(
         return flow {
             val guard = repository.local.getGuard()
 
-            if (guard != null && addressProvider.address != null) {
+            if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
                 _contactExportedData.value = ExportedContactData(
                     guard.hostname,
                     guard.address,
-                    addressProvider.publicKey!!
+                    signatureService.publicKey
                 )
 
                 emit(QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString()))
@@ -329,8 +326,7 @@ class MainViewModel @Inject constructor(
 
                 if(response.code() == 200 && body != null && body.data != null && body.publicKey != null)
                 {
-                    val decodedData = Base64.decode(body.data, Base64.DEFAULT) ?: throw Exception()
-                    val content = CryptoProvider.getDataFromSignature(decodedData, body.publicKey) ?: throw Exception()
+                    val content = CryptoProvider.getDataFromSignature(body.data, body.publicKey) ?: throw Exception()
                     val stringContent = String(content, Charsets.UTF_8)
                     _scannedContactDetails.value = Gson().fromJson(
                         stringContent,

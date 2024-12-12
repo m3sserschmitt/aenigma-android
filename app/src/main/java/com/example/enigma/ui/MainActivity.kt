@@ -29,10 +29,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    init {
-        System.loadLibrary("cryptography-wrapper")
-    }
-
     @Inject lateinit var navigationTracker: NavigationTracker
 
     @Inject lateinit var notificationService: NotificationService

@@ -13,10 +13,11 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.example.enigma.crypto.AddressExtensions.isValidAddress
-import com.example.enigma.crypto.AddressProvider
+import com.example.enigma.crypto.Base64Extensions.isValidBase64
 import com.example.enigma.crypto.CryptoProvider
 import com.example.enigma.crypto.PublicKeyExtensions.isValidPublicKey
 import com.example.enigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
+import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.MessageEntity
@@ -37,7 +38,7 @@ class MessageSenderWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val signalRClient: SignalRClient,
     private val repository: Repository,
-    private val addressProvider: AddressProvider,
+    private val signatureService: SignatureService,
     private val pathFinder: PathFinder
 ) : CoroutineWorker(context, params) {
 
@@ -83,7 +84,7 @@ class MessageSenderWorker @AssistedInject constructor(
         }
 
         val guard = repository.local.getGuard() ?: return null
-        val localAddress = addressProvider.address ?: return null
+        val localAddress = signatureService.address ?: return null
         val reversedPath = path.reversed()
         val addresses =
             arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
@@ -93,40 +94,49 @@ class MessageSenderWorker @AssistedInject constructor(
         val json = Gson()
         val messageDetails = OnionDetails(
             text,
-            addressProvider.address ?: "",
+            signatureService.address,
             guard.address,
             guard.hostname,
-            addressProvider.publicKey ?: "" // TODO: public key shout not be sent in every message
+            signatureService.publicKey ?: "" // TODO: public key shout not be sent in every message
         )
         val serializedData = json.toJson(messageDetails)
 
-        return CryptoProvider.buildOnion(
-            serializedData.toByteArray(),
-            keys,
-            addresses
-        )
+        return CryptoProvider.sealOnionEx(serializedData.toByteArray(), keys, addresses)
     }
 
-    private fun validateVertex(vertex: Vertex?, isLeaf: Boolean, publicKey: String? = null): Boolean {
-        // TODO: add signature verification
-        if(vertex == null)
-        {
+    private fun validateVertex(
+        vertex: Vertex?,
+        isLeaf: Boolean,
+        publicKey: String? = null
+    ): Boolean {
+        if (vertex == null) {
             return false
         }
         val key = publicKey ?: vertex.publicKey
-        val keyValid = isLeaf || key.isValidPublicKey()
-        val neighborsValid = (!isLeaf || vertex.neighborhood?.neighbors?.count() == 1)
-                && vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } ?: false
-        val vertexAddressValid = vertex.neighborhood?.address.isValidAddress()
-        val publicKeyAddressMatch = isLeaf || vertex.publicKey.publicKeyMatchAddress(vertex.neighborhood?.address)
-        return keyValid && neighborsValid && vertexAddressValid && publicKeyAddressMatch
+        if (!key.isValidPublicKey()) {
+            return false
+        }
+        if ((isLeaf && vertex.neighborhood?.neighbors?.count() != 1)
+            || vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true
+        ) {
+            return false
+        }
+        if (!vertex.neighborhood.address.isValidAddress()) {
+            return false
+        }
+        if (!isLeaf && !key.publicKeyMatchAddress(vertex.neighborhood.address)) {
+            return false
+        }
+        return vertex.signedData.isValidBase64() && CryptoProvider.verifyEx(
+            key!!,
+            vertex.signedData!!
+        )
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
         val threshold = ZonedDateTime.now().minusMinutes(MIN_CONTACT_SYNC_INTERVAL_MINUTES)
         val aboveThreshold = contactEntity.lastSynchronized.isBefore(threshold)
-        if(!aboveThreshold)
-        {
+        if (!aboveThreshold) {
             return true
         }
 
@@ -134,7 +144,12 @@ class MessageSenderWorker @AssistedInject constructor(
             val vertexResponse = repository.remote.getVertex(contactEntity.address)
             val vertex = vertexResponse.body()
 
-            if (vertexResponse.code() != 200 || !validateVertex(vertex, true, contactEntity.publicKey)) {
+            if (vertexResponse.code() != 200 || !validateVertex(
+                    vertex,
+                    true,
+                    contactEntity.publicKey
+                )
+            ) {
                 return false
             }
 

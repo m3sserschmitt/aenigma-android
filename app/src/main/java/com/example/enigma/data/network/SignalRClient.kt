@@ -3,7 +3,6 @@ package com.example.enigma.data.network
 import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.example.enigma.crypto.AddressProvider
 import com.example.enigma.crypto.SignatureService
 import com.example.enigma.data.MessageSaver
 import com.example.enigma.models.Neighborhood
@@ -31,8 +30,7 @@ import javax.inject.Singleton
 @Singleton
 class SignalRClient @Inject constructor(
     private val signatureService: SignatureService,
-    private val messageSaver: MessageSaver,
-    private val addressProvider: AddressProvider
+    private val messageSaver: MessageSaver
 ) {
     companion object {
         const val CLIENT_CONNECTION_RETRY_COUNT = 3
@@ -209,7 +207,7 @@ class SignalRClient @Inject constructor(
         try {
             updateStatus(SignalRStatus.Broadcasting())
             val neighborhood =
-                Neighborhood(addressProvider.address, null, listOf(_guardAddress))
+                Neighborhood(signatureService.address, null, listOf(_guardAddress))
             val serializedNeighborhood = GsonBuilder()
                 .setFieldNamingStrategy(CapitalizedFieldNamingStrategy())
                 .create()
