@@ -44,6 +44,7 @@ import java.time.ZonedDateTime
 fun ContactsScreen(
     navigateToChatScreen: (String) -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
+    navigateToAboutScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
     LaunchedEffect(key1 = true)
@@ -79,6 +80,7 @@ fun ContactsScreen(
             contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete)
         },
         navigateToAddContactScreen = navigateToAddContactScreen,
+        navigateToAboutScreen = navigateToAboutScreen,
         onContactRenamed = {
             contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
         },
@@ -109,6 +111,7 @@ fun ContactsScreen(
     onContactSaved: () -> Unit,
     onContactSaveDismissed: () -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
+    navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
@@ -279,7 +282,8 @@ fun ContactsScreen(
                       navigateToAddContactScreen(selectedItems.single().address)
                     }
                 },
-                onRetryConnection = onRetryConnection
+                onRetryConnection = onRetryConnection,
+                navigateToAboutScreen = navigateToAboutScreen
             )
         },
         content = { paddingValues ->
@@ -372,6 +376,7 @@ fun ContactsScreenPreview()
         navigateToAddContactScreen = {},
         onContactSaved = {},
         onContactSaveDismissed = {},
-        sharedDataRequest = DatabaseRequestState.Idle
+        sharedDataRequest = DatabaseRequestState.Idle,
+        navigateToAboutScreen = { }
     )
 }

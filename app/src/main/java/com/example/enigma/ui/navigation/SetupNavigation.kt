@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
+import com.example.enigma.ui.navigation.destinations.aboutComposable
 import com.example.enigma.ui.navigation.destinations.addContactComposable
 import com.example.enigma.ui.navigation.destinations.chatComposable
 import com.example.enigma.ui.navigation.destinations.contactsComposable
@@ -28,6 +29,7 @@ fun SetupNavigation(
             navigationTracker = navigationTracker,
             navigateToChatScreen = screen.chat,
             navigateToAddContactScreen = screen.addContact,
+            navigateToAboutScreen = screen.about,
             mainViewModel = mainViewModel
         )
         chatComposable(
@@ -39,6 +41,11 @@ fun SetupNavigation(
             navigationTracker = navigationTracker,
             navigateToChatsScreen = screen.contacts,
             mainViewModel = mainViewModel
+        )
+        aboutComposable(
+            navigationTracker = navigationTracker,
+            mainViewModel = mainViewModel,
+            navigateToContactsScreen = screen.contacts
         )
     }
 }

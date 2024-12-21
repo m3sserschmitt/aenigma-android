@@ -13,10 +13,12 @@ class Screens(navController: NavController) {
         const val CONTACTS_SCREEN_BASE_ROUTE = "contacts"
         const val CHAT_SCREEN_BASE_ROUTE = "chat"
         const val ADD_CONTACTS_BASE_ROUTE = "addContacts"
+        const val ABOUT_BASE_ROUTE = "about"
 
         const val CONTACTS_SCREEN_ROUTE_FULL = CONTACTS_SCREEN_BASE_ROUTE
         const val CHAT_SCREEN_ROUTE_FULL = "$CHAT_SCREEN_BASE_ROUTE/{$CHAT_SCREEN_CHAT_ID_ARG}"
         const val ADD_CONTACT_SCREEN_ROUTE_FULL = "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}"
+        const val ABOUT_SCREEN_ROUTE_FULL = ABOUT_BASE_ROUTE
 
         const val STARTING_SCREEN = CONTACTS_SCREEN_ROUTE_FULL
         const val NO_SCREEN = "none"
@@ -60,5 +62,9 @@ class Screens(navController: NavController) {
 
     val addContact: (String?) -> Unit = {
         contactId -> navController.navigate(getAddContactsScreenRoute(contactId))
+    }
+
+    val about: () -> Unit = {
+        navController.navigate(ABOUT_SCREEN_ROUTE_FULL)
     }
 }

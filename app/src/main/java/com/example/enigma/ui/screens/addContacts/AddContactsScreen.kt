@@ -17,11 +17,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
 import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.models.SharedData
 import com.example.enigma.ui.navigation.Screens
+import com.example.enigma.ui.screens.common.StandardAppBar
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.QrCodeGenerator
 import com.example.enigma.util.QrCodeScannerState
@@ -106,8 +108,9 @@ fun AddContactsScreen(
 ) {
     Scaffold (
         topBar = {
-            AddContactsAppBar(
-                navigateToContactsScreen = navigateToContactsScreen
+            StandardAppBar(
+                title = stringResource(R.string.add_contacts),
+                navigateBack = navigateToContactsScreen
             )
         },
         content = { paddingValues ->

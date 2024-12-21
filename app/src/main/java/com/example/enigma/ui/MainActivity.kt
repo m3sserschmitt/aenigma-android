@@ -169,8 +169,6 @@ class MainActivity : ComponentActivity() {
 
             disableNotifications(chatId)
             dismissNotifications(chatId)
-        } else if (NavigationTracker.isAddContactsScreenRoute(route)) {
-            enableNotifications()
         } else if (NavigationTracker.isContactsScreenRoute(route)) {
             disableNotifications()
         } else {

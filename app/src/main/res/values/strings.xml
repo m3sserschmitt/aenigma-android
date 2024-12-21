@@ -31,7 +31,7 @@
     <string name="new_contact_available">This contact is new in your list</string>
     <string name="provide_new_name">Please provide a new name for it</string>
     <string name="this_conversation_seems_empty">It looks like this conversation is empty</string>
-    <string name="more_contact_actions">More contact actions</string>
+    <string name="more_actions">More actions</string>
     <string name="clear_conversation">Clear conversation</string>
     <string name="rename">Rename</string>
     <string name="rename_contact">Rename Contact</string>
@@ -82,4 +82,15 @@
     <string name="message_selection">Message selection status</string>
     <string name="message_sent">Message sent status</string>
     <string name="please_wait">Please wait</string>
+    <string name="app_name_and_version">Aenigma\nVersion: 1.0.0~beta1</string>
+    <string name="copyright_notices">Developed and maintained by Romulus-Emanuel Ruja.\n© 2024 Romulus-Emanuel Ruja. All rights reserved.</string>
+    <string name="gpl_license">This app is licensed under the GNU General Public License, version 3 (GPLv3). You are free to redistribute and/or modify this app under the terms of the GPLv3. For details, visit:</string>
+    <string name="gnu_license_link">https://www.gnu.org/licenses/</string>
+    <string name="openssl_notice">This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit.</string>
+    <string name="openssl_link">https://openssl.org/</string>
+    <string name="eric_young_notice">This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)</string>
+    <string name="source_code_available_at">The source code for this app is available at:</string>
+    <string name="source_code_link">https://github.com/m3sserschmitt/aenigma/</string>
+    <string name="disclaimer">This app is provided "as is," without any warranty of any kind, express or implied, including but not limited to the warranties of merchantability or fitness for a particular purpose.</string>
+    <string name="about_app">About App</string>
 </resources>
