@@ -7,6 +7,7 @@
     <string name="save">Save</string>
     <string name="name">Name:</string>
     <string name="contact_name">Contact name</string>
+    <string name="link">Link</string>
     <string name="send">Send</string>
     <string name="unread_messages_from_this_contact">Unread messages from this contact</string>
     <string name="exit">Exit</string>
@@ -22,8 +23,8 @@
     <string name="qr_code_caption">Scan the code from other devices to connect</string>
     <string name="scan">Scan</string>
     <string name="code">Code</string>
-    <string name="qr_code_scanned_successfully">QR Code scanned successfully</string>
-    <string name="save_contact_message">Would you like to save the contact?</string>
+    <string name="contact_details_successfully_retrieved">Contact data successfully retrieved</string>
+    <string name="save_contact_message">Would you like to save it?</string>
     <string name="dismiss">Dismiss</string>
     <string name="confirm">Confirm</string>
     <string name="qr_code_not_available">Could not generate the QR code</string>
@@ -34,7 +35,9 @@
     <string name="clear_conversation">Clear conversation</string>
     <string name="rename">Rename</string>
     <string name="rename_contact">Rename Contact</string>
+    <string name="enter_link">Enter Link</string>
     <string name="enter_new_contact_name">Enter new contact name</string>
+    <string name="enter_link_to_get_contact">Enter link to get the contact</string>
     <string name="erase_entire_conversation">Erase entire conversation?</string>
     <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
     <string name="delete">Delete</string>
@@ -61,6 +64,7 @@
     <string name="camera_permission_required">Camera permission required</string>
     <string name="or">or</string>
     <string name="create_link">Create link</string>
+    <string name="use_link">Use link</string>
     <string name="saved">Saved</string>
     <string name="copy">Copy</string>
     <string name="error">Error</string>
@@ -77,4 +81,5 @@
     <string name="camera_permission_required_to_scan">Please provide Camera permission from Settings to scan QR Codes.</string>
     <string name="message_selection">Message selection status</string>
     <string name="message_sent">Message sent status</string>
+    <string name="please_wait">Please wait</string>
 </resources>

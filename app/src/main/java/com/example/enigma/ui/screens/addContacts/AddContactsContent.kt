@@ -2,20 +2,31 @@ package com.example.enigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.example.enigma.R
 import com.example.enigma.models.CreatedSharedData
+import com.example.enigma.models.SharedData
+import com.example.enigma.ui.screens.common.LoadingDialog
 import com.example.enigma.ui.screens.common.LoadingScreen
+import com.example.enigma.ui.screens.common.SaveNewContactDialog
+import com.example.enigma.ui.screens.common.UseLinkDialog
 import com.example.enigma.ui.themes.ApplicationComposeTheme
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.QrCodeGenerator
@@ -27,35 +38,92 @@ fun AddContactsContent(
     scannerState: QrCodeScannerState,
     qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
-    sharedData: DatabaseRequestState<CreatedSharedData>,
+    sharedDataCreate: DatabaseRequestState<CreatedSharedData>,
+    sharedDataGet: DatabaseRequestState<SharedData>,
     onQrCodeFound: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: () -> Unit,
     onSaveContactDismissed: () -> Unit,
     onCreateLinkClicked: () -> Unit,
+    onGetLink: (String) -> Unit,
     onSharedDataConfirm: () ->  Unit
 ) {
+    var link by remember { mutableStateOf("") }
+    var useLinkDialogVisible by remember { mutableStateOf(false) }
+    var createLinkDialogVisible by remember { mutableStateOf(false) }
+    var saveContactDialogVisible by remember { mutableStateOf(false) }
+    var useLinkLoadingDialogVisible by remember { mutableStateOf(false) }
+    var createLinkLoadingDialogVisible by remember { mutableStateOf(false) }
+
+    LoadingDialog(
+        visible = useLinkLoadingDialogVisible,
+        state = sharedDataGet,
+        onConfirmButtonClicked = {
+            saveContactDialogVisible = true
+            useLinkLoadingDialogVisible = false
+        }
+    )
+
+    LoadingDialog(
+        visible = createLinkLoadingDialogVisible,
+        state = sharedDataCreate,
+        onConfirmButtonClicked = {
+            createLinkDialogVisible = true
+            createLinkLoadingDialogVisible = false
+        }
+    )
+
     SaveNewContactDialog(
-        scannerState = scannerState,
+        visible = scannerState == QrCodeScannerState.SAVE
+                || (sharedDataGet is DatabaseRequestState.Success && saveContactDialogVisible),
         onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = onSaveContact,
-        onDismissClicked = onSaveContactDismissed,
+        onConfirmClicked = {
+            saveContactDialogVisible = false
+            onSaveContact()
+        },
+        onDismissClicked = {
+            saveContactDialogVisible = false
+            onSaveContactDismissed()
+        },
     )
 
     CreateLinkDialog(
-        sharedData = sharedData,
-        onConfirmButtonClick = onSharedDataConfirm
+        visible = createLinkDialogVisible,
+        sharedData = sharedDataCreate,
+        onConfirmButtonClick = {
+            onSharedDataConfirm()
+            createLinkDialogVisible = false
+        }
     )
 
-    when(scannerState)
-    {
+    UseLinkDialog(
+        visible = useLinkDialogVisible,
+        onTextChanged = { newLink ->
+            link = newLink
+            Patterns.WEB_URL.matcher(link).matches()
+        },
+        onConfirmClicked = {
+            onGetLink(link)
+            useLinkDialogVisible = false
+            useLinkLoadingDialogVisible = true
+        },
+        onDismissClicked = { useLinkDialogVisible = false }
+    )
+
+    when (scannerState) {
         QrCodeScannerState.SHARE_CODE,
         QrCodeScannerState.SAVE -> {
             DisplayQrCode(
                 modifier = modifier,
                 qrCode = qrCode,
                 qrCodeLabel = qrCodeLabel,
-                onCreateLinkClicked = onCreateLinkClicked
+                onCreateLinkClicked = {
+                    createLinkLoadingDialogVisible = true
+                    onCreateLinkClicked()
+                },
+                onUseLinkClicked = {
+                    useLinkDialogVisible = true
+                }
             )
         }
         QrCodeScannerState.SCAN_CODE -> {
@@ -71,23 +139,23 @@ fun DisplayQrCode(
     modifier: Modifier = Modifier,
     qrCodeLabel: String,
     qrCode: DatabaseRequestState<Bitmap>,
-    onCreateLinkClicked: () -> Unit
+    onCreateLinkClicked: () -> Unit,
+    onUseLinkClicked: () -> Unit
 ) {
     when(qrCode) {
         is DatabaseRequestState.Success -> {
             Column(
                 modifier = modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceAround
+                verticalArrangement = Arrangement.Center
             ) {
                 QrCode(
                     qrCodeLabel = qrCodeLabel,
                     qrCode = qrCode.data
                 )
-                Text(
-                    text = stringResource(
-                        id = R.string.or
-                    )
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.background,
+                    thickness = 36.dp
                 )
                 TextButton(
                     onClick = onCreateLinkClicked
@@ -95,6 +163,16 @@ fun DisplayQrCode(
                     Text(
                         text = stringResource(
                             id = R.string.create_link
+                        ),
+                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                    )
+                }
+                TextButton(
+                    onClick = onUseLinkClicked
+                ) {
+                    Text(
+                        text = stringResource(
+                            id = R.string.use_link
                         ),
                         fontSize = MaterialTheme.typography.bodyLarge.fontSize
                     )
@@ -124,8 +202,10 @@ fun AddContactsContentPreview()
                 onSaveContact = { },
                 onSaveContactDismissed = { },
                 onCreateLinkClicked = { },
-                sharedData = DatabaseRequestState.Idle,
-                onSharedDataConfirm = { }
+                sharedDataCreate = DatabaseRequestState.Idle,
+                onSharedDataConfirm = { },
+                onGetLink = { },
+                sharedDataGet = DatabaseRequestState.Idle
             )
         }
     }

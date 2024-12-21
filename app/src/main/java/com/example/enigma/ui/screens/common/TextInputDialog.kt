@@ -30,15 +30,16 @@ import com.example.enigma.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditContactDialog(
+fun TextInputDialog(
     title: String,
     body: String,
-    onContactNameChanged: (String) -> Boolean,
+    placeholderText: String,
+    onTextChanged: (String) -> Boolean,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
-    var isContactNameValidationError by remember { mutableStateOf(false) }
-    var contactName by remember { mutableStateOf("") }
+    var isValidationError by remember { mutableStateOf(false) }
+    var text by remember { mutableStateOf("") }
 
     BasicAlertDialog(
         onDismissRequest = {  },
@@ -48,12 +49,13 @@ fun EditContactDialog(
     ) {
         DialogContentTemplate(
             content = {
-                ContactNameInput(
-                    contactName = contactName,
-                    isError = isContactNameValidationError,
-                    onContactNameChanged = {
-                        newValue -> isContactNameValidationError = !onContactNameChanged(newValue)
-                        contactName = newValue
+                TextInput(
+                    text = text,
+                    placeholderText = placeholderText,
+                    isError = isValidationError,
+                    onTextChanged = {
+                        newText -> isValidationError = !onTextChanged(newText)
+                        text = newText
                     }
                 )
             },
@@ -61,16 +63,16 @@ fun EditContactDialog(
             body = body,
             dismissible = true,
             onPositiveButtonClicked = {
-                isContactNameValidationError = isContactNameValidationError || contactName.isEmpty()
-                if(!isContactNameValidationError)
+                isValidationError = isValidationError || text.isEmpty()
+                if(!isValidationError)
                 {
                     onConfirmClicked()
-                    contactName = ""
+                    text = ""
                 }
             },
             onNegativeButtonClicked =  {
                 onDismissClicked()
-                contactName = ""
+                text = ""
             }
         )
     }
@@ -83,6 +85,7 @@ fun DialogContentTemplate(
     body: String,
     content: @Composable () -> Unit,
     dismissible: Boolean = true,
+    positiveButtonVisible: Boolean = true,
     negativeButtonText: String = stringResource(id = R.string.dismiss),
     positiveButtonText: String = stringResource(id = R.string.confirm),
     onPositiveButtonClicked: () -> Unit,
@@ -102,13 +105,15 @@ fun DialogContentTemplate(
                 fontSize = MaterialTheme.typography.titleMedium.fontSize,
                 fontWeight = MaterialTheme.typography.titleMedium.fontWeight
             )
-            HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
-            Text(
-                modifier = Modifier.fillMaxWidth(),
-                text = body,
-                textAlign = TextAlign.Center,
-            )
-            HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
+            if(body.isNotEmpty()) {
+                HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
+                Text(
+                    modifier = Modifier.fillMaxWidth(),
+                    text = body,
+                    textAlign = TextAlign.Center,
+                )
+                HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
+            }
             content()
             Row(
                 modifier = Modifier
@@ -128,15 +133,17 @@ fun DialogContentTemplate(
                         )
                     }
                 }
-                Button(
-                    modifier = Modifier.padding(4.dp),
-                    onClick = {
-                        onPositiveButtonClicked()
+                if(positiveButtonVisible) {
+                    Button(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = {
+                            onPositiveButtonClicked()
+                        }
+                    ) {
+                        Text(
+                            text = positiveButtonText
+                        )
                     }
-                ) {
-                    Text(
-                        text = positiveButtonText
-                    )
                 }
             }
         }
@@ -144,40 +151,42 @@ fun DialogContentTemplate(
 }
 
 @Composable
-fun ContactNameInput(
-    contactName: String,
+fun TextInput(
+    text: String,
+    placeholderText: String,
     isError: Boolean,
-    onContactNameChanged: (String) -> Unit
+    onTextChanged: (String) -> Unit
 ) {
     OutlinedTextField(
         modifier = Modifier.fillMaxWidth(),
-        value = contactName,
+        value = text,
         isError = isError,
         onValueChange = {
-            newValue -> onContactNameChanged(newValue)
+            newValue -> onTextChanged(newValue)
         },
         label = {
             Text(
-                text = stringResource(id = R.string.contact_name)
+                text = placeholderText
             )
         },
-        maxLines = 1
+        singleLine = true
     )
 }
 
 @Composable
 @Preview
-fun SaveContactDialogPreview()
+fun TextInputDialogPreview()
 {
-    EditContactDialog(
+    TextInputDialog(
         title = stringResource(
-            id = R.string.qr_code_scanned_successfully
+            id = R.string.contact_details_successfully_retrieved
         ),
         body = stringResource(
             id = R.string.save_contact_message
         ),
-        onContactNameChanged = { true },
+        onTextChanged = { true },
         onConfirmClicked = { },
-        onDismissClicked = { }
+        onDismissClicked = { },
+        placeholderText = ""
     )
 }

@@ -13,14 +13,15 @@ fun RenameContactDialog(
     onDismiss: () -> Unit
 ) {
     if(visible) {
-        EditContactDialog(
-            onContactNameChanged = onNewContactNameChanged,
+        TextInputDialog(
+            onTextChanged = onNewContactNameChanged,
             title = stringResource(
                 id = R.string.rename_contact
             ),
             body = stringResource(
                 id = R.string.enter_new_contact_name
             ),
+            placeholderText = stringResource(id = R.string.contact_name),
             onConfirmClicked = onConfirmClicked,
             onDismissClicked = onDismiss,
         )

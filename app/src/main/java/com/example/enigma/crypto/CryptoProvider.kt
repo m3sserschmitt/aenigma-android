@@ -5,6 +5,7 @@ import com.example.enigma.crypto.AddressExtensions.isValidAddress
 import com.example.enigma.crypto.Base64Extensions.isValidBase64
 import com.example.enigma.crypto.PublicKeyExtensions.isValidPrivateKey
 import com.example.enigma.crypto.PublicKeyExtensions.isValidPublicKey
+import com.example.enigma.crypto.StringExtensions.oneLine
 
 class CryptoProvider {
     companion object {
@@ -114,12 +115,13 @@ class CryptoProvider {
 
         @JvmStatic
         fun getDataFromSignature(signedData: String, publicKey: String): ByteArray? {
-            if (!publicKey.isValidPublicKey() || !signedData.isValidBase64()) {
+            val data = signedData.oneLine()
+            if (!publicKey.isValidPublicKey() || !data.isValidBase64()) {
                 return null
             }
 
-            val decodedData = Base64.decode(signedData, Base64.DEFAULT) ?: return null
-            val digestSize = getPKeySize(publicKey) / 8
+            val decodedData = Base64.decode(data, Base64.DEFAULT) ?: return null
+            val digestSize = getPKeySize(publicKey)
 
             if (decodedData.size < digestSize + 1) {
                 return null

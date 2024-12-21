@@ -29,9 +29,11 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    @Inject lateinit var navigationTracker: NavigationTracker
+    @Inject
+    lateinit var navigationTracker: NavigationTracker
 
-    @Inject lateinit var notificationService: NotificationService
+    @Inject
+    lateinit var notificationService: NotificationService
 
     private lateinit var navController: NavHostController
 
@@ -55,13 +57,14 @@ class MainActivity : ComponentActivity() {
         startConnection()
         observeClientConnectivity()
         observeNavigation()
-        handleIntent()
+        handleAppLink()
     }
 
     override fun onResume() {
         super.onResume()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
-        SignalRClientWorker.start(this,
+        SignalRClientWorker.start(
+            this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
     }
@@ -76,146 +79,130 @@ class MainActivity : ComponentActivity() {
         schedulePeriodicSync()
     }
 
-    private fun schedulePeriodicSync()
-    {
+    private fun schedulePeriodicSync() {
         SignalRClientWorker.schedulePeriodicSync(this)
     }
 
-    private fun startConnection()
-    {
+    private fun startConnection() {
         val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
-            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast())
+            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
+        )
         WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
             .enqueue()
     }
 
-    private fun observeClientConnectivity()
-    {
+    private fun observeClientConnectivity() {
         mainViewModel.signalRClientStatus.observe(this, signalRStatusObserver)
     }
 
-    private fun observeOutgoingMessages()
-    {
+    private fun observeOutgoingMessages() {
         mainViewModel.outgoingMessages.observe(this, outgoingMessagesObserver)
     }
 
-    private fun observeNavigation()
-    {
+    private fun observeNavigation() {
         navigationTracker.currentRoute.observe(this, navigationObserver)
     }
 
     private val outgoingMessagesObserver = Observer<List<MessageEntity>> { messages ->
-        for (message in messages)
-        {
+        for (message in messages) {
             onOutgoingMessage(message)
         }
     }
 
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
-        when(clientStatus) {
-            is SignalRStatus.Reset -> { onSignalRClientReset() }
-            is SignalRStatus.Error.Disconnected -> { onClientDisconnected() }
-            is SignalRStatus.Error.ConnectionRefused -> { onClientConnectionRefused() }
-            is SignalRStatus.Error -> { onClientError() }
+        when (clientStatus) {
+            is SignalRStatus.Reset -> {
+                onSignalRClientReset()
+            }
+
+            is SignalRStatus.Error.Disconnected -> {
+                onClientDisconnected()
+            }
+
+            is SignalRStatus.Error.ConnectionRefused -> {
+                onClientConnectionRefused()
+            }
+
+            is SignalRStatus.Error -> {
+                onClientError()
+            }
         }
-        if(clientStatus greaterOrEqualThan SignalRStatus.Authenticated())
-        {
+        if (clientStatus greaterOrEqualThan SignalRStatus.Authenticated()) {
             onClientAuthenticated()
         }
     }
 
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
 
-    private fun onClientAuthenticated()
-    {
+    private fun onClientAuthenticated() {
         observeOutgoingMessages()
     }
 
-    private fun onClientConnectionRefused()
-    {
+    private fun onClientConnectionRefused() {
         SignalRClientWorker.startDelayed(this)
     }
 
-    private fun onClientDisconnected()
-    {
+    private fun onClientDisconnected() {
         SignalRClientWorker.startDelayed(this)
     }
 
-    private fun onClientError()
-    {
-        SignalRClientWorker.startDelayed(this,
-            SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup())
+    private fun onClientError() {
+        SignalRClientWorker.startDelayed(
+            this,
+            SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
+        )
     }
 
-    private fun onSignalRClientReset()
-    {
+    private fun onSignalRClientReset() {
         SignalRClientWorker.startDelayed(this)
     }
 
-    private fun onOutgoingMessage(message: MessageEntity)
-    {
+    private fun onOutgoingMessage(message: MessageEntity) {
         MessageSenderWorker.sendMessage(this, message)
     }
 
-    private fun onScreenChanged(route: String)
-    {
-        if(NavigationTracker.isChatScreenRoute(route))
-        {
+    private fun onScreenChanged(route: String) {
+        if (NavigationTracker.isChatScreenRoute(route)) {
             val chatId = Screens.getChatIdFromChatRoute(route) ?: return
 
             disableNotifications(chatId)
             dismissNotifications(chatId)
-        }
-        else if (NavigationTracker.isAddContactsScreenRoute(route))
-        {
+        } else if (NavigationTracker.isAddContactsScreenRoute(route)) {
             enableNotifications()
-        }
-        else if (NavigationTracker.isContactsScreenRoute(route))
-        {
+        } else if (NavigationTracker.isContactsScreenRoute(route)) {
             disableNotifications()
-        }
-        else {
+        } else {
             enableNotifications()
         }
     }
 
-    private fun enableNotifications()
-    {
+    private fun enableNotifications() {
         notificationService.enableNotifications()
     }
 
-    private fun disableNotifications()
-    {
+    private fun disableNotifications() {
         notificationService.disableNotifications()
     }
 
-    private fun disableNotifications(address: String)
-    {
+    private fun disableNotifications(address: String) {
         notificationService.disableNotifications(address)
     }
 
-    private fun dismissNotifications(address: String)
-    {
+    private fun dismissNotifications(address: String) {
         notificationService.dismissNotifications(address)
     }
 
-    private fun handleIntent()
-    {
-        val intent = intent
-        val action = intent.action
-        val data: Uri? = intent.data
-
-        if (action == Intent.ACTION_VIEW && data != null) {
-            val path = data.path
-            val tag = data.getQueryParameter("Tag") ?: data.getQueryParameter("tag")
-
-            if (path != null) {
-                if(path.lowercase() == "/share" && tag != null) {
-                    mainViewModel.openContactSharedData(tag)
-                }
-            }
+    private fun handleAppLink() {
+        val appLinkIntent = intent
+        val appLinkAction = appLinkIntent.action ?: return
+        val appLinkData = appLinkIntent.data ?: return
+        val path = appLinkData.path ?: return
+        if (appLinkAction != Intent.ACTION_VIEW || path.lowercase() != "/share") {
+            return
         }
+
+        mainViewModel.openContactSharedData(appLinkData.toString())
     }
 }

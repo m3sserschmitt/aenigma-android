@@ -2,6 +2,7 @@ package com.example.enigma.crypto
 
 import android.util.Base64
 import com.example.enigma.crypto.Base64Extensions.isValidBase64
+import com.example.enigma.crypto.StringExtensions.oneLine
 import java.security.MessageDigest
 import java.util.regex.Pattern
 
@@ -17,13 +18,10 @@ object PublicKeyExtensions {
                 return null
             }
 
-            val matcher = regexProvider.invoke().matcher(this)
+            val matcher = regexProvider.invoke().matcher(this.trim())
 
             if (matcher.find()) {
-                matcher.group(1)
-                    ?.replace("\n", "")
-                    ?.replace("\r", "")
-                    ?.replace(" ", "")
+                matcher.group(1).oneLine()
             } else {
                 null
             }

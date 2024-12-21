@@ -103,7 +103,7 @@ fun CreateLinkDialog(
 
                                         Text(
                                             text = link,
-                                            maxLines = 2,
+                                            maxLines = 5,
                                             overflow = TextOverflow.Ellipsis,
                                             textAlign = TextAlign.Center
                                         )
@@ -201,6 +201,21 @@ fun CreateLinkDialog(
             properties = DialogProperties(
                 dismissOnClickOutside = false
             )
+        )
+    }
+}
+
+@Composable
+fun CreateLinkDialog(
+    visible: Boolean,
+    sharedData: DatabaseRequestState<CreatedSharedData>,
+    onConfirmButtonClick: () -> Unit
+) {
+    if(visible)
+    {
+        CreateLinkDialog(
+            sharedData = sharedData,
+            onConfirmButtonClick = onConfirmButtonClick
         )
     }
 }

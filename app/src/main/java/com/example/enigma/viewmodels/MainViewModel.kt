@@ -2,6 +2,7 @@ package com.example.enigma.viewmodels
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import com.example.enigma.data.Repository
 import com.example.enigma.data.database.ContactEntity
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.database.MessageEntity
+import com.example.enigma.data.network.EnigmaApi
 import com.example.enigma.data.network.SignalRClient
 import com.example.enigma.models.CreatedSharedData
 import com.example.enigma.util.DatabaseRequestState
@@ -28,7 +30,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import retrofit2.Retrofit
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
+import retrofit2.converter.gson.GsonConverterFactory
+import java.net.URL
 import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -297,7 +305,7 @@ class MainViewModel @Inject constructor(
                 val signature = signatureService.sign(_contactExportedData.value.toString().toByteArray())
 
                 if (signature != null) {
-                    val sharedDataCreate = SharedDataCreate(signature.first, signature.second)
+                    val sharedDataCreate = SharedDataCreate(signature.first, signature.second, 3)
                     val response = repository.remote.createSharedData(sharedDataCreate)
                     val body = response.body()
 
@@ -316,15 +324,17 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun openContactSharedData(tag: String)
+    fun openContactSharedData(url: String)
     {
         _sharedDataRequestResult.value = DatabaseRequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val response = repository.remote.getSharedData(tag)
-                val body = response.body()
+                val uri = Uri.parse(url)
+                val tag = uri.getQueryParameter("Tag") ?: uri.getQueryParameter("tag") ?: throw Exception()
+                val response = initApi(url)?.getSharedData(tag) ?: throw Exception()
+                val body = response.body() ?: throw Exception()
 
-                if(response.code() == 200 && body != null && body.data != null && body.publicKey != null)
+                if(response.code() == 200 && body.data != null && body.publicKey != null)
                 {
                     val content = CryptoProvider.getDataFromSignature(body.data, body.publicKey) ?: throw Exception()
                     val stringContent = String(content, Charsets.UTF_8)
@@ -341,6 +351,26 @@ class MainViewModel @Inject constructor(
                     Exception("Could not process shared data. Invalid content or link.")
                 )
             }
+        }
+    }
+
+    private fun initApi(url: String) : EnigmaApi? {
+        return try {
+            val parsedUrl = URL(url)
+            Retrofit.Builder()
+                .baseUrl("${parsedUrl.protocol}://${parsedUrl.host}")
+                .client(
+                    OkHttpClient.Builder()
+                        .readTimeout(10, TimeUnit.SECONDS)
+                        .connectTimeout(10, TimeUnit.SECONDS)
+                        .writeTimeout(10, TimeUnit.SECONDS)
+                        .build()
+                )
+                .addConverterFactory(GsonConverterFactory.create())
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .build().create(EnigmaApi::class.java)
+        } catch (_: Exception) {
+            null
         }
     }
 

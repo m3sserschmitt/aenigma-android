@@ -1,28 +1,27 @@
-package com.example.enigma.ui.screens.addContacts
+package com.example.enigma.ui.screens.common
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.enigma.R
-import com.example.enigma.ui.screens.common.EditContactDialog
-import com.example.enigma.util.QrCodeScannerState
 
 @Composable
 fun SaveNewContactDialog(
-    scannerState: QrCodeScannerState,
+    visible: Boolean,
     onContactNameChanged: (String) -> Boolean,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
-    if(scannerState == QrCodeScannerState.SAVE) {
-        EditContactDialog(
-            onContactNameChanged = onContactNameChanged,
+    if(visible) {
+        TextInputDialog(
+            onTextChanged = onContactNameChanged,
             title = stringResource(
-                id = R.string.qr_code_scanned_successfully
+                id = R.string.contact_details_successfully_retrieved
             ),
             body = stringResource(
                 id = R.string.save_contact_message
             ),
+            placeholderText = stringResource(id = R.string.contact_name),
             onConfirmClicked = onConfirmClicked,
             onDismissClicked = onDismissClicked
         )
@@ -34,7 +33,7 @@ fun SaveNewContactDialog(
 fun SaveNewContactDialogPreview()
 {
     SaveNewContactDialog(
-        scannerState = QrCodeScannerState.SAVE,
+        visible = true,
         onContactNameChanged = { true },
         onConfirmClicked = { },
         onDismissClicked = { },

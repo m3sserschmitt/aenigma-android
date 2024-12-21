@@ -28,10 +28,12 @@ import com.example.enigma.R
 import com.example.enigma.data.database.ContactWithConversationPreview
 import com.example.enigma.data.network.SignalRStatus
 import com.example.enigma.models.SharedData
+import com.example.enigma.ui.screens.common.SaveNewContactDialog
 import com.example.enigma.ui.screens.common.ConnectionStatusSnackBar
 import com.example.enigma.ui.screens.common.ExitSelectionMode
 import com.example.enigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import com.example.enigma.ui.screens.common.CheckNotificationsPermission
+import com.example.enigma.ui.screens.common.LoadingDialog
 import com.example.enigma.ui.screens.common.RenameContactDialog
 import com.example.enigma.util.DatabaseRequestState
 import com.example.enigma.util.openApplicationDetails
@@ -112,6 +114,8 @@ fun ContactsScreen(
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
+    var getContactDataLoadingDialogVisible by remember { mutableStateOf(true) }
+    var saveContactDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<ContactWithConversationPreview>() }
@@ -187,11 +191,26 @@ fun ContactsScreen(
         }
     )
 
+    LoadingDialog(
+        visible = getContactDataLoadingDialogVisible,
+        state = sharedDataRequest,
+        onConfirmButtonClicked = {
+            saveContactDialogVisible = true
+            getContactDataLoadingDialogVisible = false
+        }
+    )
+
     SaveNewContactDialog(
-        visible = sharedDataRequest is DatabaseRequestState.Success,
+        visible = sharedDataRequest is DatabaseRequestState.Success && saveContactDialogVisible,
         onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = onContactSaved,
-        onDismissClicked = onContactSaveDismissed
+        onConfirmClicked = {
+            onContactSaved()
+            saveContactDialogVisible = false
+        },
+        onDismissClicked = {
+            onContactSaveDismissed()
+            saveContactDialogVisible = false
+        }
     )
 
     BackHandler(

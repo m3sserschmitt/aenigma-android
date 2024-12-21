@@ -24,7 +24,7 @@ class Constants {
 
         const val APP_DOMAIN = "aenigma.ro"
 
-        const val SERVER_URL = "http://$APP_DOMAIN"
+        const val SERVER_URL = "https://$APP_DOMAIN"
 
         // TODO: Keys for testing. To be removed!!
         const val PUBLIC_KEY =
