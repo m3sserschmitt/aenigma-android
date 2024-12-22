@@ -115,12 +115,11 @@ class CryptoProvider {
 
         @JvmStatic
         fun getDataFromSignature(signedData: String, publicKey: String): ByteArray? {
-            val data = signedData.oneLine()
-            if (!publicKey.isValidPublicKey() || !data.isValidBase64()) {
+            if (!publicKey.isValidPublicKey() || !signedData.isValidBase64()) {
                 return null
             }
 
-            val decodedData = Base64.decode(data, Base64.DEFAULT) ?: return null
+            val decodedData = Base64.decode(signedData, Base64.DEFAULT) ?: return null
             val digestSize = getPKeySize(publicKey)
 
             if (decodedData.size < digestSize + 1) {

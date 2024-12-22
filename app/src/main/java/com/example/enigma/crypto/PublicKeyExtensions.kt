@@ -18,10 +18,10 @@ object PublicKeyExtensions {
                 return null
             }
 
-            val matcher = regexProvider.invoke().matcher(this.trim())
+            val matcher = regexProvider.invoke().matcher(this)
 
             if (matcher.find()) {
-                matcher.group(1).oneLine()
+                matcher.group(1)
             } else {
                 null
             }

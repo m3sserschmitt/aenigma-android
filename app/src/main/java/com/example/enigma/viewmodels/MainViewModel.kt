@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.enigma.MyApplication
+import com.example.enigma.R
 import com.example.enigma.crypto.CryptoProvider
 import com.example.enigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import com.example.enigma.crypto.SignatureService
@@ -53,10 +55,11 @@ class MainViewModel @Inject constructor(
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
     private val _allContacts =
-        MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(DatabaseRequestState.Idle)
+        MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(
+            DatabaseRequestState.Idle
+        )
 
-    private val _qrCode
-            = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
+    private val _qrCode = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
 
     private val _qrCodeLabel = MutableStateFlow("")
 
@@ -64,13 +67,14 @@ class MainViewModel @Inject constructor(
 
     private val _contactExportedData = MutableStateFlow(ExportedContactData("", "", ""))
 
-    private val _sharedDataCreateResult
-        = MutableStateFlow<DatabaseRequestState<CreatedSharedData>>(DatabaseRequestState.Idle)
+    private val _sharedDataCreateResult =
+        MutableStateFlow<DatabaseRequestState<CreatedSharedData>>(DatabaseRequestState.Idle)
 
-    private val _sharedDataRequestResult
-        = MutableStateFlow<DatabaseRequestState<SharedData>>(DatabaseRequestState.Idle)
+    private val _sharedDataRequestResult =
+        MutableStateFlow<DatabaseRequestState<SharedData>>(DatabaseRequestState.Idle)
 
-    val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> = _allContacts
+    val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> =
+        _allContacts
 
     val qrCode: StateFlow<DatabaseRequestState<Bitmap>> = _qrCode
 
@@ -78,93 +82,87 @@ class MainViewModel @Inject constructor(
 
     val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
 
-    val sharedDataCreateResult: StateFlow<DatabaseRequestState<CreatedSharedData>> = _sharedDataCreateResult
+    val sharedDataCreateResult: StateFlow<DatabaseRequestState<CreatedSharedData>> =
+        _sharedDataCreateResult
 
     val sharedDataRequest: StateFlow<DatabaseRequestState<SharedData>> = _sharedDataRequestResult
 
-    val outgoingMessages: LiveData<List<MessageEntity>> get() = repository.local.getOutgoingMessages().asLiveData()
+    val outgoingMessages: LiveData<List<MessageEntity>>
+        get() = repository.local.getOutgoingMessages().asLiveData()
 
-    fun loadContacts()
-    {
-        if(_allContacts.value is DatabaseRequestState.Success
-            || _allContacts.value is DatabaseRequestState.Loading) return
+    fun loadContacts() {
+        if (_allContacts.value is DatabaseRequestState.Success
+            || _allContacts.value is DatabaseRequestState.Loading
+        ) return
 
         _allContacts.value = DatabaseRequestState.Loading
         collectContacts()
         collectSearches()
     }
 
-    private fun collectContacts()
-    {
+    private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getContactsWithConversationPreviewFlow().collect { contacts ->
                     val query = _contactsSearchQuery.value
-                    val result = if(query.isNotBlank())
+                    val result = if (query.isNotBlank())
                         contacts.filter { contact -> contact.name.contains(query) }
                     else
                         contacts
 
                     _allContacts.value = DatabaseRequestState.Success(result)
                 }
-            }
-            catch (ex: Exception)
-            {
+            } catch (ex: Exception) {
                 _allContacts.value = DatabaseRequestState.Error(ex)
             }
         }
     }
 
-    private fun collectSearches()
-    {
+    private fun collectSearches() {
         viewModelScope.launch(defaultDispatcher) {
             _contactsSearchQuery.collect { query ->
                 _allContacts.value = DatabaseRequestState.Loading
                 try {
-                    val searchResult = if(query.isBlank())
+                    val searchResult = if (query.isBlank())
                         repository.local.getContactsWithConversationPreview()
                     else
-                        repository.local.searchContacts(query).map {
-                            item -> item.toContactWithPreview()
+                        repository.local.searchContacts(query).map { item ->
+                            item.toContactWithPreview()
                         }
                     _allContacts.value = DatabaseRequestState.Success(searchResult)
-                }
-                catch (ex: Exception)
-                {
+                } catch (ex: Exception) {
                     _allContacts.value = DatabaseRequestState.Error(ex)
                 }
             }
         }
     }
 
-    fun searchContacts(searchQuery: String)
-    {
+    fun searchContacts(searchQuery: String) {
         _contactsSearchQuery.update { searchQuery }
     }
 
-    fun generateCode(profileId: String)
-    {
-        if(_qrCode.value is DatabaseRequestState.Loading) return
+    fun generateCode(profileId: String) {
+        if (_qrCode.value is DatabaseRequestState.Loading) return
         _qrCode.value = DatabaseRequestState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
-               generateQrCodeBitmap(profileId).collect {
-                   qrCode -> if(qrCode != null)
-                       _qrCode.value = DatabaseRequestState.Success(qrCode)
-                   else
-                       _qrCode.value = DatabaseRequestState.Error(
-                           Exception("Failed to generate contact QR Code")
-                       )
-               }
-            } catch (ex: Exception)
-            {
+                generateQrCodeBitmap(profileId).collect { qrCode ->
+                    if (qrCode != null)
+                        _qrCode.value = DatabaseRequestState.Success(qrCode)
+                    else
+                        _qrCode.value = DatabaseRequestState.Error(
+                            Exception("Failed to generate contact QR Code")
+                        )
+                }
+            } catch (ex: Exception) {
                 _qrCode.value = DatabaseRequestState.Error(ex)
             }
         }
     }
 
     override fun getContactEntityForSaving(): ContactEntity? {
-        val contactAddress = _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return null
+        val contactAddress =
+            _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return null
 
         return ContactEntity(
             contactAddress,
@@ -187,8 +185,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun getMyProfileBitmap(): Flow<Bitmap?>
-    {
+    private fun getMyProfileBitmap(): Flow<Bitmap?> {
         return flow {
             val guard = repository.local.getGuard()
 
@@ -199,61 +196,50 @@ class MainViewModel @Inject constructor(
                     signatureService.publicKey
                 )
 
-                emit(QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString()))
+                emit(
+                    QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString())
+                )
             } else {
                 emit(null)
             }
         }
     }
 
-    private fun getProfileBitmap(profileId: String): Flow<Bitmap?>
-    {
+    private fun getProfileBitmap(profileId: String): Flow<Bitmap?> {
         return flow {
             val contact = repository.local.getContact(profileId)
 
-            if(contact != null)
-            {
+            if (contact != null) {
                 _contactExportedData.value = ExportedContactData(
                     contact.guardHostname,
                     contact.guardAddress,
                     contact.publicKey
                 )
 
-                emit(QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString()))
-            }
-            else {
+                emit(
+                    QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString())
+                )
+            } else {
                 emit(null)
             }
         }
     }
 
-    private fun getQrCodeLabel(address: String): String
-    {
-        return if (address == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE)
-        {
-            "Sharing @My code"
-        }
-        else try {
-            val contact = (allContacts.value as DatabaseRequestState.Success).data.find { item -> item.address == address }
-            if(contact != null)
-            {
-                "Sharing @${contact.name}"
-            }
-            else
-            {
-                ""
-            }
-        }
-        catch (_: Exception)
-        {
+    private fun getQrCodeLabel(address: String): String {
+        return if (address == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE) {
+            getApplication<MyApplication>().getString(R.string.my_code)
+        } else try {
+            val contact =
+                (allContacts.value as DatabaseRequestState.Success).data.find { item -> item.address == address }
+            contact?.name ?: ""
+        } catch (_: Exception) {
             ""
         }
     }
 
-    private fun generateQrCodeBitmap(profileId: String): Flow<Bitmap?>
-    {
+    private fun generateQrCodeBitmap(profileId: String): Flow<Bitmap?> {
         _qrCodeLabel.value = getQrCodeLabel(profileId)
-        return when(profileId) {
+        return when (profileId) {
             Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE -> {
                 getMyProfileBitmap()
             }
@@ -263,15 +249,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun deleteContacts(contacts: List<ContactWithConversationPreview>)
-    {
+    fun deleteContacts(contacts: List<ContactWithConversationPreview>) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.removeContacts(contacts.map { contact -> contact.toContact() })
         }
     }
 
-    fun renameContact(contact: ContactWithConversationPreview)
-    {
+    fun renameContact(contact: ContactWithConversationPreview) {
         viewModelScope.launch(ioDispatcher) {
             val contactToUpdate = contact.toContact()
             contactToUpdate.name = newContactName.value
@@ -279,17 +263,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun saveNotificationsPreference(granted: Boolean)
-    {
+    fun saveNotificationsPreference(granted: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.saveNotificationsAllowed(granted)
         }
     }
 
-    fun setScannedContactDetails(scannedDetails: String): Boolean
-    {
+    fun setScannedContactDetails(scannedDetails: String): Boolean {
         return try {
-            _scannedContactDetails.value = Gson().fromJson(scannedDetails, ExportedContactData::class.java)
+            _scannedContactDetails.value =
+                Gson().fromJson(scannedDetails, ExportedContactData::class.java)
             true
         } catch (_: Exception) {
             resetScannedContactDetails()
@@ -297,12 +280,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun createContactShareLink()
-    {
+    fun createContactShareLink() {
         _sharedDataCreateResult.value = DatabaseRequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val signature = signatureService.sign(_contactExportedData.value.toString().toByteArray())
+                val signature =
+                    signatureService.sign(_contactExportedData.value.toString().toByteArray())
 
                 if (signature != null) {
                     val sharedDataCreate = SharedDataCreate(signature.first, signature.second, 3)
@@ -311,12 +294,9 @@ class MainViewModel @Inject constructor(
 
                     if (response.code() == 200 && body != null) {
                         _sharedDataCreateResult.value = DatabaseRequestState.Success(body)
-                    }
-                    else throw Exception()
-                }
-                else throw Exception()
-            }
-            catch (_: Exception) {
+                    } else throw Exception()
+                } else throw Exception()
+            } catch (_: Exception) {
                 _sharedDataCreateResult.value = DatabaseRequestState.Error(
                     Exception("Something went wrong while trying to create a link.")
                 )
@@ -324,19 +304,19 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun openContactSharedData(url: String)
-    {
+    fun openContactSharedData(url: String) {
         _sharedDataRequestResult.value = DatabaseRequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
                 val uri = Uri.parse(url)
-                val tag = uri.getQueryParameter("Tag") ?: uri.getQueryParameter("tag") ?: throw Exception()
+                val tag = uri.getQueryParameter("Tag") ?: uri.getQueryParameter("tag")
+                ?: throw Exception()
                 val response = initApi(url)?.getSharedData(tag) ?: throw Exception()
                 val body = response.body() ?: throw Exception()
 
-                if(response.code() == 200 && body.data != null && body.publicKey != null)
-                {
-                    val content = CryptoProvider.getDataFromSignature(body.data, body.publicKey) ?: throw Exception()
+                if (response.code() == 200 && body.data != null && body.publicKey != null) {
+                    val content = CryptoProvider.getDataFromSignature(body.data, body.publicKey)
+                        ?: throw Exception()
                     val stringContent = String(content, Charsets.UTF_8)
                     _scannedContactDetails.value = Gson().fromJson(
                         stringContent,
@@ -344,9 +324,7 @@ class MainViewModel @Inject constructor(
                     )
                     _sharedDataRequestResult.value = DatabaseRequestState.Success(body)
                 } else throw Exception()
-            }
-            catch (ex: Exception)
-            {
+            } catch (ex: Exception) {
                 _sharedDataRequestResult.value = DatabaseRequestState.Error(
                     Exception("Could not process shared data. Invalid content or link.")
                 )
@@ -354,7 +332,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun initApi(url: String) : EnigmaApi? {
+    private fun initApi(url: String): EnigmaApi? {
         return try {
             val parsedUrl = URL(url)
             Retrofit.Builder()
@@ -374,36 +352,30 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun resetSearchQuery()
-    {
+    private fun resetSearchQuery() {
         searchContacts("")
     }
 
-    private fun resetSharedDataCreateResult()
-    {
+    private fun resetSharedDataCreateResult() {
         _sharedDataCreateResult.value = DatabaseRequestState.Idle
     }
 
-    private fun resetSharedDataRequestResult()
-    {
+    private fun resetSharedDataRequestResult() {
         _sharedDataRequestResult.value = DatabaseRequestState.Idle
     }
 
-    private fun resetScannedContactDetails()
-    {
+    private fun resetScannedContactDetails() {
         _scannedContactDetails.value = ExportedContactData("", "", "")
     }
 
-    override fun resetContactChanges()
-    {
+    override fun resetContactChanges() {
         resetNewContactName()
         resetScannedContactDetails()
         resetSharedDataRequestResult()
         resetSharedDataCreateResult()
     }
 
-    override fun init()
-    {
+    override fun init() {
         resetNewContactName()
         resetSearchQuery()
     }

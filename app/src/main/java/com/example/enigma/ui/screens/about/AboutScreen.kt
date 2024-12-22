@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.enigma.BuildConfig
 import com.example.enigma.R
 import com.example.enigma.ui.screens.common.StandardAppBar
 
@@ -47,7 +48,9 @@ fun AboutScreen(
                 .verticalScroll(scrollState)
         ) {
             Text(
-                text = stringResource(R.string.app_name_and_version),
+                text = stringResource(
+                    id = R.string.app_name_and_version
+                ).format(BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(bottom = 16.dp)
             )

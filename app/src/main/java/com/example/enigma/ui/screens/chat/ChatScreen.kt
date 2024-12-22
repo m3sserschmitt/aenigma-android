@@ -171,7 +171,7 @@ fun ChatScreen(
     )
 
     ConnectionStatusSnackBar(
-        message = stringResource(id = R.string.conversation_read_only),
+        message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
         connectionStatus = connectionStatus,
         targetStatus = SignalRStatus.Error.Aborted::class.java,

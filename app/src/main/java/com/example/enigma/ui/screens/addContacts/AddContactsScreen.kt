@@ -65,7 +65,7 @@ fun AddContactsScreen(
         onSaveContact = {
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveContactChanges()
-            Toast.makeText(context, "Saved!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
             navigateToContactsScreen()
         },
         onSaveContactDismissed = {
