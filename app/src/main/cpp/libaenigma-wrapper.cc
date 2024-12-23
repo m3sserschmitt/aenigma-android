@@ -94,7 +94,7 @@ static CryptoContext *createSignatureVerificationContext(JNIEnv *env, jstring ke
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_initDecryption(JNIEnv *env,
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initDecryption(JNIEnv *env,
                                                                             jobject thiz,
                                                                             jstring privateKey,
                                                                             jstring passphrase) {
@@ -106,7 +106,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_initDecryption(JNIE
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_initSignature(JNIEnv *env,
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initSignature(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jstring privateKey,
                                                                            jstring passphrase) {
@@ -118,7 +118,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_initSignature(JNIEn
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_encrypt(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_encrypt(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -150,7 +150,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_encrypt(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_decrypt(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_decrypt(
         JNIEnv *env,
         jobject thiz,
         jbyteArray ciphertext) {
@@ -175,7 +175,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_decrypt(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sign(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sign(
         JNIEnv *env,
         jobject thiz,
         jbyteArray plaintext) {
@@ -200,7 +200,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sign(
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_verify(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -224,7 +224,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_verify(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_unsealOnion(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_unsealOnion(
         JNIEnv *env, jobject thiz,
         jbyteArray onion) {
 
@@ -248,7 +248,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_unsealOnion(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sealOnion(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sealOnion(
         JNIEnv *env,
         jobject thiz,
         jbyteArray plaintext,
@@ -291,7 +291,7 @@ Java_com_example_enigma_crypto_CryptoProvider_00024Companion_sealOnion(
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_com_example_enigma_crypto_CryptoProvider_00024Companion_getPKeySize(
+Java_ro_aenigma_crypto_CryptoProvider_00024Companion_getPKeySize(
         JNIEnv *env,
         jobject thiz,
         jstring publicKey) {
