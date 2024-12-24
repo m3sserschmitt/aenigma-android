@@ -16,6 +16,7 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,36 +42,39 @@ fun CreateLinkDialog(
     sharedData: DatabaseRequestState<CreatedSharedData>,
     onConfirmButtonClick: () -> Unit
 ) {
-    if(sharedData !is DatabaseRequestState.Idle) {
-        val title = when (sharedData)
-        {
+    if (sharedData !is DatabaseRequestState.Idle) {
+        val title = when (sharedData) {
             is DatabaseRequestState.Success -> stringResource(
                 id = R.string.link_successfully_created
             )
+
             is DatabaseRequestState.Loading -> stringResource(
                 id = R.string.loading
             )
+
             is DatabaseRequestState.Error -> stringResource(
                 id = R.string.failure
             )
+
             else -> ""
         }
-        val body = when(sharedData)
-        {
+        val body = when (sharedData) {
             is DatabaseRequestState.Success -> stringResource(
                 id = R.string.copy_link_or_share_to_other_apps
             )
+
             is DatabaseRequestState.Loading -> ""
             is DatabaseRequestState.Error -> stringResource(
                 id = R.string.link_could_not_be_created
             )
+
             else -> ""
         }
 
-        val link = if(sharedData is DatabaseRequestState.Success)
-            sharedData.data.resourceUrl ?: "Link not available"
+        val link = if (sharedData is DatabaseRequestState.Success)
+            sharedData.data.resourceUrl ?: stringResource(id = R.string.link_not_available)
         else
-            "Link not available"
+            stringResource(id = R.string.link_not_available)
         val context = LocalContext.current
 
         BasicAlertDialog(
@@ -83,21 +87,22 @@ fun CreateLinkDialog(
                         Box(
                             modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
-                        ){
-                            when(sharedData)
-                            {
+                        ) {
+                            when (sharedData) {
                                 is DatabaseRequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         val validUntil = PrettyDateFormatter.prettyTimeFormat(
                                             sharedData.data.validUntil
                                         )
-                                        if(validUntil != null)
-                                        {
+                                        if (validUntil != null) {
                                             Text(
                                                 text = stringResource(
-                                                    id = R.string.link_valid_for)
+                                                    id = R.string.link_valid_for
+                                                )
                                                     .format(validUntil),
-                                                textAlign = TextAlign.Center
+                                                textAlign = TextAlign.Center,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onBackground
                                             )
                                         }
 
@@ -105,7 +110,9 @@ fun CreateLinkDialog(
                                             text = link,
                                             maxLines = 5,
                                             overflow = TextOverflow.Ellipsis,
-                                            textAlign = TextAlign.Center
+                                            textAlign = TextAlign.Center,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onBackground
                                         )
                                         Row {
                                             IconButton(
@@ -117,15 +124,13 @@ fun CreateLinkDialog(
                                                         context.startActivity(
                                                             Intent.createChooser(
                                                                 intent,
-                                                                "Share link via"
+                                                                context.getString(R.string.share_via)
                                                             )
                                                         )
-                                                    }
-                                                    catch (_: Exception)
-                                                    {
+                                                    } catch (_: Exception) {
                                                         Toast.makeText(
                                                             context,
-                                                            "Failed to share link.",
+                                                            context.getString(R.string.failed_to_share),
                                                             Toast.LENGTH_SHORT
                                                         ).show()
                                                     }
@@ -135,7 +140,8 @@ fun CreateLinkDialog(
                                                     imageVector = Icons.Filled.Share,
                                                     contentDescription = stringResource(
                                                         id = R.string.share
-                                                    )
+                                                    ),
+                                                    tint = MaterialTheme.colorScheme.onBackground
                                                 )
                                             }
                                             IconButton(
@@ -146,12 +152,10 @@ fun CreateLinkDialog(
                                                         ) as ClipboardManager
                                                         val data = ClipData.newPlainText("", link)
                                                         clipboard.setPrimaryClip(data)
-                                                    }
-                                                    catch (_: Exception)
-                                                    {
+                                                    } catch (_: Exception) {
                                                         Toast.makeText(
                                                             context,
-                                                            "Failed to copy link to clipboard.",
+                                                            context.getString(R.string.failed_to_copy_to_clipboard),
                                                             Toast.LENGTH_SHORT
                                                         ).show()
                                                     }
@@ -163,18 +167,24 @@ fun CreateLinkDialog(
                                                     ),
                                                     contentDescription = stringResource(
                                                         id = R.string.copy
-                                                    )
+                                                    ),
+                                                    tint = MaterialTheme.colorScheme.onBackground
                                                 )
                                             }
                                         }
                                     }
                                 }
+
                                 is DatabaseRequestState.Loading -> IndeterminateCircularIndicator(
                                     visible = true,
                                     text = stringResource(
                                         id = R.string.loading
-                                    )
+                                    ),
+                                    textColor = MaterialTheme.colorScheme.onBackground,
+                                    color = MaterialTheme.colorScheme.onBackground,
+                                    textStyle = MaterialTheme.typography.bodyMedium
                                 )
+
                                 is DatabaseRequestState.Error -> {
                                     Icon(
                                         modifier = Modifier.size(64.dp),
@@ -183,10 +193,12 @@ fun CreateLinkDialog(
                                         ),
                                         contentDescription = stringResource(
                                             id = R.string.error
-                                        )
+                                        ),
+                                        tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
-                                else -> { }
+
+                                else -> {}
                             }
                         }
                     },

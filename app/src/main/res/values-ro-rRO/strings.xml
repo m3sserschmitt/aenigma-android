@@ -50,8 +50,8 @@
     <string name="loading">Încărcare…</string>
     <string name="share">Distribuie</string>
     <string name="camera_permission_required">Este necesară permisiunea pentru utilizarea Camerei</string>
-    <string name="create_link">Creați link</string>
-    <string name="use_link">Folosiți link</string>
+    <string name="create_link">Creați un link</string>
+    <string name="use_link">Folosiți un link</string>
     <string name="copy">Copiați</string>
     <string name="error">Eroare</string>
     <string name="link_successfully_created">Link-ul a fost creat cu succes</string>
@@ -80,4 +80,12 @@
     <string name="you">Dvs:</string>
     <string name="my_code">Codul meu</string>
     <string name="saved">Salvat</string>
+    <string name="no_item_selected">Niciun obiect selectat</string>
+    <string name="one_item_selected">1 obiect selectat</string>
+    <string name="n_items_selected">%s obiecte selectate</string>
+    <string name="scan_qr_code">Scanați codul QR</string>
+    <string name="link_not_available">Link-ul nu este diponibil</string>
+    <string name="share_via">Distribuiți către</string>
+    <string name="failed_to_share">Nu se poate distribui</string>
+    <string name="failed_to_copy_to_clipboard">Nu se poate copia in clipboard</string>
 </resources>

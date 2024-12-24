@@ -2,10 +2,10 @@ package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Notifications
@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,35 +55,35 @@ fun ContactItem(
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             if(isSelectionMode)
             {
                 if(isSelected)
                 {
                     Icon(
+                        modifier = Modifier.alpha(.5f),
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outline,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
                 else
                 {
                     Icon(
+                        modifier = Modifier.alpha(.5f),
                         painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outline,
+                        tint = MaterialTheme.colorScheme.onBackground,
                     )
                 }
             }
 
             Icon(
-                modifier = Modifier
-                    .weight(1f)
-                    .size(64.dp),
+                modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
                 imageVector = Icons.Filled.AccountCircle,
                 contentDescription = stringResource(
                     id = R.string.contact
                 ),
+                tint = MaterialTheme.colorScheme.onBackground
             )
 
             val contactNameTextWeight = if(contact.hasNewMessage) 8f else 9f
@@ -94,19 +95,22 @@ fun ContactItem(
             ) {
                 Text(
                     text = contact.name,
-                    fontSize = MaterialTheme.typography.headlineSmall.fontSize,
-                    maxLines = 1
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 if(contact.lastMessageText != null)
                 {
                     Text(
+                        modifier = Modifier.alpha(.75f),
                         text = if(contact.lastMessageIncoming != null && !contact.lastMessageIncoming)
                             stringResource(R.string.you) + contact.lastMessageText
                         else
                             contact.lastMessageText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontSize = MaterialTheme.typography.bodySmall.fontSize
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 }
             }
@@ -114,9 +118,10 @@ fun ContactItem(
             if(contact.hasNewMessage)
             {
                 Icon(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).alpha(.5f),
                     imageVector = Icons.Filled.Notifications,
                     contentDescription = stringResource(id = R.string.contact),
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }

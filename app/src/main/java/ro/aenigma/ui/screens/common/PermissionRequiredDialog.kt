@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,8 +28,7 @@ fun PermissionRequiredDialog(
     onPositiveButtonClicked: () -> Unit,
     onNegativeButtonClicked: (Boolean) -> Unit
 ) {
-    if(visible)
-    {
+    if (visible) {
         var rememberDecisionChecked by remember { mutableStateOf(false) }
 
         BasicAlertDialog(
@@ -49,7 +49,11 @@ fun PermissionRequiredDialog(
                                 onCheckedChange = {
                                     rememberDecisionChecked = !rememberDecisionChecked
                                 })
-                            Text(text = stringResource(id = R.string.remember_decision))
+                            Text(
+                                text = stringResource(id = R.string.remember_decision),
+                                color = MaterialTheme.colorScheme.onBackground,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
                         }
                     }
                 },

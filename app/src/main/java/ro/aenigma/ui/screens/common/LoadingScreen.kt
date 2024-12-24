@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.common
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -18,7 +19,10 @@ fun LoadingScreen(
         icon = {
             IndeterminateCircularIndicator(
                 visible = true,
-                text = ""
+                text = "",
+                color = MaterialTheme.colorScheme.onBackground,
+                textStyle = MaterialTheme.typography.bodySmall,
+                textColor = MaterialTheme.colorScheme.onBackground
             )
         }
     )

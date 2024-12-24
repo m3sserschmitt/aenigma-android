@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -20,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -127,31 +127,27 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = contacts)
     {
-        if(contacts is DatabaseRequestState.Success)
-        {
+        if (contacts is DatabaseRequestState.Success) {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
 
     LaunchedEffect(key1 = isSearchMode) {
-        if(!isSearchMode)
-        {
+        if (!isSearchMode) {
             onSearch("")
         }
     }
 
     LaunchedEffect(key1 = sharedDataRequest) {
-        if(sharedDataRequest is DatabaseRequestState.Error)
-        {
+        if (sharedDataRequest is DatabaseRequestState.Error) {
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
 
     CheckNotificationsPermission(
-        onPermissionGranted = {
-            granted ->
+        onPermissionGranted = { granted ->
             permissionRequiredDialogVisible = !granted && notificationsAllowed
-            if(granted) onNotificationsPreferenceChanged(true)
+            if (granted) onNotificationsPreferenceChanged(true)
         }
     )
 
@@ -161,9 +157,8 @@ fun ContactsScreen(
             permissionRequiredDialogVisible = false
             context.openApplicationDetails()
         },
-        onNegativeButtonClicked = {
-            rememberDecision ->
-            if(rememberDecision) onNotificationsPreferenceChanged(false)
+        onNegativeButtonClicked = { rememberDecision ->
+            if (rememberDecision) onNotificationsPreferenceChanged(false)
             permissionRequiredDialogVisible = false
         }
     )
@@ -183,9 +178,8 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = {
-            if(selectedItems.size == 1)
-            {
-               onContactRenamed(selectedItems.single())
+            if (selectedItems.size == 1) {
+                onContactRenamed(selectedItems.single())
             }
             renameContactDialogVisible = false
         },
@@ -198,7 +192,11 @@ fun ContactsScreen(
         visible = getContactDataLoadingDialogVisible,
         state = sharedDataRequest,
         onConfirmButtonClicked = {
-            saveContactDialogVisible = true
+            if (sharedDataRequest is DatabaseRequestState.Error) {
+                onContactSaveDismissed()
+            } else {
+                saveContactDialogVisible = true
+            }
             getContactDataLoadingDialogVisible = false
         }
     )
@@ -219,13 +217,11 @@ fun ContactsScreen(
     BackHandler(
         enabled = isSearchMode || isSelectionMode
     ) {
-        if(isSearchMode)
-        {
+        if (isSearchMode) {
             isSearchMode = false
         }
 
-        if(isSelectionMode)
-        {
+        if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
         }
@@ -259,8 +255,8 @@ fun ContactsScreen(
                 onSearchTriggered = {
                     isSearchMode = true
                 },
-                onSearchClicked = {
-                    searchQuery -> onSearch(searchQuery)
+                onSearchClicked = { searchQuery ->
+                    onSearch(searchQuery)
                 },
                 onSearchModeExited = {
                     isSearchMode = false
@@ -277,9 +273,8 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    if(selectedItems.size == 1)
-                    {
-                      navigateToAddContactScreen(selectedItems.single().address)
+                    if (selectedItems.size == 1) {
+                        navigateToAddContactScreen(selectedItems.single().address)
                     }
                 },
                 onRetryConnection = onRetryConnection,
@@ -296,15 +291,14 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 navigateToChatScreen = navigateToChatScreen,
                 onItemSelected = { selectedContact ->
-                    if(!isSelectionMode)
-                    {
+                    if (!isSelectionMode) {
                         isSelectionMode = true
                     }
 
                     selectedItems.add(selectedContact)
                 },
-                onItemDeselected = {
-                        deselectedContact -> selectedItems.remove(deselectedContact)
+                onItemDeselected = { deselectedContact ->
+                    selectedItems.remove(deselectedContact)
                 },
                 isSelectionMode = isSelectionMode,
                 selectedContacts = selectedItems
@@ -325,6 +319,7 @@ fun ContactsFab(
     onFabClicked: () -> Unit
 ) {
     FloatingActionButton(
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
         onClick = { onFabClicked() },
     ) {
         Icon (
@@ -332,7 +327,7 @@ fun ContactsFab(
             contentDescription = stringResource (
                 id = R.string.contacts_floating_button_content_description
             ),
-            tint = Color.White
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }

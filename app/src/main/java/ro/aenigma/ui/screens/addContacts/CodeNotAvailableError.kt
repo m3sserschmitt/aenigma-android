@@ -34,7 +34,8 @@ fun CodeNotAvailableError()
         )
         Text(
             fontWeight = FontWeight.Bold,
-            text = stringResource(id = R.string.qr_code_not_available)
+            text = stringResource(id = R.string.qr_code_not_available),
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }

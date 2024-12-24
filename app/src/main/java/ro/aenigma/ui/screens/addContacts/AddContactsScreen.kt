@@ -106,11 +106,15 @@ fun AddContactsScreen(
     onSharedDataConfirm: () -> Unit,
     navigateToContactsScreen: () -> Unit
 ) {
-    Scaffold (
+    Scaffold(
         topBar = {
             StandardAppBar(
-                title = stringResource(R.string.add_contacts),
-                navigateBack = navigateToContactsScreen
+                title = if (scannerState == QrCodeScannerState.SCAN_CODE)
+                    stringResource(R.string.scan_qr_code)
+                else
+                    stringResource(R.string.add_contacts),
+                navigateBack = navigateToContactsScreen,
+                transparent = scannerState == QrCodeScannerState.SCAN_CODE
             )
         },
         content = { paddingValues ->
@@ -138,12 +142,9 @@ fun AddContactsScreen(
                 scannerState = scannerState,
                 visible = floatingButtonVisible,
                 onClick = {
-                    if(scannerState == QrCodeScannerState.SHARE_CODE)
-                    {
+                    if (scannerState == QrCodeScannerState.SHARE_CODE) {
                         onScannerStateChanged(QrCodeScannerState.SCAN_CODE)
-                    }
-                    else if(scannerState == QrCodeScannerState.SCAN_CODE)
-                    {
+                    } else if (scannerState == QrCodeScannerState.SCAN_CODE) {
                         onScannerStateChanged(QrCodeScannerState.SHARE_CODE)
                     }
                 }

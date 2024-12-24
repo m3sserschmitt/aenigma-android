@@ -43,7 +43,14 @@ fun MessageItem(
 ) {
     val paddingStart = if (message.incoming) 8.dp else 50.dp
     val paddingEnd = if (message.incoming) 50.dp else 8.dp
-
+    val contentColor = if (message.incoming)
+        MaterialTheme.colorScheme.onSecondaryContainer
+    else
+        MaterialTheme.colorScheme.onPrimaryContainer
+    val containerColor = if (message.incoming)
+        MaterialTheme.colorScheme.secondaryContainer
+    else
+        MaterialTheme.colorScheme.primaryContainer
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
         contentAlignment = if (message.incoming) Alignment.CenterStart else Alignment.CenterEnd
@@ -58,10 +65,7 @@ fun MessageItem(
                     onItemDeselected = onItemDeselected,
                     onClick = onClick
                 ),
-            color = if (message.incoming)
-                MaterialTheme.colorScheme.secondaryContainer
-            else
-                MaterialTheme.colorScheme.primary,
+            color = containerColor,
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
@@ -70,15 +74,17 @@ fun MessageItem(
                 if (isSelectionMode) {
                     if (isSelected) {
                         Icon(
+                            modifier = Modifier.alpha(.5f),
                             imageVector = Icons.Rounded.CheckCircle,
                             contentDescription = stringResource(R.string.message_selection),
-                            tint = MaterialTheme.colorScheme.outline,
+                            tint = contentColor,
                         )
                     } else {
                         Icon(
+                            modifier = Modifier.alpha(.5f),
                             painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
                             contentDescription = stringResource(R.string.message_selection),
-                            tint = MaterialTheme.colorScheme.outline,
+                            tint = contentColor,
                         )
                     }
                 }
@@ -89,7 +95,9 @@ fun MessageItem(
                     Text(
                         modifier = Modifier.fillMaxWidth(),
                         text = message.text,
-                        textAlign = if (message.incoming) TextAlign.Start else TextAlign.End
+                        textAlign = if (message.incoming) TextAlign.Start else TextAlign.End,
+                        color = contentColor,
+                        style = MaterialTheme.typography.bodyMedium
                     )
 
                     Row(
@@ -100,21 +108,23 @@ fun MessageItem(
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.getTime(message.date)
+                            text = PrettyDateFormatter.getTime(message.date),
+                            color = contentColor,
+                            style = MaterialTheme.typography.bodySmall
                         )
                         if (!message.incoming && !isSent) {
                             Icon(
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(12.dp).alpha(.5f),
                                 imageVector = Icons.Outlined.Done,
                                 contentDescription = stringResource(R.string.message_sent),
-                                tint = MaterialTheme.colorScheme.outline
+                                tint = contentColor
                             )
                         } else if (!message.incoming) {
                             Icon(
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(16.dp).alpha(.5f),
                                 painter = painterResource(R.drawable.ic_timer),
                                 contentDescription = stringResource(R.string.message_sent),
-                                tint = MaterialTheme.colorScheme.outline
+                                tint = contentColor
                             )
                         }
                     }

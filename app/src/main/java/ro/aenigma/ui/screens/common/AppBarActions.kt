@@ -11,9 +11,12 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.data.network.SignalRStatus
 
 @Composable
 fun CloseAppBarAction(
@@ -27,6 +30,7 @@ fun CloseAppBarAction(
             contentDescription = stringResource(
                 id = R.string.close
             ),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }
@@ -43,6 +47,7 @@ fun NavigateBackAppBarAction(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(id = R.string.back),
+            tint = MaterialTheme.colorScheme.onBackground
         )
     }
 }
@@ -59,6 +64,7 @@ fun DeleteAppBarAction(
             contentDescription = stringResource(
                 id = R.string.delete
             ),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }
@@ -74,9 +80,25 @@ fun ActivateSearchAppBarAction(
             imageVector = Icons.Filled.Search,
             contentDescription = stringResource (
                 id = R.string.search
-            )
+            ),
+            tint = MaterialTheme.colorScheme.onBackground
         )
     }
+}
+
+@Composable
+fun ConnectionStatusAppBarAction(
+    connectionStatus: SignalRStatus
+) {
+    IndeterminateCircularIndicator(
+        size = 18.dp,
+        color = MaterialTheme.colorScheme.onBackground,
+        textColor = MaterialTheme.colorScheme.onBackground,
+        visible = connectionStatus greaterOrEqualThan connectionStatus
+                && connectionStatus smallerThan SignalRStatus.Authenticated(),
+        text = stringResource(id = R.string.connecting),
+        textStyle = MaterialTheme.typography.bodyMedium
+    )
 }
 
 @Composable
@@ -92,7 +114,8 @@ fun RetryConnectionAppBarAction(
                 imageVector = Icons.Filled.Refresh,
                 contentDescription = stringResource(
                     id = R.string.retry_connection
-                )
+                ),
+                tint = MaterialTheme.colorScheme.onBackground
             )
         }
     }
@@ -118,7 +141,8 @@ fun CloseSearchTopAppBarAction(
     ) {
         Icon(
             imageVector = Icons.Filled.Close,
-            contentDescription = stringResource(id = R.string.close)
+            contentDescription = stringResource(id = R.string.close),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
         )
     }
 }
@@ -137,6 +161,7 @@ fun EditTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.rename
                 ),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }
@@ -156,6 +181,7 @@ fun ShareTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.share
                 ),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
     }

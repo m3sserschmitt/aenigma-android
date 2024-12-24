@@ -3,7 +3,9 @@ package ro.aenigma.ui.screens.about
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -31,6 +33,7 @@ fun AboutScreen(
     val context = LocalContext.current
 
     Scaffold(
+        modifier = Modifier.background(MaterialTheme.colorScheme.background),
         topBar = {
             StandardAppBar(
                 title = stringResource(id = R.string.about_app),
@@ -58,13 +61,13 @@ fun AboutScreen(
 
             Text(
                 text = stringResource(R.string.copyright_notices),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Text(
                 text = stringResource(R.string.gpl_license),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             Link(
@@ -74,7 +77,7 @@ fun AboutScreen(
 
             Text(
                 text = stringResource(R.string.openssl_notice),
-                style = MaterialTheme.typography.bodySmall
+                style = MaterialTheme.typography.bodyMedium
             )
 
             Link(
@@ -84,13 +87,13 @@ fun AboutScreen(
 
             Text(
                 text = stringResource(R.string.eric_young_notice),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
             Text(
                 text = stringResource(R.string.source_code_available_at),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
 
             Link(
@@ -100,7 +103,7 @@ fun AboutScreen(
 
             Text(
                 text = stringResource(R.string.disclaimer),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }
@@ -110,7 +113,7 @@ fun AboutScreen(
 fun Link(
     context: Context,
     url: String
-){
+) {
     TextButton(
         modifier = Modifier.padding(0.dp),
         onClick = {
@@ -118,11 +121,12 @@ fun Link(
                 context = context,
                 url = url
             )
-        }
+        },
+        contentPadding = PaddingValues(0.dp)
     ) {
         Text(
             text = url,
-            fontSize = MaterialTheme.typography.bodySmall.fontSize
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }

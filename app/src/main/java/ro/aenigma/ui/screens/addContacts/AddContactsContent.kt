@@ -2,12 +2,14 @@ package ro.aenigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -59,7 +61,14 @@ fun AddContactsContent(
         visible = useLinkLoadingDialogVisible,
         state = sharedDataGet,
         onConfirmButtonClicked = {
-            saveContactDialogVisible = true
+            if(sharedDataGet is DatabaseRequestState.Error)
+            {
+                onSharedDataConfirm()
+            }
+            else
+            {
+                saveContactDialogVisible = true
+            }
             useLinkLoadingDialogVisible = false
         }
     )
@@ -68,7 +77,14 @@ fun AddContactsContent(
         visible = createLinkLoadingDialogVisible,
         state = sharedDataCreate,
         onConfirmButtonClicked = {
-            createLinkDialogVisible = true
+            if(sharedDataCreate is DatabaseRequestState.Error)
+            {
+                onSharedDataConfirm()
+            }
+            else
+            {
+                createLinkDialogVisible = true
+            }
             createLinkLoadingDialogVisible = false
         }
     )
@@ -98,9 +114,8 @@ fun AddContactsContent(
 
     UseLinkDialog(
         visible = useLinkDialogVisible,
-        onTextChanged = { newLink ->
-            link = newLink
-            Patterns.WEB_URL.matcher(link).matches()
+        onTextChanged = {
+            newLink -> link = newLink
         },
         onConfirmClicked = {
             onGetLink(link)
@@ -142,7 +157,7 @@ fun DisplayQrCode(
     onCreateLinkClicked: () -> Unit,
     onUseLinkClicked: () -> Unit
 ) {
-    when(qrCode) {
+    when (qrCode) {
         is DatabaseRequestState.Success -> {
             Column(
                 modifier = modifier.fillMaxSize(),
@@ -155,33 +170,46 @@ fun DisplayQrCode(
                 )
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.background,
-                    thickness = 36.dp
+                    thickness = 12.dp
                 )
-                TextButton(
-                    onClick = onCreateLinkClicked
+                Surface(
+                    modifier = Modifier.fillMaxWidth(.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.create_link
-                        ),
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                    )
-                }
-                TextButton(
-                    onClick = onUseLinkClicked
-                ) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.use_link
-                        ),
-                        fontSize = MaterialTheme.typography.bodyLarge.fontSize
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        TextButton(
+                            onClick = onCreateLinkClicked
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    id = R.string.create_link
+                                ),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        TextButton(
+                            onClick = onUseLinkClicked,
+                        ) {
+                            Text(
+                                text = stringResource(
+                                    id = R.string.use_link
+                                ),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
                 }
             }
         }
+
         is DatabaseRequestState.Error -> CodeNotAvailableError()
         is DatabaseRequestState.Loading -> LoadingScreen()
-        is DatabaseRequestState.Idle -> {  }
+        is DatabaseRequestState.Idle -> {}
     }
 }
 

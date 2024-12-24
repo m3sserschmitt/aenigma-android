@@ -79,4 +79,12 @@
     <string name="you">You:</string>
     <string name="my_code">My code</string>
     <string name="saved">Saved</string>
+    <string name="no_item_selected">No item selected</string>
+    <string name="one_item_selected">1 item selected</string>
+    <string name="n_items_selected">%s items selected</string>
+    <string name="scan_qr_code">Scan the QR Code</string>
+    <string name="link_not_available">Link not available</string>
+    <string name="share_via">Share via</string>
+    <string name="failed_to_share">Failed to share</string>
+    <string name="failed_to_copy_to_clipboard">Failed to copy to clipboard</string>
 </resources>

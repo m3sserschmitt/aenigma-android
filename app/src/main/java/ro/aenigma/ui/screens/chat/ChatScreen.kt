@@ -254,7 +254,6 @@ fun ChatScreen(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding()
                 ),
-                connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,

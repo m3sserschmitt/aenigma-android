@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -34,27 +35,26 @@ fun QrCode(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         Text(
             modifier = Modifier
                 .padding(horizontal = 28.dp),
             textAlign = TextAlign.Center,
-            fontSize = MaterialTheme.typography.headlineSmall.fontSize,
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.bodyLarge,
             text = stringResource(
                 id = R.string.qr_code_caption
             )
         )
         HorizontalDivider(
             color = MaterialTheme.colorScheme.background,
-            thickness = 32.dp
+            thickness = 12.dp
         )
         Image(
             modifier = Modifier
-                .padding(horizontal = 32.dp)
-                .clip(RoundedCornerShape(48.dp))
+                .padding(horizontal = 24.dp)
+                .clip(RoundedCornerShape(24.dp))
                 .fillMaxWidth(),
             contentScale = ContentScale.FillWidth,
-
             bitmap = qrCode.asImageBitmap(),
             contentDescription = stringResource(
                 id = R.string.contact_qr_code
@@ -62,17 +62,15 @@ fun QrCode(
         )
         HorizontalDivider(
             color = MaterialTheme.colorScheme.background,
-            thickness = 36.dp
+            thickness = 12.dp
         )
         Text(
-            modifier = Modifier.padding(
-                horizontal = 24.dp
-            ),
+            modifier = Modifier.alpha(.75f),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             text = qrCodeLabel,
-            fontSize = MaterialTheme.typography.headlineSmall.fontSize
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }

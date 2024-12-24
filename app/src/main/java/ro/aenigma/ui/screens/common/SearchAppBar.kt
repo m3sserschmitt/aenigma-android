@@ -8,10 +8,12 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -43,14 +45,15 @@ fun SearchAppBar(
     TopAppBar(
         navigationIcon = {
             IconButton(
-                modifier = Modifier.alpha(0.5f),
+                modifier = Modifier.alpha(0.75f),
                 onClick = {
                     onSearchClicked(searchQuery)
                 }
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = stringResource(id = R.string.search)
+                    contentDescription = stringResource(id = R.string.search),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         },
@@ -65,8 +68,10 @@ fun SearchAppBar(
                 },
                 placeholder = {
                     Text(
-                        modifier = Modifier.alpha(0.5f),
-                        text = stringResource(id = R.string.search)
+                        modifier = Modifier.alpha(0.25f),
+                        text = stringResource(id = R.string.search),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.bodyLarge
                     )
                 },
                 singleLine = true,
@@ -90,6 +95,9 @@ fun SearchAppBar(
                 )
             )
         },
+        colors = TopAppBarDefaults.topAppBarColors().copy(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
         actions = {
             CloseSearchTopAppBarAction(
                 isEmptySearchQuery = searchQuery.isEmpty(),

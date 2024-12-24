@@ -6,74 +6,41 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowInsetsControllerCompat
 
 private val LightColors = lightColorScheme(
-    primary = md_theme_light_primary,
-    onPrimary = md_theme_light_onPrimary,
-    primaryContainer = md_theme_light_primaryContainer,
-    onPrimaryContainer = md_theme_light_onPrimaryContainer,
-    secondary = md_theme_light_secondary,
-    onSecondary = md_theme_light_onSecondary,
-    secondaryContainer = md_theme_light_secondaryContainer,
-    onSecondaryContainer = md_theme_light_onSecondaryContainer,
-    tertiary = md_theme_light_tertiary,
-    onTertiary = md_theme_light_onTertiary,
-    tertiaryContainer = md_theme_light_tertiaryContainer,
-    onTertiaryContainer = md_theme_light_onTertiaryContainer,
-    error = md_theme_light_error,
-    onError = md_theme_light_onError,
-    errorContainer = md_theme_light_errorContainer,
-    onErrorContainer = md_theme_light_onErrorContainer,
-    outline = md_theme_light_outline,
-    background = md_theme_light_background,
-    onBackground = md_theme_light_onBackground,
-    surface = md_theme_light_surface,
-    onSurface = md_theme_light_onSurface,
-    surfaceVariant = md_theme_light_surfaceVariant,
-    onSurfaceVariant = md_theme_light_onSurfaceVariant,
-    inverseSurface = md_theme_light_inverseSurface,
-    inverseOnSurface = md_theme_light_inverseOnSurface,
-    inversePrimary = md_theme_light_inversePrimary,
-    surfaceTint = md_theme_light_surfaceTint,
-    outlineVariant = md_theme_light_outlineVariant,
-    scrim = md_theme_light_scrim,
+    primary = Color(0xFF9575CD), // Light Purple
+    onPrimary = Color(0xFFFFFFFF), // White Text on Primary
+    primaryContainer = Color(0xFFD1C4E9), // Soft Purple Container
+    onPrimaryContainer = Color(0xFF512DA8), // Dark Purple Text on Container
+    secondary = Color(0xFFB39DDB), // Muted Purple
+    onSecondary = Color(0xFF311B92), // Deep Purple Text
+    secondaryContainer = Color(0xFFEDE7F6), // Very Light Purple for Contrast
+    onSecondaryContainer = Color(0xFF311B92), // Deep Purple Text on Secondary Container
+    background = Color(0xFFF5F5F5), // Light Gray Background
+    onBackground = Color(0xFF424242), // Dark Gray Text on Background
+    surface = Color(0xFFE8EAF6), // Light Purple-Gray Surface
+    onSurface = Color(0xFF1A237E), // Dark Blue Text on Surface
+    surfaceContainerHighest = Color(0xFFD1C4E9) // Slightly Darker Purple for Elevation
 )
 
-
 private val DarkColors = darkColorScheme(
-    primary = md_theme_dark_primary,
-    onPrimary = md_theme_dark_onPrimary,
-    primaryContainer = md_theme_dark_primaryContainer,
-    onPrimaryContainer = md_theme_dark_onPrimaryContainer,
-    secondary = md_theme_dark_secondary,
-    onSecondary = md_theme_dark_onSecondary,
-    secondaryContainer = md_theme_dark_secondaryContainer,
-    onSecondaryContainer = md_theme_dark_onSecondaryContainer,
-    tertiary = md_theme_dark_tertiary,
-    onTertiary = md_theme_dark_onTertiary,
-    tertiaryContainer = md_theme_dark_tertiaryContainer,
-    onTertiaryContainer = md_theme_dark_onTertiaryContainer,
-    error = md_theme_dark_error,
-    onError = md_theme_dark_onError,
-    errorContainer = md_theme_dark_errorContainer,
-    onErrorContainer = md_theme_dark_onErrorContainer,
-    outline = md_theme_dark_outline,
-    background = md_theme_dark_background,
-    onBackground = md_theme_dark_onBackground,
-    surface = md_theme_dark_surface,
-    onSurface = md_theme_dark_onSurface,
-    surfaceVariant = md_theme_dark_surfaceVariant,
-    onSurfaceVariant = md_theme_dark_onSurfaceVariant,
-    inverseSurface = md_theme_dark_inverseSurface,
-    inverseOnSurface = md_theme_dark_inverseOnSurface,
-    inversePrimary = md_theme_dark_inversePrimary,
-    surfaceTint = md_theme_dark_surfaceTint,
-    outlineVariant = md_theme_dark_outlineVariant,
-    scrim = md_theme_dark_scrim,
+    primary = Color(0xFF757575), // Medium Gray
+    onPrimary = Color(0xFFFAFAFA), // Light Text
+    primaryContainer = Color(0xFF424242), // Dark Container
+    onPrimaryContainer = Color(0xFFECEFF1), // Light Text on Dark Container
+    secondary = Color(0xFF616161), // Secondary Gray
+    onSecondary = Color(0xFFE0E0E0), // Light Text on Secondary
+    secondaryContainer = Color(0xA0151517), // Dark Gray for Contrast
+    onSecondaryContainer = Color(0xFFCFD8DC), // Lighter Text on Secondary Container
+    background = Color(0xFF212121), // Almost Black Gray
+    onBackground = Color(0xFFBDBDBD), // Text on Dark Background
+    surface = Color(0xFF303030), // Dark Surface
+    onSurface = Color(0xFFE0E0E0), // Light Text on Surface
+    surfaceContainerHighest = Color(0xFF3A3A3A) // Lighter Surface for Elevation
 )
 
 @Composable
@@ -81,25 +48,13 @@ fun ApplicationComposeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) {
-        DarkColors
-    } else {
-        LightColors
-    }
+    val colors = if (darkTheme) DarkColors else LightColors
 
-    val view = LocalView.current
-    val colorPrimary = colors.primary
-    val colorSurface = colors.surface
-
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorPrimary.toArgb()
-            window.navigationBarColor = colorSurface.toArgb()
-            val wic = WindowCompat.getInsetsController(window, view)
-            wic.isAppearanceLightStatusBars = darkTheme
-            wic.isAppearanceLightNavigationBars = !darkTheme
-        }
+    val activity = LocalContext.current as Activity
+    activity.window?.let { window ->
+        window.statusBarColor = colors.background.toArgb()
+        val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = !darkTheme
     }
 
     MaterialTheme(

@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.common
 
+import android.util.Patterns
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -8,13 +9,16 @@ import ro.aenigma.R
 @Composable
 fun UseLinkDialog(
     visible: Boolean,
-    onTextChanged: (String) -> Boolean,
+    onTextChanged: (String) -> Unit,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
 ) {
     if (visible) {
         TextInputDialog(
-            onTextChanged = onTextChanged,
+            onTextChanged = { link ->
+                onTextChanged(link)
+                Patterns.WEB_URL.matcher(link).matches()
+            },
             title = stringResource(
                 id = R.string.enter_link
             ),
@@ -34,7 +38,7 @@ fun UseLinkDialogPreview()
 {
     UseLinkDialog(
         visible = true,
-        onTextChanged = { true },
+        onTextChanged = { },
         onConfirmClicked = { },
         onDismissClicked = { }
     )

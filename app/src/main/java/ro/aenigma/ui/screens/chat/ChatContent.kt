@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,7 +20,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -33,7 +33,6 @@ fun ChatContent(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
@@ -95,9 +94,11 @@ fun MessageDate(next: MessageEntity?, message: MessageEntity) {
 
     if (localDate1 == null || localDate1 != localDate2) {
         Text(
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            text = PrettyDateFormatter.formatPastDate(message.date)
+            text = PrettyDateFormatter.formatPastDate(message.date),
+            style = MaterialTheme.typography.bodyLarge
         )
     }
 }
@@ -175,7 +176,6 @@ fun ChatContentPreview()
         ),
         notSentMessages = listOf(),
         nextConversationPageAvailable = true,
-        connectionStatus = SignalRStatus.Authenticated(),
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},

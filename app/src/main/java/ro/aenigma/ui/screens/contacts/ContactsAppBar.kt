@@ -1,28 +1,22 @@
 package ro.aenigma.ui.screens.contacts
 
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ro.aenigma.R
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
+import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
+import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
-import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
@@ -91,12 +85,8 @@ fun ContactsAppBar(
             ),
             navigateBackVisible = false,
             actions = {
-                IndeterminateCircularIndicator(
-                    modifier = Modifier.size(18.dp),
-                    visible = connectionStatus greaterOrEqualThan connectionStatus
-                            && connectionStatus smallerThan SignalRStatus.Authenticated(),
-                    text = stringResource(id = R.string.connecting),
-                    fontSize = 12.sp
+                ConnectionStatusAppBarAction(
+                    connectionStatus = connectionStatus
                 )
                 RetryConnectionAppBarAction(
                     visible = connectionStatus is SignalRStatus.Error.Aborted,
@@ -124,22 +114,10 @@ fun MoreActions(
             expanded = isExpended
         }
     ) {
-        DropdownMenuItem(
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = stringResource(
-                        id = R.string.about_app
-                    )
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(
-                        id = R.string.about_app
-                    )
-                )
-            },
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.Info,
+            contentDescription = stringResource(id = R.string.about_app),
+            text = stringResource(id = R.string.about_app),
             onClick = {
                 navigateToAboutScreen()
                 expanded = false

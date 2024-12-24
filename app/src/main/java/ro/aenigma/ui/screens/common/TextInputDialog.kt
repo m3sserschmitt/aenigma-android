@@ -8,11 +8,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,21 +43,35 @@ fun TextInputDialog(
     var text by remember { mutableStateOf("") }
 
     BasicAlertDialog(
-        onDismissRequest = {  },
+        onDismissRequest = { },
         properties = DialogProperties(
             dismissOnClickOutside = false
         )
     ) {
         DialogContentTemplate(
             content = {
-                TextInput(
-                    text = text,
-                    placeholderText = placeholderText,
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = text,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    colors = OutlinedTextFieldDefaults.colors().copy(
+                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
+                        focusedContainerColor = MaterialTheme.colorScheme.background,
+                        errorContainerColor = MaterialTheme.colorScheme.background,
+                    ),
                     isError = isValidationError,
-                    onTextChanged = {
-                        newText -> isValidationError = !onTextChanged(newText)
-                        text = newText
-                    }
+                    onValueChange = { newValue ->
+                        isValidationError = !onTextChanged(newValue)
+                        text = newValue
+                    },
+                    label = {
+                        Text(
+                            text = placeholderText,
+                            color = MaterialTheme.colorScheme.onBackground,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    singleLine = true
                 )
             },
             title = title,
@@ -64,13 +79,12 @@ fun TextInputDialog(
             dismissible = true,
             onPositiveButtonClicked = {
                 isValidationError = isValidationError || text.isEmpty()
-                if(!isValidationError)
-                {
+                if (!isValidationError) {
                     onConfirmClicked()
                     text = ""
                 }
             },
-            onNegativeButtonClicked =  {
+            onNegativeButtonClicked = {
                 onDismissClicked()
                 text = ""
             }
@@ -82,7 +96,7 @@ fun TextInputDialog(
 fun DialogContentTemplate(
     modifier: Modifier = Modifier,
     title: String,
-    body: String,
+    body: String = "",
     content: @Composable () -> Unit,
     dismissible: Boolean = true,
     positiveButtonVisible: Boolean = true,
@@ -102,75 +116,60 @@ fun DialogContentTemplate(
                 modifier = Modifier.fillMaxWidth(),
                 text = title,
                 textAlign = TextAlign.Center,
-                fontSize = MaterialTheme.typography.titleMedium.fontSize,
-                fontWeight = MaterialTheme.typography.titleMedium.fontWeight
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
-            if(body.isNotEmpty()) {
-                HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
+            if (body.isNotEmpty()) {
                 Text(
                     modifier = Modifier.fillMaxWidth(),
                     text = body,
                     textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
-                HorizontalDivider(thickness = 4.dp, color = MaterialTheme.colorScheme.background)
             }
             content()
             Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
             ) {
-                if(dismissible)
-                {
+                if (dismissible) {
                     OutlinedButton(
                         modifier = Modifier.padding(4.dp),
+                        colors = ButtonDefaults.outlinedButtonColors().copy(
+                            containerColor = MaterialTheme.colorScheme.background
+                        ),
                         onClick = {
                             onNegativeButtonClicked()
                         }
                     ) {
                         Text(
-                            text = negativeButtonText
+                            text = negativeButtonText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
-                if(positiveButtonVisible) {
+                if (positiveButtonVisible) {
                     Button(
+                        colors = ButtonDefaults.buttonColors().copy(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
                         modifier = Modifier.padding(4.dp),
                         onClick = {
                             onPositiveButtonClicked()
                         }
                     ) {
                         Text(
-                            text = positiveButtonText
+                            text = positiveButtonText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-fun TextInput(
-    text: String,
-    placeholderText: String,
-    isError: Boolean,
-    onTextChanged: (String) -> Unit
-) {
-    OutlinedTextField(
-        modifier = Modifier.fillMaxWidth(),
-        value = text,
-        isError = isError,
-        onValueChange = {
-            newValue -> onTextChanged(newValue)
-        },
-        label = {
-            Text(
-                text = placeholderText
-            )
-        },
-        singleLine = true
-    )
 }
 
 @Composable

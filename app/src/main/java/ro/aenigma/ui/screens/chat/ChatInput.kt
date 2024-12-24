@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.chat
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -14,6 +15,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,7 +31,7 @@ fun ChatInput(
     onSendClicked: () -> Unit
 ) {
     Row (
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
         verticalAlignment = Alignment.CenterVertically
     ){
         TextField(
@@ -38,10 +40,16 @@ fun ChatInput(
             onValueChange = onInputTextChanged,
             shape = RoundedCornerShape(30.dp),
             maxLines = 3,
+            textStyle = MaterialTheme.typography.bodyMedium,
             colors = TextFieldDefaults.colors().copy(
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
+                disabledIndicatorColor = Color.Transparent,
+                focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                disabledContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                focusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer
             ),
             enabled = enabled
         )
@@ -53,11 +61,12 @@ fun ChatInput(
             enabled = enabled
         ) {
             Icon(
+                modifier = Modifier.alpha(.75f),
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = stringResource(
                     id = R.string.send
                 ),
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onBackground
             )
         }
     }
