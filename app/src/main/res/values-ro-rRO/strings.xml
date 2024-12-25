@@ -74,7 +74,7 @@
     <string name="openssl_link">https://openssl.org/</string>
     <string name="eric_young_notice">Acest produs conține software dezvoltat de către Eric Young (eay@cryptsoft.com)</string>
     <string name="source_code_available_at">Codul sursă este disponibil la:</string>
-    <string name="source_code_link">https://github.com/m3sserschmitt/aenigma/</string>
+    <string name="source_code_link">https://github.com/m3sserschmitt/aenigma-android</string>
     <string name="disclaimer">Această aplicație este furnizată "ca atare", fără nicio garanție de niciun fel, expresă sau implicită, inclusiv, dar fără a se limita la garanțiile de vandabilitate sau adecvare pentru un anumit scop.</string>
     <string name="about_app">Despre Aplicație</string>
     <string name="you">Dvs:</string>

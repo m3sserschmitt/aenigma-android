@@ -73,7 +73,7 @@
     <string name="openssl_link">https://openssl.org/</string>
     <string name="eric_young_notice">This product includes cryptographic software written by Eric Young (eay@cryptsoft.com)</string>
     <string name="source_code_available_at">The source code for this app is available at:</string>
-    <string name="source_code_link">https://github.com/m3sserschmitt/aenigma/</string>
+    <string name="source_code_link">https://github.com/m3sserschmitt/aenigma-android</string>
     <string name="disclaimer">This app is provided "as is," without any warranty of any kind, express or implied, including but not limited to the warranties of merchantability or fitness for a particular purpose.</string>
     <string name="about_app">About App</string>
     <string name="you">You:</string>
