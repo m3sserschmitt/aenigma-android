@@ -7,7 +7,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import ro.aenigma.R
-import ro.aenigma.MyApplication
+import ro.aenigma.AenigmaApp
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.SignatureService
@@ -227,7 +227,7 @@ class MainViewModel @Inject constructor(
 
     private fun getQrCodeLabel(address: String): String {
         return if (address == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE) {
-            getApplication<MyApplication>().getString(R.string.my_code)
+            getApplication<AenigmaApp>().getString(R.string.my_code)
         } else try {
             val contact =
                 (allContacts.value as DatabaseRequestState.Success).data.find { item -> item.address == address }

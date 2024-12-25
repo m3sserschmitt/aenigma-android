@@ -10,12 +10,12 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
-import ro.aenigma.ui.MainActivity
+import ro.aenigma.ui.AppActivity
 
-fun Context.findActivity(): MainActivity {
+fun Context.findActivity(): AppActivity {
     var context = this
     while (context is ContextWrapper) {
-        if (context is Activity) return context as MainActivity
+        if (context is Activity) return context as AppActivity
         context = context.baseContext
     }
     throw IllegalStateException("Permissions should be called in the context of an Activity")

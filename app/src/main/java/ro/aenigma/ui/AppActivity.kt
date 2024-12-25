@@ -26,7 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class AppActivity : ComponentActivity() {
 
     @Inject
     lateinit var navigationTracker: NavigationTracker

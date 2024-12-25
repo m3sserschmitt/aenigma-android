@@ -17,7 +17,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.ui.MainActivity
+import ro.aenigma.ui.AppActivity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,7 +61,7 @@ class NotificationService @Inject constructor(
 
     private fun createChatNavigationIntent(): PendingIntent
     {
-        val intent = Intent(context, MainActivity::class.java).apply {
+        val intent = Intent(context, AppActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
