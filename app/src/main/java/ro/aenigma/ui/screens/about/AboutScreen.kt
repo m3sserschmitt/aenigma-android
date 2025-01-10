@@ -6,15 +6,24 @@ import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -22,6 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.BuildConfig
 import ro.aenigma.R
+import ro.aenigma.ui.screens.common.DialogContentTemplate
 
 import ro.aenigma.ui.screens.common.StandardAppBar
 
@@ -29,8 +39,41 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 fun AboutScreen(
     navigateBack: () -> Unit
 ) {
+    var apache2LicenseDialogVisible by remember { mutableStateOf(false) }
+    var mitLicenseDialogVisible by remember { mutableStateOf(false) }
+    var lgplLicenseDialogVisible by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+
+    LicenseDialog(
+        visible = apache2LicenseDialogVisible,
+        title = stringResource(id = R.string.apache_license_v2_0_title),
+        subtitle = stringResource(id = R.string.apache_license_v2_0_link),
+        text = readRawTextResource(context, R.raw.apache_license_2_0),
+        onCloseButtonClicked = {
+            apache2LicenseDialogVisible = false
+        }
+    )
+
+    LicenseDialog(
+        visible = mitLicenseDialogVisible,
+        title = stringResource(id = R.string.mit_license_title),
+        subtitle = stringResource(id = R.string.mit_license_link),
+        text = readRawTextResource(context, R.raw.mit_license),
+        onCloseButtonClicked = {
+            mitLicenseDialogVisible = false
+        }
+    )
+
+    LicenseDialog(
+        visible = lgplLicenseDialogVisible,
+        title = stringResource(id = R.string.lgpl_license_v3_0_title),
+        subtitle = stringResource(id = R.string.lgpl_license_v3_0_link),
+        text = readRawTextResource(context, R.raw.lgpl_license_3_0),
+        onCloseButtonClicked = {
+            lgplLicenseDialogVisible = false
+        }
+    )
 
     Scaffold(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
@@ -68,26 +111,6 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.gpl_license),
                 style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Link(
-                context = context,
-                url = stringResource(R.string.gnu_license_link)
-            )
-
-            Text(
-                text = stringResource(R.string.openssl_notice),
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Link(
-                context = context,
-                url = stringResource(R.string.openssl_link)
-            )
-
-            Text(
-                text = stringResource(R.string.eric_young_notice),
-                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
@@ -104,6 +127,36 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.disclaimer),
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Text(
+                text = stringResource(R.string.acknowledgements),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.apache_license_v2_0),
+                action = {
+                    apache2LicenseDialogVisible = true
+                }
+            )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.mit_license),
+                action = {
+                    mitLicenseDialogVisible = true
+                }
+            )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.lgpl_license_v3_0),
+                action = {
+                    lgplLicenseDialogVisible = true
+                }
             )
         }
     }
@@ -112,16 +165,17 @@ fun AboutScreen(
 @Composable
 fun Link(
     context: Context,
-    url: String
+    url: String = "",
+    action: () -> Unit = {
+        openLinkInBrowser(
+            context = context,
+            url = url
+        )
+    }
 ) {
     TextButton(
         modifier = Modifier.padding(0.dp),
-        onClick = {
-            openLinkInBrowser(
-                context = context,
-                url = url
-            )
-        },
+        onClick = action,
         contentPadding = PaddingValues(0.dp)
     ) {
         Text(
@@ -131,9 +185,54 @@ fun Link(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LicenseDialog(
+    visible: Boolean,
+    title: String,
+    subtitle: String,
+    text: String,
+    onCloseButtonClicked: () -> Unit
+) {
+    val scrollState = rememberScrollState()
+    if (visible ) {
+        BasicAlertDialog(
+            onDismissRequest = { }
+        ) {
+            DialogContentTemplate(
+                title = title,
+                body = subtitle,
+                dismissible = false,
+                onNegativeButtonClicked = onCloseButtonClicked,
+                onPositiveButtonClicked = onCloseButtonClicked,
+                content = {
+                    BasicText(
+                        text = text,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onBackground
+                        ),
+                        modifier = Modifier
+                            .fillMaxHeight(fraction = .75f)
+                            .fillMaxWidth()
+                            .verticalScroll(scrollState)
+                    )
+                }
+            )
+        }
+    }
+}
+
 fun openLinkInBrowser(context: Context, url: String) {
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
     context.startActivity(intent)
+}
+
+fun readRawTextResource(
+    context: Context,
+    resourceId: Int
+): String {
+    val inputStream = context.resources.openRawResource(resourceId)
+    return inputStream.bufferedReader().use { it.readText() }
 }
 
 @Preview
@@ -142,5 +241,19 @@ fun AboutScreenPreview()
 {
     AboutScreen(
         navigateBack = { }
+    )
+}
+
+@Preview
+@Composable
+fun LicenseDialogPreview()
+{
+    val context = LocalContext.current
+    LicenseDialog(
+        visible = true,
+        title = stringResource(id = R.string.apache_license_v2_0),
+        subtitle = stringResource(id = R.string.apache_license_v2_0_link),
+        text = readRawTextResource(context, R.raw.apache_license_2_0),
+        onCloseButtonClicked = { }
     )
 }

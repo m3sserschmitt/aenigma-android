@@ -104,7 +104,7 @@ fun ContactItem(
                     Text(
                         modifier = Modifier.alpha(.75f),
                         text = if(contact.lastMessageIncoming != null && !contact.lastMessageIncoming)
-                            stringResource(R.string.you) + contact.lastMessageText
+                            stringResource(R.string.you) + " " + contact.lastMessageText
                         else
                             contact.lastMessageText,
                         maxLines = 1,

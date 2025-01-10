@@ -195,7 +195,8 @@ class MessageSenderWorker @AssistedInject constructor(
         val contact = repository.local.getContact(message.chatId) ?: return Result.failure()
 
         if (!updateContactIfRequired(contact)) {
-            return Result.failure()
+            // TODO: This might become a failure condition in the future
+            // return Result.failure()
         }
 
         val paths = pathFinder.calculatePaths(contact)
