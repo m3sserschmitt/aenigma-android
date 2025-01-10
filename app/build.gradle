@@ -93,9 +93,6 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:1.4.1"
     implementation "androidx.camera:camera-view:1.4.1"
 
-    // zxing
-    implementation 'com.google.zxing:core:3.4.1'
-
     // Gson
     implementation 'com.google.code.gson:gson:2.10.1'
 
