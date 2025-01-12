@@ -8,6 +8,7 @@ import ro.aenigma.ui.navigation.destinations.aboutComposable
 import ro.aenigma.ui.navigation.destinations.addContactComposable
 import ro.aenigma.ui.navigation.destinations.chatComposable
 import ro.aenigma.ui.navigation.destinations.contactsComposable
+import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.util.NavigationTracker
 import ro.aenigma.viewmodels.MainViewModel
 
@@ -45,7 +46,13 @@ fun SetupNavigation(
         aboutComposable(
             navigationTracker = navigationTracker,
             mainViewModel = mainViewModel,
-            navigateToContactsScreen = screen.contacts
+            navigateToContactsScreen = screen.contacts,
+            navigateToLicensesScreen = screen.licenses
+        )
+        licensesComposable(
+            navigationTracker = navigationTracker,
+            mainViewModel = mainViewModel,
+            navigateToAboutScreen = screen.about
         )
     }
 }

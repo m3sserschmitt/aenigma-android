@@ -37,41 +37,20 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 
 @Composable
 fun AboutScreen(
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    navigateToLicensesScreen: () -> Unit,
 ) {
-    var apache2LicenseDialogVisible by remember { mutableStateOf(false) }
-    var mitLicenseDialogVisible by remember { mutableStateOf(false) }
-    var lgplLicenseDialogVisible by remember { mutableStateOf(false) }
+    var appLicenseVisible by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
     LicenseDialog(
-        visible = apache2LicenseDialogVisible,
-        title = stringResource(id = R.string.apache_license_v2_0_title),
-        subtitle = stringResource(id = R.string.apache_license_v2_0_link),
-        text = readRawTextResource(context, R.raw.apache_license_2_0),
+        visible = appLicenseVisible,
+        title = stringResource(id = R.string.gnu_gpl_v3_0_title),
+        subtitle = "",
+        text = readRawTextResource(context, R.raw.gnu_gpl_v3_0_license),
         onCloseButtonClicked = {
-            apache2LicenseDialogVisible = false
-        }
-    )
-
-    LicenseDialog(
-        visible = mitLicenseDialogVisible,
-        title = stringResource(id = R.string.mit_license_title),
-        subtitle = stringResource(id = R.string.mit_license_link),
-        text = readRawTextResource(context, R.raw.mit_license),
-        onCloseButtonClicked = {
-            mitLicenseDialogVisible = false
-        }
-    )
-
-    LicenseDialog(
-        visible = lgplLicenseDialogVisible,
-        title = stringResource(id = R.string.lgpl_license_v3_0_title),
-        subtitle = stringResource(id = R.string.lgpl_license_v3_0_link),
-        text = readRawTextResource(context, R.raw.lgpl_license_3_0),
-        onCloseButtonClicked = {
-            lgplLicenseDialogVisible = false
+            appLicenseVisible = false
         }
     )
 
@@ -109,9 +88,16 @@ fun AboutScreen(
             )
 
             Text(
-                text = stringResource(R.string.gpl_license),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                text = stringResource(R.string.gpl_license_info),
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.gnu_gpl_v3_0_license),
+                action = {
+                    appLicenseVisible = true
+                }
             )
 
             Text(
@@ -127,36 +113,12 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.disclaimer),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            Text(
-                text = stringResource(R.string.acknowledgements),
-                style = MaterialTheme.typography.bodyMedium,
             )
 
             Link(
                 context = context,
-                url = stringResource(id = R.string.apache_license_v2_0),
-                action = {
-                    apache2LicenseDialogVisible = true
-                }
-            )
-
-            Link(
-                context = context,
-                url = stringResource(id = R.string.mit_license),
-                action = {
-                    mitLicenseDialogVisible = true
-                }
-            )
-
-            Link(
-                context = context,
-                url = stringResource(id = R.string.lgpl_license_v3_0),
-                action = {
-                    lgplLicenseDialogVisible = true
-                }
+                url = stringResource(id = R.string.open_source_libraries),
+                action = navigateToLicensesScreen
             )
         }
     }
@@ -240,7 +202,8 @@ fun readRawTextResource(
 fun AboutScreenPreview()
 {
     AboutScreen(
-        navigateBack = { }
+        navigateBack = { },
+        navigateToLicensesScreen = { }
     )
 }
 
@@ -251,9 +214,9 @@ fun LicenseDialogPreview()
     val context = LocalContext.current
     LicenseDialog(
         visible = true,
-        title = stringResource(id = R.string.apache_license_v2_0),
-        subtitle = stringResource(id = R.string.apache_license_v2_0_link),
-        text = readRawTextResource(context, R.raw.apache_license_2_0),
+        title = stringResource(id = R.string.gnu_gpl_v3_0_title),
+        subtitle = "",
+        text = readRawTextResource(context, R.raw.gnu_gpl_v3_0_license),
         onCloseButtonClicked = { }
     )
 }

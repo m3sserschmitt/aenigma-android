@@ -7,6 +7,7 @@ plugins
     id('dagger.hilt.android.plugin')
     id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
+    id('com.mikepenz.aboutlibraries.plugin')
 }
 
 
@@ -49,7 +50,7 @@ android {
         }
     }
     namespace 'ro.aenigma'
-    ndkVersion '27.0.11902837 rc2'
+    ndkVersion '28.0.12674087'
 }
 
 dependencies {
@@ -58,7 +59,6 @@ dependencies {
     implementation "androidx.room:room-runtime:2.6.1"
     ksp "androidx.room:room-compiler:2.6.1"
     implementation "androidx.room:room-ktx:2.6.1"
-    androidTestImplementation "androidx.room:room-testing:2.6.1"
 
     // Hilt
     implementation "com.google.dagger:hilt-android:2.51.1"
@@ -126,7 +126,7 @@ dependencies {
     implementation 'org.ocpsoft.prettytime:prettytime:5.0.4.Final'
 
     // Kotlin
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1'
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'androidx.appcompat:appcompat:1.7.0'
 
@@ -134,4 +134,8 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+
+    // open source libraries page
+    implementation "com.mikepenz:aboutlibraries:11.4.0"
+    implementation "com.mikepenz:aboutlibraries-compose-m3:11.4.0"
 }

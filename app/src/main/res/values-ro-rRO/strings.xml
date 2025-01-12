@@ -68,12 +68,11 @@
     <string name="please_wait">Vă rugăm așteptați</string>
     <string name="app_name_and_version">Aenigma\nVersiunea: %s</string>
     <string name="copyright_notices">Aplicație dezvoltată de Romulus-Emanuel Ruja.\n© 2024 Romulus-Emanuel Ruja. Toate drepturile rezervate.</string>
-    <string name="gpl_license">Această aplicație este distribuită sub GNU General Public License, versiunea 3 (GPLv3). Aveți dreptul să redistribuiți și/sau  modificați această aplicație sub termenii GPLv3.</string>
-    <string name="openssl_notice">Acest produs include software dezvoltat de către OpenSSL Project pentru a fi utilizat în OpenSSL Toolkit.</string>
-    <string name="eric_young_notice">Acest produs conține software dezvoltat de către Eric Young (eay@cryptsoft.com)</string>
-    <string name="source_code_available_at">Codul sursă și licența sunt disponibil la:</string>
+    <string name="gpl_license_info">Această aplicație este distribuită sub GNU General Public License, versiunea 3 (GPLv3). Aveți dreptul să redistribuiți și/sau  modificați această aplicație sub termenii GNU General Public License Version 3.</string>
+    <string name="source_code_available_at">Codul sursă al aplicației este disponibil la:</string>
     <string name="disclaimer">Această aplicație este furnizată "ca atare", fără nicio garanție de niciun fel, expresă sau implicită, inclusiv, dar fără a se limita la garanțiile de vandabilitate sau adecvare pentru un anumit scop.</string>
     <string name="about_app">Despre Aplicație</string>
+    <string name="open_source_libraries">Biblioteci Open Source</string>
     <string name="you">Dvs:</string>
     <string name="my_code">Codul meu</string>
     <string name="saved">Salvat</string>
@@ -85,10 +84,4 @@
     <string name="share_via">Distribuiți către</string>
     <string name="failed_to_share">Nu se poate distribui</string>
     <string name="failed_to_copy_to_clipboard">Nu se poate copia in clipboard</string>
-    <string name="acknowledgements">
-        Aplicația utilizează următoarele biblioteci open-source: Room, Hilt, Lifecycle, Work Manager, Compose,
-        Material3, Retrofit, SignalR, PrettyTime, ZXing, Gson,
-        OpenSSL compilat static - Licențiate sub Apache License 2.0;
-        Bouncy Castle - Licențiată sub MIT License; JGraph - Licențiată sub LGPL v3
-    </string>
 </resources>
