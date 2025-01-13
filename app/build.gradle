@@ -49,6 +49,22 @@ android {
             path file('src/main/cpp/CMakeLists.txt')
         }
     }
+
+    buildTypes {
+        release {
+//             shrinkResources true
+//             minifyEnabled true
+            debuggable false
+            signingConfig signingConfigs.debug
+//            proguardFiles getDefaultProguardFile(
+//                    'proguard-android-optimize.txt'),
+//                    'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+
     namespace 'ro.aenigma'
     ndkVersion '28.0.12674087'
 }

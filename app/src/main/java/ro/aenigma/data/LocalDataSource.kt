@@ -60,34 +60,14 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get(address)
     }
 
-    fun getContactFlow(address: String): Flow<ContactEntity?>
-    {
-        return contactsDao.getFlow(address)
-    }
-
     suspend fun insertOrUpdateContact(contactEntity: ContactEntity)
     {
         contactsDao.insertOrUpdate(contactEntity)
     }
 
-    suspend fun insertContact(contactEntity: ContactEntity)
-    {
-        contactsDao.insert(contactEntity)
-    }
-
     suspend fun updateContact(contactEntity: ContactEntity)
     {
         contactsDao.update(contactEntity)
-    }
-
-    suspend fun insertOrUpdateContacts(contacts: List<ContactEntity>): List<Long>
-    {
-        return contactsDao.insertOrUpdate(contacts)
-    }
-
-    suspend fun insertContacts(contacts: List<ContactEntity>): List<Long>
-    {
-        return contactsDao.insert(contacts)
     }
 
     suspend fun removeContacts(contacts: List<ContactEntity>)
@@ -168,11 +148,6 @@ class LocalDataSource @Inject constructor(
         contactsDao.markConversationAsRead(address)
     }
 
-    fun isGuardAvailable(): Flow<Boolean>
-    {
-        return guardsDao.isGuardAvailable()
-    }
-
     suspend fun insertGuard(guard: GuardEntity)
     {
         baseUrlInterceptor.setBaseUrl(guard.hostname)
@@ -217,11 +192,6 @@ class LocalDataSource @Inject constructor(
     suspend fun removeEdges()
     {
         return edgesDao.remove()
-    }
-
-    suspend fun insertEdges(edges: List<EdgeEntity>)
-    {
-        return edgesDao.insert(edges)
     }
 
     suspend fun insertEdge(edge: EdgeEntity)
