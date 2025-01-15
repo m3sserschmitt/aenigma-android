@@ -10,7 +10,7 @@ class CryptoProvider {
     companion object {
 
         init {
-            System.loadLibrary("libaenigma-wrapper")
+            System.loadLibrary("aenigma-wrapper")
         }
 
         private external fun initDecryption(privateKey: String, passphrase: String): Boolean
