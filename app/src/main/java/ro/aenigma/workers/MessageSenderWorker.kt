@@ -29,12 +29,13 @@ import ro.aenigma.routing.PathFinder
 import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import ro.aenigma.util.MessageType
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class MessageSenderWorker @AssistedInject constructor(
-    @Assisted private val context: Context,
+    @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val signalRClient: SignalRClient,
     private val repository: Repository,
@@ -50,36 +51,36 @@ class MessageSenderWorker @AssistedInject constructor(
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun sendMessage(context: Context, message: MessageEntity) {
+        fun createUniqueWorkRequest(context: Context, data: Data, uniqueWorkRequest: String) {
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID, message.id)
-                .build()
-
             val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setConstraints(constraints)
-                .setInputData(parameters)
+                .setInputData(data)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
                 .build()
-
             WorkManager.getInstance(context)
-                .enqueueUniqueWork(
-                    "MessageSenderWorkRequest-${message.id}",
-                    ExistingWorkPolicy.KEEP,
-                    workRequest
-                )
+                .enqueueUniqueWork(uniqueWorkRequest, ExistingWorkPolicy.KEEP, workRequest)
+        }
+
+        @JvmStatic
+        fun sendMessage(context: Context, message: MessageEntity) {
+            val parameters = Data.Builder()
+                .putLong(MESSAGE_ID, message.id)
+                .build()
+            createUniqueWorkRequest(context, parameters, "MessageSenderWorkRequest-${message.id}")
         }
     }
 
     private suspend fun buildOnion(
-        text: String,
+        text: String?,
+        refId: String?,
+        action: MessageType?,
         destination: ContactEntity,
         path: List<VertexEntity>
     ): String? {
-        if (text.isBlank() || path.isEmpty()) {
+        if (path.isEmpty()) {
             return null
         }
 
@@ -91,17 +92,13 @@ class MessageSenderWorker @AssistedInject constructor(
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
 
-        val json = Gson()
         val messageDetails = OnionDetails(
-            text,
-            signatureService.address,
-            guard.address,
-            guard.hostname,
-            signatureService.publicKey ?: "" // TODO: public key shout not be sent in every message
+            text, action?.name, signatureService.address, guard.address, guard.hostname,
+            signatureService.publicKey, // TODO: public key & guard should not be sent in every message
+            refId
         )
-        val serializedData = json.toJson(messageDetails)
-
-        return CryptoProvider.sealOnionEx(serializedData.toByteArray(), keys, addresses)
+        val serializedData = Gson().toJson(messageDetails).toByteArray()
+        return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
     }
 
     private fun validateVertex(
@@ -177,12 +174,6 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        val messageId = inputData.getLong(MESSAGE_ID, -1)
-
-        if (messageId < 0) {
-            return Result.failure()
-        }
-
         if (!signalRClient.isConnected()) {
             return Result.retry()
         }
@@ -191,8 +182,10 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.retry()
         }
 
-        val message = repository.local.getMessage(messageId) ?: return Result.failure()
-        val contact = repository.local.getContact(message.chatId) ?: return Result.failure()
+        val messageId = inputData.getLong(MESSAGE_ID, -1)
+        val message = if (messageId > 0) repository.local.getMessage(messageId) else null
+        val chatId = message?.chatId ?: return Result.failure()
+        val contact = repository.local.getContact(chatId) ?: return Result.failure()
 
         if (!updateContactIfRequired(contact)) {
             // TODO: This might become a failure condition in the future
@@ -206,7 +199,8 @@ class MessageSenderWorker @AssistedInject constructor(
         }
 
         val path = paths.random().vertexList
-        val onion = buildOnion(message.text, contact, path) ?: return Result.failure()
+        val onion = buildOnion(message.text, message.refId, message.type, contact, path)
+            ?: return Result.failure()
 
         if (!signalRClient.sendMessage(onion)) {
             return Result.retry()

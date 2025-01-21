@@ -14,7 +14,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ro.aenigma.util.MessageType
+import ro.aenigma.util.getDescription
 import java.util.SortedSet
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -117,13 +120,18 @@ class ChatViewModel @Inject constructor(
             try {
                 repository.local.getConversation(chatId).collect { messages ->
                     synchronized(_conversationSortedSet) {
+                        val messagesSet = messages.toSet()
+                        val deletedItems = _conversationSortedSet.subtract(messagesSet)
+                        val filteredItems = messagesSet.filter {
+                            item -> item.text.contains(_filterQuery.value)
+                        }
+                        val notSentItems = messages.filter { item -> !item.sent }
                         if (_conversationSortedSet.isEmpty()) {
                             _nextPageAvailable.value = messages.isFullPage()
                         }
-                        _conversationSortedSet.addAll(
-                            messages.filter { item -> item.text.contains(_filterQuery.value) }
-                        )
-                        _notSentMessages.value = messages.filter { item -> !item.sent }
+                        _conversationSortedSet.addAll(filteredItems)
+                        _conversationSortedSet.removeAll(deletedItems)
+                        _notSentMessages.value = notSentItems
                         _conversation.value = DatabaseRequestState.Success(
                             _conversationSortedSet.toList()
                         )
@@ -186,43 +194,65 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) { repository.local.markConversationAsRead(chatId) }
     }
 
-    fun clearConversation(chatId: String)
-    {
+    fun clearConversation(chatId: String) {
         synchronized(_conversationSortedSet) { _conversationSortedSet.clear() }
-        viewModelScope.launch(ioDispatcher) { repository.local.clearConversation(chatId) }
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.clearConversationSoft(chatId)
+            postToDatabase(MessageType.DELETE_ALL, null, null)
+        }
     }
 
-    fun removeMessages(messages: List<MessageEntity>)
-    {
+    fun removeMessages(messages: List<MessageEntity>) {
         synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
-            repository.local.removeMessages(messages, _conversationSortedSet.firstOrNull()?.id)
+            val textMessages = messages.filter { item -> item.type == MessageType.TEXT }
+            val textMessagesWithRefs = textMessages.filter { item -> item.refId != null }
+            val nonText = messages.filter { item -> item.type != MessageType.TEXT }
+            repository.local.removeMessagesSoft(textMessages)
+            repository.local.removeMessagesHard(nonText)
+            textMessagesWithRefs.forEach { item ->
+                postToDatabase(
+                    MessageType.DELETE,
+                    null,
+                    item.refId
+                )
+            }
         }
     }
 
     fun sendMessage() {
         viewModelScope.launch(ioDispatcher) {
-            if (saveMessageToDatabase()) {
+            if (postToDatabase()) {
                 _messageInputText.value = ""
             }
         }
     }
 
-    private suspend fun saveMessageToDatabase(): Boolean {
-        if(messageInputText.value.isBlank())
-        {
+    private suspend fun postToDatabase(action: MessageType, text: String?, refId: String?) : Boolean {
+        return try {
+            val contact = getSelectedContactEntity() ?: return false
+            val content = text ?: action.getDescription() ?: return false
+            val message = MessageEntity(
+                chatId = contact.address,
+                text = content,
+                incoming = false,
+                sent = false,
+                type = action,
+                refId = refId,
+                uuid = null
+            )
+            messageSaver.saveOutgoingMessage(message)
+            true
+        } catch (ex: Exception) {
+            false
+        }
+    }
+
+    private suspend fun postToDatabase(): Boolean {
+        if (messageInputText.value.isBlank()) {
             return false
         }
-        val contact = getSelectedContactEntity() ?: return false
-        val message = MessageEntity(
-            contact.address,
-            messageInputText.value,
-            incoming = false,
-            sent = false)
-
-        messageSaver.saveOutgoingMessage(message)
-
-        return true
+        return postToDatabase(MessageType.TEXT, messageInputText.value, UUID.randomUUID().toString())
     }
 
     private fun getSelectedContactEntity(): ContactEntity? {

@@ -297,10 +297,23 @@ fun MarkConversationAsRead(
 
 @Preview
 @Composable
-fun ChatScreenPreview()
-{
-    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, ZonedDateTime.now())
-    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, ZonedDateTime.now())
+fun ChatScreenPreview() {
+    val message1 = MessageEntity(
+        chatId = "123",
+        text = "Hey",
+        incoming = true,
+        sent = false,
+        deleted = false,
+        uuid = null
+    )
+    val message2 = MessageEntity(
+        chatId = "123",
+        text = "Hey, how are you?",
+        incoming = false,
+        sent = true,
+        deleted = false,
+        uuid = null
+    )
     message1.id = 1
     message2.id = 2
 

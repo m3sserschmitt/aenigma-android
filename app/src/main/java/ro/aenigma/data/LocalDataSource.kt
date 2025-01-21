@@ -27,107 +27,120 @@ class LocalDataSource @Inject constructor(
     private val preferencesDataStore: PreferencesDataStore,
     private val baseUrlInterceptor: BaseUrlInterceptor
 ) {
-    suspend fun saveNotificationsAllowed(granted: Boolean)
-    {
+    suspend fun saveNotificationsAllowed(granted: Boolean) {
         preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    val notificationsAllowed: Flow<Boolean>
-    = preferencesDataStore.notificationsAllowed
+    val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
 
-    fun getContacts() : Flow<List<ContactEntity>>
-    {
+    fun getContacts(): Flow<List<ContactEntity>> {
         return contactsDao.get()
     }
 
-    fun getContactsWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
-    {
+    fun getContactsWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>> {
         return contactsDao.getWithConversationPreviewFlow()
     }
 
-    suspend fun getContactsWithConversationPreview(): List<ContactWithConversationPreview>
-    {
+    suspend fun getContactsWithConversationPreview(): List<ContactWithConversationPreview> {
         return contactsDao.getWithConversationPreview()
     }
 
-    suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity>
-    {
+    suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity> {
         return contactsDao.search(searchQuery)
     }
 
-    suspend fun getContact(address: String) : ContactEntity?
-    {
+    suspend fun getContact(address: String): ContactEntity? {
         return contactsDao.get(address)
     }
 
-    suspend fun insertOrUpdateContact(contactEntity: ContactEntity)
-    {
+    suspend fun insertOrUpdateContact(contactEntity: ContactEntity) {
         contactsDao.insertOrUpdate(contactEntity)
     }
 
-    suspend fun updateContact(contactEntity: ContactEntity)
-    {
+    suspend fun updateContact(contactEntity: ContactEntity) {
         contactsDao.update(contactEntity)
     }
 
-    suspend fun removeContacts(contacts: List<ContactEntity>)
-    {
+    suspend fun removeContacts(contacts: List<ContactEntity>) {
         contactsDao.remove(contacts)
     }
 
-    suspend fun getMessage(id: Long): MessageEntity?
-    {
+    suspend fun getMessage(id: Long): MessageEntity? {
         return messagesDao.get(id)
     }
 
-    suspend fun getMessage(uuid: String): MessageEntity?
-    {
-        return messagesDao.get(uuid)
-    }
-
-    fun getConversation(chatId: String) : Flow<List<MessageEntity>>
-    {
+    fun getConversation(chatId: String): Flow<List<MessageEntity>> {
         return messagesDao.getConversation(chatId)
     }
 
-    suspend fun getConversation(chatId: String, infIndex: Long, searchQuery: String = ""): List<MessageEntity>
-    {
+    suspend fun getMessageByUuid(uuid: String): MessageEntity? {
+        return messagesDao.getByUuid(uuid)
+    }
+
+    suspend fun getMessageByRefId(refId: String): MessageEntity? {
+        return messagesDao.getByRefId(refId)
+    }
+
+    suspend fun getConversation(
+        chatId: String,
+        infIndex: Long,
+        searchQuery: String = ""
+    ): List<MessageEntity> {
         return messagesDao.getConversation(chatId, infIndex, searchQuery)
     }
 
-    suspend fun clearConversation(chatId: String)
-    {
-        messagesDao.clearConversation(chatId)
+    suspend fun clearConversationSoft(chatId: String) {
+        messagesDao.clearConversationSoft(chatId)
+        updateContactLastMessageId(chatId)
+    }
 
+    private suspend fun updateContactLastMessageId(chatId: String) {
         val contact = contactsDao.get(chatId) ?: return
-        contact.lastMessageId = null
+        contact.lastMessageId = messagesDao.getLastMessageId(chatId)
         contactsDao.update(contact)
+        return
     }
 
-    suspend fun removeMessages(messages: List<MessageEntity>, lastMessageId: Long?): Boolean
-    {
-        if(messages.map { item -> item.chatId }.toSet().size != 1) return false
-
-        messagesDao.remove(messages)
-        val contact = contactsDao.get(messages.first().chatId) ?: return true
-        contact.lastMessageId = lastMessageId
-        contactsDao.update(contact)
-        return true
+    suspend fun removeMessagesSoft(messages: List<MessageEntity>) {
+        if (messages.map { item -> item.chatId }.toSet().size != 1) return
+        messagesDao.removeSoft(messages.map { item -> item.id })
+        val chatId = messages.first().chatId
+        updateContactLastMessageId(chatId)
     }
 
-    suspend fun insertMessages(messages: List<MessageEntity>)
-    {
-        messages.forEach { item ->
-            val messageId = messagesDao.insert(item.chatId, item.text, item.incoming, item.sent, item.date, item.dateReceivedOnServer, item.uuid)
-            if(messageId > 0)
-            {
-                val contact = contactsDao.get(item.chatId)
-                if (contact != null) {
-                    contact.lastMessageId = messageId
-                    contactsDao.update(contact)
-                }
+    suspend fun removeMessageSoft(refId: String) {
+        val message = messagesDao.getByRefId(refId) ?: return
+        messagesDao.removeSoft(refId)
+        updateContactLastMessageId(message.chatId)
+    }
+
+    suspend fun removeMessagesHard() {
+        return messagesDao.removeHard()
+    }
+
+    suspend fun removeMessagesHard(messages: List<MessageEntity>) {
+        return messagesDao.removeHard(messages)
+    }
+
+    suspend fun insertMessage(message: MessageEntity): Boolean {
+        val messageId = messagesDao.insert(
+            chatId = message.chatId,
+            text = message.text,
+            type = message.type,
+            incoming = message.incoming,
+            refId = message.refId,
+            date = message.date,
+            dateReceivedOnServer = message.dateReceivedOnServer,
+            uuid = message.uuid
+        )
+        if (messageId != null && messageId > 0) {
+            updateContactLastMessageId(message.chatId)
+            if (message.incoming) {
+                markConversationAsUnread(message.chatId)
             }
+            return true
         }
+        return false
     }
 
     fun getOutgoingMessages(): Flow<List<MessageEntity>> {
@@ -138,24 +151,20 @@ class LocalDataSource @Inject constructor(
         return messagesDao.update(message)
     }
 
-    suspend fun markConversationAsUnread(address: String)
-    {
-        contactsDao.markConversationAsUnread(address)
+    suspend fun markConversationAsUnread(address: String) {
+        return contactsDao.markConversationAsUnread(address)
     }
 
-    suspend fun markConversationAsRead(address: String)
-    {
-        contactsDao.markConversationAsRead(address)
+    suspend fun markConversationAsRead(address: String) {
+        return contactsDao.markConversationAsRead(address)
     }
 
-    suspend fun insertGuard(guard: GuardEntity)
-    {
+    suspend fun insertGuard(guard: GuardEntity) {
         baseUrlInterceptor.setBaseUrl(guard.hostname)
         return guardsDao.insert(guard)
     }
 
-    suspend fun getGuard(): GuardEntity?
-    {
+    suspend fun getGuard(): GuardEntity? {
         val guard = guardsDao.getLastGuard()
         if (guard != null) {
             baseUrlInterceptor.setBaseUrl(guard.hostname)
@@ -163,44 +172,36 @@ class LocalDataSource @Inject constructor(
         return guard
     }
 
-    suspend fun getGraphVersion(): GraphVersionEntity?
-    {
+    suspend fun getGraphVersion(): GraphVersionEntity? {
         return graphVersionsDao.get()
     }
 
-    suspend fun updateGraphVersion(graphVersion: GraphVersionEntity)
-    {
+    suspend fun updateGraphVersion(graphVersion: GraphVersionEntity) {
         graphVersionsDao.remove()
         graphVersionsDao.insert(graphVersion)
     }
 
-    suspend fun removeVertices()
-    {
+    suspend fun removeVertices() {
         return verticesDao.remove()
     }
 
-    suspend fun insertVertices(vertices: List<VertexEntity>)
-    {
+    suspend fun insertVertices(vertices: List<VertexEntity>) {
         return verticesDao.insert(vertices)
     }
 
-    suspend fun getVertices(): List<VertexEntity>
-    {
+    suspend fun getVertices(): List<VertexEntity> {
         return verticesDao.get()
     }
 
-    suspend fun removeEdges()
-    {
+    suspend fun removeEdges() {
         return edgesDao.remove()
     }
 
-    suspend fun insertEdge(edge: EdgeEntity)
-    {
+    suspend fun insertEdge(edge: EdgeEntity) {
         return edgesDao.insert(edge)
     }
 
-    suspend fun getEdges(): List<EdgeEntity>
-    {
+    suspend fun getEdges(): List<EdgeEntity> {
         return edgesDao.get()
     }
 }

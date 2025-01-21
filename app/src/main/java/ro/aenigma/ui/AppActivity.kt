@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import ro.aenigma.crypto.KeysManager
 import ro.aenigma.data.database.MessageEntity
@@ -23,6 +24,7 @@ import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import dagger.hilt.android.AndroidEntryPoint
+import ro.aenigma.workers.CleanupWorker
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -87,8 +89,10 @@ class AppActivity : ComponentActivity() {
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
             actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
         )
+        val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
         WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
+            .then(cleanupRequest)
             .enqueue()
     }
 

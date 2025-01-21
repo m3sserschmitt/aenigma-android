@@ -146,7 +146,8 @@ fun MessageItemPreview()
             "123-123-123-123",
             "Hello",
             incoming = true,
-            sent = true
+            sent = true,
+            uuid = null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -166,7 +167,8 @@ fun MessageItemSelectedPreview()
             "123-123-123-123",
             "Hello",
             incoming = true,
-            sent = false
+            sent = false,
+            uuid = null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -186,7 +188,8 @@ fun MessageItemPending()
             "123-123-123-123",
             "Hello",
             incoming = false,
-            sent = false
+            sent = false,
+            uuid = null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -206,7 +209,8 @@ fun MessageItemSent()
             "123-123-123-123",
             "Hello",
             incoming = false,
-            sent = true
+            sent = true,
+            uuid = null
         ),
         onItemDeselected = {},
         onClick = {},

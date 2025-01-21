@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
-    @Assisted private val context: Context,
+    @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository
 ) : CoroutineWorker(context, params) {

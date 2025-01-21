@@ -1,28 +1,12 @@
 package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import ro.aenigma.util.MessageType
 import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.util.*
 
 class Converters {
-
-    @TypeConverter
-    fun pathToString(path: List<String>): String
-    {
-        val gson = Gson()
-        return gson.toJson(path)
-    }
-
-    @TypeConverter
-    fun pathFromString(stringPath: String): List<String>?
-    {
-        val gson = Gson()
-        val itemType = object : TypeToken<List<String>>() {}.type
-        return gson.fromJson(stringPath, itemType)
-    }
 
     @TypeConverter
     fun dateToString(date: Date): String
@@ -50,5 +34,15 @@ class Converters {
     fun stringToZonedDateTime(date: String): ZonedDateTime?
     {
         return ZonedDateTime.parse(date)
+    }
+
+    @TypeConverter
+    fun fromStatus(status: MessageType): String {
+        return status.name
+    }
+
+    @TypeConverter
+    fun toStatus(value: String): MessageType {
+        return MessageType.valueOf(value)
     }
 }
