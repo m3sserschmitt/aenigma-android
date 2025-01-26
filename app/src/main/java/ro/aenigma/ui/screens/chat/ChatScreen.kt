@@ -17,6 +17,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
@@ -43,6 +44,7 @@ fun ChatScreen(
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
+    val replyToMessage by chatViewModel.replyToMessage.collectAsState()
     val notSentMessages by chatViewModel.notSentMessages.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
@@ -59,6 +61,7 @@ fun ChatScreen(
     ChatScreen(
         contact = selectedContact,
         connectionStatus = connectionStatus,
+        replyToMessage = replyToMessage,
         messages = messages,
         notSentMessages = notSentMessages,
         nextConversationPageAvailable = nextConversationPageAvailable,
@@ -87,6 +90,9 @@ fun ChatScreen(
         onDelete = {
             selectedMessages -> chatViewModel.removeMessages(selectedMessages)
         },
+        onReplyToMessage = {
+            selectedMessage -> chatViewModel.setReplyTo(selectedMessage)
+        },
         onSearch = {
             searchQuery -> chatViewModel.searchConversation(searchQuery)
         },
@@ -103,6 +109,7 @@ fun ChatScreen(
     contact: DatabaseRequestState<ContactEntity>,
     connectionStatus: SignalRStatus,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    replyToMessage: MessageEntity?,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
@@ -114,6 +121,7 @@ fun ChatScreen(
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
     onDelete: (List<MessageEntity>) -> Unit,
+    onReplyToMessage: (MessageEntity?) -> Unit,
     onSearch: (String) -> Unit,
     loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit,
@@ -232,6 +240,14 @@ fun ChatScreen(
                 onDeleteClicked = {
                     deleteMessagesConfirmationVisible = true
                 },
+                onReplyToMessageClicked = {
+                    val selectedItem = selectedItems.firstOrNull()
+                    if(selectedItem != null)
+                    {
+                        onReplyToMessage(selectedItem)
+                    }
+                    selectedItems.clear()
+                },
                 navigateToContactsScreen = navigateToContactsScreen,
                 isSearchMode = isSearchMode,
                 onSearchModeClosed = {
@@ -252,17 +268,27 @@ fun ChatScreen(
             ChatContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding()
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = 4.dp,
+                    end = 4.dp
                 ),
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
+                contact = contact,
+                replyToMessage = replyToMessage,
                 messages = messages,
                 notSentMessages = notSentMessages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
-                onSendClicked = onSendClicked,
+                onSendClicked = {
+                    onSendClicked()
+                    selectedItems.clear()
+                },
+                onReplyAborted = {
+                    onReplyToMessage(null)
+                },
                 onMessageSelected = { selectedMessage ->
                     if(!isSelectionMode)
                     {
@@ -330,6 +356,7 @@ fun ChatScreenPreview() {
             )
         ),
         connectionStatus = SignalRStatus.Connected(),
+        replyToMessage = null,
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
@@ -343,6 +370,7 @@ fun ChatScreenPreview() {
         onNewContactNameChanged = { true },
         onDeleteAll = {},
         onDelete = {},
+        onReplyToMessage = {},
         onSearch = {},
         onRenameContactDismissed = {},
         loadNextPage = { },

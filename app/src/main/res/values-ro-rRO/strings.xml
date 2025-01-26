@@ -30,6 +30,9 @@
     <string name="erase_entire_conversation">Ștergeți intreaga conversație?</string>
     <string name="this_action_is_permanent">Această acțiune este permanentă și nu poate fi revocată</string>
     <string name="delete">Ștergeți</string>
+    <string name="reply">Răspundeți</string>
+    <string name="they_said">%s a spus:</string>
+    <string name="you_said">Dvs. ați spus:</string>
     <string name="delete_selected_messages">Ștergeți mesajele selectate?</string>
     <string name="delete_selected_contacts">Ștergeți contactele selectete?</string>
     <string name="no_message_found">Nu a fost găsit niciun mesaj</string>
@@ -84,4 +87,6 @@
     <string name="share_via">Distribuiți către</string>
     <string name="failed_to_share">Nu se poate distribui</string>
     <string name="failed_to_copy_to_clipboard">Nu se poate copia in clipboard</string>
+    <string name="message_deleted">Mesaj șters</string>
+    <string name="conversation_deleted">Conversație ștearsă</string>
 </resources>

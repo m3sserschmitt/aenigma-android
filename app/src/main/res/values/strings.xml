@@ -29,6 +29,9 @@
     <string name="erase_entire_conversation">Erase entire conversation?</string>
     <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
     <string name="delete">Delete</string>
+    <string name="reply">Reply</string>
+    <string name="they_said">%s said: </string>
+    <string name="you_said">You said:</string>
     <string name="delete_selected_messages">Delete selected messages?</string>
     <string name="delete_selected_contacts">Delete selected contacts?</string>
     <string name="no_message_found">We could not find any message out there</string>
@@ -86,4 +89,6 @@
     <string name="failed_to_copy_to_clipboard">Failed to copy to clipboard</string>
     <string name="gnu_gpl_v3_0_license" translatable="false">GNU General Public License Version 3</string>
     <string name="gnu_gpl_v3_0_title" translatable="false">GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007</string>
+    <string name="message_deleted">Message deleted</string>
+    <string name="conversation_deleted">Conversation deleted</string>
 </resources>

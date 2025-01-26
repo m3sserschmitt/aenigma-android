@@ -29,7 +29,6 @@ import ro.aenigma.routing.PathFinder
 import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.util.MessageType
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
@@ -74,9 +73,7 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun buildOnion(
-        text: String?,
-        refId: String?,
-        action: MessageType?,
+        message: MessageEntity,
         destination: ContactEntity,
         path: List<VertexEntity>
     ): String? {
@@ -93,9 +90,9 @@ class MessageSenderWorker @AssistedInject constructor(
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
 
         val messageDetails = OnionDetails(
-            text, action?.name, signatureService.address, guard.address, guard.hostname,
+            message.text, message.type, signatureService.address, guard.address, guard.hostname,
             signatureService.publicKey, // TODO: public key & guard should not be sent in every message
-            refId
+            message.refId
         )
         val serializedData = Gson().toJson(messageDetails).toByteArray()
         return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
@@ -199,7 +196,7 @@ class MessageSenderWorker @AssistedInject constructor(
         }
 
         val path = paths.random().vertexList
-        val onion = buildOnion(message.text, message.refId, message.type, contact, path)
+        val onion = buildOnion(message, contact, path)
             ?: return Result.failure()
 
         if (!signalRClient.sendMessage(onion)) {

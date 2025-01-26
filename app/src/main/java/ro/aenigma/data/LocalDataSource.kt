@@ -77,8 +77,9 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getByUuid(uuid)
     }
 
-    suspend fun getMessageByRefId(refId: String): MessageEntity? {
-        return messagesDao.getByRefId(refId)
+    fun getMessageByRefIdFlow(refId: String): Flow<MessageEntity?>
+    {
+        return messagesDao.getByRefIdFlow(refId)
     }
 
     suspend fun getConversation(

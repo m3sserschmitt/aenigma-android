@@ -1,7 +1,8 @@
 package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
-import ro.aenigma.util.MessageType
+import com.google.gson.Gson
+import ro.aenigma.models.MessageAction
 import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.util.*
@@ -37,12 +38,12 @@ class Converters {
     }
 
     @TypeConverter
-    fun fromStatus(status: MessageType): String {
-        return status.name
+    fun fromMessageAction(action: MessageAction): String {
+        return Gson().toJson(action)
     }
 
     @TypeConverter
-    fun toStatus(value: String): MessageType {
-        return MessageType.valueOf(value)
+    fun toMessageAction(value: String): MessageAction {
+        return Gson().fromJson(value, MessageAction::class.java)
     }
 }

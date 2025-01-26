@@ -21,6 +21,7 @@ import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
+import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
 import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
@@ -39,6 +40,7 @@ fun ChatAppBar(
     onRetryConnection: () -> Unit,
     onDeleteAllClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
+    onReplyToMessageClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onSelectionModeExited: () -> Unit,
     onSearchModeTriggered: () -> Unit,
@@ -60,6 +62,11 @@ fun ChatAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
             actions = {
+                if (selectedItemsCount == 1) {
+                    ReplyToMessageAppBarAction(
+                        onReplyToMessageClicked = onReplyToMessageClicked
+                    )
+                }
                 DeleteAppBarAction(
                     onDeleteClicked = onDeleteClicked
                 )
@@ -174,6 +181,7 @@ fun DefaultChatAppBarPreview()
         onRenameContactClicked = {},
         navigateToContactsScreen = {},
         onDeleteClicked = {},
+        onReplyToMessageClicked = {},
         selectedItemsCount = 0,
         onSelectionModeExited = {},
         onSearchModeTriggered = {},
@@ -206,6 +214,7 @@ fun SelectionModeChatAppBarPreview()
         onRenameContactClicked = {},
         navigateToContactsScreen = {},
         onDeleteClicked = {},
+        onReplyToMessageClicked = {},
         selectedItemsCount = 3,
         onSelectionModeExited = {},
         onSearchModeTriggered = {},

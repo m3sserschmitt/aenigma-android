@@ -1,6 +1,6 @@
 package ro.aenigma.util
 
-enum class MessageType {
+enum class MessageActionType {
     @Description("Text message")
     TEXT,
 
@@ -8,14 +8,10 @@ enum class MessageType {
     DELETE,
 
     @Description("Conversation deleted")
-    DELETE_ALL
-}
+    DELETE_ALL,
 
-inline fun <reified T : Enum<T>>String?.parseEnum(): T? {
-    if (this == null) {
-        return null
-    }
-    return enumValues<T>().find { it.name.equals(this, ignoreCase = true) }
+    @Description("Replied to message")
+    REPLY
 }
 
 inline fun <reified T : Enum<T>>T?.getDescription(): String? {

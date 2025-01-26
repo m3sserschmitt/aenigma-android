@@ -1,10 +1,14 @@
 package ro.aenigma.data.database
 
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import ro.aenigma.models.MessageAction
 import ro.aenigma.util.Constants
-import ro.aenigma.util.MessageType
+import ro.aenigma.util.MessageActionType
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -14,7 +18,7 @@ import java.util.UUID
         Index(value = ["chatId"]),
         Index(value = ["sent"]),
         Index(value = ["deleted"]),
-        Index(value = ["refId"]),
+        Index(value = ["refId"], unique = true),
         Index(value = ["uuid"], unique = true)
     ]
 )
@@ -25,7 +29,7 @@ data class MessageEntity (
     val uuid: String?,
     var sent: Boolean = false,
     var deleted: Boolean = false,
-    val type: MessageType = MessageType.TEXT,
+    val type: MessageAction = MessageAction(MessageActionType.TEXT, null),
     val date: ZonedDateTime = ZonedDateTime.now(),
     val dateReceivedOnServer: ZonedDateTime? = null,
     val refId: String? = UUID.randomUUID().toString(),
@@ -33,6 +37,8 @@ data class MessageEntity (
     ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
+
+    @Ignore var responseFor: Flow<MessageEntity?> = flowOf(null)
 
     override fun hashCode(): Int {
         return id.hashCode()

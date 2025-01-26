@@ -9,9 +9,9 @@ import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.util.NotificationService
 import com.google.gson.Gson
-import ro.aenigma.util.MessageType
+import ro.aenigma.models.MessageAction
+import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.getDescription
-import ro.aenigma.util.parseEnum
 import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,19 +36,20 @@ class MessageSaver @Inject constructor(
                 return
             }
 
-            when (data.type) {
-                MessageType.DELETE -> {
-                    data.refId?.let { repository.local.removeMessageSoft(it) }
+            when (data.type.actionType) {
+                MessageActionType.DELETE -> {
+                    data.type.refId?.let {
+                        repository.local.removeMessageSoft(it)
+                    }
                 }
 
-                MessageType.DELETE_ALL -> {
+                MessageActionType.DELETE_ALL -> {
                     data.chatId.let { repository.local.clearConversationSoft(it) }
                 }
 
-                MessageType.TEXT -> {}
+                else -> {}
             }
-            if(repository.local.insertMessage(data))
-            {
+            if (repository.local.insertMessage(data)) {
                 notify(data)
             }
         } catch (_: Exception) {
@@ -59,12 +60,12 @@ class MessageSaver @Inject constructor(
     private suspend fun interpret(message: Message): MessageEntity? {
         return try {
             val parsedContent = deserializeContent(message) ?: return null
-            val action = parsedContent.action.parseEnum<MessageType>()
-            if (action == null && parsedContent.text == null) {
+            if (parsedContent.action == null && parsedContent.text == null) {
                 return null
             }
             createOrUpdateContact(parsedContent)
-            val text = parsedContent.text ?: action.getDescription() ?: return null
+            val text = parsedContent.text ?: parsedContent.action?.actionType.getDescription()
+            ?: return null
             MessageEntity(
                 chatId = message.chatId,
                 text = text,
@@ -73,7 +74,7 @@ class MessageSaver @Inject constructor(
                 sent = false,
                 dateReceivedOnServer = message.dateReceivedOnServer,
                 refId = parsedContent.refId,
-                type = action ?: MessageType.TEXT
+                type = parsedContent.action ?: MessageAction(MessageActionType.TEXT, null)
             )
         } catch (_: Exception) {
             null

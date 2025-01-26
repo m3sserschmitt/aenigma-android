@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
@@ -33,12 +34,15 @@ fun ChatContent(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    contact: DatabaseRequestState<ContactEntity>,
+    replyToMessage: MessageEntity?,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
+    onReplyAborted: () -> Unit,
     onMessageSelected: (MessageEntity) -> Unit,
     onMessageDeselected: (MessageEntity) -> Unit,
     loadNextPage: () -> Unit
@@ -64,6 +68,7 @@ fun ChatContent(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
+                contact = contact,
                 notSentMessages = notSentMessages,
                 conversationListState = conversationListState,
                 nextConversationPageAvailable = nextConversationPageAvailable,
@@ -76,11 +81,14 @@ fun ChatContent(
             ChatInput(
                 modifier = Modifier.height(80.dp),
                 messageInputText = messageInputText,
+                contact = contact,
+                replyToMessage = replyToMessage,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = {
                     onSendClicked()
                     messageSent = true
-                }
+                },
+                onReplyAborted = onReplyAborted
             )
         }
     }
@@ -108,6 +116,7 @@ fun DisplayMessages(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: DatabaseRequestState<List<MessageEntity>>,
+    contact: DatabaseRequestState<ContactEntity>,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
@@ -132,6 +141,7 @@ fun DisplayMessages(
                             isSelected = isSelected,
                             isSent = notSentMessages.contains(messageEntity),
                             message = messageEntity,
+                            contact = contact,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {}
@@ -186,11 +196,14 @@ fun ChatContentPreview() {
         messages = DatabaseRequestState.Success(
             listOf(message1, message2)
         ),
+        replyToMessage = null,
+        contact = DatabaseRequestState.Idle,
         notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},
+        onReplyAborted = {},
         onInputTextChanged = {},
         selectedMessages = listOf(),
         onMessageDeselected = { },
