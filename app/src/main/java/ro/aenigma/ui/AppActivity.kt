@@ -16,19 +16,23 @@ import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.util.NavigationTracker
-import ro.aenigma.util.NotificationService
+import ro.aenigma.services.NavigationTracker
+import ro.aenigma.services.NotificationService
 import ro.aenigma.viewmodels.MainViewModel
 import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import dagger.hilt.android.AndroidEntryPoint
+import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.workers.CleanupWorker
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var signalRClient: SignalRClient
 
     @Inject
     lateinit var navigationTracker: NavigationTracker
@@ -97,7 +101,7 @@ class AppActivity : ComponentActivity() {
     }
 
     private fun observeClientConnectivity() {
-        mainViewModel.signalRClientStatus.observe(this, signalRStatusObserver)
+        signalRClient.status.observe(this, signalRStatusObserver)
     }
 
     private fun observeOutgoingMessages() {

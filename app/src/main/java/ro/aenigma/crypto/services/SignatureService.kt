@@ -1,8 +1,10 @@
-package ro.aenigma.crypto
+package ro.aenigma.crypto.services
 
 import android.content.Context
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import dagger.hilt.android.qualifiers.ApplicationContext
+import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.crypto.KeysManager
 import javax.inject.Inject
 import javax.inject.Singleton
 

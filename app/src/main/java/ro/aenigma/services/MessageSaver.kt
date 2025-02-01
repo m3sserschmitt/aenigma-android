@@ -1,14 +1,14 @@
-package ro.aenigma.data
+package ro.aenigma.services
 
-import ro.aenigma.crypto.OnionParsingService
+import ro.aenigma.crypto.services.OnionParsingService
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.models.Message
-import ro.aenigma.models.OnionDetails
+import ro.aenigma.models.ParsedMessageDto
+import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import ro.aenigma.util.NotificationService
 import com.google.gson.Gson
+import ro.aenigma.data.Repository
 import ro.aenigma.models.MessageAction
 import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.getDescription
@@ -22,9 +22,9 @@ class MessageSaver @Inject constructor(
     private val onionParsingService: OnionParsingService,
     private val notificationService: NotificationService
 ) {
-    private fun deserializeContent(message: Message): OnionDetails? {
+    private fun deserializeContent(message: ParsedMessageDto): MessageWithMetadata? {
         return try {
-            Gson().fromJson(message.text, OnionDetails::class.java)
+            Gson().fromJson(message.content, MessageWithMetadata::class.java)
         } catch (_: Exception) {
             null
         }
@@ -57,7 +57,7 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private suspend fun interpret(message: Message): MessageEntity? {
+    private suspend fun interpret(message: ParsedMessageDto): MessageEntity? {
         return try {
             val parsedContent = deserializeContent(message) ?: return null
             if (parsedContent.action == null && parsedContent.text == null) {
@@ -98,7 +98,7 @@ class MessageSaver @Inject constructor(
         repository.local.insertMessage(message)
     }
 
-    private suspend fun createOrUpdateContact(onionDetails: OnionDetails) {
+    private suspend fun createOrUpdateContact(onionDetails: MessageWithMetadata) {
         if (onionDetails.address == null || onionDetails.publicKey == null || onionDetails.guardAddress == null) {
             return
         }

@@ -13,8 +13,8 @@ import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import ro.aenigma.crypto.SignatureService
-import ro.aenigma.data.MessageSaver
+import ro.aenigma.crypto.services.SignatureService
+import ro.aenigma.services.MessageSaver
 import ro.aenigma.models.Neighborhood
 import ro.aenigma.models.VertexBroadcastRequest
 import ro.aenigma.models.hubInvocation.AuthenticateResult
@@ -137,7 +137,7 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun resetStatus() {
+    fun resetAborted() {
         if (status.value is SignalRStatus.Error.Aborted) {
             _failedAttempts.postValue(0)
             updateStatus(SignalRStatus.Reset(_status.value))

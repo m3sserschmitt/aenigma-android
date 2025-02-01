@@ -10,7 +10,7 @@ import ro.aenigma.R
 import ro.aenigma.AenigmaApp
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.crypto.SignatureService
+import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithConversationPreview
@@ -18,7 +18,7 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
@@ -55,11 +55,11 @@ class MainViewModel @Inject constructor(
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
     private val _allContacts =
-        MutableStateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>>(
-            DatabaseRequestState.Idle
+        MutableStateFlow<RequestState<List<ContactWithConversationPreview>>>(
+            RequestState.Idle
         )
 
-    private val _qrCode = MutableStateFlow<DatabaseRequestState<Bitmap>>(DatabaseRequestState.Idle)
+    private val _qrCode = MutableStateFlow<RequestState<Bitmap>>(RequestState.Idle)
 
     private val _qrCodeLabel = MutableStateFlow("")
 
@@ -68,34 +68,34 @@ class MainViewModel @Inject constructor(
     private val _contactExportedData = MutableStateFlow(ExportedContactData("", "", ""))
 
     private val _sharedDataCreateResult =
-        MutableStateFlow<DatabaseRequestState<CreatedSharedData>>(DatabaseRequestState.Idle)
+        MutableStateFlow<RequestState<CreatedSharedData>>(RequestState.Idle)
 
     private val _sharedDataRequestResult =
-        MutableStateFlow<DatabaseRequestState<SharedData>>(DatabaseRequestState.Idle)
+        MutableStateFlow<RequestState<SharedData>>(RequestState.Idle)
 
-    val allContacts: StateFlow<DatabaseRequestState<List<ContactWithConversationPreview>>> =
+    val allContacts: StateFlow<RequestState<List<ContactWithConversationPreview>>> =
         _allContacts
 
-    val qrCode: StateFlow<DatabaseRequestState<Bitmap>> = _qrCode
+    val qrCode: StateFlow<RequestState<Bitmap>> = _qrCode
 
     val qrCodeLabel: StateFlow<String> = _qrCodeLabel
 
     val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
 
-    val sharedDataCreateResult: StateFlow<DatabaseRequestState<CreatedSharedData>> =
+    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> =
         _sharedDataCreateResult
 
-    val sharedDataRequest: StateFlow<DatabaseRequestState<SharedData>> = _sharedDataRequestResult
+    val sharedDataRequest: StateFlow<RequestState<SharedData>> = _sharedDataRequestResult
 
     val outgoingMessages: LiveData<List<MessageEntity>>
         get() = repository.local.getOutgoingMessages().asLiveData()
 
     fun loadContacts() {
-        if (_allContacts.value is DatabaseRequestState.Success
-            || _allContacts.value is DatabaseRequestState.Loading
+        if (_allContacts.value is RequestState.Success
+            || _allContacts.value is RequestState.Loading
         ) return
 
-        _allContacts.value = DatabaseRequestState.Loading
+        _allContacts.value = RequestState.Loading
         collectContacts()
         collectSearches()
     }
@@ -110,10 +110,10 @@ class MainViewModel @Inject constructor(
                     else
                         contacts
 
-                    _allContacts.value = DatabaseRequestState.Success(result)
+                    _allContacts.value = RequestState.Success(result)
                 }
             } catch (ex: Exception) {
-                _allContacts.value = DatabaseRequestState.Error(ex)
+                _allContacts.value = RequestState.Error(ex)
             }
         }
     }
@@ -121,7 +121,7 @@ class MainViewModel @Inject constructor(
     private fun collectSearches() {
         viewModelScope.launch(defaultDispatcher) {
             _contactsSearchQuery.collect { query ->
-                _allContacts.value = DatabaseRequestState.Loading
+                _allContacts.value = RequestState.Loading
                 try {
                     val searchResult = if (query.isBlank())
                         repository.local.getContactsWithConversationPreview()
@@ -129,9 +129,9 @@ class MainViewModel @Inject constructor(
                         repository.local.searchContacts(query).map { item ->
                             item.toContactWithPreview()
                         }
-                    _allContacts.value = DatabaseRequestState.Success(searchResult)
+                    _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
-                    _allContacts.value = DatabaseRequestState.Error(ex)
+                    _allContacts.value = RequestState.Error(ex)
                 }
             }
         }
@@ -142,20 +142,20 @@ class MainViewModel @Inject constructor(
     }
 
     fun generateCode(profileId: String) {
-        if (_qrCode.value is DatabaseRequestState.Loading) return
-        _qrCode.value = DatabaseRequestState.Loading
+        if (_qrCode.value is RequestState.Loading) return
+        _qrCode.value = RequestState.Loading
         viewModelScope.launch(ioDispatcher) {
             try {
                 generateQrCodeBitmap(profileId).collect { qrCode ->
                     if (qrCode != null)
-                        _qrCode.value = DatabaseRequestState.Success(qrCode)
+                        _qrCode.value = RequestState.Success(qrCode)
                     else
-                        _qrCode.value = DatabaseRequestState.Error(
+                        _qrCode.value = RequestState.Error(
                             Exception("Failed to generate contact QR Code")
                         )
                 }
             } catch (ex: Exception) {
-                _qrCode.value = DatabaseRequestState.Error(ex)
+                _qrCode.value = RequestState.Error(ex)
             }
         }
     }
@@ -177,7 +177,7 @@ class MainViewModel @Inject constructor(
 
     override fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
-            (_allContacts.value as DatabaseRequestState.Success).data.all { item ->
+            (_allContacts.value as RequestState.Success).data.all { item ->
                 item.name != name
             }
         } catch (_: Exception) {
@@ -230,7 +230,7 @@ class MainViewModel @Inject constructor(
             getApplication<AenigmaApp>().getString(R.string.my_code)
         } else try {
             val contact =
-                (allContacts.value as DatabaseRequestState.Success).data.find { item -> item.address == address }
+                (allContacts.value as RequestState.Success).data.find { item -> item.address == address }
             contact?.name ?: ""
         } catch (_: Exception) {
             ""
@@ -281,7 +281,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun createContactShareLink() {
-        _sharedDataCreateResult.value = DatabaseRequestState.Loading
+        _sharedDataCreateResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
                 val signature =
@@ -293,11 +293,11 @@ class MainViewModel @Inject constructor(
                     val body = response.body()
 
                     if (response.code() == 200 && body != null) {
-                        _sharedDataCreateResult.value = DatabaseRequestState.Success(body)
+                        _sharedDataCreateResult.value = RequestState.Success(body)
                     } else throw Exception()
                 } else throw Exception()
             } catch (_: Exception) {
-                _sharedDataCreateResult.value = DatabaseRequestState.Error(
+                _sharedDataCreateResult.value = RequestState.Error(
                     Exception("Something went wrong while trying to create a link.")
                 )
             }
@@ -305,7 +305,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun openContactSharedData(url: String) {
-        _sharedDataRequestResult.value = DatabaseRequestState.Loading
+        _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
                 val uri = Uri.parse(url)
@@ -322,10 +322,10 @@ class MainViewModel @Inject constructor(
                         stringContent,
                         ExportedContactData::class.java
                     )
-                    _sharedDataRequestResult.value = DatabaseRequestState.Success(body)
+                    _sharedDataRequestResult.value = RequestState.Success(body)
                 } else throw Exception()
             } catch (ex: Exception) {
-                _sharedDataRequestResult.value = DatabaseRequestState.Error(
+                _sharedDataRequestResult.value = RequestState.Error(
                     Exception("Could not process shared data. Invalid content or link.")
                 )
             }
@@ -357,11 +357,11 @@ class MainViewModel @Inject constructor(
     }
 
     private fun resetSharedDataCreateResult() {
-        _sharedDataCreateResult.value = DatabaseRequestState.Idle
+        _sharedDataCreateResult.value = RequestState.Idle
     }
 
     private fun resetSharedDataRequestResult() {
-        _sharedDataRequestResult.value = DatabaseRequestState.Idle
+        _sharedDataRequestResult.value = RequestState.Idle
     }
 
     private fun resetScannedContactDetails() {

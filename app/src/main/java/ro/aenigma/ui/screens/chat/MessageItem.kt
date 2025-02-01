@@ -34,14 +34,14 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.ui.screens.common.selectable
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.PrettyDateFormatter
 
 @Composable
 fun MessageItem(
     message: MessageEntity,
-    contact: DatabaseRequestState<ContactEntity>,
+    contact: RequestState<ContactEntity>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     isSent: Boolean,
@@ -161,12 +161,12 @@ fun MessageItem(
 @Composable
 fun ResponseTo(
     message: MessageEntity,
-    contact: DatabaseRequestState<ContactEntity>,
+    contact: RequestState<ContactEntity>,
     contentColor: Color,
     containerColor: Color
 ) {
     val context = LocalContext.current
-    if (contact is DatabaseRequestState.Success) {
+    if (contact is RequestState.Success) {
         val name = if (message.incoming) contact.data.name + ":"
         else
             context.getString(R.string.you)
@@ -210,7 +210,7 @@ fun MessageItemPreview()
             sent = true,
             uuid = null
         ),
-        contact = DatabaseRequestState.Idle,
+        contact = RequestState.Idle,
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -232,7 +232,7 @@ fun MessageItemSelectedPreview()
             sent = false,
             uuid = null
         ),
-        contact = DatabaseRequestState.Idle,
+        contact = RequestState.Idle,
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -254,7 +254,7 @@ fun MessageItemPending()
             sent = false,
             uuid = null
         ),
-        contact = DatabaseRequestState.Idle,
+        contact = RequestState.Idle,
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -276,7 +276,7 @@ fun MessageItemSent()
             sent = true,
             uuid = null
         ),
-        contact = DatabaseRequestState.Idle,
+        contact = RequestState.Idle,
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}

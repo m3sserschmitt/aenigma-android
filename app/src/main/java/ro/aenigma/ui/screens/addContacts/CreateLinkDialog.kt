@@ -33,45 +33,45 @@ import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateLinkDialog(
-    sharedData: DatabaseRequestState<CreatedSharedData>,
+    sharedData: RequestState<CreatedSharedData>,
     onConfirmButtonClick: () -> Unit
 ) {
-    if (sharedData !is DatabaseRequestState.Idle) {
+    if (sharedData !is RequestState.Idle) {
         val title = when (sharedData) {
-            is DatabaseRequestState.Success -> stringResource(
+            is RequestState.Success -> stringResource(
                 id = R.string.link_successfully_created
             )
 
-            is DatabaseRequestState.Loading -> stringResource(
+            is RequestState.Loading -> stringResource(
                 id = R.string.loading
             )
 
-            is DatabaseRequestState.Error -> stringResource(
+            is RequestState.Error -> stringResource(
                 id = R.string.failure
             )
 
             else -> ""
         }
         val body = when (sharedData) {
-            is DatabaseRequestState.Success -> stringResource(
+            is RequestState.Success -> stringResource(
                 id = R.string.copy_link_or_share_to_other_apps
             )
 
-            is DatabaseRequestState.Loading -> ""
-            is DatabaseRequestState.Error -> stringResource(
+            is RequestState.Loading -> ""
+            is RequestState.Error -> stringResource(
                 id = R.string.link_could_not_be_created
             )
 
             else -> ""
         }
 
-        val link = if (sharedData is DatabaseRequestState.Success)
+        val link = if (sharedData is RequestState.Success)
             sharedData.data.resourceUrl ?: stringResource(id = R.string.link_not_available)
         else
             stringResource(id = R.string.link_not_available)
@@ -89,7 +89,7 @@ fun CreateLinkDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             when (sharedData) {
-                                is DatabaseRequestState.Success -> {
+                                is RequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                         val validUntil = PrettyDateFormatter.prettyTimeFormat(
                                             sharedData.data.validUntil
@@ -175,7 +175,7 @@ fun CreateLinkDialog(
                                     }
                                 }
 
-                                is DatabaseRequestState.Loading -> IndeterminateCircularIndicator(
+                                is RequestState.Loading -> IndeterminateCircularIndicator(
                                     visible = true,
                                     text = stringResource(
                                         id = R.string.loading
@@ -185,7 +185,7 @@ fun CreateLinkDialog(
                                     textStyle = MaterialTheme.typography.bodyMedium
                                 )
 
-                                is DatabaseRequestState.Error -> {
+                                is RequestState.Error -> {
                                     Icon(
                                         modifier = Modifier.size(64.dp),
                                         painter = painterResource(
@@ -220,7 +220,7 @@ fun CreateLinkDialog(
 @Composable
 fun CreateLinkDialog(
     visible: Boolean,
-    sharedData: DatabaseRequestState<CreatedSharedData>,
+    sharedData: RequestState<CreatedSharedData>,
     onConfirmButtonClick: () -> Unit
 ) {
     if(visible)
@@ -237,7 +237,7 @@ fun CreateLinkDialog(
 fun CreateLinkDialogPreview()
 {
     CreateLinkDialog(
-        sharedData = DatabaseRequestState.Success(
+        sharedData = RequestState.Success(
             CreatedSharedData(
                 "123-123-123-123",
                 resourceUrl = "https://example.com/Share?Tag=123-123-123-123",

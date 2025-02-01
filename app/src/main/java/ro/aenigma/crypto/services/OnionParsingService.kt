@@ -1,12 +1,14 @@
-package ro.aenigma.crypto
+package ro.aenigma.crypto.services
 
 import android.content.Context
-import ro.aenigma.models.Message
+import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.util.Constants
 import ro.aenigma.util.HexConverter
 import dagger.hilt.android.qualifiers.ApplicationContext
+import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.crypto.KeysManager
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
@@ -24,7 +26,7 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
         }
     }
 
-    fun parse(routingRequest: RoutingRequest): Message? {
+    fun parse(routingRequest: RoutingRequest): ParsedMessageDto? {
         return parse(
             PendingMessage(
                 routingRequest.uuid,
@@ -36,7 +38,7 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
         )
     }
 
-    fun parse(pendingMessage: PendingMessage): Message? {
+    fun parse(pendingMessage: PendingMessage): ParsedMessageDto? {
         if (!ready || pendingMessage.content == null) {
             return null
         }
@@ -51,7 +53,7 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
                     String(decryptedData.sliceArray(Constants.ADDRESS_SIZE until decryptedData.size))
                 val dateReceivedOnServer = ZonedDateTime.parse(pendingMessage.dateReceived)
                     .withZoneSameInstant(ZoneId.systemDefault())
-                Message(address, content, true, dateReceivedOnServer, pendingMessage.uuid)
+                ParsedMessageDto(address, content, dateReceivedOnServer, pendingMessage.uuid)
             } catch (_: Exception) {
                 null
             }

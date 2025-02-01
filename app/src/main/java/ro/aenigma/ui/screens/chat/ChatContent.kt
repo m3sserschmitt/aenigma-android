@@ -24,7 +24,7 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
 
@@ -33,8 +33,8 @@ fun ChatContent(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    contact: DatabaseRequestState<ContactEntity>,
+    messages: RequestState<List<MessageEntity>>,
+    contact: RequestState<ContactEntity>,
     replyToMessage: MessageEntity?,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
@@ -115,8 +115,8 @@ fun DisplayMessages(
     modifier: Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    contact: DatabaseRequestState<ContactEntity>,
+    messages: RequestState<List<MessageEntity>>,
+    contact: RequestState<ContactEntity>,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
@@ -127,7 +127,7 @@ fun DisplayMessages(
 ) {
     when(messages)
     {
-        is DatabaseRequestState.Success -> {
+        is RequestState.Success -> {
             if(messages.data.isNotEmpty())
             {
                 AutoScrollItemsList(
@@ -164,9 +164,9 @@ fun DisplayMessages(
                 }
             }
         }
-        is DatabaseRequestState.Loading -> LoadingScreen(modifier)
-        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
-        is DatabaseRequestState.Idle -> {  }
+        is RequestState.Loading -> LoadingScreen(modifier)
+        is RequestState.Error -> GenericErrorScreen(modifier)
+        is RequestState.Idle -> {  }
     }
 }
 
@@ -193,11 +193,11 @@ fun ChatContentPreview() {
     message2.id = 2
 
     ChatContent(
-        messages = DatabaseRequestState.Success(
+        messages = RequestState.Success(
             listOf(message1, message2)
         ),
         replyToMessage = null,
-        contact = DatabaseRequestState.Idle,
+        contact = RequestState.Idle,
         notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         isSelectionMode = false,

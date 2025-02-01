@@ -26,13 +26,13 @@ import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import java.time.ZonedDateTime
 
 @Composable
 fun ChatAppBar(
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    contact: DatabaseRequestState<ContactEntity>,
+    messages: RequestState<List<MessageEntity>>,
+    contact: RequestState<ContactEntity>,
     connectionStatus: SignalRStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
@@ -84,7 +84,7 @@ fun ChatAppBar(
             )
         } else {
             StandardAppBar(
-                title = if (contact is DatabaseRequestState.Success) contact.data.name else "",
+                title = if (contact is RequestState.Success) contact.data.name else "",
                 navigateBack = navigateToContactsScreen,
                 actions = {
                     ConnectionStatusAppBarAction(
@@ -102,7 +102,7 @@ fun ChatAppBar(
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
-                            if (contact is DatabaseRequestState.Success) {
+                            if (contact is RequestState.Success) {
                                 navigateToAddContactsScreen(contact.data.address)
                             }
                         }
@@ -115,7 +115,7 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: DatabaseRequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageEntity>>,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit
@@ -149,7 +149,7 @@ fun MoreActions(
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Delete,
             contentDescription = stringResource(id = R.string.delete),
-            enabled = messages is DatabaseRequestState.Success && messages.data.isNotEmpty(),
+            enabled = messages is RequestState.Success && messages.data.isNotEmpty(),
             text = stringResource(id = R.string.clear_conversation),
             onClick = {
                 onDeleteAllClicked()
@@ -164,10 +164,10 @@ fun MoreActions(
 fun DefaultChatAppBarPreview()
 {
     ChatAppBar(
-        messages = DatabaseRequestState.Success(listOf()),
+        messages = RequestState.Success(listOf()),
         isSelectionMode = false,
         connectionStatus = SignalRStatus.NotConnected(),
-        contact = DatabaseRequestState.Success(ContactEntity(
+        contact = RequestState.Success(ContactEntity(
             "123456-5678-5678-123456",
             "John",
             "public-key",
@@ -197,10 +197,10 @@ fun DefaultChatAppBarPreview()
 fun SelectionModeChatAppBarPreview()
 {
     ChatAppBar(
-        messages = DatabaseRequestState.Success(listOf()),
+        messages = RequestState.Success(listOf()),
         isSelectionMode = true,
         connectionStatus = SignalRStatus.NotConnected(),
-        contact = DatabaseRequestState.Success(ContactEntity(
+        contact = RequestState.Success(ContactEntity(
             "123456-5678-5678-123456",
             "John",
             "public-key",

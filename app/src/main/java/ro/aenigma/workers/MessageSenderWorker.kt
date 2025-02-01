@@ -17,15 +17,15 @@ import ro.aenigma.crypto.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
-import ro.aenigma.crypto.SignatureService
+import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.models.OnionDetails
+import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.models.Vertex
-import ro.aenigma.routing.PathFinder
+import ro.aenigma.services.PathFinder
 import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -89,7 +89,7 @@ class MessageSenderWorker @AssistedInject constructor(
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
 
-        val messageDetails = OnionDetails(
+        val messageDetails = MessageWithMetadata(
             message.text, message.type, signatureService.address, guard.address, guard.hostname,
             signatureService.publicKey, // TODO: public key & guard should not be sent in every message
             message.refId

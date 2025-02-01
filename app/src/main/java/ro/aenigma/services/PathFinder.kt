@@ -1,4 +1,4 @@
-package ro.aenigma.routing
+package ro.aenigma.services
 
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity

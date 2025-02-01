@@ -28,13 +28,13 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatInput(
     modifier: Modifier,
     enabled: Boolean = true,
-    contact: DatabaseRequestState<ContactEntity>,
+    contact: RequestState<ContactEntity>,
     replyToMessage: MessageEntity?,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
@@ -42,7 +42,7 @@ fun ChatInput(
     onReplyAborted: () -> Unit
 ) {
     Column {
-        if(replyToMessage != null && contact is DatabaseRequestState.Success)
+        if(replyToMessage != null && contact is RequestState.Success)
         {
             ReplyToMessage(
                 message = replyToMessage,
@@ -151,6 +151,6 @@ fun ChatInputPreview()
         onInputTextChanged = {},
         onSendClicked = {},
         onReplyAborted = {},
-        contact = DatabaseRequestState.Idle
+        contact = RequestState.Idle
     )
 }

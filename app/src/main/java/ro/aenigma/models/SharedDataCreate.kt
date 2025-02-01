@@ -1,3 +1,7 @@
 package ro.aenigma.models
 
-class SharedDataCreate (val publicKey: String, val signedData: String, val accessCount: Int = 1)
+class SharedDataCreate (
+    publicKey: String,
+    signedData: String,
+    accessCount: Int = 1
+)

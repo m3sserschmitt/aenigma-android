@@ -1,4 +1,4 @@
-package ro.aenigma.util
+package ro.aenigma.services
 
 import android.Manifest
 import android.app.Notification

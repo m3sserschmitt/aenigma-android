@@ -25,7 +25,7 @@ import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
 
@@ -106,9 +106,9 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    contact: DatabaseRequestState<ContactEntity>,
+    contact: RequestState<ContactEntity>,
     connectionStatus: SignalRStatus,
-    messages: DatabaseRequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageEntity>>,
     replyToMessage: MessageEntity?,
     notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
@@ -204,7 +204,7 @@ fun ChatScreen(
 
     LaunchedEffect(key1 = messages)
     {
-        if(messages is DatabaseRequestState.Success)
+        if(messages is RequestState.Success)
         {
             selectedItems.removeAll { item -> !messages.data.contains(item) }
         }
@@ -309,12 +309,12 @@ fun ChatScreen(
 @Composable
 fun MarkConversationAsRead(
     chatId: String,
-    messages: DatabaseRequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageEntity>>,
     chatViewModel: ChatViewModel
 ) {
     LaunchedEffect(key1 = messages)
     {
-        if(messages is DatabaseRequestState.Success)
+        if(messages is RequestState.Success)
         {
             chatViewModel.markConversationAsRead(chatId)
         }
@@ -344,7 +344,7 @@ fun ChatScreenPreview() {
     message2.id = 2
 
     ChatScreen(
-        contact = DatabaseRequestState.Success(
+        contact = RequestState.Success(
             ContactEntity(
                 address = "123",
                 name = "John",
@@ -357,7 +357,7 @@ fun ChatScreenPreview() {
         ),
         connectionStatus = SignalRStatus.Connected(),
         replyToMessage = null,
-        messages = DatabaseRequestState.Success(
+        messages = RequestState.Success(
             listOf(message1, message2)
         ),
         notSentMessages = listOf(),

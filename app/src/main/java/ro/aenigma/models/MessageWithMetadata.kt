@@ -1,6 +1,6 @@
 package ro.aenigma.models
 
-data class OnionDetails(
+data class MessageWithMetadata(
     val text: String?,
     val action: MessageAction?,
     val address: String?,

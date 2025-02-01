@@ -30,7 +30,7 @@ import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.UseLinkDialog
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.QrCodeGenerator
 import ro.aenigma.util.QrCodeScannerState
 
@@ -39,9 +39,9 @@ fun AddContactsContent(
     modifier: Modifier = Modifier,
     scannerState: QrCodeScannerState,
     qrCodeLabel: String,
-    qrCode: DatabaseRequestState<Bitmap>,
-    sharedDataCreate: DatabaseRequestState<CreatedSharedData>,
-    sharedDataGet: DatabaseRequestState<SharedData>,
+    qrCode: RequestState<Bitmap>,
+    sharedDataCreate: RequestState<CreatedSharedData>,
+    sharedDataGet: RequestState<SharedData>,
     onQrCodeFound: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: () -> Unit,
@@ -61,7 +61,7 @@ fun AddContactsContent(
         visible = useLinkLoadingDialogVisible,
         state = sharedDataGet,
         onConfirmButtonClicked = {
-            if(sharedDataGet is DatabaseRequestState.Error)
+            if(sharedDataGet is RequestState.Error)
             {
                 onSharedDataConfirm()
             }
@@ -77,7 +77,7 @@ fun AddContactsContent(
         visible = createLinkLoadingDialogVisible,
         state = sharedDataCreate,
         onConfirmButtonClicked = {
-            if(sharedDataCreate is DatabaseRequestState.Error)
+            if(sharedDataCreate is RequestState.Error)
             {
                 onSharedDataConfirm()
             }
@@ -91,7 +91,7 @@ fun AddContactsContent(
 
     SaveNewContactDialog(
         visible = scannerState == QrCodeScannerState.SAVE
-                || (sharedDataGet is DatabaseRequestState.Success && saveContactDialogVisible),
+                || (sharedDataGet is RequestState.Success && saveContactDialogVisible),
         onContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = {
             saveContactDialogVisible = false
@@ -153,12 +153,12 @@ fun AddContactsContent(
 fun DisplayQrCode(
     modifier: Modifier = Modifier,
     qrCodeLabel: String,
-    qrCode: DatabaseRequestState<Bitmap>,
+    qrCode: RequestState<Bitmap>,
     onCreateLinkClicked: () -> Unit,
     onUseLinkClicked: () -> Unit
 ) {
     when (qrCode) {
-        is DatabaseRequestState.Success -> {
+        is RequestState.Success -> {
             Column(
                 modifier = modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -207,9 +207,9 @@ fun DisplayQrCode(
             }
         }
 
-        is DatabaseRequestState.Error -> CodeNotAvailableError()
-        is DatabaseRequestState.Loading -> LoadingScreen()
-        is DatabaseRequestState.Idle -> {}
+        is RequestState.Error -> CodeNotAvailableError()
+        is RequestState.Loading -> LoadingScreen()
+        is RequestState.Idle -> {}
     }
 }
 
@@ -223,17 +223,17 @@ fun AddContactsContentPreview()
         ApplicationComposeTheme(darkTheme = true) {
             AddContactsContent(
                 scannerState = QrCodeScannerState.SHARE_CODE,
-                qrCode = DatabaseRequestState.Success(bitmap),
+                qrCode = RequestState.Success(bitmap),
                 qrCodeLabel = "John",
                 onQrCodeFound = { },
                 onNewContactNameChanged = { true },
                 onSaveContact = { },
                 onSaveContactDismissed = { },
                 onCreateLinkClicked = { },
-                sharedDataCreate = DatabaseRequestState.Idle,
+                sharedDataCreate = RequestState.Idle,
                 onSharedDataConfirm = { },
                 onGetLink = { },
-                sharedDataGet = DatabaseRequestState.Idle
+                sharedDataGet = RequestState.Idle
             )
         }
     }

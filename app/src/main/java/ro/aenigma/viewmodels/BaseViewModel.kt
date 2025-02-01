@@ -64,7 +64,7 @@ abstract class BaseViewModel(
 
     fun retryClientConnection()
     {
-        signalRClient.resetStatus()
+        signalRClient.resetAborted()
     }
 
     fun cleanupContactChanges()

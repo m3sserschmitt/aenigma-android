@@ -2,12 +2,12 @@ package ro.aenigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.*
-import ro.aenigma.data.MessageSaver
+import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.isFullPage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.models.MessageAction
 import ro.aenigma.util.MessageActionType
+import ro.aenigma.util.getDescription
 import java.util.SortedSet
 import javax.inject.Inject
 
@@ -36,13 +37,13 @@ class ChatViewModel @Inject constructor(
     private var _filterQuery = MutableStateFlow("")
 
     private val _contactNames =
-        MutableStateFlow<DatabaseRequestState<List<String>>>(DatabaseRequestState.Idle)
+        MutableStateFlow<RequestState<List<String>>>(RequestState.Idle)
 
     private val _selectedContact =
-        MutableStateFlow<DatabaseRequestState<ContactEntity>>(DatabaseRequestState.Idle)
+        MutableStateFlow<RequestState<ContactEntity>>(RequestState.Idle)
 
     private val _conversation =
-        MutableStateFlow<DatabaseRequestState<List<MessageEntity>>>(DatabaseRequestState.Idle)
+        MutableStateFlow<RequestState<List<MessageEntity>>>(RequestState.Idle)
 
     private val _replyToMessage = MutableStateFlow<MessageEntity?>(null)
 
@@ -52,9 +53,9 @@ class ChatViewModel @Inject constructor(
 
     private val _messageInputText = MutableStateFlow("")
 
-    val selectedContact: StateFlow<DatabaseRequestState<ContactEntity>> = _selectedContact
+    val selectedContact: StateFlow<RequestState<ContactEntity>> = _selectedContact
 
-    val conversation: StateFlow<DatabaseRequestState<List<MessageEntity>>> = _conversation
+    val conversation: StateFlow<RequestState<List<MessageEntity>>> = _conversation
 
     val replyToMessage: StateFlow<MessageEntity?> = _replyToMessage
 
@@ -65,12 +66,12 @@ class ChatViewModel @Inject constructor(
     val nextPageAvailable: StateFlow<Boolean> = _nextPageAvailable
 
     fun loadContacts(selectedChatId: String) {
-        if (_contactNames.value is DatabaseRequestState.Loading
-            || _contactNames.value is DatabaseRequestState.Success
+        if (_contactNames.value is RequestState.Loading
+            || _contactNames.value is RequestState.Success
         ) return
 
-        _contactNames.value = DatabaseRequestState.Loading
-        _selectedContact.value = DatabaseRequestState.Loading
+        _contactNames.value = RequestState.Loading
+        _selectedContact.value = RequestState.Loading
 
         collectContacts(selectedChatId)
     }
@@ -79,37 +80,37 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getContacts().collect { contacts ->
-                    _contactNames.value = DatabaseRequestState.Success(
+                    _contactNames.value = RequestState.Success(
                         contacts.map { contact -> contact.name }
                     )
 
                     val selectedContact = contacts.find { item -> item.address == selectedChatId }
 
                     _selectedContact.value = if (selectedContact != null)
-                        DatabaseRequestState.Success(selectedContact)
+                        RequestState.Success(selectedContact)
                     else
-                        DatabaseRequestState.Error(Exception("Contact not found."))
+                        RequestState.Error(Exception("Contact not found."))
                 }
             } catch (ex: Exception) {
-                _contactNames.value = DatabaseRequestState.Error(ex)
+                _contactNames.value = RequestState.Error(ex)
             }
         }
     }
 
     override fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
-            (_contactNames.value as DatabaseRequestState.Success).data.all { item -> item != name }
+            (_contactNames.value as RequestState.Success).data.all { item -> item != name }
         } catch (_: Exception) {
             false
         }
     }
 
     fun loadConversation(chatId: String) {
-        if (_conversation.value is DatabaseRequestState.Success
-            || _conversation.value is DatabaseRequestState.Loading
+        if (_conversation.value is RequestState.Success
+            || _conversation.value is RequestState.Loading
         ) return
 
-        _conversation.value = DatabaseRequestState.Loading
+        _conversation.value = RequestState.Loading
 
         collectConversation(chatId)
         collectSearches(chatId)
@@ -153,7 +154,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun setConversation() {
-        _conversation.value = DatabaseRequestState.Success(
+        _conversation.value = RequestState.Success(
             ArrayList(_conversationSortedSet)
         )
     }
@@ -175,7 +176,7 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             } catch (ex: Exception) {
-                _conversation.value = DatabaseRequestState.Error(ex)
+                _conversation.value = RequestState.Error(ex)
             }
         }
     }
@@ -183,7 +184,7 @@ class ChatViewModel @Inject constructor(
     private fun collectSearches(chatId: String) {
         viewModelScope.launch(ioDispatcher) {
             _filterQuery.collect { query ->
-                _conversation.value = DatabaseRequestState.Loading
+                _conversation.value = RequestState.Loading
                 try {
                     val searchResult =
                         repository.local.getConversation(chatId, getLastMessageId(), query)
@@ -193,7 +194,7 @@ class ChatViewModel @Inject constructor(
                         setConversation()
                     }
                 } catch (ex: Exception) {
-                    _conversation.value = DatabaseRequestState.Error(ex)
+                    _conversation.value = RequestState.Error(ex)
                 }
             }
         }
@@ -214,7 +215,7 @@ class ChatViewModel @Inject constructor(
                     }
                 }
             } catch (ex: Exception) {
-                _conversation.value = DatabaseRequestState.Error(ex)
+                _conversation.value = RequestState.Error(ex)
             }
         }
     }
@@ -231,7 +232,7 @@ class ChatViewModel @Inject constructor(
         synchronized(_conversationSortedSet) { _conversationSortedSet.clear() }
         viewModelScope.launch(ioDispatcher) {
             repository.local.clearConversationSoft(chatId)
-            postToDatabase(MessageAction(MessageActionType.DELETE_ALL, null), "")
+            postToDatabase(MessageAction(MessageActionType.DELETE_ALL, null))
         }
     }
 
@@ -245,7 +246,7 @@ class ChatViewModel @Inject constructor(
             repository.local.removeMessagesSoft(textMessages)
             repository.local.removeMessagesHard(nonText)
             textMessagesWithRefs.forEach { item ->
-                postToDatabase(MessageAction(MessageActionType.DELETE, item.refId), "")
+                postToDatabase(MessageAction(MessageActionType.DELETE, item.refId))
             }
         }
     }
@@ -263,7 +264,10 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private suspend fun postToDatabase(type: MessageAction, text: String): Boolean {
+    private suspend fun postToDatabase(
+        type: MessageAction,
+        text: String = type.actionType?.getDescription() ?: ""
+    ): Boolean {
         return try {
             val contact = getSelectedContactEntity() ?: return false
             val message = MessageEntity(
@@ -294,7 +298,7 @@ class ChatViewModel @Inject constructor(
 
     private fun getSelectedContactEntity(): ContactEntity? {
         return try {
-            (selectedContact.value as DatabaseRequestState.Success<ContactEntity>).data
+            (selectedContact.value as RequestState.Success<ContactEntity>).data
         } catch (_: Exception) {
             return null
         }
@@ -302,7 +306,7 @@ class ChatViewModel @Inject constructor(
 
     private fun getLastMessageId(): Long {
         return try {
-            (selectedContact.value as DatabaseRequestState.Success<ContactEntity>).data.lastMessageId
+            (selectedContact.value as RequestState.Success<ContactEntity>).data.lastMessageId
                 ?: 1
         } catch (_: Exception) {
             1
@@ -311,7 +315,7 @@ class ChatViewModel @Inject constructor(
 
     override fun getContactEntityForSaving(): ContactEntity? {
         return try {
-            val contact = (selectedContact.value as DatabaseRequestState.Success).data
+            val contact = (selectedContact.value as RequestState.Success).data
             contact.name = newContactName.value
             contact
         } catch (_: Exception) {

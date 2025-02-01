@@ -1,4 +1,4 @@
-package ro.aenigma.util
+package ro.aenigma.services
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

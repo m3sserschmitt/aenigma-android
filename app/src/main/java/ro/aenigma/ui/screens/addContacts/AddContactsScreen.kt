@@ -24,7 +24,7 @@ import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.QrCodeGenerator
 import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
@@ -91,9 +91,9 @@ fun AddContactsScreen(
 @Composable
 fun AddContactsScreen(
     scannerState: QrCodeScannerState,
-    qrCode: DatabaseRequestState<Bitmap>,
-    sharedDataCreate: DatabaseRequestState<CreatedSharedData>,
-    sharedDataGet: DatabaseRequestState<SharedData>,
+    qrCode: RequestState<Bitmap>,
+    sharedDataCreate: RequestState<CreatedSharedData>,
+    sharedDataGet: RequestState<SharedData>,
     qrCodeLabel: String,
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
@@ -185,9 +185,9 @@ fun AddContactsScreenPreview()
     if(bitmap != null) {
         AddContactsScreen(
             scannerState = QrCodeScannerState.SHARE_CODE,
-            qrCode = DatabaseRequestState.Success(bitmap),
-            sharedDataCreate = DatabaseRequestState.Idle,
-            sharedDataGet = DatabaseRequestState.Idle,
+            qrCode = RequestState.Success(bitmap),
+            sharedDataCreate = RequestState.Idle,
+            sharedDataGet = RequestState.Idle,
             qrCodeLabel = "John",
             floatingButtonVisible = true,
             onNewContactNameChanged = { true },

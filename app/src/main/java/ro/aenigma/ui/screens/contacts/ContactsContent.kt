@@ -7,13 +7,13 @@ import ro.aenigma.data.database.ContactWithConversationPreview
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import java.time.ZonedDateTime
 
 @Composable
 fun ContactsContent(
     modifier: Modifier = Modifier,
-    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
+    contacts: RequestState<List<ContactWithConversationPreview>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
     selectedContacts: List<ContactWithConversationPreview>,
@@ -23,7 +23,7 @@ fun ContactsContent(
 ) {
     when(contacts)
     {
-        is DatabaseRequestState.Success -> {
+        is RequestState.Success -> {
             if(contacts.data.isNotEmpty())
             {
                 ItemsList(
@@ -57,9 +57,9 @@ fun ContactsContent(
                 }
             }
         }
-        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
-        is DatabaseRequestState.Loading -> LoadingScreen(modifier)
-        is DatabaseRequestState.Idle -> { }
+        is RequestState.Error -> GenericErrorScreen(modifier)
+        is RequestState.Loading -> LoadingScreen(modifier)
+        is RequestState.Idle -> { }
     }
 }
 
@@ -68,7 +68,7 @@ fun ContactsContent(
 fun ContactsContentPreview()
 {
     ContactsContent(
-        contacts = DatabaseRequestState.Success(
+        contacts = RequestState.Success(
             listOf(
                 ContactWithConversationPreview(
                     address = "123",

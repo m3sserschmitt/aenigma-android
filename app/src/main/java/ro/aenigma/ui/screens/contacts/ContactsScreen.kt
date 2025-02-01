@@ -35,7 +35,7 @@ import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
 import java.time.ZonedDateTime
@@ -99,8 +99,8 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
-    sharedDataRequest: DatabaseRequestState<SharedData>,
+    contacts: RequestState<List<ContactWithConversationPreview>>,
+    sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
@@ -127,7 +127,7 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = contacts)
     {
-        if (contacts is DatabaseRequestState.Success) {
+        if (contacts is RequestState.Success) {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
@@ -139,7 +139,7 @@ fun ContactsScreen(
     }
 
     LaunchedEffect(key1 = sharedDataRequest) {
-        if (sharedDataRequest is DatabaseRequestState.Error) {
+        if (sharedDataRequest is RequestState.Error) {
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -192,7 +192,7 @@ fun ContactsScreen(
         visible = getContactDataLoadingDialogVisible,
         state = sharedDataRequest,
         onConfirmButtonClicked = {
-            if (sharedDataRequest is DatabaseRequestState.Error) {
+            if (sharedDataRequest is RequestState.Error) {
                 onContactSaveDismissed()
             } else {
                 saveContactDialogVisible = true
@@ -202,7 +202,7 @@ fun ContactsScreen(
     )
 
     SaveNewContactDialog(
-        visible = sharedDataRequest is DatabaseRequestState.Success && saveContactDialogVisible,
+        visible = sharedDataRequest is RequestState.Success && saveContactDialogVisible,
         onContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = {
             onContactSaved()
@@ -345,7 +345,7 @@ fun ContactsScreenPreview()
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
-        contacts = DatabaseRequestState.Success(
+        contacts = RequestState.Success(
             listOf(
                 ContactWithConversationPreview(
                     address = "123",
@@ -371,7 +371,7 @@ fun ContactsScreenPreview()
         navigateToAddContactScreen = {},
         onContactSaved = {},
         onContactSaveDismissed = {},
-        sharedDataRequest = DatabaseRequestState.Idle,
+        sharedDataRequest = RequestState.Idle,
         navigateToAboutScreen = { }
     )
 }
