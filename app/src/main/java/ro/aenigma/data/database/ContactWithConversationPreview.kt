@@ -1,5 +1,6 @@
 package ro.aenigma.data.database
 
+import ro.aenigma.models.enums.ContactType
 import java.time.ZonedDateTime
 
 data class ContactWithConversationPreview (
@@ -8,6 +9,7 @@ data class ContactWithConversationPreview (
     val publicKey: String,
     val guardHostname: String?,
     val guardAddress: String,
+    val type: ContactType,
     val hasNewMessage: Boolean,
     val lastSynchronized: ZonedDateTime,
     val lastMessageId: Long? = null,
@@ -21,6 +23,7 @@ data class ContactWithConversationPreview (
             publicKey,
             guardHostname,
             guardAddress,
+            type,
             hasNewMessage,
             lastSynchronized
         )

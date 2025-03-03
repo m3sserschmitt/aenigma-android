@@ -34,22 +34,24 @@ import ro.aenigma.util.RequestState
 fun ChatInput(
     modifier: Modifier,
     enabled: Boolean = true,
-    contact: RequestState<ContactEntity>,
+    allContacts: RequestState<List<ContactEntity>>,
     replyToMessage: MessageEntity?,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
+    val replyToContact =
+        if (allContacts is RequestState.Success && replyToMessage != null) allContacts.data.firstOrNull { item ->
+            item.address == replyToMessage.action.senderAddress
+        } else null
     Column {
-        if(replyToMessage != null && contact is RequestState.Success)
-        {
-            ReplyToMessage(
-                message = replyToMessage,
-                contact = contact.data,
-                onReplyAborted = onReplyAborted
-            )
-        }
+        ReplyToMessage(
+            message = replyToMessage,
+            contact = replyToContact,
+            onReplyAborted = onReplyAborted
+        )
+
         Row(
             modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
             verticalAlignment = Alignment.CenterVertically
@@ -95,10 +97,13 @@ fun ChatInput(
 
 @Composable
 fun ReplyToMessage(
-    contact: ContactEntity,
-    message: MessageEntity,
+    contact: ContactEntity?,
+    message: MessageEntity?,
     onReplyAborted: () -> Unit,
 ) {
+    if(message == null){
+        return
+    }
     Row(
         modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
         verticalAlignment = Alignment.CenterVertically
@@ -107,7 +112,7 @@ fun ReplyToMessage(
             modifier = Modifier.weight(9f)
         ) {
             Text(
-                text = if (message.incoming)
+                text = if (message.incoming && contact != null)
                     stringResource(id = R.string.they_said).format(contact.name)
                 else
                     stringResource(id = R.string.you_said),
@@ -151,6 +156,6 @@ fun ChatInputPreview()
         onInputTextChanged = {},
         onSendClicked = {},
         onReplyAborted = {},
-        contact = RequestState.Idle
+        allContacts = RequestState.Idle
     )
 }

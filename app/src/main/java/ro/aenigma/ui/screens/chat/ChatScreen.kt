@@ -22,9 +22,12 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.models.MessageAction
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
+import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
@@ -45,12 +48,12 @@ fun ChatScreen(
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
     val replyToMessage by chatViewModel.replyToMessage.collectAsState()
-    val notSentMessages by chatViewModel.notSentMessages.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
+    val allContacts by chatViewModel.allContacts.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -60,10 +63,10 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
+        allContacts = allContacts,
         connectionStatus = connectionStatus,
         replyToMessage = replyToMessage,
         messages = messages,
-        notSentMessages = notSentMessages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         onRetryConnection = {
@@ -107,10 +110,10 @@ fun ChatScreen(
 @Composable
 fun ChatScreen(
     contact: RequestState<ContactEntity>,
+    allContacts: RequestState<List<ContactEntity>>,
     connectionStatus: SignalRStatus,
     messages: RequestState<List<MessageEntity>>,
     replyToMessage: MessageEntity?,
-    notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     onRetryConnection: () -> Unit,
@@ -274,10 +277,9 @@ fun ChatScreen(
                 ),
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
-                contact = contact,
+                allContacts = allContacts,
                 replyToMessage = replyToMessage,
                 messages = messages,
-                notSentMessages = notSentMessages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
@@ -330,7 +332,8 @@ fun ChatScreenPreview() {
         incoming = true,
         sent = false,
         deleted = false,
-        uuid = null
+        uuid = null,
+        action = MessageAction(MessageActionType.TEXT, null, "123")
     )
     val message2 = MessageEntity(
         chatId = "123",
@@ -338,7 +341,8 @@ fun ChatScreenPreview() {
         incoming = false,
         sent = true,
         deleted = false,
-        uuid = null
+        uuid = null,
+        action = MessageAction(MessageActionType.TEXT, null, "123")
     )
     message1.id = 1
     message2.id = 2
@@ -352,15 +356,16 @@ fun ChatScreenPreview() {
                 guardHostname = "host",
                 guardAddress = "guard-address",
                 hasNewMessage = false,
+                type = ContactType.CONTACT,
                 lastSynchronized = ZonedDateTime.now()
             )
         ),
+        allContacts = RequestState.Idle,
         connectionStatus = SignalRStatus.Connected(),
         replyToMessage = null,
         messages = RequestState.Success(
             listOf(message1, message2)
         ),
-        notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
         messageInputText = "Can't wait to see you on Monday",

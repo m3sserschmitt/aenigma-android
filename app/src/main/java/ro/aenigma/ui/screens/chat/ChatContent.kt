@@ -21,9 +21,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.models.MessageAction
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
+import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
@@ -34,9 +36,8 @@ fun ChatContent(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageEntity>>,
-    contact: RequestState<ContactEntity>,
+    allContacts: RequestState<List<ContactEntity>>,
     replyToMessage: MessageEntity?,
-    notSentMessages: List<MessageEntity>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
     messageInputText: String,
@@ -68,8 +69,7 @@ fun ChatContent(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
-                contact = contact,
-                notSentMessages = notSentMessages,
+                allContacts = allContacts,
                 conversationListState = conversationListState,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedMessages,
@@ -81,7 +81,7 @@ fun ChatContent(
             ChatInput(
                 modifier = Modifier.height(80.dp),
                 messageInputText = messageInputText,
-                contact = contact,
+                allContacts = allContacts,
                 replyToMessage = replyToMessage,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = {
@@ -116,8 +116,7 @@ fun DisplayMessages(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageEntity>>,
-    contact: RequestState<ContactEntity>,
-    notSentMessages: List<MessageEntity>,
+    allContacts: RequestState<List<ContactEntity>>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageEntity>,
     conversationListState: LazyListState = rememberLazyListState(),
@@ -125,11 +124,9 @@ fun DisplayMessages(
     onItemDeselected: (MessageEntity) -> Unit,
     loadNextPage: () -> Unit
 ) {
-    when(messages)
-    {
-        is RequestState.Success -> {
-            if(messages.data.isNotEmpty())
-            {
+    when {
+        messages is RequestState.Success && allContacts is RequestState.Success -> {
+            if (messages.data.isNotEmpty()) {
                 AutoScrollItemsList(
                     modifier = modifier,
                     items = messages.data,
@@ -139,9 +136,8 @@ fun DisplayMessages(
                         MessageItem(
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
-                            isSent = notSentMessages.contains(messageEntity),
                             message = messageEntity,
-                            contact = contact,
+                            allContacts = allContacts.data,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {}
@@ -154,19 +150,23 @@ fun DisplayMessages(
                     loadNextPage = loadNextPage
                 )
             } else {
-                if(isSearchMode)
-                {
+                if (isSearchMode) {
                     EmptySearchResult(modifier)
-                }
-                else
-                {
+                } else {
                     EmptyChatScreen(modifier)
                 }
             }
         }
-        is RequestState.Loading -> LoadingScreen(modifier)
-        is RequestState.Error -> GenericErrorScreen(modifier)
-        is RequestState.Idle -> {  }
+
+        listOf(messages, allContacts).any { obj -> obj is RequestState.Loading } -> LoadingScreen(
+            modifier = modifier
+        )
+
+        listOf(messages, allContacts).any { obj -> obj is RequestState.Error } -> GenericErrorScreen(
+            modifier = modifier
+        )
+
+        else -> {}
     }
 }
 
@@ -179,7 +179,8 @@ fun ChatContentPreview() {
         incoming = true,
         sent = false,
         deleted = false,
-        uuid = null
+        uuid = null,
+        action = MessageAction(MessageActionType.TEXT, null, "123")
     )
     val message2 = MessageEntity(
         chatId = "123",
@@ -187,7 +188,8 @@ fun ChatContentPreview() {
         incoming = false,
         sent = true,
         deleted = false,
-        uuid = null
+        uuid = null,
+        action = MessageAction(MessageActionType.TEXT, null, "123")
     )
     message1.id = 1
     message2.id = 2
@@ -197,8 +199,6 @@ fun ChatContentPreview() {
             listOf(message1, message2)
         ),
         replyToMessage = null,
-        contact = RequestState.Idle,
-        notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
@@ -210,5 +210,6 @@ fun ChatContentPreview() {
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
+        allContacts = RequestState.Idle,
     )
 }

@@ -20,15 +20,26 @@ abstract class BaseViewModel(
     application: Application,
 ): AndroidViewModel(application) {
 
-    private val _newContactName: MutableStateFlow<String> = MutableStateFlow("")
-
     protected var ioDispatcher = Dispatchers.IO
+
+    private val _userName = MutableStateFlow("")
+
+    init {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.name.collect { userName -> _userName.value = userName }
+        }
+    }
+
+    // TODO: try to remove from viewmodel
+    private val _newContactName: MutableStateFlow<String> = MutableStateFlow("")
 
     protected var defaultDispatcher = Dispatchers.Default
 
     val signalRClientStatus: LiveData<SignalRStatus> = signalRClient.status
 
     val newContactName: StateFlow<String> = _newContactName
+
+    val userName: StateFlow<String> = _userName
 
     protected abstract fun validateNewContactName(name: String): Boolean
 

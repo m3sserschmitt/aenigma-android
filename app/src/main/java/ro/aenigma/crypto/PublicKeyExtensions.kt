@@ -2,7 +2,7 @@ package ro.aenigma.crypto
 
 import android.util.Base64
 import ro.aenigma.crypto.Base64Extensions.isValidBase64
-import java.security.MessageDigest
+import ro.aenigma.crypto.HashExtensions.getSha256
 import java.util.regex.Pattern
 
 object PublicKeyExtensions {
@@ -41,8 +41,7 @@ object PublicKeyExtensions {
             }
             val base64Content = getPublicKeyBase64() ?: return null
             val decodedContent = Base64.decode(base64Content, Base64.DEFAULT) ?: return null
-            return MessageDigest.getInstance("SHA-256").digest(decodedContent)
-                .joinToString(separator = "") { byte ->  "%02x".format(byte) }
+            return decodedContent.getSha256()
         } catch (_: Exception)
         {
             return null

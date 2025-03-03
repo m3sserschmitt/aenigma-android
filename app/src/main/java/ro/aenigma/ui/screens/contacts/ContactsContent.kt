@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -77,6 +78,7 @@ fun ContactsContentPreview()
                     guardHostname = "",
                     guardAddress = "",
                     hasNewMessage = true,
+                    type = ContactType.CONTACT,
                     lastSynchronized = ZonedDateTime.now()
                 ),
                 ContactWithConversationPreview(
@@ -86,6 +88,7 @@ fun ContactsContentPreview()
                     guardHostname = "",
                     guardAddress = "",
                     hasNewMessage = false,
+                    type = ContactType.CONTACT,
                     lastSynchronized = ZonedDateTime.now()
                 )
             )
@@ -100,6 +103,7 @@ fun ContactsContentPreview()
             guardHostname = "",
             guardAddress = "",
             hasNewMessage = true,
+                type = ContactType.CONTACT,
             lastSynchronized = ZonedDateTime.now()
         )
         ),

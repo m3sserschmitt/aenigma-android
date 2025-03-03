@@ -31,12 +31,12 @@ interface MessagesDao {
     fun getDeletedMessages(chatId: String): Flow<List<MessageEntity>>
 
     @Query(
-        "INSERT OR IGNORE INTO $MESSAGES_TABLE(chatId, text, incoming, uuid, date, dateReceivedOnServer, sent, deleted, type, refId, id) " +
-                "VALUES(:chatId, :text, :incoming, :uuid, :date, :dateReceivedOnServer, 0, 0, :type, :refId, " +
+        "INSERT OR IGNORE INTO $MESSAGES_TABLE(chatId, text, incoming, uuid, date, dateReceivedOnServer, sent, deleted, [action], refId, id) " +
+                "VALUES(:chatId, :text, :incoming, :uuid, :date, :dateReceivedOnServer, 0, 0, :action, :refId, " +
                 "(SELECT CASE WHEN MIN(id) IS NULL THEN CAST(9223372036854775807 AS INTEGER) ELSE MIN(id) - 1 END AS min_value FROM $MESSAGES_TABLE))"
     )
     suspend fun insert(
-        chatId: String, text: String?, type: MessageAction, incoming: Boolean, uuid: String?,
+        chatId: String, text: String?, action: MessageAction, incoming: Boolean, uuid: String?,
         refId: String?, date: ZonedDateTime, dateReceivedOnServer: ZonedDateTime?
     ): Long?
 

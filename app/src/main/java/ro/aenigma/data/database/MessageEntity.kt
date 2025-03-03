@@ -4,11 +4,10 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import ro.aenigma.models.MessageAction
 import ro.aenigma.util.Constants
-import ro.aenigma.util.MessageActionType
+import ro.aenigma.util.RequestState
 import java.time.ZonedDateTime
 import java.util.UUID
 
@@ -27,9 +26,9 @@ data class MessageEntity (
     val text: String,
     val incoming: Boolean,
     val uuid: String?,
+    val action: MessageAction,
     var sent: Boolean = false,
     var deleted: Boolean = false,
-    val type: MessageAction = MessageAction(MessageActionType.TEXT, null),
     val date: ZonedDateTime = ZonedDateTime.now(),
     val dateReceivedOnServer: ZonedDateTime? = null,
     val refId: String? = UUID.randomUUID().toString(),
@@ -38,7 +37,12 @@ data class MessageEntity (
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
 
-    @Ignore var responseFor: Flow<MessageEntity?> = flowOf(null)
+    @Ignore
+    val responseFor: MutableStateFlow<RequestState<MessageEntity>> =
+        MutableStateFlow(RequestState.Idle)
+
+    @Ignore
+    val deliveryStatus = MutableStateFlow(false)
 
     override fun hashCode(): Int {
         return id.hashCode()

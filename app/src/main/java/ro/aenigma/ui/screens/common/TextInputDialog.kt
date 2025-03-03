@@ -35,6 +35,7 @@ fun TextInputDialog(
     title: String,
     body: String,
     placeholderText: String,
+    dismissible: Boolean = true,
     onTextChanged: (String) -> Boolean,
     onConfirmClicked: () -> Unit,
     onDismissClicked: () -> Unit
@@ -76,7 +77,7 @@ fun TextInputDialog(
             },
             title = title,
             body = body,
-            dismissible = true,
+            dismissible = dismissible,
             onPositiveButtonClicked = {
                 isValidationError = isValidationError || text.isEmpty()
                 if (!isValidationError) {

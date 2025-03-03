@@ -15,6 +15,7 @@ import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
+import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
 import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
@@ -37,6 +38,7 @@ fun ContactsAppBar(
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
+    onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
     var searchQueryState by remember { mutableStateOf("") }
@@ -64,6 +66,10 @@ fun ContactsAppBar(
                 ShareTopAppBarAction(
                     visible = selectedItemsCount == 1,
                     onShareContactClick = onShareSelectedItemsClicked
+                )
+                CreateGroupTopAppBarAction(
+                    visible = selectedItemsCount > 0,
+                    onCreateGroupClicked = onCreateGroupClicked
                 )
             }
         )

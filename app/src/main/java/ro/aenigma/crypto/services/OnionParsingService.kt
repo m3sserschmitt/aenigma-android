@@ -26,16 +26,16 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
         }
     }
 
-    fun parse(routingRequest: RoutingRequest): ParsedMessageDto? {
-        return parse(
+    fun parse(routingRequest: RoutingRequest): List<ParsedMessageDto> {
+        return routingRequest.payloads?.mapNotNull { item -> parse(
             PendingMessage(
                 routingRequest.uuid,
                 null,
-                routingRequest.payload,
+                item,
                 ZonedDateTime.now().toString(),
                 false
             )
-        )
+        )} ?: listOf()
     }
 
     fun parse(pendingMessage: PendingMessage): ParsedMessageDto? {
@@ -47,6 +47,10 @@ class OnionParsingService @Inject constructor(@ApplicationContext context: Conte
             return try {
                 val decryptedData =
                     CryptoProvider.unsealOnionEx(pendingMessage.content) ?: return null
+                if(decryptedData.size < Constants.ADDRESS_SIZE + 1)
+                {
+                    return null
+                }
                 val address =
                     HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE))
                 val content =

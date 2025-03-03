@@ -2,26 +2,21 @@ package ro.aenigma.viewmodels
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.net.Uri
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.WorkManager
 import ro.aenigma.R
 import ro.aenigma.AenigmaApp
-import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithConversationPreview
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.SharedData
-import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import com.google.gson.Gson
@@ -32,13 +27,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import retrofit2.Retrofit
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
-import retrofit2.converter.gson.GsonConverterFactory
-import java.net.URL
+import ro.aenigma.crypto.getStringDataFromSignature
+import ro.aenigma.data.RemoteDataSource
+import ro.aenigma.models.enums.ContactType
+import ro.aenigma.util.getQueryParameter
+import ro.aenigma.workers.GroupUploadWorker
 import java.time.ZonedDateTime
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -51,6 +45,16 @@ class MainViewModel @Inject constructor(
     repository,
     signalRClient,
     application) {
+    init {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.notificationsAllowed.collect { allowed ->
+                _notificationsAllowed.value = allowed
+            }
+        }
+    }
+
+    @Inject
+    lateinit var workManager: dagger.Lazy<WorkManager>
 
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
@@ -73,6 +77,8 @@ class MainViewModel @Inject constructor(
     private val _sharedDataRequestResult =
         MutableStateFlow<RequestState<SharedData>>(RequestState.Idle)
 
+    private val _notificationsAllowed = MutableStateFlow(true)
+
     val allContacts: StateFlow<RequestState<List<ContactWithConversationPreview>>> =
         _allContacts
 
@@ -80,15 +86,12 @@ class MainViewModel @Inject constructor(
 
     val qrCodeLabel: StateFlow<String> = _qrCodeLabel
 
-    val notificationsPermissionGranted: Flow<Boolean> = repository.local.notificationsAllowed
-
     val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> =
         _sharedDataCreateResult
 
     val sharedDataRequest: StateFlow<RequestState<SharedData>> = _sharedDataRequestResult
 
-    val outgoingMessages: LiveData<List<MessageEntity>>
-        get() = repository.local.getOutgoingMessages().asLiveData()
+    val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
     fun loadContacts() {
         if (_allContacts.value is RequestState.Success
@@ -165,13 +168,14 @@ class MainViewModel @Inject constructor(
             _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return null
 
         return ContactEntity(
-            contactAddress,
-            newContactName.value,
-            _scannedContactDetails.value.publicKey,
-            _scannedContactDetails.value.guardHostname,
-            _scannedContactDetails.value.guardAddress,
-            false,
-            ZonedDateTime.now()
+            address = contactAddress,
+            name = newContactName.value,
+            publicKey = _scannedContactDetails.value.publicKey,
+            guardHostname = _scannedContactDetails.value.guardHostname,
+            guardAddress = _scannedContactDetails.value.guardAddress,
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastSynchronized = ZonedDateTime.now()
         )
     }
 
@@ -182,6 +186,25 @@ class MainViewModel @Inject constructor(
             }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    fun createGroup(contacts: List<ContactWithConversationPreview>) {
+        viewModelScope.launch(ioDispatcher) {
+            val memberAddresses = contacts.map { item -> item.address }
+            GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                workManager.get(),
+                newContactName.value,
+                userName.value,
+                memberAddresses,
+                null
+            )
+        }
+    }
+
+    fun setupName(name: String) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveName(name)
         }
     }
 
@@ -243,6 +266,7 @@ class MainViewModel @Inject constructor(
             Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE -> {
                 getMyProfileBitmap()
             }
+
             else -> {
                 getProfileBitmap(profileId)
             }
@@ -283,20 +307,11 @@ class MainViewModel @Inject constructor(
     fun createContactShareLink() {
         _sharedDataCreateResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
-            try {
-                val signature =
-                    signatureService.sign(_contactExportedData.value.toString().toByteArray())
+            val response = repository.remote.createSharedData(_contactExportedData.value.toString())
+            if (response != null) {
+                _sharedDataCreateResult.value = RequestState.Success(response)
+            } else {
 
-                if (signature != null) {
-                    val sharedDataCreate = SharedDataCreate(signature.first, signature.second, 3)
-                    val response = repository.remote.createSharedData(sharedDataCreate)
-                    val body = response.body()
-
-                    if (response.code() == 200 && body != null) {
-                        _sharedDataCreateResult.value = RequestState.Success(body)
-                    } else throw Exception()
-                } else throw Exception()
-            } catch (_: Exception) {
                 _sharedDataCreateResult.value = RequestState.Error(
                     Exception("Something went wrong while trying to create a link.")
                 )
@@ -308,47 +323,22 @@ class MainViewModel @Inject constructor(
         _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val uri = Uri.parse(url)
-                val tag = uri.getQueryParameter("Tag") ?: uri.getQueryParameter("tag")
-                ?: throw Exception()
-                val response = initApi(url)?.getSharedData(tag) ?: throw Exception()
-                val body = response.body() ?: throw Exception()
-
-                if (response.code() == 200 && body.data != null && body.publicKey != null) {
-                    val content = CryptoProvider.getDataFromSignature(body.data, body.publicKey)
+                val tag = url.getQueryParameter("tag") ?: throw Exception()
+                val response =
+                    RemoteDataSource(EnigmaApi.initApi(url), signatureService).getSharedData(tag)
                         ?: throw Exception()
-                    val stringContent = String(content, Charsets.UTF_8)
-                    _scannedContactDetails.value = Gson().fromJson(
-                        stringContent,
-                        ExportedContactData::class.java
-                    )
-                    _sharedDataRequestResult.value = RequestState.Success(body)
-                } else throw Exception()
+                val content = response.data.getStringDataFromSignature(response.publicKey!!)
+                    ?: throw Exception()
+                _scannedContactDetails.value = Gson().fromJson(
+                    content,
+                    ExportedContactData::class.java
+                )
+                _sharedDataRequestResult.value = RequestState.Success(response)
             } catch (ex: Exception) {
                 _sharedDataRequestResult.value = RequestState.Error(
                     Exception("Could not process shared data. Invalid content or link.")
                 )
             }
-        }
-    }
-
-    private fun initApi(url: String): EnigmaApi? {
-        return try {
-            val parsedUrl = URL(url)
-            Retrofit.Builder()
-                .baseUrl("${parsedUrl.protocol}://${parsedUrl.host}")
-                .client(
-                    OkHttpClient.Builder()
-                        .readTimeout(10, TimeUnit.SECONDS)
-                        .connectTimeout(10, TimeUnit.SECONDS)
-                        .writeTimeout(10, TimeUnit.SECONDS)
-                        .build()
-                )
-                .addConverterFactory(GsonConverterFactory.create())
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .build().create(EnigmaApi::class.java)
-        } catch (_: Exception) {
-            null
         }
     }
 

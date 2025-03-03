@@ -204,3 +204,23 @@ fun ShareTopAppBarAction(
         }
     }
 }
+
+@Composable
+fun CreateGroupTopAppBarAction(
+    visible: Boolean,
+    onCreateGroupClicked: () -> Unit
+) {
+    if(visible) {
+        IconButton(
+            onClick = onCreateGroupClicked
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_group),
+                contentDescription = stringResource(
+                    id = R.string.create_group
+                ),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}

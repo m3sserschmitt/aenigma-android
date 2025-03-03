@@ -16,6 +16,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -168,13 +169,14 @@ fun DefaultChatAppBarPreview()
         isSelectionMode = false,
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(ContactEntity(
-            "123456-5678-5678-123456",
-            "John",
-            "public-key",
-            "guard-hostname",
-            "guard-address",
-            true,
-            ZonedDateTime.now()
+            address = "123456-5678-5678-123456",
+            name = "John",
+            publicKey = "public-key",
+            guardHostname = "guard-hostname",
+            guardAddress = "guard-address",
+            type = ContactType.CONTACT,
+            hasNewMessage = true,
+            lastSynchronized = ZonedDateTime.now()
         )),
         onRetryConnection = {},
         onDeleteAllClicked = {},
@@ -201,13 +203,14 @@ fun SelectionModeChatAppBarPreview()
         isSelectionMode = true,
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(ContactEntity(
-            "123456-5678-5678-123456",
-            "John",
-            "public-key",
-            "guard-hostname",
-            "guard-address",
-            true,
-            ZonedDateTime.now()
+            address = "123456-5678-5678-123456",
+            name = "John",
+            publicKey = "public-key",
+            guardHostname = "guard-hostname",
+            guardAddress = "guard-address",
+            type = ContactType.CONTACT,
+            hasNewMessage = true,
+            lastSynchronized = ZonedDateTime.now()
         )),
         onRetryConnection = {},
         onDeleteAllClicked = {},

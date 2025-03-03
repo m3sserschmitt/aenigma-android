@@ -2,6 +2,7 @@ package ro.aenigma.data.database
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
 import java.time.ZonedDateTime
 
@@ -12,6 +13,7 @@ data class ContactEntity(
     var publicKey: String,
     var guardHostname: String?,
     var guardAddress: String,
+    val type: ContactType,
     var hasNewMessage: Boolean,
     var lastSynchronized: ZonedDateTime
 ) {
@@ -20,14 +22,15 @@ data class ContactEntity(
     fun toContactWithPreview(): ContactWithConversationPreview
     {
         return ContactWithConversationPreview(
-            address,
-            name,
-            publicKey,
-            guardHostname,
-            guardAddress,
-            hasNewMessage,
-            lastSynchronized,
-            lastMessageId
+            address = address,
+            name = name,
+            publicKey = publicKey,
+            guardHostname = guardHostname,
+            guardAddress = guardAddress,
+            hasNewMessage = hasNewMessage,
+            lastSynchronized = lastSynchronized,
+            lastMessageId = lastMessageId,
+            type = type
         )
     }
 }

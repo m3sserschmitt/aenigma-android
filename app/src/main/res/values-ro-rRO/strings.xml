@@ -52,6 +52,10 @@
     <string name="do_not_allow">Nu permite</string>
     <string name="loading">Încărcare…</string>
     <string name="share">Distribuie</string>
+    <string name="whats_your_name">Cum vă numiți?</string>
+    <string name="name_dialog_body">Acesta va putea fi văzut de către contactele dvs.</string>
+    <string name="create_group">Creați un grup</string>
+    <string name="enter_group_name">Introduceți numele noului grup</string>
     <string name="camera_permission_required">Este necesară permisiunea pentru utilizarea Camerei</string>
     <string name="create_link">Creați un link</string>
     <string name="use_link">Folosiți un link</string>

@@ -97,7 +97,7 @@ class SignalRClient @Inject constructor(
         }
         synchronized(_hubConnection) {
             _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
-                if (data.payload != null) {
+                if (data.payloads != null) {
                     CoroutineScope(Dispatchers.IO).launch {
                         messageSaver.handleRoutingRequest(data)
                     }
@@ -402,13 +402,14 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun sendMessage(message: String): Boolean {
+    fun sendMessages(messages: List<String>): Boolean
+    {
         var r = false
         if (isConnected()) {
             synchronized(_hubConnection) {
                 _hubConnection.invoke(
                     RouteResult::class.java, ROUTE_MESSAGE_METHOD,
-                    RoutingRequest(message)
+                    RoutingRequest(messages)
                 ).blockingSubscribe(
                     { result -> r = result.success == true },
                     { _ -> r = false }

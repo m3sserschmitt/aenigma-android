@@ -11,7 +11,13 @@ enum class MessageActionType {
     DELETE_ALL,
 
     @Description("Replied to message")
-    REPLY
+    REPLY,
+
+    @Description("Text message within a group")
+    GROUP_UPDATE,
+
+    @Description("Group created")
+    GROUP_CREATE
 }
 
 inline fun <reified T : Enum<T>>T?.getDescription(): String? {

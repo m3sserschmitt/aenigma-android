@@ -2,6 +2,7 @@ package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
 import com.google.gson.Gson
+import ro.aenigma.models.GroupData
 import ro.aenigma.models.MessageAction
 import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
@@ -45,5 +46,17 @@ class Converters {
     @TypeConverter
     fun toMessageAction(value: String): MessageAction {
         return Gson().fromJson(value, MessageAction::class.java)
+    }
+
+    @TypeConverter
+    fun fromGroupData(value: GroupData): String
+    {
+        return Gson().toJson(value)
+    }
+
+    @TypeConverter
+    fun toGroupData(value: String): GroupData
+    {
+        return Gson().fromJson(value, GroupData::class.java)
     }
 }

@@ -11,7 +11,6 @@ import androidx.navigation.compose.rememberNavController
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import ro.aenigma.crypto.KeysManager
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
@@ -20,7 +19,6 @@ import ro.aenigma.services.NavigationTracker
 import ro.aenigma.services.NotificationService
 import ro.aenigma.viewmodels.MainViewModel
 import ro.aenigma.workers.GraphReaderWorker
-import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import dagger.hilt.android.AndroidEntryPoint
@@ -104,18 +102,8 @@ class AppActivity : ComponentActivity() {
         signalRClient.status.observe(this, signalRStatusObserver)
     }
 
-    private fun observeOutgoingMessages() {
-        mainViewModel.outgoingMessages.observe(this, outgoingMessagesObserver)
-    }
-
     private fun observeNavigation() {
         navigationTracker.currentRoute.observe(this, navigationObserver)
-    }
-
-    private val outgoingMessagesObserver = Observer<List<MessageEntity>> { messages ->
-        for (message in messages) {
-            onOutgoingMessage(message)
-        }
     }
 
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
@@ -136,16 +124,9 @@ class AppActivity : ComponentActivity() {
                 onClientError()
             }
         }
-        if (clientStatus greaterOrEqualThan SignalRStatus.Authenticated()) {
-            onClientAuthenticated()
-        }
     }
 
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onClientAuthenticated() {
-        observeOutgoingMessages()
-    }
 
     private fun onClientConnectionRefused() {
         SignalRClientWorker.startDelayed(this)
@@ -164,10 +145,6 @@ class AppActivity : ComponentActivity() {
 
     private fun onSignalRClientReset() {
         SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onOutgoingMessage(message: MessageEntity) {
-        MessageSenderWorker.sendMessage(this, message)
     }
 
     private fun onScreenChanged(route: String) {

@@ -27,30 +27,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.models.MessageAction
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.selectable
-import ro.aenigma.util.RequestState
 import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.util.RequestState
+import java.time.ZonedDateTime
 
 @Composable
 fun MessageItem(
     message: MessageEntity,
-    contact: RequestState<ContactEntity>,
+    allContacts: List<ContactEntity>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    isSent: Boolean,
     onItemSelected: (MessageEntity) -> Unit,
     onItemDeselected: (MessageEntity) -> Unit,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val text = when(message.type.actionType) {
+    val text = when (message.action.actionType) {
         MessageActionType.DELETE -> context.getString(R.string.message_deleted)
         MessageActionType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
         else -> message.text
@@ -65,8 +68,12 @@ fun MessageItem(
         MaterialTheme.colorScheme.secondaryContainer
     else
         MaterialTheme.colorScheme.primaryContainer
-    val refMessage by message.responseFor.collectAsState(initial = null)
-
+    val isGroup = message.chatId != message.action.senderAddress
+    val replyToMessageMessage by message.responseFor.collectAsState()
+    val sender =
+        if (isGroup && message.incoming) allContacts.firstOrNull { item -> item.address == message.action.senderAddress } else null
+    val deliveryStatus by message.deliveryStatus.collectAsState()
+    val isSent = message.sent || deliveryStatus
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
         contentAlignment = if (message.incoming) Alignment.CenterStart else Alignment.CenterEnd
@@ -108,14 +115,18 @@ fun MessageItem(
                 Column(
                     modifier = Modifier.padding(8.dp).width(IntrinsicSize.Max)
                 ) {
-                    if(refMessage != null) {
-                        ResponseTo(
-                            message = refMessage!!,
-                            contact = contact,
-                            contentColor = MaterialTheme.colorScheme.onSecondary,
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        )
-                    }
+                    SenderName(
+                        contact = sender,
+                        color = contentColor
+                    )
+
+                    ResponseTo(
+                        message = replyToMessageMessage,
+                        allContacts = allContacts,
+                        contentColor = MaterialTheme.colorScheme.onSecondary,
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    )
+
                     Text(
                         modifier = Modifier.fillMaxWidth(),
                         text = text,
@@ -136,7 +147,7 @@ fun MessageItem(
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )
-                        if (!message.incoming && !isSent) {
+                        if (!message.incoming && isSent) {
                             Icon(
                                 modifier = Modifier.size(12.dp).alpha(.5f),
                                 imageVector = Icons.Outlined.Done,
@@ -159,58 +170,89 @@ fun MessageItem(
 }
 
 @Composable
+fun SenderName(
+    contact: ContactEntity?,
+    color: Color
+) {
+    if(contact == null)
+    {
+        return
+    }
+    Text(
+        text = contact.name,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            fontWeight = FontWeight.Bold,
+        ),
+        color = color
+    )
+}
+
+@Composable
 fun ResponseTo(
-    message: MessageEntity,
-    contact: RequestState<ContactEntity>,
+    message: RequestState<MessageEntity>,
+    allContacts: List<ContactEntity>,
     contentColor: Color,
     containerColor: Color
 ) {
+    if(message !is RequestState.Success)
+    {
+        return
+    }
+    val replyToContact =
+        allContacts.firstOrNull { item -> item.address == message.data.action.senderAddress }
     val context = LocalContext.current
-    if (contact is RequestState.Success) {
-        val name = if (message.incoming) contact.data.name + ":"
-        else
-            context.getString(R.string.you)
-        val text = if(message.deleted) context.getString(R.string.message_deleted) else message.text
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = containerColor,
-            shape = RoundedCornerShape(8.dp)
+    val name = if (message.data.incoming && replyToContact != null) replyToContact.name + ":"
+    else
+        context.getString(R.string.you)
+    val text = if (message.data.deleted) context.getString(R.string.message_deleted) else message.data.text
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = containerColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(4.dp)
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(4.dp)
-            ) {
-                Text(
-                    text = name,
-                    color = contentColor,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    modifier = Modifier.padding(start = 4.dp),
-                    text = text,
-                    color = contentColor.copy(alpha = .75f),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+            Text(
+                text = name,
+                color = contentColor,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Text(
+                modifier = Modifier.padding(start = 4.dp),
+                text = text,
+                color = contentColor.copy(alpha = .75f),
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
 
 @Composable
 @Preview
-fun MessageItemPreview()
+fun GroupSelectionModeNotSelectedIncomingMessagePreview()
 {
     MessageItem(
         isSelectionMode = true,
         isSelected = false,
-        isSent = true,
         message = MessageEntity(
-            "123-123-123-123",
-            "Hello",
+            chatId = "123-123-123-124",
+            text = "Hello, how are you?",
             incoming = true,
             sent = true,
-            uuid = null
+            uuid = null,
+            action = MessageAction(MessageActionType.TEXT, null, "123-123-123-123")
         ),
-        contact = RequestState.Idle,
+        allContacts = listOf(ContactEntity(
+            address = "123-123-123-123",
+            name = "John",
+            publicKey = "pkey",
+            guardHostname = "hostname",
+            guardAddress = "address",
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastSynchronized = ZonedDateTime.now()
+        )),
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -219,20 +261,29 @@ fun MessageItemPreview()
 
 @Composable
 @Preview
-fun MessageItemSelectedPreview()
+fun GroupSelectionModeIncomingMessageSelectedPreview()
 {
     MessageItem(
         isSelectionMode = true,
         isSelected = true,
-        isSent = true,
         message = MessageEntity(
-            "123-123-123-123",
-            "Hello",
+            "123-123-123-124",
+            "Hi there!",
             incoming = true,
             sent = false,
-            uuid = null
+            uuid = null,
+            action = MessageAction(MessageActionType.TEXT, null, "123-123-123-123")
         ),
-        contact = RequestState.Idle,
+        allContacts = listOf(ContactEntity(
+            address = "123-123-123-123",
+            name = "John",
+            publicKey = "pkey",
+            guardHostname = "hostname",
+            guardAddress = "address",
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastSynchronized = ZonedDateTime.now()
+        )),
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -241,20 +292,29 @@ fun MessageItemSelectedPreview()
 
 @Composable
 @Preview
-fun MessageItemPending()
+fun MessagePending()
 {
     MessageItem(
         isSelectionMode = false,
         isSelected = false,
-        isSent = false,
         message = MessageEntity(
             "123-123-123-123",
             "Hello",
             incoming = false,
             sent = false,
-            uuid = null
+            uuid = null,
+            action = MessageAction(MessageActionType.TEXT, null, "123-123-123-123")
         ),
-        contact = RequestState.Idle,
+        allContacts = listOf(ContactEntity(
+            address = "123-123-123-123",
+            name = "John",
+            publicKey = "pkey",
+            guardHostname = "hostname",
+            guardAddress = "address",
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastSynchronized = ZonedDateTime.now()
+        )),
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}
@@ -263,20 +323,29 @@ fun MessageItemPending()
 
 @Composable
 @Preview
-fun MessageItemSent()
+fun MessageSent()
 {
     MessageItem(
         isSelectionMode = false,
         isSelected = false,
-        isSent = true,
         message = MessageEntity(
             "123-123-123-123",
             "Hello",
             incoming = false,
             sent = true,
-            uuid = null
+            uuid = null,
+            action = MessageAction(MessageActionType.TEXT, null, "123-123-123-123")
         ),
-        contact = RequestState.Idle,
+        allContacts = listOf(ContactEntity(
+            address = "123-123-123-123",
+            name = "John",
+            publicKey = "pkey",
+            guardHostname = "hostname",
+            guardAddress = "address",
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastSynchronized = ZonedDateTime.now()
+        )),
         onItemDeselected = {},
         onClick = {},
         onItemSelected = {}

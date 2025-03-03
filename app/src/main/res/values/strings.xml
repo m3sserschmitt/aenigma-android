@@ -51,6 +51,10 @@
     <string name="do_not_allow">Don\'t allow</string>
     <string name="loading">Loading…</string>
     <string name="share">Share</string>
+    <string name="whats_your_name">What is your name?</string>
+    <string name="name_dialog_body">This will be visible to your contacts</string>
+    <string name="create_group">Create group</string>
+    <string name="enter_group_name">Enter group name</string>
     <string name="camera_permission_required">Camera permission required</string>
     <string name="create_link">Create link</string>
     <string name="use_link">Use link</string>

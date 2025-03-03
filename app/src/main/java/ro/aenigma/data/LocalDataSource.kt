@@ -15,6 +15,8 @@ import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
 import ro.aenigma.data.network.BaseUrlInterceptor
 import kotlinx.coroutines.flow.Flow
+import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.GroupEntity
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -27,11 +29,18 @@ class LocalDataSource @Inject constructor(
     private val preferencesDataStore: PreferencesDataStore,
     private val baseUrlInterceptor: BaseUrlInterceptor
 ) {
+    suspend fun saveName(name: String)
+    {
+        return preferencesDataStore.saveName(name)
+    }
+
     suspend fun saveNotificationsAllowed(granted: Boolean) {
         preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
+
+    val name: Flow<String> = preferencesDataStore.name
 
     fun getContacts(): Flow<List<ContactEntity>> {
         return contactsDao.get()
@@ -53,8 +62,20 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get(address)
     }
 
+    suspend fun getContactWithGroup(address: String): ContactWithGroup? {
+        return contactsDao.getWithGroup(address)
+    }
+
+    fun getContactWithGroupFlow(address: String): Flow<ContactWithGroup?> {
+        return contactsDao.getWithGroupFlow(address)
+    }
+
     suspend fun insertOrUpdateContact(contactEntity: ContactEntity) {
         contactsDao.insertOrUpdate(contactEntity)
+    }
+
+    suspend fun insertOrUpdateGroup(group: GroupEntity) {
+        return contactsDao.insertOrUpdate(group)
     }
 
     suspend fun updateContact(contactEntity: ContactEntity) {
@@ -123,11 +144,11 @@ class LocalDataSource @Inject constructor(
         return messagesDao.removeHard(messages)
     }
 
-    suspend fun insertMessage(message: MessageEntity): Boolean {
+    suspend fun insertMessage(message: MessageEntity): Long {
         val messageId = messagesDao.insert(
             chatId = message.chatId,
             text = message.text,
-            type = message.type,
+            action = message.action,
             incoming = message.incoming,
             refId = message.refId,
             date = message.date,
@@ -139,9 +160,9 @@ class LocalDataSource @Inject constructor(
             if (message.incoming) {
                 markConversationAsUnread(message.chatId)
             }
-            return true
+            return messageId
         }
-        return false
+        return -1
     }
 
     fun getOutgoingMessages(): Flow<List<MessageEntity>> {

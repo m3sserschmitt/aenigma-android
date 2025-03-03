@@ -28,6 +28,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithConversationPreview
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
@@ -56,9 +57,8 @@ fun ContactsScreen(
     val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
-    val notificationsAllowed by mainViewModel.notificationsPermissionGranted.collectAsState(
-        initial = true
-    )
+    val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
+    val userName by mainViewModel.userName.collectAsState()
     val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
 
     ContactsScreen(
@@ -66,6 +66,7 @@ fun ContactsScreen(
         contacts = allContacts,
         sharedDataRequest = sharedDataRequest,
         notificationsAllowed = notificationsAllowed,
+        nameDialogVisible = userName.isBlank(),
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
@@ -90,6 +91,12 @@ fun ContactsScreen(
         onContactSaved = {
             mainViewModel.saveContactChanges()
         },
+        onGroupCreated = {
+            selectedItems -> mainViewModel.createGroup(selectedItems)
+        },
+        onNameConfirmed = {
+            nameValue -> mainViewModel.setupName(nameValue)
+        },
         onContactSaveDismissed = {
             mainViewModel.cleanupContactChanges()
         }
@@ -102,6 +109,7 @@ fun ContactsScreen(
     contacts: RequestState<List<ContactWithConversationPreview>>,
     sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
+    nameDialogVisible: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
@@ -109,11 +117,14 @@ fun ContactsScreen(
     onContactRenamed: (ContactWithConversationPreview) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onContactSaved: () -> Unit,
+    onGroupCreated: (List<ContactWithConversationPreview>) -> Unit,
     onContactSaveDismissed: () -> Unit,
+    onNameConfirmed: (String) -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
+    var createGroupDialogVisible by remember { mutableStateOf(false) }
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
@@ -214,6 +225,24 @@ fun ContactsScreen(
         }
     )
 
+    CreateGroupDialog(
+        visible = createGroupDialogVisible,
+        onTextChanged = onNewContactNameChanged,
+        onConfirmClicked = {
+            onGroupCreated(selectedItems)
+            createGroupDialogVisible = false
+        },
+        onDismissClicked = {
+            onContactSaveDismissed()
+            createGroupDialogVisible = false
+        }
+    )
+
+    SetupNameDialog(
+        visible = nameDialogVisible,
+        onConfirmClicked = onNameConfirmed
+    )
+
     BackHandler(
         enabled = isSearchMode || isSelectionMode
     ) {
@@ -277,6 +306,9 @@ fun ContactsScreen(
                         navigateToAddContactScreen(selectedItems.single().address)
                     }
                 },
+                onCreateGroupClicked = {
+                    createGroupDialogVisible = true
+                },
                 onRetryConnection = onRetryConnection,
                 navigateToAboutScreen = navigateToAboutScreen
             )
@@ -339,12 +371,14 @@ fun ContactsScreenPreview()
     ContactsScreen(
         connectionStatus = SignalRStatus.Connected(),
         notificationsAllowed = true,
+        nameDialogVisible = false,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { },
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
+        onGroupCreated = {},
         contacts = RequestState.Success(
             listOf(
                 ContactWithConversationPreview(
@@ -354,6 +388,7 @@ fun ContactsScreenPreview()
                     guardHostname = "",
                     guardAddress = "",
                     hasNewMessage = true,
+                    type = ContactType.CONTACT,
                     lastSynchronized = ZonedDateTime.now()
                 ),
                 ContactWithConversationPreview(
@@ -363,6 +398,7 @@ fun ContactsScreenPreview()
                     guardHostname = "",
                     guardAddress = "",
                     hasNewMessage = false,
+                    type = ContactType.CONTACT,
                     lastSynchronized = ZonedDateTime.now()
                 )
             )
@@ -372,6 +408,7 @@ fun ContactsScreenPreview()
         onContactSaved = {},
         onContactSaveDismissed = {},
         sharedDataRequest = RequestState.Idle,
-        navigateToAboutScreen = { }
+        navigateToAboutScreen = { },
+        onNameConfirmed = {}
     )
 }

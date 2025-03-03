@@ -25,6 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
 
@@ -142,7 +143,8 @@ fun ContactItemPreview()
             hasNewMessage = true,
             lastMessageText = "Hey, how are you?",
             lastMessageIncoming = false,
-            lastSynchronized = ZonedDateTime.now()
+            lastSynchronized = ZonedDateTime.now(),
+            type = ContactType.CONTACT,
         ),
         isSelectionMode = false,
         isSelected = false,
@@ -164,6 +166,7 @@ fun ContactItemSelectedPreview()
             guardHostname = "guard-hostname",
             guardAddress = "guard-address",
             hasNewMessage = true,
+            type = ContactType.CONTACT,
             lastMessageText = "Hey, how are you?",
             lastSynchronized = ZonedDateTime.now()
         ),

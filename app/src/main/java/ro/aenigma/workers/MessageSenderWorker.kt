@@ -29,6 +29,9 @@ import ro.aenigma.services.PathFinder
 import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.models.MessageActionDto
+import ro.aenigma.models.enums.ContactType
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
@@ -43,56 +46,71 @@ class MessageSenderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        const val MESSAGE_ID = "messageId"
-
+        const val USER_NAME_ARG = "UserName"
+        const val MESSAGE_ID_ARG = "MessageId"
+        private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
         private const val MIN_CONTACT_SYNC_INTERVAL_MINUTES: Long = 15
         private const val DELAY_BETWEEN_RETRIES: Long = 10
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createUniqueWorkRequest(context: Context, data: Data, uniqueWorkRequest: String) {
+        fun createWorkRequest(workManager: WorkManager, messageId: Long, userName: String) {
+            val parameters = Data.Builder()
+                .putString(USER_NAME_ARG, userName)
+                .putLong(MESSAGE_ID_ARG, messageId)
+                .build()
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
             val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setConstraints(constraints)
-                .setInputData(data)
+                .setInputData(parameters)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
                 .build()
-            WorkManager.getInstance(context)
-                .enqueueUniqueWork(uniqueWorkRequest, ExistingWorkPolicy.KEEP, workRequest)
+            workManager.enqueueUniqueWork(
+                getUniqueWorkRequestName(messageId),
+                ExistingWorkPolicy.KEEP,
+                workRequest
+            )
         }
 
-        @JvmStatic
-        fun sendMessage(context: Context, message: MessageEntity) {
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID, message.id)
-                .build()
-            createUniqueWorkRequest(context, parameters, "MessageSenderWorkRequest-${message.id}")
+        fun getUniqueWorkRequestName(messageId: Long): String {
+            return "$UNIQUE_WORK_REQUEST_NAME-$messageId"
         }
     }
 
     private suspend fun buildOnion(
         message: MessageEntity,
         destination: ContactEntity,
-        path: List<VertexEntity>
+        userName: String?,
+        path: List<VertexEntity>,
+        groupAddress: String?,
+        groupResourceUrl: String?
     ): String? {
         if (path.isEmpty()) {
             return null
         }
 
         val guard = repository.local.getGuard() ?: return null
-        val localAddress = signatureService.address ?: return null
+        val localAddress = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
         val addresses =
             arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-
+        val action = MessageActionDto(
+            actionType = message.action.actionType,
+            refId = message.action.refId
+        )
         val messageDetails = MessageWithMetadata(
-            message.text, message.type, signatureService.address, guard.address, guard.hostname,
-            signatureService.publicKey, // TODO: public key & guard should not be sent in every message
-            message.refId
+            text = message.text,
+            action = action,
+            senderName = userName,
+            senderGuardAddress = guard.address,
+            senderGuardHostname = guard.hostname,
+            senderPublicKey = signatureService.publicKey, // TODO: public key & guard should not be sent in every message
+            refId = message.refId,
+            groupResourceUrl = groupResourceUrl,
         )
         val serializedData = Gson().toJson(messageDetails).toByteArray()
         return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
@@ -166,6 +184,39 @@ class MessageSenderWorker @AssistedInject constructor(
         return true
     }
 
+    private suspend fun sendMessage(
+        contacts: List<ContactEntity>,
+        message: MessageEntity,
+        userName: String?,
+        groupAddress: String?,
+        groupResourceUrl: String?
+    ): Result {
+        val onions = contacts.map { contact ->
+            updateContactIfRequired(contact)
+            val paths = pathFinder.calculatePaths(contact)
+            if (paths.isEmpty()) {
+                return Result.failure()
+            }
+            buildOnion(
+                message,
+                contact,
+                userName,
+                paths.random().vertexList,
+                groupAddress,
+                groupResourceUrl
+            )
+                ?: return Result.failure()
+        }
+        if (!signalRClient.sendMessages(onions)) {
+            return Result.retry()
+        }
+
+        message.sent = true
+        repository.local.updateMessage(message)
+
+        return Result.success()
+    }
+
     override suspend fun doWork(): Result {
         if (runAttemptCount > MAX_RETRY_COUNT) {
             return Result.failure()
@@ -179,33 +230,29 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.retry()
         }
 
-        val messageId = inputData.getLong(MESSAGE_ID, -1)
+        val messageId = inputData.getLong(MESSAGE_ID_ARG, -1)
+        val userName = inputData.getString(USER_NAME_ARG) ?: return Result.failure()
         val message = if (messageId > 0) repository.local.getMessage(messageId) else null
         val chatId = message?.chatId ?: return Result.failure()
-        val contact = repository.local.getContact(chatId) ?: return Result.failure()
+        val contact = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
+        val contacts = (if (contact.contact.type == ContactType.CONTACT) listOf(contact.contact)
+        else contact.group?.groupData?.members?.mapNotNull { item ->
+            val address = item.publicKey.getAddressFromPublicKey()
+            if (address != null && address != signatureService.address) {
+                repository.local.getContact(
+                    address
+                )
+            } else {
+                null
+            }
+        }) ?: return Result.failure()
 
-        if (!updateContactIfRequired(contact)) {
-            // TODO: This might become a failure condition in the future
-            // return Result.failure()
-        }
-
-        val paths = pathFinder.calculatePaths(contact)
-
-        if (paths.isEmpty()) {
-            return Result.failure()
-        }
-
-        val path = paths.random().vertexList
-        val onion = buildOnion(message, contact, path)
-            ?: return Result.failure()
-
-        if (!signalRClient.sendMessage(onion)) {
-            return Result.retry()
-        }
-
-        message.sent = true
-        repository.local.updateMessage(message)
-
-        return Result.success()
+        return sendMessage(
+            contacts = contacts,
+            message = message,
+            userName = userName,
+            groupAddress = contact.group?.address,
+            groupResourceUrl = contact.group?.resourceUrl
+        )
     }
 }

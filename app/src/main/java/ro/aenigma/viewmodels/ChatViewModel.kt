@@ -2,6 +2,8 @@ package ro.aenigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
@@ -14,19 +16,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.MessageAction
+import ro.aenigma.models.MessageActionDto
 import ro.aenigma.util.MessageActionType
 import ro.aenigma.util.getDescription
+import ro.aenigma.workers.MessageSenderWorker
 import java.util.SortedSet
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
+    private val workManager: WorkManager,
+    signatureService: SignatureService,
     signalRClient: SignalRClient,
     repository: Repository,
     application: Application,
 ) : BaseViewModel(repository, signalRClient, application) {
+
+    private val localAddress = signatureService.address
 
     private val _conversationSupportListComparator = compareBy<MessageEntity> { item -> item.id }
 
@@ -36,8 +45,8 @@ class ChatViewModel @Inject constructor(
 
     private var _filterQuery = MutableStateFlow("")
 
-    private val _contactNames =
-        MutableStateFlow<RequestState<List<String>>>(RequestState.Idle)
+    private val _allContacts =
+        MutableStateFlow<RequestState<List<ContactEntity>>>(RequestState.Idle)
 
     private val _selectedContact =
         MutableStateFlow<RequestState<ContactEntity>>(RequestState.Idle)
@@ -46,8 +55,6 @@ class ChatViewModel @Inject constructor(
         MutableStateFlow<RequestState<List<MessageEntity>>>(RequestState.Idle)
 
     private val _replyToMessage = MutableStateFlow<MessageEntity?>(null)
-
-    private val _notSentMessages = MutableStateFlow<List<MessageEntity>>(listOf())
 
     private val _nextPageAvailable = MutableStateFlow(false)
 
@@ -59,18 +66,18 @@ class ChatViewModel @Inject constructor(
 
     val replyToMessage: StateFlow<MessageEntity?> = _replyToMessage
 
-    val notSentMessages: StateFlow<List<MessageEntity>> = _notSentMessages
-
     val messageInputText: StateFlow<String> = _messageInputText
 
     val nextPageAvailable: StateFlow<Boolean> = _nextPageAvailable
 
+    val allContacts: StateFlow<RequestState<List<ContactEntity>>> = _allContacts
+
     fun loadContacts(selectedChatId: String) {
-        if (_contactNames.value is RequestState.Loading
-            || _contactNames.value is RequestState.Success
+        if (_allContacts.value is RequestState.Loading
+            || _allContacts.value is RequestState.Success
         ) return
 
-        _contactNames.value = RequestState.Loading
+        _allContacts.value = RequestState.Loading
         _selectedContact.value = RequestState.Loading
 
         collectContacts(selectedChatId)
@@ -80,9 +87,7 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getContacts().collect { contacts ->
-                    _contactNames.value = RequestState.Success(
-                        contacts.map { contact -> contact.name }
-                    )
+                    _allContacts.value = RequestState.Success(contacts)
 
                     val selectedContact = contacts.find { item -> item.address == selectedChatId }
 
@@ -92,14 +97,14 @@ class ChatViewModel @Inject constructor(
                         RequestState.Error(Exception("Contact not found."))
                 }
             } catch (ex: Exception) {
-                _contactNames.value = RequestState.Error(ex)
+                _allContacts.value = RequestState.Error(ex)
             }
         }
     }
 
     override fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
-            (_contactNames.value as RequestState.Success).data.all { item -> item != name }
+            (_allContacts.value as RequestState.Success).data.all { item -> item.name != name }
         } catch (_: Exception) {
             false
         }
@@ -116,17 +121,43 @@ class ChatViewModel @Inject constructor(
         collectSearches(chatId)
     }
 
-    private fun loadMessageReference(message: MessageEntity) {
-        if (message.type.actionType == MessageActionType.REPLY) {
-            if (message.type.refId != null) {
-                message.responseFor = repository.local.getMessageByRefIdFlow(message.type.refId)
+    private fun loadMessageReplyReference(message: MessageEntity) {
+        if (message.action.actionType == MessageActionType.REPLY && message.action.refId != null) {
+            viewModelScope.launch(ioDispatcher) {
+                repository.local.getMessageByRefIdFlow(message.action.refId).collect { replyFor ->
+                    if (replyFor != null) {
+                        message.responseFor.value = RequestState.Success(replyFor)
+                    } else {
+                        message.responseFor.value = RequestState.Error(Exception("Not found"))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun readMessageDeliveryStatus(message: MessageEntity) {
+        if(!message.sent) {
+            viewModelScope.launch(ioDispatcher) {
+                workManager.getWorkInfosForUniqueWorkFlow(
+                    MessageSenderWorker.getUniqueWorkRequestName(
+                        message.id
+                    )
+                ).collect { workInfo ->
+                    if(workInfo.isNotEmpty()){
+                        val lastWorkRequest = workInfo.last()
+                        if(lastWorkRequest.state == WorkInfo.State.SUCCEEDED) {
+                            message.deliveryStatus.value = true
+                        }
+                    }
+                }
             }
         }
     }
 
     private fun initialConversationLoad(messages: List<MessageEntity>) {
         messages.forEach { item ->
-            loadMessageReference(item)
+            loadMessageReplyReference(item)
+            readMessageDeliveryStatus(item)
             _conversationSortedSet.add(item)
         }
         _nextPageAvailable.value = messages.isFullPage()
@@ -144,13 +175,15 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun addNewItemToConversation(message: MessageEntity) {
-        loadMessageReference(message)
-        if (message.type.refId != null && message.type.actionType == MessageActionType.DELETE) {
-            removeItemFromConversation(message.type.refId)
-        } else if (message.type.actionType == MessageActionType.DELETE_ALL) {
+        loadMessageReplyReference(message)
+        if (message.action.refId != null && message.action.actionType == MessageActionType.DELETE) {
+            removeItemFromConversation(message.action.refId)
+        } else if (message.action.actionType == MessageActionType.DELETE_ALL) {
             clearConversation()
         }
-        _conversationSortedSet.add(message)
+        if(_conversationSortedSet.add(message)) {
+            readMessageDeliveryStatus(message)
+        }
     }
 
     private fun setConversation() {
@@ -232,7 +265,7 @@ class ChatViewModel @Inject constructor(
         synchronized(_conversationSortedSet) { _conversationSortedSet.clear() }
         viewModelScope.launch(ioDispatcher) {
             repository.local.clearConversationSoft(chatId)
-            postToDatabase(MessageAction(MessageActionType.DELETE_ALL, null))
+            postToDatabase(MessageActionDto(MessageActionType.DELETE_ALL, null))
         }
     }
 
@@ -240,13 +273,13 @@ class ChatViewModel @Inject constructor(
         synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
             val textMessages =
-                messages.filter { item -> item.type.actionType == MessageActionType.TEXT }
+                messages.filter { item -> item.action.actionType == MessageActionType.TEXT }
             val textMessagesWithRefs = textMessages.filter { item -> item.refId != null }
-            val nonText = messages.filter { item -> item.type.actionType != MessageActionType.TEXT }
+            val nonText = messages.filter { item -> item.action.actionType != MessageActionType.TEXT }
             repository.local.removeMessagesSoft(textMessages)
             repository.local.removeMessagesHard(nonText)
             textMessagesWithRefs.forEach { item ->
-                postToDatabase(MessageAction(MessageActionType.DELETE, item.refId))
+                postToDatabase(MessageActionDto(MessageActionType.DELETE, item.refId))
             }
         }
     }
@@ -265,23 +298,23 @@ class ChatViewModel @Inject constructor(
     }
 
     private suspend fun postToDatabase(
-        type: MessageAction,
+        type: MessageActionDto,
         text: String = type.actionType?.getDescription() ?: ""
     ): Boolean {
-        return try {
+        try {
             val contact = getSelectedContactEntity() ?: return false
+            val action = MessageAction(type.actionType!!, type.refId, localAddress!!)
             val message = MessageEntity(
                 chatId = contact.address,
                 text = text,
                 incoming = false,
                 sent = false,
-                type = type,
+                action = action,
                 uuid = null
             )
-            messageSaver.saveOutgoingMessage(message)
-            true
+            return messageSaver.saveOutgoingMessage(message, userName.value)
         } catch (ex: Exception) {
-            false
+            return false
         }
     }
 
@@ -290,9 +323,9 @@ class ChatViewModel @Inject constructor(
             return false
         }
         val type = if (replyToMessage.value != null)
-            MessageAction(MessageActionType.REPLY, replyToMessage.value?.refId)
+            MessageActionDto(MessageActionType.REPLY, replyToMessage.value?.refId)
         else
-            MessageAction(MessageActionType.TEXT, null)
+            MessageActionDto(MessageActionType.TEXT, null)
         return postToDatabase(type, messageInputText.value)
     }
 
