@@ -1,6 +1,6 @@
 package ro.aenigma.models
 
-import ro.aenigma.util.MessageActionType
+import ro.aenigma.models.enums.MessageActionType
 
 class MessageActionDto(
     val actionType: MessageActionType?,

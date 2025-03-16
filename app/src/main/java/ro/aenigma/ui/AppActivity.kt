@@ -10,7 +10,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import ro.aenigma.crypto.KeysManager
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
@@ -56,7 +55,6 @@ class AppActivity : ComponentActivity() {
             }
         }
 
-        KeysManager.generateKeyIfNotExistent(this)
         startConnection()
         observeClientConnectivity()
         observeNavigation()

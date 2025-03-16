@@ -93,4 +93,15 @@
     <string name="failed_to_copy_to_clipboard">Nu se poate copia in clipboard</string>
     <string name="message_deleted">Mesaj șters</string>
     <string name="conversation_deleted">Conversație ștearsă</string>
+    <string name="group_created">A creat grupul</string>
+    <string name="group_member_added">A adăugat noi membri</string>
+    <string name="group_member_removed">A eliminat persoane din grup</string>
+    <string name="group_member_left">A părăsit grupul</string>
+    <string name="group_renamed">A redenumit grupul</string>
+    <string name="add_group_member">Adăugați un nou membru</string>
+    <string name="remove_group_member">Eliminați un membru</string>
+    <string name="select_contacts_to_add">Adăugați contacte în grup</string>
+    <string name="select_members_to_remove">Eliminați membri din grup</string>
+    <string name="leave_group">Părăsiți grupul</string>
+    <string name="are_you_sure_leave_group">Părăsiți grupul? Această acțiune este ireversibilă.</string>
 </resources>

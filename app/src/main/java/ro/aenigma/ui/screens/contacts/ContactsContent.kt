@@ -3,7 +3,8 @@ package ro.aenigma.ui.screens.contacts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
@@ -14,12 +15,12 @@ import java.time.ZonedDateTime
 @Composable
 fun ContactsContent(
     modifier: Modifier = Modifier,
-    contacts: RequestState<List<ContactWithConversationPreview>>,
+    contacts: RequestState<List<ContactWithLastMessage>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
-    selectedContacts: List<ContactWithConversationPreview>,
-    onItemSelected: (ContactWithConversationPreview) -> Unit,
-    onItemDeselected: (ContactWithConversationPreview) -> Unit,
+    selectedContacts: List<ContactWithLastMessage>,
+    onItemSelected: (ContactWithLastMessage) -> Unit,
+    onItemDeselected: (ContactWithLastMessage) -> Unit,
     navigateToChatScreen: (chatId: String) -> Unit
 ) {
     when(contacts)
@@ -35,7 +36,7 @@ fun ContactsContent(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {
-                                navigateToChatScreen(contact.address)
+                                navigateToChatScreen(contact.contact.address)
                             },
                             contact = contact,
                             isSelectionMode = isSelectionMode,
@@ -43,7 +44,7 @@ fun ContactsContent(
                         )
                     },
                     selectedItems = selectedContacts,
-                    itemKeyProvider = { c -> c.address }
+                    itemKeyProvider = { c -> c.contact.address }
                 )
 
             } else {
@@ -66,12 +67,41 @@ fun ContactsContent(
 
 @Preview
 @Composable
-fun ContactsContentPreview()
-{
+fun ContactsContentPreview() {
     ContactsContent(
         contacts = RequestState.Success(
             listOf(
-                ContactWithConversationPreview(
+                ContactWithLastMessage(
+                    ContactEntity(
+                        address = "123",
+                        name = "John",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                        hasNewMessage = true,
+                        type = ContactType.CONTACT,
+                        lastSynchronized = ZonedDateTime.now()
+                    ), null
+                ),
+                ContactWithLastMessage(
+                    ContactEntity(
+                        address = "124",
+                        name = "Paul",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                        hasNewMessage = false,
+                        type = ContactType.CONTACT,
+                        lastSynchronized = ZonedDateTime.now()
+                    ), null
+                )
+            )
+        ),
+        isSearchMode = false,
+        isSelectionMode = true,
+        selectedContacts = listOf(
+            ContactWithLastMessage(
+                ContactEntity(
                     address = "123",
                     name = "John",
                     publicKey = "",
@@ -80,32 +110,8 @@ fun ContactsContentPreview()
                     hasNewMessage = true,
                     type = ContactType.CONTACT,
                     lastSynchronized = ZonedDateTime.now()
-                ),
-                ContactWithConversationPreview(
-                    address = "124",
-                    name = "Paul",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
-                )
+                ), null
             )
-        ),
-        isSearchMode = false,
-        isSelectionMode = true,
-        selectedContacts = listOf(
-            ContactWithConversationPreview(
-            address = "123",
-            name = "John",
-            publicKey = "",
-            guardHostname = "",
-            guardAddress = "",
-            hasNewMessage = true,
-                type = ContactType.CONTACT,
-            lastSynchronized = ZonedDateTime.now()
-        )
         ),
         onItemSelected = { },
         onItemDeselected = { },

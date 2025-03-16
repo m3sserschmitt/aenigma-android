@@ -25,7 +25,7 @@ import ro.aenigma.models.MessageAction
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.MessageActionType
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
@@ -33,6 +33,7 @@ import java.time.ZoneId
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
+    isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageEntity>>,
@@ -80,6 +81,7 @@ fun ChatContent(
 
             ChatInput(
                 modifier = Modifier.height(80.dp),
+                enabled = isMember,
                 messageInputText = messageInputText,
                 allContacts = allContacts,
                 replyToMessage = replyToMessage,
@@ -198,6 +200,7 @@ fun ChatContentPreview() {
         messages = RequestState.Success(
             listOf(message1, message2)
         ),
+        isMember = true,
         replyToMessage = null,
         nextConversationPageAvailable = true,
         isSelectionMode = false,

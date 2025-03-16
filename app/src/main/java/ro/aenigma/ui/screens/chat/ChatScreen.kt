@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.MessageAction
@@ -27,7 +28,7 @@ import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.util.MessageActionType
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
@@ -54,6 +55,7 @@ fun ChatScreen(
     )
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val allContacts by chatViewModel.allContacts.collectAsState()
+    val isMember by chatViewModel.isMember.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -63,45 +65,34 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
+        isMember = isMember,
         allContacts = allContacts,
         connectionStatus = connectionStatus,
         replyToMessage = replyToMessage,
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
-        onRetryConnection = {
-            chatViewModel.retryClientConnection()
+        onRetryConnection = { chatViewModel.retryClientConnection() },
+        onInputTextChanged = { newInputTextValue ->
+            chatViewModel.setMessageInputText(
+                newInputTextValue
+            )
         },
-        onInputTextChanged = {
-            newInputTextValue -> chatViewModel.setMessageInputText(newInputTextValue)
+        onNewContactNameChanged = { newContactNameValue ->
+            chatViewModel.setNewContactName(
+                newContactNameValue
+            )
         },
-        onNewContactNameChanged = {
-            newContactNameValue -> chatViewModel.setNewContactName(newContactNameValue)
-        },
-        onRenameContactConfirmed = {
-            chatViewModel.saveContactChanges()
-        },
-        onRenameContactDismissed = {
-            chatViewModel.cleanupContactChanges()
-        },
-        onSendClicked = {
-            chatViewModel.sendMessage()
-        },
-        onDeleteAll = {
-            chatViewModel.clearConversation(chatId)
-        },
-        onDelete = {
-            selectedMessages -> chatViewModel.removeMessages(selectedMessages)
-        },
-        onReplyToMessage = {
-            selectedMessage -> chatViewModel.setReplyTo(selectedMessage)
-        },
-        onSearch = {
-            searchQuery -> chatViewModel.searchConversation(searchQuery)
-        },
-        loadNextPage = {
-            chatViewModel.loadNextPage(chatId)
-        },
+        onRenameContactConfirmed = { chatViewModel.saveContactChanges() },
+        onRenameContactDismissed = { chatViewModel.cleanupContactChanges() },
+        onSendClicked = { chatViewModel.sendMessage() },
+        onDeleteAll = { chatViewModel.clearConversation(chatId) },
+        onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
+        onReplyToMessage = { selectedMessage -> chatViewModel.setReplyTo(selectedMessage) },
+        onSearch = { searchQuery -> chatViewModel.searchConversation(searchQuery) },
+        onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
+        onLeaveGroup = { chatViewModel.leaveGroup() },
+        loadNextPage = { chatViewModel.loadNextPage(chatId) },
         navigateToContactsScreen = navigateToContactsScreen,
         navigateToAddContactsScreen = navigateToAddContactsScreen
     )
@@ -109,7 +100,8 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    contact: RequestState<ContactEntity>,
+    contact: RequestState<ContactWithGroup>,
+    isMember: Boolean,
     allContacts: RequestState<List<ContactEntity>>,
     connectionStatus: SignalRStatus,
     messages: RequestState<List<MessageEntity>>,
@@ -126,6 +118,8 @@ fun ChatScreen(
     onDelete: (List<MessageEntity>) -> Unit,
     onReplyToMessage: (MessageEntity?) -> Unit,
     onSearch: (String) -> Unit,
+    onAddGroupMembers: (List<String>, MessageActionType) -> Unit,
+    onLeaveGroup: () -> Unit,
     loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
@@ -133,10 +127,38 @@ fun ChatScreen(
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
     var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
+    var addGroupMemberDialogVisible by remember { mutableStateOf(false) }
+    var leaveGroupDialogVisible by remember { mutableStateOf(false) }
+    var addGroupMembers by remember { mutableStateOf(MessageActionType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<MessageEntity>() }
     val snackBarHostState = remember { SnackbarHostState() }
+
+    AddGroupMemberDialog(
+        action = addGroupMembers,
+        visible = addGroupMemberDialogVisible,
+        contactWithGroup = contact,
+        allContacts = allContacts,
+        onConfirmClicked = { members ->
+            addGroupMemberDialogVisible = false
+            onAddGroupMembers(members, addGroupMembers)
+        },
+        onDismissClicked = {
+            addGroupMemberDialogVisible = false
+        }
+    )
+
+    LeaveGroupDialog(
+        visible = leaveGroupDialogVisible,
+        onConfirmClicked = {
+            leaveGroupDialogVisible = false
+            onLeaveGroup()
+        },
+        onDismissClicked = {
+            leaveGroupDialogVisible = false
+        }
+    )
 
     RenameContactDialog(
         visible = renameContactDialogVisible,
@@ -228,6 +250,7 @@ fun ChatScreen(
             ChatAppBar(
                 messages = messages,
                 contact = contact,
+                isMember = isMember,
                 connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
@@ -263,6 +286,20 @@ fun ChatScreen(
                 onSearchModeTriggered = {
                     isSearchMode = true
                 },
+                onGroupActionClicked = { action ->
+                    when (action) {
+                        MessageActionType.GROUP_MEMBER_ADD, MessageActionType.GROUP_MEMBER_REMOVE -> {
+                            addGroupMembers = action
+                            addGroupMemberDialogVisible = true
+                        }
+
+                        MessageActionType.GROUP_MEMBER_LEFT -> {
+                            leaveGroupDialogVisible = true
+                        }
+
+                        else -> {}
+                    }
+                },
                 onRetryConnection = onRetryConnection,
                 navigateToAddContactsScreen = navigateToAddContactsScreen
             )
@@ -275,6 +312,7 @@ fun ChatScreen(
                     start = 4.dp,
                     end = 4.dp
                 ),
+                isMember = isMember,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 allContacts = allContacts,
@@ -349,17 +387,20 @@ fun ChatScreenPreview() {
 
     ChatScreen(
         contact = RequestState.Success(
-            ContactEntity(
-                address = "123",
-                name = "John",
-                publicKey = "key",
-                guardHostname = "host",
-                guardAddress = "guard-address",
-                hasNewMessage = false,
-                type = ContactType.CONTACT,
-                lastSynchronized = ZonedDateTime.now()
+            ContactWithGroup(
+                ContactEntity(
+                    address = "123",
+                    name = "John",
+                    publicKey = "key",
+                    guardHostname = "host",
+                    guardAddress = "guard-address",
+                    hasNewMessage = false,
+                    type = ContactType.CONTACT,
+                    lastSynchronized = ZonedDateTime.now()
+                ), null
             )
         ),
+        isMember = true,
         allContacts = RequestState.Idle,
         connectionStatus = SignalRStatus.Connected(),
         replyToMessage = null,
@@ -377,6 +418,8 @@ fun ChatScreenPreview() {
         onDelete = {},
         onReplyToMessage = {},
         onSearch = {},
+        onAddGroupMembers = { _: List<String>, _: MessageActionType -> },
+        onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },
         navigateToContactsScreen = {},

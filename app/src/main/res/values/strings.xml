@@ -95,4 +95,15 @@
     <string name="gnu_gpl_v3_0_title" translatable="false">GNU GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007</string>
     <string name="message_deleted">Message deleted</string>
     <string name="conversation_deleted">Conversation deleted</string>
+    <string name="group_created">Created the group</string>
+    <string name="group_member_added">Added new members</string>
+    <string name="group_member_removed">Removed group members</string>
+    <string name="group_member_left">Left the group</string>
+    <string name="group_renamed">Renamed the group</string>
+    <string name="add_group_member">Add group member</string>
+    <string name="remove_group_member">Remove group member</string>
+    <string name="select_contacts_to_add">Select contacts to add</string>
+    <string name="select_members_to_remove">Select members to remove</string>
+    <string name="leave_group">Leave group</string>
+    <string name="are_you_sure_leave_group">Do you want to leave the group? This action is irreversible.</string>
 </resources>

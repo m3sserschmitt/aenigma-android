@@ -14,13 +14,11 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.util.MessageActionType
-import ro.aenigma.util.getDescription
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import java.time.ZonedDateTime
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,9 +74,7 @@ class MessageSaver @Inject constructor(
                 return null
             }
             createOrUpdateEntities(messageWithMetadata, message.chatId)
-            val text =
-                messageWithMetadata.text ?: messageWithMetadata.action?.actionType.getDescription()
-                ?: return null
+            val text = messageWithMetadata.text ?: messageWithMetadata.action?.actionType.toString()
             val action = MessageAction(
                 actionType = messageWithMetadata.action?.actionType ?: MessageActionType.TEXT,
                 refId = messageWithMetadata.action?.refId,
@@ -112,16 +108,16 @@ class MessageSaver @Inject constructor(
         saveIncomingMessages(messageEntities)
     }
 
-    suspend fun saveOutgoingMessage(message: MessageEntity, userName: String): Boolean {
+    suspend fun saveOutgoingMessage(message: MessageEntity, userName: String, resourceUrl: String? = null): Long? {
         try {
             message.action.senderAddress = localAddress!!
             val messageId = repository.local.insertMessage(message)
             if (messageId > 0) {
-                MessageSenderWorker.createWorkRequest(workManager, messageId, userName)
+                MessageSenderWorker.createWorkRequest(workManager, messageId, userName, resourceUrl)
             }
-            return messageId > 0
+            return messageId
         } catch (_: Exception) {
-            return false
+            return null
         }
     }
 

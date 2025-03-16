@@ -55,25 +55,28 @@ fun BasicDropDownMenuItem(
     contentDescription: String,
     text: String,
     enabled: Boolean = true,
+    visible: Boolean = true,
     onClick: () -> Unit
 ) {
-    DropdownMenuItem(
-        enabled = enabled,
-        leadingIcon = {
-            Icon(
-                modifier = Modifier.alpha(.75f),
-                imageVector = imageVector,
-                contentDescription = contentDescription,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        },
-        text = {
-            Text(
-                text = text,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        },
-        onClick = onClick
-    )
+    if (visible) {
+        DropdownMenuItem(
+            enabled = enabled,
+            leadingIcon = {
+                Icon(
+                    modifier = Modifier.alpha(.75f),
+                    imageVector = imageVector,
+                    contentDescription = contentDescription,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            },
+            text = {
+                Text(
+                    text = text,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            },
+            onClick = onClick
+        )
+    }
 }

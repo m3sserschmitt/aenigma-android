@@ -18,19 +18,4 @@ data class ContactEntity(
     var lastSynchronized: ZonedDateTime
 ) {
     var lastMessageId: Long? = null
-
-    fun toContactWithPreview(): ContactWithConversationPreview
-    {
-        return ContactWithConversationPreview(
-            address = address,
-            name = name,
-            publicKey = publicKey,
-            guardHostname = guardHostname,
-            guardAddress = guardAddress,
-            hasNewMessage = hasNewMessage,
-            lastSynchronized = lastSynchronized,
-            lastMessageId = lastMessageId,
-            type = type
-        )
-    }
 }

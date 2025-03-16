@@ -16,11 +16,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
+import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.models.MessageAction
 import ro.aenigma.models.MessageActionDto
-import ro.aenigma.util.MessageActionType
-import ro.aenigma.util.getDescription
+import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import java.util.SortedSet
 import javax.inject.Inject
@@ -49,7 +53,9 @@ class ChatViewModel @Inject constructor(
         MutableStateFlow<RequestState<List<ContactEntity>>>(RequestState.Idle)
 
     private val _selectedContact =
-        MutableStateFlow<RequestState<ContactEntity>>(RequestState.Idle)
+        MutableStateFlow<RequestState<ContactWithGroup>>(RequestState.Idle)
+
+    private val _isMember = MutableStateFlow(false)
 
     private val _conversation =
         MutableStateFlow<RequestState<List<MessageEntity>>>(RequestState.Idle)
@@ -60,7 +66,9 @@ class ChatViewModel @Inject constructor(
 
     private val _messageInputText = MutableStateFlow("")
 
-    val selectedContact: StateFlow<RequestState<ContactEntity>> = _selectedContact
+    val selectedContact: StateFlow<RequestState<ContactWithGroup>> = _selectedContact
+
+    val isMember: StateFlow<Boolean> = _isMember
 
     val conversation: StateFlow<RequestState<List<MessageEntity>>> = _conversation
 
@@ -80,24 +88,43 @@ class ChatViewModel @Inject constructor(
         _allContacts.value = RequestState.Loading
         _selectedContact.value = RequestState.Loading
 
-        collectContacts(selectedChatId)
+        collectContacts()
+        collectSelectedContact(selectedChatId)
     }
 
-    private fun collectContacts(selectedChatId: String) {
+    private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
                 repository.local.getContacts().collect { contacts ->
                     _allContacts.value = RequestState.Success(contacts)
-
-                    val selectedContact = contacts.find { item -> item.address == selectedChatId }
-
-                    _selectedContact.value = if (selectedContact != null)
-                        RequestState.Success(selectedContact)
-                    else
-                        RequestState.Error(Exception("Contact not found."))
                 }
             } catch (ex: Exception) {
                 _allContacts.value = RequestState.Error(ex)
+            }
+        }
+    }
+
+    private fun collectSelectedContact(selectedChatId: String) {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                repository.local.getContactWithGroupFlow(selectedChatId).collect { item ->
+                    if (item != null) {
+                        _selectedContact.value = RequestState.Success(item)
+                        when (item.contact.type) {
+                            ContactType.GROUP -> _isMember.value =
+                                item.group?.groupData?.members?.any { member ->
+                                    member.publicKey.getAddressFromPublicKey() == localAddress
+                                } ?: false
+
+                            ContactType.CONTACT -> _isMember.value = true
+                        }
+                    } else {
+                        _selectedContact.value = RequestState.Error(Exception("Contact not found."))
+                        _isMember.value = false
+                    }
+                }
+            } catch (ex: Exception) {
+                _selectedContact.value = RequestState.Error(ex)
             }
         }
     }
@@ -297,9 +324,37 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    fun editGroupMembers(members: List<String>, action: MessageActionType) {
+        val group = getSelectedGroupEntity()
+        if (group != null && group.groupData.name != null) {
+            GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                workManager = workManager,
+                groupName = group.groupData.name,
+                userName = userName.value,
+                members = members,
+                existingGroupAddress = group.address,
+                actionType = action
+            )
+        }
+    }
+
+    fun leaveGroup() {
+        val group = getSelectedGroupEntity()
+        if(group != null && group.groupData.name != null){
+            GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                workManager = workManager,
+                groupName = group.groupData.name,
+                userName = userName.value,
+                members = null,
+                existingGroupAddress = group.address,
+                actionType = MessageActionType.GROUP_MEMBER_LEFT
+            )
+        }
+    }
+
     private suspend fun postToDatabase(
         type: MessageActionDto,
-        text: String = type.actionType?.getDescription() ?: ""
+        text: String = type.actionType.toString()
     ): Boolean {
         try {
             val contact = getSelectedContactEntity() ?: return false
@@ -312,7 +367,7 @@ class ChatViewModel @Inject constructor(
                 action = action,
                 uuid = null
             )
-            return messageSaver.saveOutgoingMessage(message, userName.value)
+            return messageSaver.saveOutgoingMessage(message, userName.value) != null
         } catch (ex: Exception) {
             return false
         }
@@ -329,28 +384,31 @@ class ChatViewModel @Inject constructor(
         return postToDatabase(type, messageInputText.value)
     }
 
-    private fun getSelectedContactEntity(): ContactEntity? {
+    private fun getSelectedContactWithGroup(): ContactWithGroup? {
         return try {
-            (selectedContact.value as RequestState.Success<ContactEntity>).data
+            (selectedContact.value as RequestState.Success<ContactWithGroup>).data
         } catch (_: Exception) {
             return null
         }
     }
 
+    private fun getSelectedContactEntity(): ContactEntity? {
+        return getSelectedContactWithGroup()?.contact
+    }
+
+    private fun getSelectedGroupEntity(): GroupEntity? {
+        return getSelectedContactWithGroup()?.group
+    }
+
     private fun getLastMessageId(): Long {
-        return try {
-            (selectedContact.value as RequestState.Success<ContactEntity>).data.lastMessageId
-                ?: 1
-        } catch (_: Exception) {
-            1
-        }
+        return getSelectedContactEntity()?.lastMessageId ?: 1
     }
 
     override fun getContactEntityForSaving(): ContactEntity? {
         return try {
             val contact = (selectedContact.value as RequestState.Success).data
-            contact.name = newContactName.value
-            contact
+            contact.contact.name = newContactName.value
+            contact.contact
         } catch (_: Exception) {
             null
         }

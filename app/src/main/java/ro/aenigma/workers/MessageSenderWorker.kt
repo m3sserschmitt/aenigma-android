@@ -48,16 +48,18 @@ class MessageSenderWorker @AssistedInject constructor(
     companion object {
         const val USER_NAME_ARG = "UserName"
         const val MESSAGE_ID_ARG = "MessageId"
+        const val RESOURCE_URL_ARG = "ResourceUrl"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-        private const val MIN_CONTACT_SYNC_INTERVAL_MINUTES: Long = 15
+//        private const val MIN_CONTACT_SYNC_INTERVAL_MINUTES: Long = 15
         private const val DELAY_BETWEEN_RETRIES: Long = 10
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, messageId: Long, userName: String) {
+        fun createWorkRequest(workManager: WorkManager, messageId: Long, userName: String, resourceUrl: String? = null) {
             val parameters = Data.Builder()
                 .putString(USER_NAME_ARG, userName)
                 .putLong(MESSAGE_ID_ARG, messageId)
+                .putString(RESOURCE_URL_ARG, resourceUrl)
                 .build()
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -124,7 +126,7 @@ class MessageSenderWorker @AssistedInject constructor(
         if (vertex == null) {
             return false
         }
-        val key = publicKey ?: vertex.publicKey
+        val key = if(publicKey.isNullOrBlank()) vertex.publicKey else publicKey
         if (!key.isValidPublicKey()) {
             return false
         }
@@ -146,12 +148,16 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
-        val threshold = ZonedDateTime.now().minusMinutes(MIN_CONTACT_SYNC_INTERVAL_MINUTES)
-        val aboveThreshold = contactEntity.lastSynchronized.isBefore(threshold)
-        if (!aboveThreshold) {
+//        val threshold = ZonedDateTime.now().minusMinutes(MIN_CONTACT_SYNC_INTERVAL_MINUTES)
+//        val aboveThreshold = contactEntity.lastSynchronized.isBefore(threshold)
+//        if (!aboveThreshold) {
+//            return true
+//        }
+
+        if(contactEntity.guardAddress.isValidAddress())
+        {
             return true
         }
-
         try {
             val vertexResponse = repository.remote.getVertex(contactEntity.address)
             val vertex = vertexResponse.body()
@@ -191,21 +197,15 @@ class MessageSenderWorker @AssistedInject constructor(
         groupAddress: String?,
         groupResourceUrl: String?
     ): Result {
-        val onions = contacts.map { contact ->
-            updateContactIfRequired(contact)
-            val paths = pathFinder.calculatePaths(contact)
-            if (paths.isEmpty()) {
-                return Result.failure()
-            }
-            buildOnion(
-                message,
-                contact,
-                userName,
-                paths.random().vertexList,
-                groupAddress,
-                groupResourceUrl
-            )
-                ?: return Result.failure()
+        val onions = contacts.mapNotNull { contact ->
+            if(updateContactIfRequired(contact)) {
+                val paths = pathFinder.calculatePaths(contact)
+                if (paths.isNotEmpty()) {
+                    buildOnion(message, contact, userName, paths.random().vertexList, groupAddress,
+                        groupResourceUrl
+                    )
+                } else null
+            } else null
         }
         if (!signalRClient.sendMessages(onions)) {
             return Result.retry()
@@ -232,6 +232,7 @@ class MessageSenderWorker @AssistedInject constructor(
 
         val messageId = inputData.getLong(MESSAGE_ID_ARG, -1)
         val userName = inputData.getString(USER_NAME_ARG) ?: return Result.failure()
+        val resourceUrl = inputData.getString(RESOURCE_URL_ARG)
         val message = if (messageId > 0) repository.local.getMessage(messageId) else null
         val chatId = message?.chatId ?: return Result.failure()
         val contact = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
@@ -246,13 +247,16 @@ class MessageSenderWorker @AssistedInject constructor(
                 null
             }
         }) ?: return Result.failure()
-
+        if(contacts.isEmpty())
+        {
+            return Result.success()
+        }
         return sendMessage(
             contacts = contacts,
             message = message,
             userName = userName,
             groupAddress = contact.group?.address,
-            groupResourceUrl = contact.group?.resourceUrl
+            groupResourceUrl = resourceUrl ?: contact.group?.resourceUrl
         )
     }
 }

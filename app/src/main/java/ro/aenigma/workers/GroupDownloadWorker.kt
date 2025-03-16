@@ -14,12 +14,15 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.network.EnigmaApi
+import ro.aenigma.models.GroupData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.getTagQueryParameter
 import java.time.ZonedDateTime
@@ -40,8 +43,7 @@ class GroupDownloadWorker @AssistedInject constructor(
         const val MAX_RETRY_COUNT = 2
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, resourceUrl: String)
-        {
+        fun createWorkRequest(workManager: WorkManager, resourceUrl: String) {
             val parameters = Data.Builder()
                 .putString(GROUP_RESOURCE_URL, resourceUrl)
                 .build()
@@ -60,14 +62,7 @@ class GroupDownloadWorker @AssistedInject constructor(
         }
     }
 
-    override suspend fun doWork(): Result {
-        if (runAttemptCount > MAX_RETRY_COUNT) {
-            return Result.failure()
-        }
-        val resourceUrl = inputData.getString(GROUP_RESOURCE_URL) ?: return Result.failure()
-        val api = EnigmaApi.initApi(resourceUrl)
-        val tag = resourceUrl.getTagQueryParameter() ?: return Result.failure()
-        val groupData = RemoteDataSource(api, signatureService).getGroupData(tag) ?: return Result.failure()
+    private suspend fun createContactEntities(groupData: GroupData, resourceUrl: String) {
         val contact = ContactEntity(
             address = groupData.address!!,
             name = groupData.name!!,
@@ -85,6 +80,40 @@ class GroupDownloadWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateContact(contact)
         repository.local.insertOrUpdateGroup(group)
+
+        groupData.members ?: return
+
+        for (member in groupData.members) {
+            val address = member.publicKey.getAddressFromPublicKey()
+            if (member.name == null || address == null || signatureService.address == address
+                || !member.publicKey.isValidPublicKey()
+            ) {
+                continue
+            }
+            val c = ContactEntity(
+                address = address,
+                name = member.name,
+                publicKey = member.publicKey!!,
+                guardHostname = null,
+                guardAddress = "",
+                type = ContactType.CONTACT,
+                hasNewMessage = false,
+                lastSynchronized = ZonedDateTime.now()
+            )
+            repository.local.insertOrUpdateContact(c)
+        }
+    }
+
+    override suspend fun doWork(): Result {
+        if (runAttemptCount > MAX_RETRY_COUNT) {
+            return Result.failure()
+        }
+        val resourceUrl = inputData.getString(GROUP_RESOURCE_URL) ?: return Result.failure()
+        val api = EnigmaApi.initApi(resourceUrl)
+        val tag = resourceUrl.getTagQueryParameter() ?: return Result.failure()
+        val groupData =
+            RemoteDataSource(api, signatureService).getGroupData(tag) ?: return Result.failure()
+        createContactEntities(groupData, resourceUrl)
         return Result.success()
     }
 }

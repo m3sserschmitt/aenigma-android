@@ -25,7 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
@@ -106,18 +107,18 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: RequestState<List<ContactWithConversationPreview>>,
+    contacts: RequestState<List<ContactWithLastMessage>>,
     sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
-    onContactRenamed: (ContactWithConversationPreview) -> Unit,
+    onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
+    onContactRenamed: (ContactWithLastMessage) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onContactSaved: () -> Unit,
-    onGroupCreated: (List<ContactWithConversationPreview>) -> Unit,
+    onGroupCreated: (List<ContactWithLastMessage>) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
@@ -132,7 +133,7 @@ fun ContactsScreen(
     var saveContactDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<ContactWithConversationPreview>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
     val snackBarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -303,7 +304,7 @@ fun ContactsScreen(
                 },
                 onShareSelectedItemsClicked = {
                     if (selectedItems.size == 1) {
-                        navigateToAddContactScreen(selectedItems.single().address)
+                        navigateToAddContactScreen(selectedItems.single().contact.address)
                     }
                 },
                 onCreateGroupClicked = {
@@ -366,8 +367,7 @@ fun ContactsFab(
 
 @Preview
 @Composable
-fun ContactsScreenPreview()
-{
+fun ContactsScreenPreview() {
     ContactsScreen(
         connectionStatus = SignalRStatus.Connected(),
         notificationsAllowed = true,
@@ -381,25 +381,29 @@ fun ContactsScreenPreview()
         onGroupCreated = {},
         contacts = RequestState.Success(
             listOf(
-                ContactWithConversationPreview(
-                    address = "123",
-                    name = "John",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = true,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntity(
+                        address = "123",
+                        name = "John",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                        hasNewMessage = true,
+                        type = ContactType.CONTACT,
+                        lastSynchronized = ZonedDateTime.now()
+                    ), null
                 ),
-                ContactWithConversationPreview(
-                    address = "124",
-                    name = "Paul",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntity(
+                        address = "124",
+                        name = "Paul",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                        hasNewMessage = false,
+                        type = ContactType.CONTACT,
+                        lastSynchronized = ZonedDateTime.now()
+                    ), null
                 )
             )
         ),

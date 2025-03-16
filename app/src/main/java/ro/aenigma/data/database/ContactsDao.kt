@@ -2,7 +2,6 @@ package ro.aenigma.data.database
 
 import androidx.room.*
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
-import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -11,19 +10,11 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE")
     fun get(): Flow<List<ContactEntity>>
 
-    @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId, c.type, " +
-                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
-                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
-    )
-    fun getWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    fun getWithLastMessageFlow(): Flow<List<ContactWithLastMessage>>
 
-    @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId, c.type, " +
-                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
-                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
-    )
-    suspend fun getWithConversationPreview(): List<ContactWithConversationPreview>
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    suspend fun getWithLastMessage(): List<ContactWithLastMessage>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?

@@ -34,10 +34,11 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
 import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.selectable
-import ro.aenigma.util.MessageActionType
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.util.PrettyDateFormatter
 import ro.aenigma.util.RequestState
 import java.time.ZonedDateTime
@@ -53,11 +54,7 @@ fun MessageItem(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val text = when (message.action.actionType) {
-        MessageActionType.DELETE -> context.getString(R.string.message_deleted)
-        MessageActionType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
-        else -> message.text
-    }
+    val text = message.getMessageTextByAction(context)
     val paddingStart = if (message.incoming) 0.dp else 50.dp
     val paddingEnd = if (message.incoming) 50.dp else 0.dp
     val contentColor = if (message.incoming)

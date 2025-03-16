@@ -1,7 +1,6 @@
 package ro.aenigma.data
 
 import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.ContactWithConversationPreview
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgeEntity
 import ro.aenigma.data.database.EdgesDao
@@ -16,6 +15,7 @@ import ro.aenigma.data.database.VerticesDao
 import ro.aenigma.data.network.BaseUrlInterceptor
 import kotlinx.coroutines.flow.Flow
 import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
 import javax.inject.Inject
 
@@ -46,12 +46,12 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get()
     }
 
-    fun getContactsWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>> {
-        return contactsDao.getWithConversationPreviewFlow()
+    fun getContactWithLastMessageFlow(): Flow<List<ContactWithLastMessage>> {
+        return contactsDao.getWithLastMessageFlow()
     }
 
-    suspend fun getContactsWithConversationPreview(): List<ContactWithConversationPreview> {
-        return contactsDao.getWithConversationPreview()
+    suspend fun getContactWithLastMessage(): List<ContactWithLastMessage> {
+        return contactsDao.getWithLastMessage()
     }
 
     suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity> {

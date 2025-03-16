@@ -18,26 +18,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
+import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
 
 @Composable
 fun ContactItem(
-    onItemSelected: (ContactWithConversationPreview) -> Unit,
-    onItemDeselected: (ContactWithConversationPreview) -> Unit,
+    onItemSelected: (ContactWithLastMessage) -> Unit,
+    onItemDeselected: (ContactWithLastMessage) -> Unit,
     onClick: () -> Unit,
-    contact: ContactWithConversationPreview,
+    contact: ContactWithLastMessage,
     isSelectionMode: Boolean,
     isSelected: Boolean
 ) {
+    val context = LocalContext.current
     Surface(
         modifier = Modifier
             .selectable(
@@ -56,19 +63,15 @@ fun ContactItem(
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if(isSelectionMode)
-            {
-                if(isSelected)
-                {
+            if (isSelectionMode) {
+                if (isSelected) {
                     Icon(
                         modifier = Modifier.alpha(.5f),
                         imageVector = Icons.Rounded.CheckCircle,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onBackground,
                     )
-                }
-                else
-                {
+                } else {
                     Icon(
                         modifier = Modifier.alpha(.5f),
                         painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
@@ -87,7 +90,7 @@ fun ContactItem(
                 tint = MaterialTheme.colorScheme.onBackground
             )
 
-            val contactNameTextWeight = if(contact.hasNewMessage) 8f else 9f
+            val contactNameTextWeight = if (contact.contact.hasNewMessage) 8f else 9f
 
             Column(
                 modifier = Modifier
@@ -95,19 +98,20 @@ fun ContactItem(
                     .padding(start = 8.dp)
             ) {
                 Text(
-                    text = contact.name,
+                    text = contact.contact.name,
                     style = MaterialTheme.typography.headlineSmall,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                if(contact.lastMessageText != null)
-                {
+                if (contact.lastMessage != null) {
                     Text(
                         modifier = Modifier.alpha(.75f),
-                        text = if(contact.lastMessageIncoming != null && !contact.lastMessageIncoming)
-                            stringResource(R.string.you) + " " + contact.lastMessageText
+                        text = if (!contact.lastMessage.incoming)
+                            stringResource(R.string.you) + " " + contact.lastMessage.getMessageTextByAction(
+                                context
+                            )
                         else
-                            contact.lastMessageText,
+                            contact.lastMessage.getMessageTextByAction(context),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,
@@ -116,8 +120,7 @@ fun ContactItem(
                 }
             }
 
-            if(contact.hasNewMessage)
-            {
+            if (contact.contact.hasNewMessage) {
                 Icon(
                     modifier = Modifier.weight(1f).alpha(.5f),
                     imageVector = Icons.Filled.Notifications,
@@ -131,20 +134,25 @@ fun ContactItem(
 
 @Composable
 @Preview
-fun ContactItemPreview()
-{
+fun ContactItemPreview() {
     ContactItem(
-        contact = ContactWithConversationPreview(
-            address = "12345-5678-5678-12345",
-            name = "John",
-            publicKey = "public-key",
-            guardHostname = "guard-hostname",
-            guardAddress = "guard-address",
-            hasNewMessage = true,
-            lastMessageText = "Hey, how are you?",
-            lastMessageIncoming = false,
-            lastSynchronized = ZonedDateTime.now(),
-            type = ContactType.CONTACT,
+        contact = ContactWithLastMessage(
+            ContactEntity(
+                address = "12345-5678-5678-12345",
+                name = "John",
+                publicKey = "public-key",
+                guardHostname = "guard-hostname",
+                guardAddress = "guard-address",
+                hasNewMessage = true,
+                lastSynchronized = ZonedDateTime.now(),
+                type = ContactType.CONTACT
+            ), MessageEntity(
+                chatId = "12345-5678-5678-12345",
+                text = "Hey, how are you",
+                incoming = false,
+                uuid = null,
+                action = MessageAction(MessageActionType.TEXT, null, "12345-5678-5678-12345")
+            )
         ),
         isSelectionMode = false,
         isSelected = false,
@@ -159,16 +167,23 @@ fun ContactItemPreview()
 fun ContactItemSelectedPreview()
 {
     ContactItem(
-        contact = ContactWithConversationPreview(
-            address = "12345-5678-5678-12345",
-            name = "John",
-            publicKey = "public-key",
-            guardHostname = "guard-hostname",
-            guardAddress = "guard-address",
-            hasNewMessage = true,
-            type = ContactType.CONTACT,
-            lastMessageText = "Hey, how are you?",
-            lastSynchronized = ZonedDateTime.now()
+        contact = ContactWithLastMessage(
+            ContactEntity(
+                address = "12345-5678-5678-12345",
+                name = "John",
+                publicKey = "public-key",
+                guardHostname = "guard-hostname",
+                guardAddress = "guard-address",
+                hasNewMessage = true,
+                lastSynchronized = ZonedDateTime.now(),
+                type = ContactType.CONTACT
+            ), MessageEntity(
+                chatId = "12345-5678-5678-12345",
+                text = "Hey, how are you",
+                incoming = true,
+                uuid = null,
+                action = MessageAction(MessageActionType.TEXT, null, "12345-5678-5678-12345")
+            )
         ),
         isSelectionMode = true,
         isSelected = true,

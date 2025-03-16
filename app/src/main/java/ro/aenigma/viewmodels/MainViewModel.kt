@@ -10,7 +10,6 @@ import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.ContactWithConversationPreview
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
@@ -29,7 +28,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.getStringDataFromSignature
 import ro.aenigma.data.RemoteDataSource
+import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.util.getQueryParameter
 import ro.aenigma.workers.GroupUploadWorker
 import java.time.ZonedDateTime
@@ -59,7 +60,7 @@ class MainViewModel @Inject constructor(
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
     private val _allContacts =
-        MutableStateFlow<RequestState<List<ContactWithConversationPreview>>>(
+        MutableStateFlow<RequestState<List<ContactWithLastMessage>>>(
             RequestState.Idle
         )
 
@@ -79,8 +80,7 @@ class MainViewModel @Inject constructor(
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
-    val allContacts: StateFlow<RequestState<List<ContactWithConversationPreview>>> =
-        _allContacts
+    val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<Bitmap>> = _qrCode
 
@@ -106,10 +106,10 @@ class MainViewModel @Inject constructor(
     private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.getContactsWithConversationPreviewFlow().collect { contacts ->
+                repository.local.getContactWithLastMessageFlow().collect { contacts ->
                     val query = _contactsSearchQuery.value
                     val result = if (query.isNotBlank())
-                        contacts.filter { contact -> contact.name.contains(query) }
+                        contacts.filter { contact -> contact.contact.name.contains(query) }
                     else
                         contacts
 
@@ -127,10 +127,10 @@ class MainViewModel @Inject constructor(
                 _allContacts.value = RequestState.Loading
                 try {
                     val searchResult = if (query.isBlank())
-                        repository.local.getContactsWithConversationPreview()
+                        repository.local.getContactWithLastMessage()
                     else
                         repository.local.searchContacts(query).map { item ->
-                            item.toContactWithPreview()
+                            ContactWithLastMessage(item, null)
                         }
                     _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
@@ -182,22 +182,23 @@ class MainViewModel @Inject constructor(
     override fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
             (_allContacts.value as RequestState.Success).data.all { item ->
-                item.name != name
+                item.contact.name != name
             }
         } catch (_: Exception) {
             false
         }
     }
 
-    fun createGroup(contacts: List<ContactWithConversationPreview>) {
+    fun createGroup(contacts: List<ContactWithLastMessage>) {
         viewModelScope.launch(ioDispatcher) {
-            val memberAddresses = contacts.map { item -> item.address }
+            val memberAddresses = contacts.map { item -> item.contact.address }
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                workManager.get(),
-                newContactName.value,
-                userName.value,
-                memberAddresses,
-                null
+                workManager = workManager.get(),
+                groupName = newContactName.value,
+                userName = userName.value,
+                members = memberAddresses,
+                existingGroupAddress = null,
+                actionType = MessageActionType.GROUP_CREATE
             )
         }
     }
@@ -216,7 +217,7 @@ class MainViewModel @Inject constructor(
                 _contactExportedData.value = ExportedContactData(
                     guard.hostname,
                     guard.address,
-                    signatureService.publicKey
+                    signatureService.publicKey!!
                 )
 
                 emit(
@@ -253,8 +254,8 @@ class MainViewModel @Inject constructor(
             getApplication<AenigmaApp>().getString(R.string.my_code)
         } else try {
             val contact =
-                (allContacts.value as RequestState.Success).data.find { item -> item.address == address }
-            contact?.name ?: ""
+                (allContacts.value as RequestState.Success).data.find { item -> item.contact.address == address }
+            contact?.contact?.name ?: ""
         } catch (_: Exception) {
             ""
         }
@@ -273,17 +274,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun deleteContacts(contacts: List<ContactWithConversationPreview>) {
+    fun deleteContacts(contacts: List<ContactWithLastMessage>) {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.removeContacts(contacts.map { contact -> contact.toContact() })
+            repository.local.removeContacts(contacts.map { contact -> contact.contact })
         }
     }
 
-    fun renameContact(contact: ContactWithConversationPreview) {
+    fun renameContact(contact: ContactWithLastMessage) {
         viewModelScope.launch(ioDispatcher) {
-            val contactToUpdate = contact.toContact()
-            contactToUpdate.name = newContactName.value
-            repository.local.updateContact(contactToUpdate)
+            contact.contact.name = newContactName.value
+            repository.local.updateContact(contact.contact)
         }
     }
 
