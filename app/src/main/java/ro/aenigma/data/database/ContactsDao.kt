@@ -44,10 +44,7 @@ interface ContactsDao {
     suspend fun insertOrUpdate(groupEntity: GroupEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(contact: ContactEntity)
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(contact : List<ContactEntity>): List<Long>
+    suspend fun insertOrIgnore(contact: ContactEntity)
 
     @Update
     suspend fun update(contact: ContactEntity)

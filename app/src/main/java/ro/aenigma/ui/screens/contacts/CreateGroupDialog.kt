@@ -10,7 +10,7 @@ import ro.aenigma.ui.screens.common.TextInputDialog
 fun CreateGroupDialog(
     visible: Boolean,
     onTextChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     if (visible) {

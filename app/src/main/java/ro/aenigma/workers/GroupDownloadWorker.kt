@@ -100,7 +100,7 @@ class GroupDownloadWorker @AssistedInject constructor(
                 hasNewMessage = false,
                 lastSynchronized = ZonedDateTime.now()
             )
-            repository.local.insertOrUpdateContact(c)
+            repository.local.insertOrIgnoreContact(c)
         }
     }
 

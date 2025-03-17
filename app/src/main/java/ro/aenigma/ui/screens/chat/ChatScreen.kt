@@ -78,13 +78,9 @@ fun ChatScreen(
                 newInputTextValue
             )
         },
-        onNewContactNameChanged = { newContactNameValue ->
-            chatViewModel.setNewContactName(
-                newContactNameValue
-            )
-        },
-        onRenameContactConfirmed = { chatViewModel.saveContactChanges() },
-        onRenameContactDismissed = { chatViewModel.cleanupContactChanges() },
+        onNewContactNameChanged = { name -> chatViewModel.validateNewContactName(name) },
+        onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
+        onRenameContactDismissed = {  },
         onSendClicked = { chatViewModel.sendMessage() },
         onDeleteAll = { chatViewModel.clearConversation(chatId) },
         onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
@@ -111,7 +107,7 @@ fun ChatScreen(
     onRetryConnection: () -> Unit,
     onInputTextChanged: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onRenameContactConfirmed: () -> Unit,
+    onRenameContactConfirmed: (String) -> Unit,
     onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
@@ -163,9 +159,9 @@ fun ChatScreen(
     RenameContactDialog(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
+        onConfirmClicked = { name ->
             renameContactDialogVisible = false
-            onRenameContactConfirmed()
+            onRenameContactConfirmed(name)
         },
         onDismiss = {
             onRenameContactDismissed()

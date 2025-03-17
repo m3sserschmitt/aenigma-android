@@ -71,36 +71,20 @@ fun ContactsScreen(
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
-        onRetryConnection = {
-            mainViewModel.retryClientConnection()
-        },
-        onSearch = {
-            searchQuery -> mainViewModel.searchContacts(searchQuery)
-        },
+        onRetryConnection = { mainViewModel.retryClientConnection() },
+        onSearch = { searchQuery -> mainViewModel.searchContacts(searchQuery) },
         navigateToChatScreen = navigateToChatScreen,
-        onDeleteSelectedItems = {
-            contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete)
-        },
+        onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
         navigateToAboutScreen = navigateToAboutScreen,
-        onContactRenamed = {
-            contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
+        onContactRenamed = { contactToBeRenamed, newName ->
+            mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  {
-            newValue -> mainViewModel.setNewContactName(newValue)
-        },
-        onContactSaved = {
-            mainViewModel.saveContactChanges()
-        },
-        onGroupCreated = {
-            selectedItems -> mainViewModel.createGroup(selectedItems)
-        },
-        onNameConfirmed = {
-            nameValue -> mainViewModel.setupName(nameValue)
-        },
-        onContactSaveDismissed = {
-            mainViewModel.cleanupContactChanges()
-        }
+        onNewContactNameChanged =  { newValue -> mainViewModel.validateNewContactName(newValue) },
+        onContactSaved = { name -> mainViewModel.saveNewContact(name) },
+        onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
+        onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
+        onContactSaveDismissed = { mainViewModel.resetContactChanges() }
     )
 }
 
@@ -115,10 +99,10 @@ fun ContactsScreen(
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
     onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
-    onContactRenamed: (ContactWithLastMessage) -> Unit,
+    onContactRenamed: (ContactWithLastMessage, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onContactSaved: () -> Unit,
-    onGroupCreated: (List<ContactWithLastMessage>) -> Unit,
+    onContactSaved: (String) -> Unit,
+    onGroupCreated: (List<ContactWithLastMessage>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
@@ -189,9 +173,9 @@ fun ContactsScreen(
     RenameContactDialog(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
+        onConfirmClicked = { name ->
             if (selectedItems.size == 1) {
-                onContactRenamed(selectedItems.single())
+                onContactRenamed(selectedItems.single(), name)
             }
             renameContactDialogVisible = false
         },
@@ -216,8 +200,8 @@ fun ContactsScreen(
     SaveNewContactDialog(
         visible = sharedDataRequest is RequestState.Success && saveContactDialogVisible,
         onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
-            onContactSaved()
+        onConfirmClicked = { name ->
+            onContactSaved(name)
             saveContactDialogVisible = false
         },
         onDismissClicked = {
@@ -229,8 +213,8 @@ fun ContactsScreen(
     CreateGroupDialog(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
-        onConfirmClicked = {
-            onGroupCreated(selectedItems)
+        onConfirmClicked = { name ->
+            onGroupCreated(selectedItems, name)
             createGroupDialogVisible = false
         },
         onDismissClicked = {
@@ -239,7 +223,7 @@ fun ContactsScreen(
         }
     )
 
-    SetupNameDialog(
+    SetupUserNameDialog(
         visible = nameDialogVisible,
         onConfirmClicked = onNameConfirmed
     )
@@ -374,11 +358,11 @@ fun ContactsScreenPreview() {
         nameDialogVisible = false,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
-        onContactRenamed = { },
+        onContactRenamed = { _, _ -> },
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
-        onGroupCreated = {},
+        onGroupCreated = { _, _ -> },
         contacts = RequestState.Success(
             listOf(
                 ContactWithLastMessage(

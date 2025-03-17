@@ -37,7 +37,7 @@ fun TextInputDialog(
     placeholderText: String,
     dismissible: Boolean = true,
     onTextChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     var isValidationError by remember { mutableStateOf(false) }
@@ -81,7 +81,7 @@ fun TextInputDialog(
             onPositiveButtonClicked = {
                 isValidationError = isValidationError || text.isEmpty()
                 if (!isValidationError) {
-                    onConfirmClicked()
+                    onConfirmClicked(text)
                     text = ""
                 }
             },

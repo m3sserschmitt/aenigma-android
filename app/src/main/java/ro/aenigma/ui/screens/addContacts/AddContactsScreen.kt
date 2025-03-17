@@ -62,28 +62,22 @@ fun AddContactsScreen(
             scannedData -> if(mainViewModel.setScannedContactDetails(scannedData))
             scannerState = QrCodeScannerState.SAVE
         },
-        onSaveContact = {
+        onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
-            mainViewModel.saveContactChanges()
+            mainViewModel.saveNewContact(name)
             Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
             navigateToContactsScreen()
         },
         onSaveContactDismissed = {
-            mainViewModel.cleanupContactChanges()
+            mainViewModel.resetContactChanges()
             scannerState = QrCodeScannerState.SHARE_CODE
         },
         onNewContactNameChanged = {
-            newContactName -> mainViewModel.setNewContactName(newContactName)
+            newContactName -> mainViewModel.validateNewContactName(newContactName)
         },
-        onCreateLinkClicked = {
-            mainViewModel.createContactShareLink()
-        },
-        onGetLink = {
-            url -> mainViewModel.openContactSharedData(url)
-        },
-        onSharedDataConfirm = {
-            mainViewModel.cleanupContactChanges()
-        },
+        onCreateLinkClicked = { mainViewModel.createContactShareLink() },
+        onGetLink = { url -> mainViewModel.openContactSharedData(url) },
+        onSharedDataConfirm = { mainViewModel.resetContactChanges() },
         navigateToContactsScreen = navigateToContactsScreen
     )
 }
@@ -98,7 +92,7 @@ fun AddContactsScreen(
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     onQrCodeFound: (String) -> Unit,
-    onSaveContact: () -> Unit,
+    onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onCreateLinkClicked: () -> Unit,

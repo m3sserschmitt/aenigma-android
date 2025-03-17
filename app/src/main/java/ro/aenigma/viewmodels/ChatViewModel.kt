@@ -129,7 +129,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    override fun validateNewContactName(name: String): Boolean {
+    fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
             (_allContacts.value as RequestState.Success).data.all { item -> item.name != name }
         } catch (_: Exception) {
@@ -404,13 +404,22 @@ class ChatViewModel @Inject constructor(
         return getSelectedContactEntity()?.lastMessageId ?: 1
     }
 
-    override fun getContactEntityForSaving(): ContactEntity? {
-        return try {
-            val contact = (selectedContact.value as RequestState.Success).data
-            contact.contact.name = newContactName.value
-            contact.contact
-        } catch (_: Exception) {
-            null
+    fun renameContact(name: String) {
+        val contact = getSelectedContactEntity() ?: return
+        contact.name = name
+        when (contact.type) {
+            ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                workManager = workManager,
+                userName = userName.value,
+                groupName = name,
+                existingGroupAddress = contact.address,
+                actionType = MessageActionType.GROUP_RENAMED,
+                members = null
+            )
+
+            ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
+                repository.local.insertOrUpdateContact(contact)
+            }
         }
     }
 
@@ -422,12 +431,7 @@ class ChatViewModel @Inject constructor(
         searchConversation("")
     }
 
-    override fun resetContactChanges() {
-        resetNewContactName()
-    }
-
     override fun init() {
         resetSearchQuery()
-        resetNewContactName()
     }
 }

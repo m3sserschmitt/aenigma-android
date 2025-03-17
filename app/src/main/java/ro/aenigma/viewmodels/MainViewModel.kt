@@ -163,13 +163,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    override fun getContactEntityForSaving(): ContactEntity? {
+    fun saveNewContact(name: String) {
         val contactAddress =
-            _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return null
-
-        return ContactEntity(
+            _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return
+        val newContact = ContactEntity(
             address = contactAddress,
-            name = newContactName.value,
+            name = name,
             publicKey = _scannedContactDetails.value.publicKey,
             guardHostname = _scannedContactDetails.value.guardHostname,
             guardAddress = _scannedContactDetails.value.guardAddress,
@@ -177,9 +176,13 @@ class MainViewModel @Inject constructor(
             hasNewMessage = false,
             lastSynchronized = ZonedDateTime.now()
         )
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.insertOrUpdateContact(newContact)
+        }
+        resetContactChanges()
     }
 
-    override fun validateNewContactName(name: String): Boolean {
+    fun validateNewContactName(name: String): Boolean {
         return name.isNotBlank() && try {
             (_allContacts.value as RequestState.Success).data.all { item ->
                 item.contact.name != name
@@ -189,12 +192,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun createGroup(contacts: List<ContactWithLastMessage>) {
+    fun createGroup(contacts: List<ContactWithLastMessage>, name: String) {
         viewModelScope.launch(ioDispatcher) {
             val memberAddresses = contacts.map { item -> item.contact.address }
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager.get(),
-                groupName = newContactName.value,
+                groupName = name,
                 userName = userName.value,
                 members = memberAddresses,
                 existingGroupAddress = null,
@@ -280,10 +283,21 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun renameContact(contact: ContactWithLastMessage) {
-        viewModelScope.launch(ioDispatcher) {
-            contact.contact.name = newContactName.value
-            repository.local.updateContact(contact.contact)
+    fun renameContact(contact: ContactWithLastMessage, name: String) {
+        when (contact.contact.type) {
+            ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
+                contact.contact.name = name
+                repository.local.updateContact(contact.contact)
+            }
+
+            ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                workManager = workManager.get(),
+                userName = userName.value,
+                groupName = name,
+                existingGroupAddress = contact.contact.address,
+                actionType = MessageActionType.GROUP_RENAMED,
+                members = null
+            )
         }
     }
 
@@ -358,15 +372,14 @@ class MainViewModel @Inject constructor(
         _scannedContactDetails.value = ExportedContactData("", "", "")
     }
 
-    override fun resetContactChanges() {
-        resetNewContactName()
+    fun resetContactChanges() {
         resetScannedContactDetails()
         resetSharedDataRequestResult()
         resetSharedDataCreateResult()
     }
 
     override fun init() {
-        resetNewContactName()
         resetSearchQuery()
+        resetContactChanges()
     }
 }

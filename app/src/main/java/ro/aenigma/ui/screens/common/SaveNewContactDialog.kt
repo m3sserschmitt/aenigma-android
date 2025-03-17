@@ -9,7 +9,7 @@ import ro.aenigma.R
 fun SaveNewContactDialog(
     visible: Boolean,
     onContactNameChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     if(visible) {

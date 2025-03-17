@@ -44,13 +44,12 @@ fun AddContactsContent(
     sharedDataGet: RequestState<SharedData>,
     onQrCodeFound: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onSaveContact: () -> Unit,
+    onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onCreateLinkClicked: () -> Unit,
     onGetLink: (String) -> Unit,
     onSharedDataConfirm: () ->  Unit
 ) {
-    var link by remember { mutableStateOf("") }
     var useLinkDialogVisible by remember { mutableStateOf(false) }
     var createLinkDialogVisible by remember { mutableStateOf(false) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
@@ -93,9 +92,9 @@ fun AddContactsContent(
         visible = scannerState == QrCodeScannerState.SAVE
                 || (sharedDataGet is RequestState.Success && saveContactDialogVisible),
         onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
+        onConfirmClicked = { name ->
             saveContactDialogVisible = false
-            onSaveContact()
+            onSaveContact(name)
         },
         onDismissClicked = {
             saveContactDialogVisible = false
@@ -114,10 +113,7 @@ fun AddContactsContent(
 
     UseLinkDialog(
         visible = useLinkDialogVisible,
-        onTextChanged = {
-            newLink -> link = newLink
-        },
-        onConfirmClicked = {
+        onConfirmClicked = { link ->
             onGetLink(link)
             useLinkDialogVisible = false
             useLinkLoadingDialogVisible = true
