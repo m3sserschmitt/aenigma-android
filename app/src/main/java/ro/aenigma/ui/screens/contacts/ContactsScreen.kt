@@ -84,6 +84,7 @@ fun ContactsScreen(
         onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
+        onResetUserNameClicked = { mainViewModel.resetUserName() },
         onContactSaveDismissed = { mainViewModel.resetContactChanges() }
     )
 }
@@ -105,6 +106,7 @@ fun ContactsScreen(
     onGroupCreated: (List<ContactWithLastMessage>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
+    onResetUserNameClicked: () -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
@@ -287,13 +289,21 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    if (selectedItems.size == 1) {
-                        navigateToAddContactScreen(selectedItems.single().contact.address)
+                    val selectedItem = selectedItems.singleOrNull()?.contact
+                    if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
+                        navigateToAddContactScreen(selectedItem.address)
+                    } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.cannot_share_groups),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
                 onCreateGroupClicked = {
                     createGroupDialogVisible = true
                 },
+                onResetUsernameClicked = onResetUserNameClicked,
                 onRetryConnection = onRetryConnection,
                 navigateToAboutScreen = navigateToAboutScreen
             )
@@ -391,6 +401,7 @@ fun ContactsScreenPreview() {
                 )
             )
         ),
+        onResetUserNameClicked = {},
         navigateToChatScreen = {},
         navigateToAddContactScreen = {},
         onContactSaved = {},

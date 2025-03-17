@@ -1,6 +1,7 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +39,7 @@ fun ContactsAppBar(
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
+    onResetUsernameClicked: () -> Unit,
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -102,7 +104,8 @@ fun ContactsAppBar(
                     onSearchModeTriggered = onSearchTriggered
                 )
                 MoreActions(
-                    navigateToAboutScreen = navigateToAboutScreen
+                    navigateToAboutScreen = navigateToAboutScreen,
+                    onResetUsernameClicked = onResetUsernameClicked
                 )
             }
         )
@@ -111,6 +114,7 @@ fun ContactsAppBar(
 
 @Composable
 fun MoreActions(
+    onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -120,6 +124,15 @@ fun MoreActions(
             expanded = isExpended
         }
     ) {
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.AccountCircle,
+            contentDescription = stringResource(id = R.string.reset_username),
+            text = stringResource(id = R.string.reset_username),
+            onClick = {
+                onResetUsernameClicked()
+                expanded = false
+            }
+        )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Info,
             contentDescription = stringResource(id = R.string.about_app),

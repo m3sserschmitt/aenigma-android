@@ -36,12 +36,13 @@ fun TextInputDialog(
     body: String,
     placeholderText: String,
     dismissible: Boolean = true,
+    initialText: String = "",
     onTextChanged: (String) -> Boolean,
     onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     var isValidationError by remember { mutableStateOf(false) }
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText) }
 
     BasicAlertDialog(
         onDismissRequest = { },

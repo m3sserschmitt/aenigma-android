@@ -104,4 +104,6 @@
     <string name="select_members_to_remove">Eliminați membri din grup</string>
     <string name="leave_group">Părăsiți grupul</string>
     <string name="are_you_sure_leave_group">Părăsiți grupul? Această acțiune este ireversibilă.</string>
+    <string name="reset_username">Resetați numele de utilizator</string>
+    <string name="cannot_share_groups">Grupurile nu pot fi distribuite.</string>
 </resources>

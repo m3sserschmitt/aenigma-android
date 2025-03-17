@@ -1,7 +1,6 @@
 package ro.aenigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +23,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedData
+import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.SharedData
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -38,11 +39,11 @@ import ro.aenigma.util.QrCodeScannerState
 fun AddContactsContent(
     modifier: Modifier = Modifier,
     scannerState: QrCodeScannerState,
-    qrCodeLabel: String,
-    qrCode: RequestState<Bitmap>,
+    qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedData>,
     sharedDataGet: RequestState<SharedData>,
-    onQrCodeFound: (String) -> Unit,
+    importedContactDetails: ExportedContactData?,
+    onQrCodeFound: (ExportedContactData) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
@@ -96,6 +97,7 @@ fun AddContactsContent(
             saveContactDialogVisible = false
             onSaveContact(name)
         },
+        initialName = importedContactDetails?.userName ?: "",
         onDismissClicked = {
             saveContactDialogVisible = false
             onSaveContactDismissed()
@@ -127,7 +129,6 @@ fun AddContactsContent(
             DisplayQrCode(
                 modifier = modifier,
                 qrCode = qrCode,
-                qrCodeLabel = qrCodeLabel,
                 onCreateLinkClicked = {
                     createLinkLoadingDialogVisible = true
                     onCreateLinkClicked()
@@ -138,8 +139,10 @@ fun AddContactsContent(
             )
         }
         QrCodeScannerState.SCAN_CODE -> {
-            QrCodeScanner(
-                onQrCodeFound = onQrCodeFound
+            QrCodeScanner<ExportedContactData>(
+                onQrCodeFound = { data ->
+                    onQrCodeFound(data)
+                }
             )
         }
     }
@@ -148,8 +151,7 @@ fun AddContactsContent(
 @Composable
 fun DisplayQrCode(
     modifier: Modifier = Modifier,
-    qrCodeLabel: String,
-    qrCode: RequestState<Bitmap>,
+    qrCode: RequestState<QrCodeDto>,
     onCreateLinkClicked: () -> Unit,
     onUseLinkClicked: () -> Unit
 ) {
@@ -161,7 +163,6 @@ fun DisplayQrCode(
                 verticalArrangement = Arrangement.Center
             ) {
                 QrCode(
-                    qrCodeLabel = qrCodeLabel,
                     qrCode = qrCode.data
                 )
                 HorizontalDivider(
@@ -187,16 +188,18 @@ fun DisplayQrCode(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
-                        TextButton(
-                            onClick = onUseLinkClicked,
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    id = R.string.use_link
-                                ),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                        if(qrCode.data.isOwnCode) {
+                            TextButton(
+                                onClick = onUseLinkClicked,
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        id = R.string.use_link
+                                    ),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
                         }
                     }
                 }
@@ -219,8 +222,13 @@ fun AddContactsContentPreview()
         ApplicationComposeTheme(darkTheme = true) {
             AddContactsContent(
                 scannerState = QrCodeScannerState.SHARE_CODE,
-                qrCode = RequestState.Success(bitmap),
-                qrCodeLabel = "John",
+                qrCode = RequestState.Success(QrCodeDto(bitmap, "John", false)),
+                importedContactDetails = ExportedContactData(
+                    guardAddress = "",
+                    guardHostname = "",
+                    userName = "",
+                    publicKey = ""
+                ),
                 onQrCodeFound = { },
                 onNewContactNameChanged = { true },
                 onSaveContact = { },

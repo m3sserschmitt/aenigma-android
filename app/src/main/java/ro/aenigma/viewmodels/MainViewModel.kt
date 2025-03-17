@@ -1,7 +1,6 @@
 package ro.aenigma.viewmodels
 
 import android.app.Application
-import android.graphics.Bitmap
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import ro.aenigma.R
@@ -18,7 +17,6 @@ import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
-import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,9 +27,12 @@ import kotlinx.coroutines.launch
 import ro.aenigma.crypto.getStringDataFromSignature
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.util.fromJson
 import ro.aenigma.util.getQueryParameter
+import ro.aenigma.util.toJson
 import ro.aenigma.workers.GroupUploadWorker
 import java.time.ZonedDateTime
 import javax.inject.Inject
@@ -64,13 +65,11 @@ class MainViewModel @Inject constructor(
             RequestState.Idle
         )
 
-    private val _qrCode = MutableStateFlow<RequestState<Bitmap>>(RequestState.Idle)
+    private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
-    private val _qrCodeLabel = MutableStateFlow("")
+    private val _importedContactDetails = MutableStateFlow<ExportedContactData?>(null)
 
-    private val _scannedContactDetails = MutableStateFlow(ExportedContactData("", "", ""))
-
-    private val _contactExportedData = MutableStateFlow(ExportedContactData("", "", ""))
+    private val _exportedContactDetails = MutableStateFlow<ExportedContactData?>(null)
 
     private val _sharedDataCreateResult =
         MutableStateFlow<RequestState<CreatedSharedData>>(RequestState.Idle)
@@ -82,14 +81,13 @@ class MainViewModel @Inject constructor(
 
     val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
 
-    val qrCode: StateFlow<RequestState<Bitmap>> = _qrCode
+    val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
 
-    val qrCodeLabel: StateFlow<String> = _qrCodeLabel
-
-    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> =
-        _sharedDataCreateResult
+    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> = _sharedDataCreateResult
 
     val sharedDataRequest: StateFlow<RequestState<SharedData>> = _sharedDataRequestResult
+
+    val importedContactDetails: StateFlow<ExportedContactData?> = _importedContactDetails
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
@@ -165,13 +163,15 @@ class MainViewModel @Inject constructor(
 
     fun saveNewContact(name: String) {
         val contactAddress =
-            _scannedContactDetails.value.publicKey.getAddressFromPublicKey() ?: return
+            _importedContactDetails.value?.publicKey.getAddressFromPublicKey() ?: return
+        val publicKey = _importedContactDetails.value?.publicKey ?: return
+        val guardAddress = _importedContactDetails.value?.guardAddress ?: return
         val newContact = ContactEntity(
             address = contactAddress,
             name = name,
-            publicKey = _scannedContactDetails.value.publicKey,
-            guardHostname = _scannedContactDetails.value.guardHostname,
-            guardAddress = _scannedContactDetails.value.guardAddress,
+            publicKey = publicKey,
+            guardHostname = _importedContactDetails.value?.guardHostname,
+            guardAddress = guardAddress,
             type = ContactType.CONTACT,
             hasNewMessage = false,
             lastSynchronized = ZonedDateTime.now()
@@ -212,60 +212,65 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun getMyProfileBitmap(): Flow<Bitmap?> {
+    fun resetUserName() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveName("")
+        }
+    }
+
+    private fun getMyProfileBitmap(): Flow<QrCodeDto?> {
         return flow {
             val guard = repository.local.getGuard()
 
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
-                _contactExportedData.value = ExportedContactData(
-                    guard.hostname,
-                    guard.address,
-                    signatureService.publicKey!!
+                _exportedContactDetails.value = ExportedContactData(
+                    guardHostname = guard.hostname,
+                    guardAddress = guard.address,
+                    publicKey = signatureService.publicKey!!,
+                    userName = userName.value
                 )
-
-                emit(
-                    QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString())
-                )
+                val code = QrCodeGenerator(400, 400)
+                    .encodeAsBitmap(_exportedContactDetails.value.toJson())
+                if (code != null) {
+                    emit(
+                        QrCodeDto(
+                            code, getApplication<AenigmaApp>().getString(R.string.my_code), true
+                        )
+                    )
+                } else {
+                    emit(null)
+                }
             } else {
                 emit(null)
             }
         }
     }
 
-    private fun getProfileBitmap(profileId: String): Flow<Bitmap?> {
+    private fun getProfileBitmap(profileId: String): Flow<QrCodeDto?> {
         return flow {
             val contact = repository.local.getContact(profileId)
 
             if (contact != null) {
-                _contactExportedData.value = ExportedContactData(
+                _exportedContactDetails.value = ExportedContactData(
                     contact.guardHostname,
                     contact.guardAddress,
-                    contact.publicKey
+                    contact.publicKey,
+                    contact.name
                 )
-
-                emit(
-                    QrCodeGenerator(400, 400).encodeAsBitmap(_contactExportedData.value.toString())
-                )
+                val code = QrCodeGenerator(400, 400)
+                    .encodeAsBitmap(_exportedContactDetails.value.toJson())
+                if(code != null) {
+                    emit(QrCodeDto(code, contact.name, false))
+                } else {
+                    emit(null)
+                }
             } else {
                 emit(null)
             }
         }
     }
 
-    private fun getQrCodeLabel(address: String): String {
-        return if (address == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE) {
-            getApplication<AenigmaApp>().getString(R.string.my_code)
-        } else try {
-            val contact =
-                (allContacts.value as RequestState.Success).data.find { item -> item.contact.address == address }
-            contact?.contact?.name ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    private fun generateQrCodeBitmap(profileId: String): Flow<Bitmap?> {
-        _qrCodeLabel.value = getQrCodeLabel(profileId)
+    private fun generateQrCodeBitmap(profileId: String): Flow<QrCodeDto?> {
         return when (profileId) {
             Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE -> {
                 getMyProfileBitmap()
@@ -307,25 +312,24 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun setScannedContactDetails(scannedDetails: String): Boolean {
-        return try {
-            _scannedContactDetails.value =
-                Gson().fromJson(scannedDetails, ExportedContactData::class.java)
-            true
-        } catch (_: Exception) {
-            resetScannedContactDetails()
-            false
-        }
+    fun setScannedContactDetails(scannedDetails: ExportedContactData) {
+        _importedContactDetails.value = scannedDetails
     }
 
     fun createContactShareLink() {
         _sharedDataCreateResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
-            val response = repository.remote.createSharedData(_contactExportedData.value.toString())
-            if (response != null) {
-                _sharedDataCreateResult.value = RequestState.Success(response)
+            val data = _exportedContactDetails.value.toJson()
+            if (data != null) {
+                val response = repository.remote.createSharedData(data)
+                if (response != null) {
+                    _sharedDataCreateResult.value = RequestState.Success(response)
+                } else {
+                    _sharedDataCreateResult.value = RequestState.Error(
+                        Exception("Something went wrong while trying to create a link.")
+                    )
+                }
             } else {
-
                 _sharedDataCreateResult.value = RequestState.Error(
                     Exception("Something went wrong while trying to create a link.")
                 )
@@ -343,10 +347,8 @@ class MainViewModel @Inject constructor(
                         ?: throw Exception()
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception()
-                _scannedContactDetails.value = Gson().fromJson(
-                    content,
-                    ExportedContactData::class.java
-                )
+                _importedContactDetails.value =
+                    content.fromJson<ExportedContactData>() ?: throw Exception()
                 _sharedDataRequestResult.value = RequestState.Success(response)
             } catch (ex: Exception) {
                 _sharedDataRequestResult.value = RequestState.Error(
@@ -369,7 +371,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun resetScannedContactDetails() {
-        _scannedContactDetails.value = ExportedContactData("", "", "")
+        _importedContactDetails.value = null
     }
 
     fun resetContactChanges() {

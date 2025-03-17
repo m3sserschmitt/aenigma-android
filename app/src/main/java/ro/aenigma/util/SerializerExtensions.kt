@@ -10,3 +10,11 @@ inline fun <reified T> String?.fromJson(): T? {
         null
     }
 }
+
+inline fun <reified T> T?.toJson(): String? {
+    return try {
+        Gson().toJson(this)
+    } catch (_: Exception){
+        null
+    }
+}
