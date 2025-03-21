@@ -151,10 +151,8 @@ class GraphReaderWorker @AssistedInject constructor(
 
     private suspend fun requestNewGraph(): GraphRequestResult {
         return try {
-            val response = repository.remote.getVertices()
-            val vertices = response.body()
-
-            if (response.code() == 200 && vertices != null) {
+            val vertices = repository.remote.getVertices()
+            if (vertices.isNotEmpty()) {
                 val guardSelectionResult = selectGuard(vertices)
 
                 if(guardSelectionResult is GuardSelectionResult.Error)

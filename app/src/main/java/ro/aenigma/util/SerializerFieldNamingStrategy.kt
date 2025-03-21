@@ -8,3 +8,9 @@ class CapitalizedFieldNamingStrategy : FieldNamingStrategy {
         return field.name.replaceFirstChar { it.uppercaseChar() }
     }
 }
+
+class CaseInsensitiveFieldNamingStrategy : FieldNamingStrategy {
+    override fun translateName(f: Field): String {
+        return f.name.replaceFirstChar { it.uppercaseChar() }
+    }
+}

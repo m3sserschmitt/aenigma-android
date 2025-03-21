@@ -26,6 +26,7 @@ import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.models.hubInvocation.VertexBroadcastResult
 import ro.aenigma.util.CapitalizedFieldNamingStrategy
+import ro.aenigma.util.toJson
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -210,10 +211,14 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Broadcasting())
             val neighborhood =
                 Neighborhood(signatureService.address, null, listOf(_guardAddress))
-            val serializedNeighborhood = GsonBuilder()
-                .setFieldNamingStrategy(CapitalizedFieldNamingStrategy())
-                .create()
-                .toJson(neighborhood)
+            val serializedNeighborhood = neighborhood.toJson()
+
+            if(serializedNeighborhood == null)
+            {
+                updateStatus(SignalRStatus.Error(_status.value))
+                return
+            }
+
             val signature = signatureService.sign(serializedNeighborhood.toByteArray())
 
             if (signature == null) {

@@ -118,69 +118,17 @@ class MessageSenderWorker @AssistedInject constructor(
         return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
     }
 
-    private fun validateVertex(
-        vertex: Vertex?,
-        isLeaf: Boolean,
-        publicKey: String? = null
-    ): Boolean {
-        if (vertex == null) {
-            return false
-        }
-        val key = if(publicKey.isNullOrBlank()) vertex.publicKey else publicKey
-        if (!key.isValidPublicKey()) {
-            return false
-        }
-        if ((isLeaf && vertex.neighborhood?.neighbors?.count() != 1)
-            || vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true
-        ) {
-            return false
-        }
-        if (!vertex.neighborhood.address.isValidAddress()) {
-            return false
-        }
-        if (!isLeaf && !key.publicKeyMatchAddress(vertex.neighborhood.address)) {
-            return false
-        }
-        return vertex.signedData.isValidBase64() && CryptoProvider.verifyEx(
-            key!!,
-            vertex.signedData!!
-        )
-    }
-
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
-//        val threshold = ZonedDateTime.now().minusMinutes(MIN_CONTACT_SYNC_INTERVAL_MINUTES)
-//        val aboveThreshold = contactEntity.lastSynchronized.isBefore(threshold)
-//        if (!aboveThreshold) {
-//            return true
-//        }
-
         if(contactEntity.guardAddress.isValidAddress())
         {
             return true
         }
         try {
-            val vertexResponse = repository.remote.getVertex(contactEntity.address)
-            val vertex = vertexResponse.body()
-
-            if (vertexResponse.code() != 200 || !validateVertex(
-                    vertex,
-                    true,
-                    contactEntity.publicKey
-                )
-            ) {
-                return false
-            }
-
-            val guardAddress = vertex?.neighborhood?.neighbors?.firstOrNull() ?: return false
-            val guardResponse = repository.remote.getVertex(guardAddress)
-            val guard = guardResponse.body()
-
-            if (guardResponse.code() != 200 || !validateVertex(guard, false)) {
-                return false
-            }
-
-            contactEntity.guardAddress = guard!!.neighborhood!!.address!!
-            contactEntity.guardHostname = guard.neighborhood!!.hostname
+            val vertex = repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey) ?: return false
+            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
+            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
+            contactEntity.guardAddress = guardVertex.neighborhood!!.address!!
+            contactEntity.guardHostname = guardVertex.neighborhood.hostname
             contactEntity.lastSynchronized = ZonedDateTime.now()
 
             repository.local.updateContact(contactEntity)

@@ -7,11 +7,15 @@ import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.Vertex
 import retrofit2.Response
+import ro.aenigma.crypto.AddressExtensions.isValidAddress
+import ro.aenigma.crypto.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
 import ro.aenigma.crypto.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.GroupData
+import ro.aenigma.models.Neighborhood
 import ro.aenigma.util.fromJson
 import javax.inject.Inject
 
@@ -19,13 +23,19 @@ class RemoteDataSource @Inject constructor(
     private val enigmaApi: EnigmaApi,
     private val signatureService: SignatureService
 ) {
-
     suspend fun getServerInfo(): Response<ServerInfo?> {
         return enigmaApi.getServerInfo()
     }
 
-    suspend fun getVertices(): Response<List<Vertex>?> {
-        return enigmaApi.getVertices()
+    suspend fun getVertices(): List<Vertex> {
+        val response = enigmaApi.getVertices()
+        val body = response.body()
+
+        if (response.code() != 200 || body == null) {
+            return listOf()
+        }
+
+        return body.mapNotNull { vertex -> validateVertex(vertex, false) }
     }
 
     suspend fun createSharedData(data: String, accessCount: Int = 1): CreatedSharedData? {
@@ -94,7 +104,50 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getVertex(address: String): Response<Vertex?> {
-        return enigmaApi.getVertex(address)
+    suspend fun getVertex(address: String, isLeaf: Boolean, publicKey: String? = null): Vertex? {
+        val response = enigmaApi.getVertex(address)
+        val vertex = response.body()
+
+        if(response.code() != 200 || vertex == null)
+        {
+            return null
+        }
+
+        return validateVertex(vertex, isLeaf, publicKey)
+    }
+
+    private fun validateVertex(
+        vertex: Vertex?,
+        isLeaf: Boolean,
+        publicKey: String? = null
+    ): Vertex? {
+        if (vertex == null) {
+            return null
+        }
+        val key = if (publicKey.isNullOrBlank()) vertex.publicKey else publicKey
+        if (!key.isValidPublicKey()) {
+            return null
+        }
+        if ((isLeaf && vertex.neighborhood?.neighbors?.count() != 1)
+            || vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true
+        ) {
+            return null
+        }
+        if (!vertex.neighborhood.address.isValidAddress()) {
+            return null
+        }
+        if (!isLeaf && !key.publicKeyMatchAddress(vertex.neighborhood.address)) {
+            return null
+        }
+        if (!vertex.signedData.isValidBase64() || !CryptoProvider.verifyEx(
+                key!!,
+                vertex.signedData!!
+            )
+        ) {
+            return null
+        }
+        val serializedNeighborhood = vertex.signedData.getStringDataFromSignature(key) ?: return null
+        val neighborhood = serializedNeighborhood.fromJson<Neighborhood>() ?: return null
+        return Vertex(vertex.publicKey, vertex.signedData, neighborhood)
     }
 }
