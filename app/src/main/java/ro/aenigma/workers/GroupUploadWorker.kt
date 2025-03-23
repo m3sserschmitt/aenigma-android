@@ -12,7 +12,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.CryptoProvider
@@ -29,6 +28,7 @@ import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageActionType
 import ro.aenigma.services.MessageSaver
+import ro.aenigma.util.SerializerExtensions.toJson
 import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -175,7 +175,7 @@ class GroupUploadWorker @AssistedInject constructor(
     }
 
     private fun encryptGroupData(groupData: GroupData, membersToEncryptFor: List<GroupMember>): String? {
-        val serializedGroupData = Gson().toJson(groupData).toByteArray()
+        val serializedGroupData = groupData.toJson()?.toByteArray() ?: return null
         val encryptedGroupData = membersToEncryptFor.mapNotNull { item ->
             item.publicKey?.let { publicKey ->
                 CryptoProvider.encryptEx(publicKey, serializedGroupData)
@@ -184,7 +184,7 @@ class GroupUploadWorker @AssistedInject constructor(
         if (encryptedGroupData.isEmpty()) {
             return null
         }
-        return Gson().toJson(encryptedGroupData)
+        return encryptedGroupData.toJson()
     }
 
     private suspend fun saveGroupEntity(groupData: GroupData, resourceUrl: String) {

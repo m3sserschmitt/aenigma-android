@@ -16,7 +16,7 @@ import ro.aenigma.crypto.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood
-import ro.aenigma.util.fromJson
+import ro.aenigma.util.SerializerExtensions.fromJson
 import javax.inject.Inject
 
 class RemoteDataSource @Inject constructor(

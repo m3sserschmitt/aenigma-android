@@ -8,13 +8,13 @@ import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import com.google.gson.Gson
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.MessageSenderWorker
@@ -31,14 +31,6 @@ class MessageSaver @Inject constructor(
     signatureService: SignatureService
 ) {
     private val localAddress = signatureService.address
-
-    private fun deserializeContent(message: ParsedMessageDto): MessageWithMetadata? {
-        return try {
-            Gson().fromJson(message.content, MessageWithMetadata::class.java)
-        } catch (_: Exception) {
-            null
-        }
-    }
 
     private suspend fun execute(data: MessageEntity) {
         try {
@@ -69,8 +61,12 @@ class MessageSaver @Inject constructor(
 
     private suspend fun interpret(message: ParsedMessageDto): MessageEntity? {
         return try {
-            val messageWithMetadata = deserializeContent(message) ?: return null
-            if (messageWithMetadata.action == null && messageWithMetadata.text == null) {
+            if(message.chatId == null)
+            {
+                return null
+            }
+            val messageWithMetadata = message.content.fromJson<MessageWithMetadata>()
+            if (messageWithMetadata?.action == null && messageWithMetadata?.text == null) {
                 return null
             }
             createOrUpdateEntities(messageWithMetadata, message.chatId)

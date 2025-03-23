@@ -2,7 +2,7 @@ package ro.aenigma.models
 
 import ro.aenigma.models.enums.MessageActionType
 
-class MessageActionDto(
-    val actionType: MessageActionType?,
-    val refId: String?
+data class MessageActionDto(
+    val actionType: MessageActionType? = null,
+    val refId: String? = null
 )

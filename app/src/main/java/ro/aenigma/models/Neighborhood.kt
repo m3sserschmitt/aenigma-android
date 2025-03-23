@@ -1,7 +1,7 @@
 package ro.aenigma.models
 
 data class Neighborhood (
-    val address: String?,
-    val hostname: String?,
-    val neighbors: List<String>?,
+    val address: String? = null,
+    val hostname: String? = null,
+    val neighbors: List<String>? = null,
 )

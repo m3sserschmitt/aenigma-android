@@ -17,6 +17,7 @@ object MessageEntityExtensions {
             MessageActionType.GROUP_MEMBER_LEFT -> context.getString(R.string.group_member_left)
             MessageActionType.GROUP_RENAMED -> context.getString(R.string.group_renamed)
             MessageActionType.TEXT, MessageActionType.REPLY -> this.text
+            null -> "null"
         }
     }
 }

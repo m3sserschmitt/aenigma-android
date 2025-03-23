@@ -1,26 +1,42 @@
 package ro.aenigma.util
 
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.PropertyNamingStrategies
+import com.fasterxml.jackson.databind.json.JsonMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import retrofit2.converter.jackson.JacksonConverterFactory
 
-inline fun <reified T> String?.fromJson(): T? {
-    return try {
-        GsonBuilder()
-            .setFieldNamingStrategy(CaseInsensitiveFieldNamingStrategy())
-            .create()
-            .fromJson(this, object : TypeToken<T>() {}.type)
-    } catch (_: Exception) {
-        null
+object SerializerExtensions {
+
+    @JvmStatic
+    fun createJsonConverterFactory(): JacksonConverterFactory {
+        return JacksonConverterFactory.create(createJsonMapper())
     }
-}
 
-inline fun <reified T> T?.toJson(): String? {
-    return try {
-        GsonBuilder()
-            .setFieldNamingStrategy(CapitalizedFieldNamingStrategy())
-            .create()
-            .toJson(this)
-    } catch (_: Exception){
-        null
+    @JvmStatic
+    fun createJsonMapper(): ObjectMapper {
+        return JsonMapper.builder()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+            .build()
+            .setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE)
+    }
+
+    inline fun <reified T> String?.fromJson(): T? {
+        return try {
+            this?.let { createJsonMapper().readValue<T>(it) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    inline fun <reified T> T?.toJson(): String? {
+        return try {
+            createJsonMapper().writeValueAsString(this)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

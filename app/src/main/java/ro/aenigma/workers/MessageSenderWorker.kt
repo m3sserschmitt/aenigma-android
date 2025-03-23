@@ -13,10 +13,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.crypto.AddressExtensions.isValidAddress
-import ro.aenigma.crypto.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.CryptoProvider
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
-import ro.aenigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
@@ -24,14 +21,13 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.MessageWithMetadata
-import ro.aenigma.models.Vertex
 import ro.aenigma.services.PathFinder
-import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.models.MessageActionDto
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.util.SerializerExtensions.toJson
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
@@ -50,7 +46,6 @@ class MessageSenderWorker @AssistedInject constructor(
         const val MESSAGE_ID_ARG = "MessageId"
         const val RESOURCE_URL_ARG = "ResourceUrl"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-//        private const val MIN_CONTACT_SYNC_INTERVAL_MINUTES: Long = 15
         private const val DELAY_BETWEEN_RETRIES: Long = 10
         private const val MAX_RETRY_COUNT = 5
 
@@ -114,7 +109,7 @@ class MessageSenderWorker @AssistedInject constructor(
             refId = message.refId,
             groupResourceUrl = groupResourceUrl,
         )
-        val serializedData = Gson().toJson(messageDetails).toByteArray()
+        val serializedData = messageDetails.toJson()?.toByteArray() ?: return null
         return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
     }
 

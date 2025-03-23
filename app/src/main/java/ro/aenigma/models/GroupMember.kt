@@ -3,8 +3,8 @@ package ro.aenigma.models
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 
 class GroupMember(
-    val name: String?,
-    val publicKey: String?
+    val name: String? = null,
+    val publicKey: String? = null
 ) {
     override fun hashCode(): Int {
         return publicKey.getAddressFromPublicKey().hashCode()

@@ -30,9 +30,9 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageActionType
-import ro.aenigma.util.fromJson
+import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.SerializerExtensions.toJson
 import ro.aenigma.util.getQueryParameter
-import ro.aenigma.util.toJson
 import ro.aenigma.workers.GroupUploadWorker
 import java.time.ZonedDateTime
 import javax.inject.Inject

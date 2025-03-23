@@ -3,7 +3,6 @@ package ro.aenigma.data.network
 import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.google.gson.GsonBuilder
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
@@ -25,8 +24,7 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.models.hubInvocation.VertexBroadcastResult
-import ro.aenigma.util.CapitalizedFieldNamingStrategy
-import ro.aenigma.util.toJson
+import ro.aenigma.util.SerializerExtensions.toJson
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -211,16 +209,8 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Broadcasting())
             val neighborhood =
                 Neighborhood(signatureService.address, null, listOf(_guardAddress))
-            val serializedNeighborhood = neighborhood.toJson()
-
-            if(serializedNeighborhood == null)
-            {
-                updateStatus(SignalRStatus.Error(_status.value))
-                return
-            }
-
-            val signature = signatureService.sign(serializedNeighborhood.toByteArray())
-
+            val data = neighborhood.toJson()?.toByteArray() ?: return
+            val signature = signatureService.sign(data)
             if (signature == null) {
                 updateStatus(SignalRStatus.Error(_status.value))
                 return
