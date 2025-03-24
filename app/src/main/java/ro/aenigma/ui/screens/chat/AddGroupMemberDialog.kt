@@ -13,7 +13,7 @@ import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
@@ -23,7 +23,7 @@ import java.time.ZonedDateTime
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGroupMemberDialog(
-    action: MessageActionType,
+    action: MessageType,
     visible: Boolean,
     contactWithGroup: RequestState<ContactWithGroup>,
     allContacts: RequestState<List<ContactEntity>>,
@@ -31,7 +31,7 @@ fun AddGroupMemberDialog(
     onConfirmClicked: (List<String>) -> Unit
 ) {
     if (visible && allContacts is RequestState.Success && contactWithGroup is RequestState.Success) {
-        val add = action == MessageActionType.GROUP_MEMBER_ADD
+        val add = action == MessageType.GROUP_MEMBER_ADD
         val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
         val memberAddresses = remember(contactWithGroup.data.group?.groupData?.members) {
             val items = hashSetOf<String>()
@@ -90,7 +90,7 @@ fun AddGroupMemberDialog(
 @Composable
 fun AddGroupMemberDialogPreview() {
     AddGroupMemberDialog(
-        action = MessageActionType.GROUP_MEMBER_ADD,
+        action = MessageType.GROUP_MEMBER_ADD,
         visible = true,
         contactWithGroup = RequestState.Idle,
         allContacts = RequestState.Success(

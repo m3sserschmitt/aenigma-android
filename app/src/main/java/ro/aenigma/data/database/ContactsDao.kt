@@ -10,18 +10,22 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE")
     fun get(): Flow<List<ContactEntity>>
 
+    @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE")
     fun getWithLastMessageFlow(): Flow<List<ContactWithLastMessage>>
 
+    @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE")
     suspend fun getWithLastMessage(): List<ContactWithLastMessage>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?
 
+    @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
     suspend fun getWithGroup(address: String): ContactWithGroup?
 
+    @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
     fun getWithGroupFlow(address: String): Flow<ContactWithGroup?>
 

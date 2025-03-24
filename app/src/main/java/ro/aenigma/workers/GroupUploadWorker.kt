@@ -21,12 +21,11 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.GroupEntity
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.GroupMember
-import ro.aenigma.models.MessageAction
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.time.ZonedDateTime
@@ -55,7 +54,7 @@ class GroupUploadWorker @AssistedInject constructor(
         @JvmStatic
         fun createOrUpdateGroupWorkRequest(
             workManager: WorkManager, userName: String, groupName: String?, members: List<String>?,
-            existingGroupAddress: String?, actionType: MessageActionType
+            existingGroupAddress: String?, actionType: MessageType
         ) {
             val parameters = Data.Builder()
                 .putString(GROUP_NAME_ARG, groupName)
@@ -106,21 +105,21 @@ class GroupUploadWorker @AssistedInject constructor(
     }
 
     private suspend fun modifyGroupMembers(
-        existingGroupData: GroupData, memberAddresses: List<String>, actionType: MessageActionType
+        existingGroupData: GroupData, memberAddresses: List<String>, actionType: MessageType
     ): GroupData? {
         if (existingGroupData.members == null) {
             return null
         }
 
         val members = when (actionType) {
-            MessageActionType.GROUP_MEMBER_REMOVE -> {
+            MessageType.GROUP_MEMBER_REMOVE -> {
                 val memberAddressesSet = HashSet(memberAddresses)
                 existingGroupData.members.filter { item ->
                     !memberAddressesSet.contains(item.publicKey.getAddressFromPublicKey())
                 }
             }
 
-            MessageActionType.GROUP_MEMBER_ADD -> {
+            MessageType.GROUP_MEMBER_ADD -> {
                 val result = mutableSetOf<GroupMember>()
                 memberAddresses.mapTo(result) { address ->
                     val contact = repository.local.getContact(address)
@@ -142,29 +141,29 @@ class GroupUploadWorker @AssistedInject constructor(
         groupName: String?,
         memberAddresses: List<String>,
         userName: String?,
-        actionType: MessageActionType
+        actionType: MessageType
     ): GroupData? {
         return when (actionType) {
-            MessageActionType.GROUP_RENAMED -> {
+            MessageType.GROUP_RENAMED -> {
                 groupName ?: return null
                 existingGroupData ?: return null
                 renameGroup(existingGroupData, groupName)
             }
 
-            MessageActionType.GROUP_CREATE -> {
+            MessageType.GROUP_CREATE -> {
                 if(memberAddresses.isEmpty()) return null
                 userName ?: return null
                 groupName ?: return null
                 createNewGroup(memberAddresses, userName, groupName)
             }
 
-            MessageActionType.GROUP_MEMBER_LEFT -> {
+            MessageType.GROUP_MEMBER_LEFT -> {
                 existingGroupData ?: return null
                 leaveGroup(existingGroupData)
             }
 
-            MessageActionType.GROUP_MEMBER_ADD,
-            MessageActionType.GROUP_MEMBER_REMOVE -> {
+            MessageType.GROUP_MEMBER_ADD,
+            MessageType.GROUP_MEMBER_REMOVE -> {
                 if(memberAddresses.isEmpty()) return null
                 existingGroupData ?: return null
                 modifyGroupMembers(existingGroupData, memberAddresses, actionType)
@@ -210,26 +209,23 @@ class GroupUploadWorker @AssistedInject constructor(
         userName: String,
         memberAddresses: List<String>,
         resourceUrl: String,
-        actionType: MessageActionType
+        actionType: MessageType
     ) {
         groupData.address ?: return
-        val signatureService = signatureService.address ?: return
-        val message = MessageEntity(
+        val message = MessageEntityFactory.createOutgoing(
             chatId = groupData.address,
-            text = "",
-            incoming = false,
-            uuid = null,
-            action = MessageAction(actionType, null, signatureService)
+            text = null,
+            type = actionType,
+            actionFor = null
         )
         messageSaver.saveOutgoingMessage(message, userName)
-        if (actionType == MessageActionType.GROUP_MEMBER_REMOVE) {
+        if (actionType == MessageType.GROUP_MEMBER_REMOVE) {
             for (memberAddress in memberAddresses) {
-                val m = MessageEntity(
+                val m = MessageEntityFactory.createOutgoing(
                     chatId = memberAddress,
-                    text = "",
-                    incoming = false,
-                    uuid = null,
-                    action = MessageAction(actionType, null, signatureService)
+                    text = null,
+                    type = actionType,
+                    actionFor = null
                 )
                 messageSaver.saveOutgoingMessage(m, userName, resourceUrl)
             }
@@ -243,7 +239,7 @@ class GroupUploadWorker @AssistedInject constructor(
 
         val actionTypeString = inputData.getString(ACTION_TYPE_ARG) ?: return Result.failure()
         val userName = inputData.getString(USER_NAME_ARG) ?: return Result.failure()
-        val actionType = MessageActionType.valueOf(actionTypeString)
+        val actionType = MessageType.valueOf(actionTypeString)
         val groupName = inputData.getString(GROUP_NAME_ARG)
         val memberAddresses = inputData.getStringArray(MEMBERS_ARG)?.toList() ?: listOf()
         val groupAddress = inputData.getString(EXISTING_GROUP_ADDRESS_ARG)

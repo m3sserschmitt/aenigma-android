@@ -18,10 +18,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -37,7 +37,7 @@ import java.time.ZonedDateTime
 
 @Composable
 fun ChatAppBar(
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
     connectionStatus: SignalRStatus,
@@ -53,7 +53,7 @@ fun ChatAppBar(
     onSearchModeTriggered: () -> Unit,
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
-    onGroupActionClicked: (MessageActionType) -> Unit,
+    onGroupActionClicked: (MessageType) -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
@@ -124,13 +124,13 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     isGroup: Boolean,
     isMember: Boolean,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit,
-    onGroupActionClicked: (MessageActionType) -> Unit
+    onGroupActionClicked: (MessageType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -166,7 +166,7 @@ fun MoreActions(
             text = stringResource(id = R.string.add_group_member),
             visible = isGroup && isMember,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_ADD)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
                 expanded = false
             }
         )
@@ -176,7 +176,7 @@ fun MoreActions(
             text = stringResource(id = R.string.remove_group_member),
             visible = isGroup && isMember,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_REMOVE)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
                 expanded = false
             }
         )
@@ -186,7 +186,7 @@ fun MoreActions(
             text = stringResource(id = R.string.leave_group),
             visible = isGroup && isMember,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_LEFT)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
                 expanded = false
             }
         )

@@ -11,9 +11,10 @@ import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.models.MessageAction
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
@@ -34,18 +35,18 @@ class MessageSaver @Inject constructor(
 
     private suspend fun execute(data: MessageEntity) {
         try {
-            if (data.uuid == null || repository.local.getMessageByUuid(data.uuid) != null) {
+            if (data.serverUUID == null || repository.local.getMessageByUuid(data.serverUUID) != null) {
                 return
             }
 
-            when (data.action.actionType) {
-                MessageActionType.DELETE -> {
-                    data.action.refId?.let {
+            when (data.type) {
+                MessageType.DELETE -> {
+                    data.actionFor?.let {
                         repository.local.removeMessageSoft(it)
                     }
                 }
 
-                MessageActionType.DELETE_ALL -> {
+                MessageType.DELETE_ALL -> {
                     data.chatId.let { repository.local.clearConversationSoft(it) }
                 }
 
@@ -65,26 +66,17 @@ class MessageSaver @Inject constructor(
             {
                 return null
             }
-            val messageWithMetadata = message.content.fromJson<MessageWithMetadata>()
-            if (messageWithMetadata?.action == null && messageWithMetadata?.text == null) {
-                return null
-            }
+            val messageWithMetadata = message.content.fromJson<MessageWithMetadata>() ?: return null
             createOrUpdateEntities(messageWithMetadata, message.chatId)
-            val text = messageWithMetadata.text ?: messageWithMetadata.action?.actionType.toString()
-            val action = MessageAction(
-                actionType = messageWithMetadata.action?.actionType ?: MessageActionType.TEXT,
-                refId = messageWithMetadata.action?.refId,
-                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey() ?: message.chatId
-            )
-            MessageEntity(
+            MessageEntityFactory.createIncoming(
                 chatId = message.chatId,
-                text = text,
-                incoming = true,
-                uuid = message.uuid,
-                sent = false,
-                dateReceivedOnServer = message.dateReceivedOnServer,
+                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey() ?: message.chatId,
+                serverUUID = message.uuid,
+                text = messageWithMetadata.text,
+                type = messageWithMetadata.type ?: MessageType.TEXT,
+                actionFor = messageWithMetadata.actionFor,
                 refId = messageWithMetadata.refId,
-                action = action
+                dateReceivedOnServer = message.dateReceivedOnServer,
             )
         } catch (_: Exception) {
             null
@@ -106,8 +98,8 @@ class MessageSaver @Inject constructor(
 
     suspend fun saveOutgoingMessage(message: MessageEntity, userName: String, resourceUrl: String? = null): Long? {
         try {
-            message.action.senderAddress = localAddress!!
-            val messageId = repository.local.insertMessage(message)
+            val entity = message.withSenderAddress(localAddress) ?: return null
+            val messageId = repository.local.insertMessage(entity)
             if (messageId > 0) {
                 MessageSenderWorker.createWorkRequest(workManager, messageId, userName, resourceUrl)
             }

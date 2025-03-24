@@ -26,29 +26,21 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.util.RequestState
+import ro.aenigma.data.database.MessageWithDetails
 
 @Composable
 fun ChatInput(
     modifier: Modifier,
     enabled: Boolean = true,
-    allContacts: RequestState<List<ContactEntity>>,
-    replyToMessage: MessageEntity?,
+    replyToMessage: MessageWithDetails?,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
-    val replyToContact =
-        if (allContacts is RequestState.Success && replyToMessage != null) allContacts.data.firstOrNull { item ->
-            item.address == replyToMessage.action.senderAddress
-        } else null
     Column {
         ReplyToMessage(
             message = replyToMessage,
-            contact = replyToContact,
             onReplyAborted = onReplyAborted
         )
 
@@ -97,8 +89,7 @@ fun ChatInput(
 
 @Composable
 fun ReplyToMessage(
-    contact: ContactEntity?,
-    message: MessageEntity?,
+    message: MessageWithDetails?,
     onReplyAborted: () -> Unit,
 ) {
     if(message == null){
@@ -112,8 +103,8 @@ fun ReplyToMessage(
             modifier = Modifier.weight(9f)
         ) {
             Text(
-                text = if (message.incoming && contact != null)
-                    stringResource(id = R.string.they_said).format(contact.name)
+                text = if (message.message.incoming && message.sender != null)
+                    stringResource(id = R.string.they_said).format(message.sender.name)
                 else
                     stringResource(id = R.string.you_said),
                 style = MaterialTheme.typography.bodyMedium,
@@ -121,7 +112,7 @@ fun ReplyToMessage(
             )
             Text(
                 modifier = Modifier.padding(start = 4.dp),
-                text = message.text,
+                text = message.message.text.toString(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f),
                 maxLines = 3,
@@ -156,6 +147,5 @@ fun ChatInputPreview()
         onInputTextChanged = {},
         onSendClicked = {},
         onReplyAborted = {},
-        allContacts = RequestState.Idle
     )
 }

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
+import ro.aenigma.data.database.MessageWithDetails
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -94,24 +95,19 @@ class LocalDataSource @Inject constructor(
         return messagesDao.get(id)
     }
 
-    fun getConversation(chatId: String): Flow<List<MessageEntity>> {
-        return messagesDao.getConversation(chatId)
+    fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>> {
+        return messagesDao.getConversationFlow(chatId)
     }
 
     suspend fun getMessageByUuid(uuid: String): MessageEntity? {
-        return messagesDao.getByUuid(uuid)
-    }
-
-    fun getMessageByRefIdFlow(refId: String): Flow<MessageEntity?>
-    {
-        return messagesDao.getByRefIdFlow(refId)
+        return messagesDao.getByServerUuid(uuid)
     }
 
     suspend fun getConversation(
         chatId: String,
         infIndex: Long,
         searchQuery: String = ""
-    ): List<MessageEntity> {
+    ): List<MessageWithDetails> {
         return messagesDao.getConversation(chatId, infIndex, searchQuery)
     }
 
@@ -149,15 +145,17 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun insertMessage(message: MessageEntity): Long {
-        val messageId = messagesDao.insert(
+        val messageId = messagesDao.insertOrIgnore(
             chatId = message.chatId,
+            senderAddress = message.senderAddress,
+            serverUUID = message.serverUUID,
             text = message.text,
-            action = message.action,
-            incoming = message.incoming,
+            type = message.type,
+            actionFor = message.actionFor,
             refId = message.refId,
+            incoming = message.incoming,
             date = message.date,
             dateReceivedOnServer = message.dateReceivedOnServer,
-            uuid = message.uuid
         )
         if (messageId != null && messageId > 0) {
             updateContactLastMessageId(message.chatId)
@@ -167,10 +165,6 @@ class LocalDataSource @Inject constructor(
             return messageId
         }
         return -1
-    }
-
-    fun getOutgoingMessages(): Flow<List<MessageEntity>> {
-        return messagesDao.getOutgoingMessages()
     }
 
     suspend fun updateMessage(message: MessageEntity) {

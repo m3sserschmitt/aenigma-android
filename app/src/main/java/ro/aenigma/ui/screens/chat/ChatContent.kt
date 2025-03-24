@@ -20,15 +20,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.models.MessageAction
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
+import java.time.ZonedDateTime
 
 @Composable
 fun ChatContent(
@@ -36,17 +37,17 @@ fun ChatContent(
     isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     allContacts: RequestState<List<ContactEntity>>,
-    replyToMessage: MessageEntity?,
+    replyToMessage: MessageWithDetails?,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageEntity>,
+    selectedMessages: List<MessageWithDetails>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit,
-    onMessageSelected: (MessageEntity) -> Unit,
-    onMessageDeselected: (MessageEntity) -> Unit,
+    onMessageSelected: (MessageWithDetails) -> Unit,
+    onMessageDeselected: (MessageWithDetails) -> Unit,
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -83,7 +84,6 @@ fun ChatContent(
                 modifier = Modifier.height(80.dp),
                 enabled = isMember,
                 messageInputText = messageInputText,
-                allContacts = allContacts,
                 replyToMessage = replyToMessage,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = {
@@ -97,16 +97,16 @@ fun ChatContent(
 }
 
 @Composable
-fun MessageDate(next: MessageEntity?, message: MessageEntity) {
-    val localDate1 = next?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
-    val localDate2 = message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
+    val localDate1 = next?.message?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+    val localDate2 = message.message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
     if (localDate1 == null || localDate1 != localDate2) {
         Text(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            text = PrettyDateFormatter.formatPastDate(message.date),
+            text = PrettyDateFormatter.formatPastDate(message.message.date),
             style = MaterialTheme.typography.bodyLarge
         )
     }
@@ -117,13 +117,13 @@ fun DisplayMessages(
     modifier: Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     allContacts: RequestState<List<ContactEntity>>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageEntity>,
+    selectedMessages: List<MessageWithDetails>,
     conversationListState: LazyListState = rememberLazyListState(),
-    onItemSelected: (MessageEntity) -> Unit,
-    onItemDeselected: (MessageEntity) -> Unit,
+    onItemSelected: (MessageWithDetails) -> Unit,
+    onItemDeselected: (MessageWithDetails) -> Unit,
     loadNextPage: () -> Unit
 ) {
     when {
@@ -147,7 +147,7 @@ fun DisplayMessages(
                         MessageDate(next = next, message = messageEntity)
                     },
                     listState = conversationListState,
-                    itemKeyProvider = { m -> m.id },
+                    itemKeyProvider = { m -> m.message.id },
                     reversedLayout = true,
                     loadNextPage = loadNextPage
                 )
@@ -175,26 +175,28 @@ fun DisplayMessages(
 @Preview
 @Composable
 fun ChatContentPreview() {
-    val message1 = MessageEntity(
-        chatId = "123",
-        text = "Hey",
-        incoming = true,
-        sent = false,
-        deleted = false,
-        uuid = null,
-        action = MessageAction(MessageActionType.TEXT, null, "123")
+    val message1 = MessageWithDetails(
+        MessageEntityFactory.createIncoming(
+            chatId = "123",
+            text = "Hey",
+            serverUUID = null,
+            type = MessageType.TEXT,
+            actionFor = null,
+            senderAddress = null,
+            refId = null,
+            dateReceivedOnServer = ZonedDateTime.now()
+        ), null, null
     )
-    val message2 = MessageEntity(
-        chatId = "123",
-        text = "Hey, how are you?",
-        incoming = false,
-        sent = true,
-        deleted = false,
-        uuid = null,
-        action = MessageAction(MessageActionType.TEXT, null, "123")
+    val message2 = MessageWithDetails(
+        MessageEntityFactory.createOutgoing(
+            chatId = "123",
+            text = "Hey, how are you?",
+            type = MessageType.TEXT,
+            actionFor = null,
+        ), null, null
     )
-    message1.id = 1
-    message2.id = 2
+    message1.message.id = 1
+    message2.message.id = 2
 
     ChatContent(
         messages = RequestState.Success(

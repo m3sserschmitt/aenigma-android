@@ -1,6 +1,6 @@
 package ro.aenigma.models.enums
 
-enum class MessageActionType {
+enum class MessageType {
     TEXT,
     REPLY,
     DELETE,

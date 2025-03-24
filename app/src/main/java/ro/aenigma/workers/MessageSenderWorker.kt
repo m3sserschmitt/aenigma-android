@@ -25,7 +25,7 @@ import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.models.MessageActionDto
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.time.ZonedDateTime
@@ -95,13 +95,10 @@ class MessageSenderWorker @AssistedInject constructor(
             arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-        val action = MessageActionDto(
-            actionType = message.action.actionType,
-            refId = message.action.refId
-        )
         val messageDetails = MessageWithMetadata(
             text = message.text,
-            action = action,
+            type = message.type,
+            actionFor = message.actionFor,
             senderName = userName,
             senderGuardAddress = guard.address,
             senderGuardHostname = guard.hostname,
@@ -154,9 +151,8 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.retry()
         }
 
-        message.sent = true
-        repository.local.updateMessage(message)
-
+        val entity = message.markAsSent() ?: return Result.success()
+        repository.local.updateMessage(entity)
         return Result.success()
     }
 

@@ -29,7 +29,7 @@ import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toJson
 import ro.aenigma.util.getQueryParameter
@@ -201,7 +201,7 @@ class MainViewModel @Inject constructor(
                 userName = userName.value,
                 members = memberAddresses,
                 existingGroupAddress = null,
-                actionType = MessageActionType.GROUP_CREATE
+                actionType = MessageType.GROUP_CREATE
             )
         }
     }
@@ -300,7 +300,7 @@ class MainViewModel @Inject constructor(
                 userName = userName.value,
                 groupName = name,
                 existingGroupAddress = contact.contact.address,
-                actionType = MessageActionType.GROUP_RENAMED,
+                actionType = MessageType.GROUP_RENAMED,
                 members = null
             )
         }
@@ -350,7 +350,7 @@ class MainViewModel @Inject constructor(
                 _importedContactDetails.value =
                     content.fromJson<ExportedContactData>() ?: throw Exception()
                 _sharedDataRequestResult.value = RequestState.Success(response)
-            } catch (ex: Exception) {
+            } catch (_: Exception) {
                 _sharedDataRequestResult.value = RequestState.Error(
                     Exception("Could not process shared data. Invalid content or link.")
                 )

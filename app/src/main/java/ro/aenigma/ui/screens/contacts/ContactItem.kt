@@ -27,11 +27,10 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
-import ro.aenigma.models.MessageAction
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
 
@@ -146,12 +145,11 @@ fun ContactItemPreview() {
                 hasNewMessage = true,
                 lastSynchronized = ZonedDateTime.now(),
                 type = ContactType.CONTACT
-            ), MessageEntity(
+            ), MessageEntityFactory.createOutgoing(
                 chatId = "12345-5678-5678-12345",
-                text = "Hey, how are you",
-                incoming = false,
-                uuid = null,
-                action = MessageAction(MessageActionType.TEXT, null, "12345-5678-5678-12345")
+                text = "Hello",
+                type = MessageType.TEXT,
+                actionFor = null,
             )
         ),
         isSelectionMode = false,
@@ -177,12 +175,15 @@ fun ContactItemSelectedPreview()
                 hasNewMessage = true,
                 lastSynchronized = ZonedDateTime.now(),
                 type = ContactType.CONTACT
-            ), MessageEntity(
+            ), MessageEntityFactory.createIncoming(
                 chatId = "12345-5678-5678-12345",
+                senderAddress = "12345-5678-5678-12345",
                 text = "Hey, how are you",
-                incoming = true,
-                uuid = null,
-                action = MessageAction(MessageActionType.TEXT, null, "12345-5678-5678-12345")
+                serverUUID = null,
+                refId = null,
+                actionFor = null,
+                dateReceivedOnServer = ZonedDateTime.now(),
+                type = MessageType.TEXT
             )
         ),
         isSelectionMode = true,

@@ -108,6 +108,7 @@ dependencies {
 
     // Serializer
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0"
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0")
 
     // Bouncy Castle - Crypto
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.70'

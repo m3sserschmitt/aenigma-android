@@ -2,7 +2,6 @@ package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
 import ro.aenigma.models.GroupData
-import ro.aenigma.models.MessageAction
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.text.SimpleDateFormat
@@ -37,16 +36,6 @@ class Converters {
     fun stringToZonedDateTime(date: String): ZonedDateTime?
     {
         return ZonedDateTime.parse(date)
-    }
-
-    @TypeConverter
-    fun fromMessageAction(action: MessageAction): String {
-        return action.toJson()!!
-    }
-
-    @TypeConverter
-    fun toMessageAction(value: String): MessageAction {
-        return value.fromJson()!!
     }
 
     @TypeConverter
