@@ -25,8 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
@@ -40,7 +40,6 @@ import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
-import java.time.ZonedDateTime
 
 @Composable
 fun ContactsScreen(
@@ -376,27 +375,21 @@ fun ContactsScreenPreview() {
         contacts = RequestState.Success(
             listOf(
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "123",
                         name = "John",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = true,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 ),
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "124",
                         name = "Paul",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = false,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 )
             )

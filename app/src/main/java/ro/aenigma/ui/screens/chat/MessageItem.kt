@@ -36,8 +36,8 @@ import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.PrettyDateFormatter
@@ -177,7 +177,7 @@ fun SenderName(
         return
     }
     Text(
-        text = contact.name,
+        text = contact.name.toString(),
         style = MaterialTheme.typography.bodyLarge.copy(
             fontWeight = FontWeight.Bold,
         ),
@@ -244,15 +244,12 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
             ), null, null
         ),
         allContacts = listOf(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "123-123-123-123",
                 name = "John",
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
             )
         ),
         onItemDeselected = {},
@@ -280,15 +277,12 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
             ), null, null
         ),
         allContacts = listOf(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "123-123-123-123",
                 name = "John",
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
             )
         ),
         onItemDeselected = {},
@@ -312,15 +306,12 @@ fun MessagePending() {
             ), null, null
         ),
         allContacts = listOf(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "123-123-123-123",
                 name = "John",
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
             )
         ),
         onItemDeselected = {},
@@ -344,15 +335,12 @@ fun MessageSent() {
             ), null, null
         ),
         allContacts = listOf(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "123-123-123-123",
                 name = "John",
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
             )
         ),
         onItemDeselected = {},

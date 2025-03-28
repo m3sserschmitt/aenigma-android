@@ -2,7 +2,6 @@ package ro.aenigma.services
 
 import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.MessageWithMetadata
@@ -11,15 +10,16 @@ import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.MessageSenderWorker
-import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -114,21 +114,19 @@ class MessageSaver @Inject constructor(
             return
         }
         val originAddress = onionDetails.senderPublicKey.getAddressFromPublicKey() ?: return
-        val contact = repository.local.getContact(originAddress) ?: ContactEntity(
-            address = originAddress,
-            name = onionDetails.senderName ?: return,
-            publicKey = onionDetails.senderPublicKey,
-            guardHostname = onionDetails.senderGuardHostname,
-            guardAddress = onionDetails.senderGuardAddress ?: return,
-            type = ContactType.CONTACT,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
-        )
-        contact.guardAddress = onionDetails.senderGuardAddress ?: contact.guardAddress
-        contact.guardHostname = onionDetails.senderGuardHostname ?: contact.guardHostname
-        contact.lastSynchronized = ZonedDateTime.now()
-
-        repository.local.insertOrUpdateContact(contact)
+        val contact =
+            repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
+                address = originAddress,
+                name = onionDetails.senderName,
+                publicKey = onionDetails.senderPublicKey,
+                guardHostname = onionDetails.senderGuardHostname,
+                guardAddress = onionDetails.senderGuardAddress,
+            )
+        val updatedContact =
+            contact.withGuardAddress(onionDetails.senderGuardAddress ?: contact.guardAddress)
+                .withGuardHostname(onionDetails.senderGuardHostname ?: contact.guardHostname)
+                ?: return
+        repository.local.insertOrUpdateContact(updatedContact)
     }
 
     private suspend fun createOrUpdateGroup(onionDetails: MessageWithMetadata, chatId: String) {

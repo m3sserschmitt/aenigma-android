@@ -8,15 +8,15 @@ import kotlinx.coroutines.flow.Flow
 interface ContactsDao {
 
     @Query("SELECT * FROM $CONTACTS_TABLE")
-    fun get(): Flow<List<ContactEntity>>
+    fun getFlow(): Flow<List<ContactEntity>>
 
     @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE")
-    fun getWithLastMessageFlow(): Flow<List<ContactWithLastMessage>>
+    fun getWithMessagesFlow(): Flow<List<ContactWithLastMessage>>
 
     @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE")
-    suspend fun getWithLastMessage(): List<ContactWithLastMessage>
+    suspend fun getWithMessages(): List<ContactWithLastMessage>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?

@@ -8,7 +8,6 @@ import ro.aenigma.AenigmaApp
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
@@ -27,6 +26,8 @@ import kotlinx.coroutines.launch
 import ro.aenigma.crypto.getStringDataFromSignature
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -34,7 +35,6 @@ import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toJson
 import ro.aenigma.util.getQueryParameter
 import ro.aenigma.workers.GroupUploadWorker
-import java.time.ZonedDateTime
 import javax.inject.Inject
 
 @HiltViewModel
@@ -104,10 +104,15 @@ class MainViewModel @Inject constructor(
     private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.getContactWithLastMessageFlow().collect { contacts ->
+                repository.local.getContactWithMessagesFlow().collect { contacts ->
                     val query = _contactsSearchQuery.value
                     val result = if (query.isNotBlank())
-                        contacts.filter { contact -> contact.contact.name.contains(query) }
+                        contacts.filter { contact ->
+                            contact.contact.name?.contains(
+                                query,
+                                ignoreCase = true
+                            ) == true
+                        }
                     else
                         contacts
 
@@ -125,7 +130,7 @@ class MainViewModel @Inject constructor(
                 _allContacts.value = RequestState.Loading
                 try {
                     val searchResult = if (query.isBlank())
-                        repository.local.getContactWithLastMessage()
+                        repository.local.getContactWithMessages()
                     else
                         repository.local.searchContacts(query).map { item ->
                             ContactWithLastMessage(item, null)
@@ -166,15 +171,12 @@ class MainViewModel @Inject constructor(
             _importedContactDetails.value?.publicKey.getAddressFromPublicKey() ?: return
         val publicKey = _importedContactDetails.value?.publicKey ?: return
         val guardAddress = _importedContactDetails.value?.guardAddress ?: return
-        val newContact = ContactEntity(
+        val newContact = ContactEntityFactory.createContact(
             address = contactAddress,
             name = name,
             publicKey = publicKey,
             guardHostname = _importedContactDetails.value?.guardHostname,
             guardAddress = guardAddress,
-            type = ContactType.CONTACT,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
         )
         viewModelScope.launch(ioDispatcher) {
             repository.local.insertOrUpdateContact(newContact)
@@ -260,7 +262,7 @@ class MainViewModel @Inject constructor(
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if(code != null) {
-                    emit(QrCodeDto(code, contact.name, false))
+                    emit(QrCodeDto(code, contact.name.toString(), false))
                 } else {
                     emit(null)
                 }
@@ -291,8 +293,8 @@ class MainViewModel @Inject constructor(
     fun renameContact(contact: ContactWithLastMessage, name: String) {
         when (contact.contact.type) {
             ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
-                contact.contact.name = name
-                repository.local.updateContact(contact.contact)
+                val updatedContact = contact.contact.withName(name)
+                updatedContact?.let { repository.local.updateContact(it) }
             }
 
             ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(

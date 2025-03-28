@@ -19,13 +19,11 @@ import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.GroupEntity
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.getTagQueryParameter
-import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -63,15 +61,9 @@ class GroupDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun createContactEntities(groupData: GroupData, resourceUrl: String) {
-        val contact = ContactEntity(
+        val contact = ContactEntityFactory.createGroup(
             address = groupData.address!!,
-            name = groupData.name!!,
-            publicKey = "",
-            guardHostname = null,
-            guardAddress = "",
-            type = ContactType.GROUP,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
+            name = groupData.name,
         )
         val group = GroupEntity(
             address = groupData.address,
@@ -90,15 +82,12 @@ class GroupDownloadWorker @AssistedInject constructor(
             ) {
                 continue
             }
-            val c = ContactEntity(
+            val c = ContactEntityFactory.createContact(
                 address = address,
                 name = member.name,
-                publicKey = member.publicKey!!,
+                publicKey = member.publicKey,
                 guardHostname = null,
-                guardAddress = "",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
+                guardAddress = null,
             )
             repository.local.insertOrIgnoreContact(c)
         }

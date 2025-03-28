@@ -25,11 +25,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
@@ -97,7 +96,7 @@ fun ContactItem(
                     .padding(start = 8.dp)
             ) {
                 Text(
-                    text = contact.contact.name,
+                    text = contact.contact.name.toString(),
                     style = MaterialTheme.typography.headlineSmall,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -136,15 +135,12 @@ fun ContactItem(
 fun ContactItemPreview() {
     ContactItem(
         contact = ContactWithLastMessage(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-                hasNewMessage = true,
-                lastSynchronized = ZonedDateTime.now(),
-                type = ContactType.CONTACT
             ), MessageEntityFactory.createOutgoing(
                 chatId = "12345-5678-5678-12345",
                 text = "Hello",
@@ -166,15 +162,12 @@ fun ContactItemSelectedPreview()
 {
     ContactItem(
         contact = ContactWithLastMessage(
-            ContactEntity(
+            ContactEntityFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-                hasNewMessage = true,
-                lastSynchronized = ZonedDateTime.now(),
-                type = ContactType.CONTACT
             ), MessageEntityFactory.createIncoming(
                 chatId = "12345-5678-5678-12345",
                 senderAddress = "12345-5678-5678-12345",

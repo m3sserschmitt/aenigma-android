@@ -25,10 +25,11 @@ import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.SerializerExtensions.toJson
-import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -84,7 +85,7 @@ class MessageSenderWorker @AssistedInject constructor(
         groupAddress: String?,
         groupResourceUrl: String?
     ): String? {
-        if (path.isEmpty()) {
+        if (path.isEmpty() || destination.publicKey == null) {
             return null
         }
 
@@ -111,19 +112,18 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
-        if(contactEntity.guardAddress.isValidAddress())
-        {
+        if (contactEntity.guardAddress.isValidAddress()) {
             return true
         }
         try {
-            val vertex = repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey) ?: return false
+            val vertex =
+                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
+                    ?: return false
             val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
             val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
-            contactEntity.guardAddress = guardVertex.neighborhood!!.address!!
-            contactEntity.guardHostname = guardVertex.neighborhood.hostname
-            contactEntity.lastSynchronized = ZonedDateTime.now()
-
-            repository.local.updateContact(contactEntity)
+            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
+                .withGuardHostname(guardVertex.neighborhood?.hostname)
+            updatedContact?.let { repository.local.updateContact(it) }
         } catch (_: Exception) {
             return false
         }

@@ -12,13 +12,13 @@ import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
 import ro.aenigma.util.RequestState
-import java.time.ZonedDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,25 +95,19 @@ fun AddGroupMemberDialogPreview() {
         contactWithGroup = RequestState.Idle,
         allContacts = RequestState.Success(
             listOf(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                    hasNewMessage = true,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 ),
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 )
             )
         ),

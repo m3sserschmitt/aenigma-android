@@ -16,9 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -33,7 +33,6 @@ import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.RequestState
-import java.time.ZonedDateTime
 
 @Composable
 fun ChatAppBar(
@@ -92,7 +91,7 @@ fun ChatAppBar(
             )
         } else if(contact is RequestState.Success){
             StandardAppBar(
-                title = contact.data.contact.name,
+                title = contact.data.contact.name.toString(),
                 navigateBack = navigateToContactsScreen,
                 actions = {
                     ConnectionStatusAppBarAction(
@@ -215,15 +214,12 @@ fun DefaultChatAppBarPreview() {
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",
                     guardHostname = "guard-hostname",
                     guardAddress = "guard-address",
-                    type = ContactType.CONTACT,
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),
@@ -254,15 +250,12 @@ fun SelectionModeChatAppBarPreview() {
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",
                     guardHostname = "guard-hostname",
                     guardAddress = "guard-address",
-                    type = ContactType.CONTACT,
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),

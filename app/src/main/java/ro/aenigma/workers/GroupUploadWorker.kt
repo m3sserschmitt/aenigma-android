@@ -19,8 +19,8 @@ import ro.aenigma.crypto.HashExtensions.getSha256
 import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.GroupEntity
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.GroupMember
@@ -28,7 +28,6 @@ import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.util.SerializerExtensions.toJson
-import java.time.ZonedDateTime
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -189,15 +188,9 @@ class GroupUploadWorker @AssistedInject constructor(
     private suspend fun saveGroupEntity(groupData: GroupData, resourceUrl: String) {
         groupData.name ?: return
         groupData.address ?: return
-        val contact = ContactEntity(
+        val contact = ContactEntityFactory.createGroup(
             address = groupData.address,
-            name = groupData.name,
-            publicKey = "",
-            guardHostname = "",
-            guardAddress = "",
-            type = ContactType.GROUP,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
+            name = groupData.name
         )
         repository.local.insertOrUpdateContact(contact)
         val group = GroupEntity(groupData.address, groupData, resourceUrl)

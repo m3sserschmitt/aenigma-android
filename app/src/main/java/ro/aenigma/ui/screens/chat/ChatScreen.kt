@@ -22,9 +22,9 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
@@ -386,15 +386,12 @@ fun ChatScreenPreview() {
     ChatScreen(
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "key",
                     guardHostname = "host",
                     guardAddress = "guard-address",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),

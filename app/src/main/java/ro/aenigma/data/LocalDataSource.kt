@@ -18,6 +18,7 @@ import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -43,16 +44,16 @@ class LocalDataSource @Inject constructor(
 
     val name: Flow<String> = preferencesDataStore.name
 
-    fun getContacts(): Flow<List<ContactEntity>> {
-        return contactsDao.get()
+    fun getContactsFlow(): Flow<List<ContactEntity>> {
+        return contactsDao.getFlow()
     }
 
-    fun getContactWithLastMessageFlow(): Flow<List<ContactWithLastMessage>> {
-        return contactsDao.getWithLastMessageFlow()
+    fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessage>> {
+        return contactsDao.getWithMessagesFlow()
     }
 
-    suspend fun getContactWithLastMessage(): List<ContactWithLastMessage> {
-        return contactsDao.getWithLastMessage()
+    suspend fun getContactWithMessages(): List<ContactWithLastMessage> {
+        return contactsDao.getWithMessages()
     }
 
     suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity> {
@@ -118,9 +119,8 @@ class LocalDataSource @Inject constructor(
 
     private suspend fun updateContactLastMessageId(chatId: String) {
         val contact = contactsDao.get(chatId) ?: return
-        contact.lastMessageId = messagesDao.getLastMessageId(chatId)
-        contactsDao.update(contact)
-        return
+        val updatedContact = contact.withLastMessageId(messagesDao.getLastMessageId(chatId)) ?: return
+        return contactsDao.update(updatedContact)
     }
 
     suspend fun removeMessagesSoft(messages: List<MessageEntity>) {

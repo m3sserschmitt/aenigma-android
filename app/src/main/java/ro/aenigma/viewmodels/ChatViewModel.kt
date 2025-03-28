@@ -19,6 +19,7 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFullPage
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.enums.ContactType
@@ -94,7 +95,7 @@ class ChatViewModel @Inject constructor(
     private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.getContacts().collect { contacts ->
+                repository.local.getContactsFlow().collect { contacts ->
                     _allContacts.value = RequestState.Success(contacts)
                 }
             } catch (ex: Exception) {
@@ -212,9 +213,11 @@ class ChatViewModel @Inject constructor(
                         } else {
                             val firstMessage = messages.firstOrNull()
                             val filterQueryMatched = firstMessage?.message?.text == null
-                                    || firstMessage.message.text.contains(_filterQuery.value, true)
-                            if(firstMessage != null && filterQueryMatched)
-                            {
+                                    || firstMessage.message.text.contains(
+                                _filterQuery.value,
+                                ignoreCase = true
+                            )
+                            if (firstMessage != null && filterQueryMatched) {
                                 addNewItemToConversation(firstMessage)
                             }
                         }
@@ -389,7 +392,6 @@ class ChatViewModel @Inject constructor(
 
     fun renameContact(name: String) {
         val contact = getSelectedContactEntity() ?: return
-        contact.name = name
         when (contact.type) {
             ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager,
@@ -401,7 +403,8 @@ class ChatViewModel @Inject constructor(
             )
 
             ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
-                repository.local.insertOrUpdateContact(contact)
+                val updatedContact = contact.withName(name)
+                updatedContact?.let { repository.local.updateContact(it) }
             }
         }
     }
