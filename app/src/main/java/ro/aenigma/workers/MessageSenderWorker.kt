@@ -12,7 +12,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import ro.aenigma.crypto.AddressExtensions.isValidAddress
+import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -24,7 +24,8 @@ import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.SignatureExtensions.sign
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
@@ -96,19 +97,18 @@ class MessageSenderWorker @AssistedInject constructor(
             arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-        val messageDetails = MessageWithMetadata(
+        val message = MessageWithMetadata(
             text = message.text,
             type = message.type,
             actionFor = message.actionFor,
             senderName = userName,
             senderGuardAddress = guard.address,
             senderGuardHostname = guard.hostname,
-            senderPublicKey = signatureService.publicKey, // TODO: public key & guard should not be sent in every message
+            senderPublicKey = signatureService.publicKey,
             refId = message.refId,
-            groupResourceUrl = groupResourceUrl,
-        )
-        val serializedData = messageDetails.toJson()?.toByteArray() ?: return null
-        return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
+            groupResourceUrl = groupResourceUrl
+        ).sign(signatureService).toJson()?.toByteArray() ?: return null
+        return CryptoProvider.sealOnionEx(message, keys, addresses)
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {

@@ -1,6 +1,6 @@
 package ro.aenigma.models
 
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 
 class GroupMember(
     val name: String? = null,

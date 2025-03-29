@@ -15,8 +15,8 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.CryptoProvider
-import ro.aenigma.crypto.HashExtensions.getSha256
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.HashExtensions.getSha256Hex
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.factories.ContactEntityFactory
@@ -89,7 +89,7 @@ class GroupUploadWorker @AssistedInject constructor(
             .filter { item -> item.type == ContactType.CONTACT }
         val members = contacts.map { item -> GroupMember(item.name, item.publicKey) } +
                 GroupMember(userName, signatureService.publicKey)
-        return GroupData(UUID.randomUUID().toString().getSha256(), groupName, members)
+        return GroupData(UUID.randomUUID().toString().getSha256Hex(), groupName, members)
     }
 
     private fun renameGroup(existingGroupData: GroupData, name: String): GroupData {

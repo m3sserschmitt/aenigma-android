@@ -1,7 +1,7 @@
 package ro.aenigma.crypto.services
 
 import android.content.Context
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager

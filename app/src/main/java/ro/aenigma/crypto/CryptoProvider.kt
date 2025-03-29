@@ -1,10 +1,10 @@
 package ro.aenigma.crypto
 
 import android.util.Base64
-import ro.aenigma.crypto.AddressExtensions.isValidAddress
-import ro.aenigma.crypto.Base64Extensions.isValidBase64
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPrivateKey
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
+import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPrivateKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 
 class CryptoProvider {
     companion object {

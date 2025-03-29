@@ -7,12 +7,12 @@ import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.Vertex
 import retrofit2.Response
-import ro.aenigma.crypto.AddressExtensions.isValidAddress
-import ro.aenigma.crypto.Base64Extensions.isValidBase64
+import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
+import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.CryptoProvider
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
-import ro.aenigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
-import ro.aenigma.crypto.getStringDataFromSignature
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.publicKeyMatchAddress
+import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import retrofit2.converter.jackson.JacksonConverterFactory
 
 object SerializerExtensions {
-
     @JvmStatic
     fun createJsonConverterFactory(): JacksonConverterFactory {
         return JacksonConverterFactory.create(createJsonMapper())
@@ -20,6 +19,7 @@ object SerializerExtensions {
         return JsonMapper.builder()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+            .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
             .findAndAddModules()
             .build()
             .setPropertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE)
@@ -44,15 +44,20 @@ object SerializerExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> T?.deepCopy(): T? {
+    inline fun <reified T, reified V> T?.map(): V? {
         return if (this == null) {
             null
         } else try {
             val objectMapper = createJsonMapper()
             val json = objectMapper.writeValueAsString(this)
-            objectMapper.readValue(json, T::class.java)
+            objectMapper.readValue(json, V::class.java)
         } catch (_: Exception) {
             null
         }
+    }
+
+    @JvmStatic
+    inline fun <reified T> T?.deepCopy(): T? {
+        return this.map()
     }
 }

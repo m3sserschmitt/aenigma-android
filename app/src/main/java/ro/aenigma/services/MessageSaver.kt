@@ -7,7 +7,8 @@ import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.SignatureExtensions.verify
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
@@ -15,6 +16,7 @@ import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHost
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.SignedMessageWithMetadata
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
@@ -33,7 +35,7 @@ class MessageSaver @Inject constructor(
 ) {
     private val localAddress = signatureService.address
 
-    private suspend fun execute(data: MessageEntity) {
+    private suspend fun postToDatabase(data: MessageEntity) {
         try {
             if (data.serverUUID == null || repository.local.getMessageByUuid(data.serverUUID) != null) {
                 return
@@ -60,17 +62,22 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private suspend fun interpret(message: ParsedMessageDto): MessageEntity? {
+    private suspend fun parseContent(message: ParsedMessageDto): MessageEntity? {
         return try {
-            if(message.chatId == null)
+            if (message.chatId == null) {
+                return null
+            }
+            val messageWithMetadata =
+                message.content.fromJson<SignedMessageWithMetadata>() ?: return null
+            if(!messageWithMetadata.verify())
             {
                 return null
             }
-            val messageWithMetadata = message.content.fromJson<MessageWithMetadata>() ?: return null
             createOrUpdateEntities(messageWithMetadata, message.chatId)
             MessageEntityFactory.createIncoming(
                 chatId = message.chatId,
-                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey() ?: message.chatId,
+                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey()
+                    ?: message.chatId,
                 serverUUID = message.uuid,
                 text = messageWithMetadata.text,
                 type = messageWithMetadata.type ?: MessageType.TEXT,
@@ -85,18 +92,22 @@ class MessageSaver @Inject constructor(
 
     suspend fun handleRoutingRequest(routingRequest: RoutingRequest) {
         val parsedMessage = onionParsingService.parse(routingRequest)
-        val messageEntity = parsedMessage.mapNotNull { item -> interpret(item) }
+        val messageEntity = parsedMessage.mapNotNull { item -> parseContent(item) }
         saveIncomingMessages(messageEntity)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessage>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
-            .mapNotNull { item -> interpret(item) }
+            .mapNotNull { item -> parseContent(item) }
         saveIncomingMessages(messageEntities)
     }
 
-    suspend fun saveOutgoingMessage(message: MessageEntity, userName: String, resourceUrl: String? = null): Long? {
+    suspend fun saveOutgoingMessage(
+        message: MessageEntity,
+        userName: String,
+        resourceUrl: String? = null
+    ): Long? {
         try {
             val entity = message.withSenderAddress(localAddress) ?: return null
             val messageId = repository.local.insertMessage(entity)
@@ -148,7 +159,7 @@ class MessageSaver @Inject constructor(
     }
 
     private suspend fun saveIncomingMessages(messages: List<MessageEntity>) {
-        messages.forEach { item -> execute(item) }
+        messages.forEach { item -> postToDatabase(item) }
     }
 
     private suspend fun notify(message: MessageEntity) {

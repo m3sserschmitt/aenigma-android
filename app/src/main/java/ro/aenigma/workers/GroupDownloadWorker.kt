@@ -14,8 +14,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository

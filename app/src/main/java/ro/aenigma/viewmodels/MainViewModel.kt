@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import ro.aenigma.R
 import ro.aenigma.AenigmaApp
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.network.EnigmaApi
@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ro.aenigma.crypto.getStringDataFromSignature
+import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName

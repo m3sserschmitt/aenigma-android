@@ -2,7 +2,7 @@ package ro.aenigma.models
 
 import ro.aenigma.models.enums.MessageType
 
-data class MessageWithMetadata(
+open class MessageWithMetadata(
     val text: String? = null,
     val type: MessageType? = null,
     val senderName: String? = null,
@@ -11,5 +11,5 @@ data class MessageWithMetadata(
     val senderGuardHostname: String? = null,
     val senderPublicKey: String? = null,
     val refId: String? = null,
-    val actionFor: String? = null,
+    val actionFor: String? = null
 )
