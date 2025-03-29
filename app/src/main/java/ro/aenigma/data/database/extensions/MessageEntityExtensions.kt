@@ -30,6 +30,11 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
+    fun MessageEntity?.withId(id: Long): MessageEntity? {
+        return this.deepCopy()?.copy(id = id)
+    }
+
+    @JvmStatic
     fun MessageEntity?.markAsSent(): MessageEntity? {
         return this.deepCopy()?.copy(sent = true)
     }

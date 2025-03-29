@@ -3,12 +3,11 @@ package ro.aenigma.data.database
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import ro.aenigma.util.Constants.Companion.GRAPH_VERSIONS_TABLE
-import java.util.Date
+import java.time.ZonedDateTime
 
 @Entity(tableName = GRAPH_VERSIONS_TABLE)
-class GraphVersionEntity (
+data class GraphVersionEntity (
+    @PrimaryKey(autoGenerate = true) var id: Int = 0,
     val version: String,
-    val date: Date
-) {
-    @PrimaryKey(autoGenerate = true) var id: Int = 0
-}
+    val dateCreated: ZonedDateTime
+)

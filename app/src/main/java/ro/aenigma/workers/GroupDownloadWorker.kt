@@ -19,8 +19,8 @@ import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
 import ro.aenigma.util.getTagQueryParameter
@@ -65,7 +65,7 @@ class GroupDownloadWorker @AssistedInject constructor(
             address = groupData.address!!,
             name = groupData.name,
         )
-        val group = GroupEntity(
+        val group = GroupEntityFactory.create(
             address = groupData.address,
             groupData = groupData,
             resourceUrl = resourceUrl

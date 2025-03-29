@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
@@ -185,7 +186,7 @@ fun ChatContentPreview() {
             senderAddress = null,
             refId = null,
             dateReceivedOnServer = ZonedDateTime.now()
-        ), null, null
+        ).withId(1)!!, null, null
     )
     val message2 = MessageWithDetails(
         MessageEntityFactory.createOutgoing(
@@ -193,10 +194,8 @@ fun ChatContentPreview() {
             text = "Hey, how are you?",
             type = MessageType.TEXT,
             actionFor = null,
-        ), null, null
+        ).withId(2)!!, null, null
     )
-    message1.message.id = 1
-    message2.message.id = 2
 
     ChatContent(
         messages = RequestState.Success(

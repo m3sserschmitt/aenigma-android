@@ -16,8 +16,7 @@ import ro.aenigma.util.Constants.Companion.GROUPS_TABLE
     )]
 )
 data class GroupEntity (
-    @PrimaryKey
-    val address: String,
+    @PrimaryKey val address: String,
     val groupData: GroupData,
     val resourceUrl: String
 )

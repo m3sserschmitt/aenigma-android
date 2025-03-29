@@ -179,6 +179,7 @@ fun ContactsScreen(
                 onContactRenamed(selectedItems.single(), name)
             }
             renameContactDialogVisible = false
+            isSelectionMode = false
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -217,6 +218,7 @@ fun ContactsScreen(
         onConfirmClicked = { name ->
             onGroupCreated(selectedItems, name)
             createGroupDialogVisible = false
+            isSelectionMode = false
         },
         onDismissClicked = {
             onContactSaveDismissed()

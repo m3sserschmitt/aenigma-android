@@ -10,16 +10,16 @@ object ContactEntityExtensions {
     }
 
     fun ContactEntity?.withName(name: String?): ContactEntity? {
-        return this.deepCopy()?.copy(name = name)
+        return this.deepCopy()?.copy(name = name, dateUpdated = ZonedDateTime.now())
     }
 
     fun ContactEntity?.withGuardAddress(guardAddress: String?): ContactEntity? {
         return this.deepCopy()
-            ?.copy(guardAddress = guardAddress, lastSynchronized = ZonedDateTime.now())
+            ?.copy(guardAddress = guardAddress, dateUpdated = ZonedDateTime.now())
     }
 
     fun ContactEntity?.withGuardHostname(guardHostname: String?): ContactEntity? {
         return this.deepCopy()
-            ?.copy(guardHostname = guardHostname, lastSynchronized = ZonedDateTime.now())
+            ?.copy(guardHostname = guardHostname, dateUpdated = ZonedDateTime.now())
     }
 }

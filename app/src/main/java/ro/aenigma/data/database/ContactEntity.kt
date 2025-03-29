@@ -16,5 +16,6 @@ data class ContactEntity(
     val lastMessageId: Long?,
     val hasNewMessage: Boolean,
     val type: ContactType,
-    val lastSynchronized: ZonedDateTime,
+    val dateCreated: ZonedDateTime,
+    val dateUpdated: ZonedDateTime
 )

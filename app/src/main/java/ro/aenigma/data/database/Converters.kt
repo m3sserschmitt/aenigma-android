@@ -4,28 +4,9 @@ import androidx.room.TypeConverter
 import ro.aenigma.models.GroupData
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toJson
-import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
-import java.util.*
 
 class Converters {
-
-    @TypeConverter
-    fun dateToString(date: Date): String
-    {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
-
-        return dateFormat.format(date)
-    }
-
-    @TypeConverter
-    fun stringToDate(date: String): Date?
-    {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.getDefault())
-
-        return dateFormat.parse(date)
-    }
-
     @TypeConverter
     fun zonedDateTimeToString(date: ZonedDateTime): String
     {

@@ -22,6 +22,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
@@ -370,7 +371,7 @@ fun ChatScreenPreview() {
             refId = null,
             actionFor = null,
             dateReceivedOnServer = ZonedDateTime.now()
-        ), null, null
+        ).withId(1)!!, null, null
     )
     val message2 = MessageWithDetails(
         MessageEntityFactory.createOutgoing(
@@ -378,10 +379,8 @@ fun ChatScreenPreview() {
             text = "Hey, how are you?",
             type = MessageType.TEXT,
             actionFor = null,
-        ), null, null
+        ).withId(2)!!, null, null
     )
-    message1.message.id = 1
-    message2.message.id = 2
 
     ChatScreen(
         contact = RequestState.Success(

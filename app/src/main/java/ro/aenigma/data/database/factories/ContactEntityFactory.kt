@@ -10,6 +10,7 @@ class ContactEntityFactory {
         fun createContact(address: String, name: String?, publicKey: String?, guardHostname: String?,
                    guardAddress: String?
         ): ContactEntity {
+            val dateCreated = ZonedDateTime.now()
             return ContactEntity(
                 address = address,
                 name = name,
@@ -19,12 +20,14 @@ class ContactEntityFactory {
                 type = ContactType.CONTACT,
                 hasNewMessage = false,
                 lastMessageId = null,
-                lastSynchronized = ZonedDateTime.now()
+                dateCreated = dateCreated,
+                dateUpdated = dateCreated
             )
         }
 
         @JvmStatic
         fun createGroup(address: String, name: String?): ContactEntity {
+            val dateCreated = ZonedDateTime.now()
             return ContactEntity(
                 address = address,
                 name = name,
@@ -34,7 +37,8 @@ class ContactEntityFactory {
                 type = ContactType.GROUP,
                 hasNewMessage = false,
                 lastMessageId = null,
-                lastSynchronized = ZonedDateTime.now()
+                dateCreated = dateCreated,
+                dateUpdated = dateCreated
             )
         }
     }

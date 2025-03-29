@@ -5,10 +5,8 @@ import androidx.room.PrimaryKey
 import ro.aenigma.util.Constants.Companion.EDGES_TABLE
 
 @Entity(tableName = EDGES_TABLE)
-class EdgeEntity (
+data class EdgeEntity (
+    @PrimaryKey(autoGenerate = true) var id: Long = 0,
     val sourceAddress: String,
     val targetAddress: String
 )
-{
-    @PrimaryKey(autoGenerate = true) var id: Long = 0
-}
