@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
@@ -35,9 +34,8 @@ fun AddGroupMemberDialog(
         val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
         val memberAddresses = remember(contactWithGroup.data.group?.groupData?.members) {
             val items = hashSetOf<String>()
-            contactWithGroup.data.group?.groupData?.members?.mapNotNullTo(items) { item ->
-                item.publicKey.getAddressFromPublicKey()
-            } ?: hashSetOf()
+            contactWithGroup.data.group?.groupData?.members?.mapNotNullTo(items) { item -> item.address }
+                ?: hashSetOf()
         }
         val items = remember(allContacts, memberAddresses, add) {
             allContacts.data.mapNotNull { item ->

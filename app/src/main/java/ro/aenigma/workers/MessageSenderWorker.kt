@@ -24,7 +24,6 @@ import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.extensions.SignatureExtensions.sign
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
@@ -177,11 +176,8 @@ class MessageSenderWorker @AssistedInject constructor(
         val contact = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = (if (contact.contact.type == ContactType.CONTACT) listOf(contact.contact)
         else contact.group?.groupData?.members?.mapNotNull { item ->
-            val address = item.publicKey.getAddressFromPublicKey()
-            if (address != null && address != signatureService.address) {
-                repository.local.getContact(
-                    address
-                )
+            if (item.address != null && item.address != signatureService.address) {
+                repository.local.getContact(item.address)
             } else {
                 null
             }

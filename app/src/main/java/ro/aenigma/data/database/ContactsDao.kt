@@ -26,6 +26,10 @@ interface ContactsDao {
     suspend fun getWithGroup(address: String): ContactWithGroup?
 
     @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    suspend fun getWithGroup(): List<ContactWithGroup>
+
+    @Transaction
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
     fun getWithGroupFlow(address: String): Flow<ContactWithGroup?>
 

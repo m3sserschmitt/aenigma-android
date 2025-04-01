@@ -5,12 +5,10 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.GuardEntity
@@ -34,9 +32,6 @@ class GraphReaderWorker @AssistedInject constructor(
     private val repository: Repository
 ) : CoroutineWorker(context, params) {
     companion object {
-
-        private const val UNIQUE_REQUEST_IDENTIFIER = "GraphReaderWorkerRequest"
-
         private const val MAX_RETRY_COUNT = 2
 
         private const val DELAY_BETWEEN_RETRIES: Long = 3
@@ -132,15 +127,17 @@ class GraphReaderWorker @AssistedInject constructor(
 
         repository.local.insertVertices(vertices)
 
-        graph.map { vertex ->
-            vertex.neighborhood?.neighbors?.map { targetAddress ->
-                vertex.neighborhood.address?.let { sourceAddress ->
-                    repository.local.insertEdge(
-                        EdgeEntityFactory.create(
-                            sourceAddress = sourceAddress,
-                            targetAddress = targetAddress
+        graph.forEach { vertex ->
+            vertex.neighborhood?.neighbors?.map { neighborAddress ->
+                neighborAddress?.let { targetAddress ->
+                    vertex.neighborhood.address?.let { sourceAddress ->
+                        repository.local.insertEdge(
+                            EdgeEntityFactory.create(
+                                sourceAddress = sourceAddress,
+                                targetAddress = targetAddress
+                            )
                         )
-                    )
+                    }
                 }
             }
         }

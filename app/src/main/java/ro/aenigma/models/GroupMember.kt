@@ -1,13 +1,12 @@
 package ro.aenigma.models
 
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
-
-class GroupMember(
+data class GroupMember(
     val name: String? = null,
-    val publicKey: String? = null
+    val publicKey: String? = null,
+    val address: String? = null
 ) {
     override fun hashCode(): Int {
-        return publicKey.getAddressFromPublicKey().hashCode()
+        return address.hashCode()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -16,6 +15,6 @@ class GroupMember(
 
         other as GroupMember
 
-        return publicKey.getAddressFromPublicKey() == other.publicKey.getAddressFromPublicKey()
+        return address == other.address
     }
 }

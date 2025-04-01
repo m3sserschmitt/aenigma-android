@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.GroupEntity
@@ -57,6 +56,8 @@ class ChatViewModel @Inject constructor(
 
     private val _isMember = MutableStateFlow(false)
 
+    private val _isAdmin = MutableStateFlow(false)
+
     private val _conversation =
         MutableStateFlow<RequestState<List<MessageWithDetails>>>(RequestState.Idle)
 
@@ -69,6 +70,8 @@ class ChatViewModel @Inject constructor(
     val selectedContact: StateFlow<RequestState<ContactWithGroup>> = _selectedContact
 
     val isMember: StateFlow<Boolean> = _isMember
+
+    val isAdmin: StateFlow<Boolean> = _isAdmin
 
     val conversation: StateFlow<RequestState<List<MessageWithDetails>>> = _conversation
 
@@ -111,16 +114,24 @@ class ChatViewModel @Inject constructor(
                     if (item != null) {
                         _selectedContact.value = RequestState.Success(item)
                         when (item.contact.type) {
-                            ContactType.GROUP -> _isMember.value =
-                                item.group?.groupData?.members?.any { member ->
-                                    member.publicKey.getAddressFromPublicKey() == localAddress
-                                } ?: false
+                            ContactType.GROUP -> {
+                                _isMember.value =
+                                    item.group?.groupData?.members?.any { member ->
+                                        member.address == localAddress
+                                    } == true
+                                _isAdmin.value =
+                                    item.group?.groupData?.admins?.contains(localAddress) == true
+                            }
 
-                            ContactType.CONTACT -> _isMember.value = true
+                            ContactType.CONTACT -> {
+                                _isMember.value = true
+                                _isAdmin.value = false
+                            }
                         }
                     } else {
                         _selectedContact.value = RequestState.Error(Exception("Contact not found."))
                         _isMember.value = false
+                        _isAdmin.value = false
                     }
                 }
             } catch (ex: Exception) {

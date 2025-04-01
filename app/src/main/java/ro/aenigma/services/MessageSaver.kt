@@ -69,8 +69,7 @@ class MessageSaver @Inject constructor(
             }
             val messageWithMetadata =
                 message.content.fromJson<SignedMessageWithMetadata>() ?: return null
-            if(!messageWithMetadata.verify())
-            {
+            if (!messageWithMetadata.verify()) {
                 return null
             }
             createOrUpdateEntities(messageWithMetadata, message.chatId)

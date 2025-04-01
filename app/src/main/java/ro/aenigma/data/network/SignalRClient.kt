@@ -60,9 +60,6 @@ class SignalRClient @Inject constructor(
         private const val PULL_DATA_NULL_ERROR =
             "Data returned from $PULL_METHOD invocation was null."
 
-        private const val GENERATE_NONCE_INVOCATION_ERROR =
-            "Error while invoking $GENERATE_NONCE_METHOD method."
-
         private const val COULD_NOT_CREATE_CONNECTION_ERROR =
             "Could not create connection or invalid URL."
 
@@ -85,8 +82,6 @@ class SignalRClient @Inject constructor(
         MutableLiveData(0)
 
     val status: LiveData<SignalRStatus> get() = _status
-
-    val failedAttempts: LiveData<Int> get() = _failedAttempts
 
     private fun configureConnection() {
         synchronized(_hubConnection) {
@@ -113,7 +108,7 @@ class SignalRClient @Inject constructor(
             _hubConnection = createConnection(hostname)
             this._guardAddress = guardAddress
             configureConnection()
-        } catch (ex: Exception) {
+        } catch (_: Exception) {
             updateStatus(SignalRStatus.Error(_status.value!!, COULD_NOT_CREATE_CONNECTION_ERROR))
         }
         return start()
@@ -211,12 +206,12 @@ class SignalRClient @Inject constructor(
                 Neighborhood(signatureService.address, null, listOf(_guardAddress))
             val data = neighborhood.toJson()?.toByteArray() ?: return
             val signature = signatureService.sign(data)
-            if (signature == null) {
+            if (signature.publicKey == null || signature.signedData == null) {
                 updateStatus(SignalRStatus.Error(_status.value))
                 return
             }
 
-            val broadcastRequest = VertexBroadcastRequest(signature.first, signature.second)
+            val broadcastRequest = VertexBroadcastRequest(signature.publicKey, signature.signedData)
             synchronized(_hubConnection) {
                 return _hubConnection.invoke(
                     VertexBroadcastResult::class.java, BROADCAST_METHOD,
@@ -290,8 +285,8 @@ class SignalRClient @Inject constructor(
                     val signature =
                         if (decodedToken != null) signatureService.sign(decodedToken) else null
 
-                    if (signature != null) {
-                        authenticate(signature.first, signature.second)
+                    if (signature != null && signature.publicKey != null && signature.signedData != null) {
+                        authenticate(signature.publicKey, signature.signedData)
                     } else {
                         updateStatus(SignalRStatus.Error(_status.value, INTERNAL_ERROR))
                     }

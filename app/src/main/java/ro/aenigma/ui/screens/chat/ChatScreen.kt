@@ -57,6 +57,7 @@ fun ChatScreen(
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val allContacts by chatViewModel.allContacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
+    val isAdmin by chatViewModel.isAdmin.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -67,6 +68,7 @@ fun ChatScreen(
     ChatScreen(
         contact = selectedContact,
         isMember = isMember,
+        isAdmin = isAdmin,
         allContacts = allContacts,
         connectionStatus = connectionStatus,
         replyToMessage = replyToMessage,
@@ -99,6 +101,7 @@ fun ChatScreen(
 fun ChatScreen(
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
+    isAdmin: Boolean,
     allContacts: RequestState<List<ContactEntity>>,
     connectionStatus: SignalRStatus,
     messages: RequestState<List<MessageWithDetails>>,
@@ -248,6 +251,7 @@ fun ChatScreen(
                 messages = messages,
                 contact = contact,
                 isMember = isMember,
+                isAdmin = isAdmin,
                 connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
@@ -395,6 +399,7 @@ fun ChatScreenPreview() {
             )
         ),
         isMember = true,
+        isAdmin = false,
         allContacts = RequestState.Idle,
         connectionStatus = SignalRStatus.Connected(),
         replyToMessage = null,

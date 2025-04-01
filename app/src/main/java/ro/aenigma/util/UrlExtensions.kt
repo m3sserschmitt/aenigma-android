@@ -1,15 +1,15 @@
 package ro.aenigma.util
 
-import android.net.Uri
+import androidx.core.net.toUri
 
 fun String.getBaseUrl(): String {
-    val uri = Uri.parse(this)
+    val uri = this.toUri()
     val port = if (uri.port != -1) ":${uri.port}" else ""
     return "${uri.scheme}://${uri.host}$port"
 }
 
 fun String.getQueryParameter(key: String): String? {
-    val uri = Uri.parse(this)
+    val uri = this.toUri()
     val matchingKey = uri.queryParameterNames.find { item ->
         item.equals(key, ignoreCase = true)
     }

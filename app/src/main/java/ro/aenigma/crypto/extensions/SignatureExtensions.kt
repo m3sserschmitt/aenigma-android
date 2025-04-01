@@ -40,7 +40,7 @@ object SignatureExtensions {
     @JvmStatic
     fun MessageWithMetadata.sign(signatureService: SignatureService): SignedMessageWithMetadata? {
         val hash = this.toJson()?.getSha256() ?: return null
-        val signature = signatureService.sign(hash) ?: return null
+        val signature = signatureService.sign(hash)
         return SignedMessageWithMetadata(
             text = this.text,
             type = this.type,
@@ -51,7 +51,7 @@ object SignatureExtensions {
             senderPublicKey = this.senderPublicKey,
             refId = this.refId,
             actionFor = this.actionFor,
-            signature = signature.second
+            signature = signature.signedData
         )
     }
 

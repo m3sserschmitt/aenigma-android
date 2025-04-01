@@ -15,8 +15,6 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.CryptoProvider
-import ro.aenigma.crypto.extensions.HashExtensions.getSha256Hex
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.factories.ContactEntityFactory
@@ -26,9 +24,12 @@ import ro.aenigma.models.GroupData
 import ro.aenigma.models.GroupMember
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
+import ro.aenigma.models.extensions.GroupDataExtensions.withName
+import ro.aenigma.models.factories.GroupDataFactory
+import ro.aenigma.models.factories.GroupMemberFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.util.SerializerExtensions.toJson
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -83,24 +84,30 @@ class GroupUploadWorker @AssistedInject constructor(
     }
 
     private suspend fun createNewGroup(
-        memberAddresses: List<String>, userName: String, groupName: String
-    ): GroupData {
+        memberAddresses: List<String>, userName: String, groupName: String, admins: List<String>
+    ): GroupData? {
+        signatureService.publicKey ?: return null
         val contacts = memberAddresses.mapNotNull { item -> repository.local.getContact(item) }
             .filter { item -> item.type == ContactType.CONTACT }
-        val members = contacts.map { item -> GroupMember(item.name, item.publicKey) } +
-                GroupMember(userName, signatureService.publicKey)
-        return GroupData(UUID.randomUUID().toString().getSha256Hex(), groupName, members)
+        val members = contacts.mapNotNull { item ->
+            item.name?.let { name ->
+                item.publicKey?.let { publicKey ->
+                    GroupMemberFactory.create(name = name, publicKey = publicKey)
+                }
+            }
+        } + GroupMemberFactory.create(userName, signatureService.publicKey!!)
+        return GroupDataFactory.create(name = groupName, members = members, admins = admins)
     }
 
-    private fun renameGroup(existingGroupData: GroupData, name: String): GroupData {
-        return GroupData(existingGroupData.address, name, existingGroupData.members)
+    private fun renameGroup(existingGroupData: GroupData, name: String): GroupData? {
+        return existingGroupData.withName(name)
     }
 
-    private fun leaveGroup(existingGroupData: GroupData): GroupData {
+    private fun leaveGroup(existingGroupData: GroupData): GroupData? {
         val members = existingGroupData.members?.filter { item ->
-            item.publicKey.getAddressFromPublicKey() != signatureService.address
+            item.address != signatureService.address
         }
-        return GroupData(existingGroupData.address, existingGroupData.name, members)
+        return existingGroupData.withMembers(members)
     }
 
     private suspend fun modifyGroupMembers(
@@ -114,15 +121,19 @@ class GroupUploadWorker @AssistedInject constructor(
             MessageType.GROUP_MEMBER_REMOVE -> {
                 val memberAddressesSet = HashSet(memberAddresses)
                 existingGroupData.members.filter { item ->
-                    !memberAddressesSet.contains(item.publicKey.getAddressFromPublicKey())
+                    !memberAddressesSet.contains(item.address)
                 }
             }
 
             MessageType.GROUP_MEMBER_ADD -> {
                 val result = mutableSetOf<GroupMember>()
-                memberAddresses.mapTo(result) { address ->
+                memberAddresses.mapNotNullTo(result) { address ->
                     val contact = repository.local.getContact(address)
-                    GroupMember(contact?.name, contact?.publicKey)
+                    contact?.name?.let { name ->
+                        contact.publicKey?.let { publicKey ->
+                            GroupMemberFactory.create(name, publicKey)
+                        }
+                    }
                 }
                 result.addAll(existingGroupData.members)
                 result.toList()
@@ -132,7 +143,7 @@ class GroupUploadWorker @AssistedInject constructor(
                 existingGroupData.members
             }
         }
-        return GroupData(existingGroupData.address, existingGroupData.name, members)
+        return existingGroupData.withMembers(members)
     }
 
     private suspend fun createGroupData(
@@ -140,6 +151,7 @@ class GroupUploadWorker @AssistedInject constructor(
         groupName: String?,
         memberAddresses: List<String>,
         userName: String?,
+        admins: List<String>,
         actionType: MessageType
     ): GroupData? {
         return when (actionType) {
@@ -153,7 +165,7 @@ class GroupUploadWorker @AssistedInject constructor(
                 if(memberAddresses.isEmpty()) return null
                 userName ?: return null
                 groupName ?: return null
-                createNewGroup(memberAddresses, userName, groupName)
+                createNewGroup(memberAddresses, userName, groupName, admins)
             }
 
             MessageType.GROUP_MEMBER_LEFT -> {
@@ -240,10 +252,11 @@ class GroupUploadWorker @AssistedInject constructor(
         val groupName = inputData.getString(GROUP_NAME_ARG)
         val memberAddresses = inputData.getStringArray(MEMBERS_ARG)?.toList() ?: listOf()
         val groupAddress = inputData.getString(EXISTING_GROUP_ADDRESS_ARG)
+        val admins = listOf(signatureService.address!!)
         val existingGroupData =
             if (groupAddress != null) repository.local.getContactWithGroup(groupAddress)?.group?.groupData else null
         val groupData =
-            createGroupData(existingGroupData, groupName, memberAddresses, userName, actionType)
+            createGroupData(existingGroupData, groupName, memberAddresses, userName, admins, actionType)
                 ?: return Result.failure()
         val membersToEncryptFor =
             if ((groupData.members?.size ?: 0) >= (existingGroupData?.members?.size

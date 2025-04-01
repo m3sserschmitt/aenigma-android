@@ -68,6 +68,10 @@ class LocalDataSource @Inject constructor(
         return contactsDao.getWithGroup(address)
     }
 
+    suspend fun getContactsWithGroup(): List<ContactWithGroup> {
+        return contactsDao.getWithGroup()
+    }
+
     fun getContactWithGroupFlow(address: String): Flow<ContactWithGroup?> {
         return contactsDao.getWithGroupFlow(address)
     }

@@ -39,6 +39,7 @@ fun ChatAppBar(
     messages: RequestState<List<MessageWithDetails>>,
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
+    isAdmin: Boolean,
     connectionStatus: SignalRStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
@@ -108,6 +109,7 @@ fun ChatAppBar(
                         messages = messages,
                         isGroup = contact.data.contact.type == ContactType.GROUP,
                         isMember = isMember,
+                        isAdmin = isAdmin,
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
@@ -126,6 +128,7 @@ fun MoreActions(
     messages: RequestState<List<MessageWithDetails>>,
     isGroup: Boolean,
     isMember: Boolean,
+    isAdmin: Boolean,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit,
@@ -163,7 +166,7 @@ fun MoreActions(
             imageVector = Icons.Filled.Add,
             contentDescription = stringResource(id = R.string.add_group_member),
             text = stringResource(id = R.string.add_group_member),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
                 expanded = false
@@ -173,7 +176,7 @@ fun MoreActions(
             imageVector = Icons.Filled.Clear,
             contentDescription = stringResource(id = R.string.remove_group_member),
             text = stringResource(id = R.string.remove_group_member),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
                 expanded = false
@@ -183,7 +186,7 @@ fun MoreActions(
             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
             contentDescription = stringResource(id = R.string.leave_group),
             text = stringResource(id = R.string.leave_group),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && !isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
                 expanded = false
@@ -224,6 +227,7 @@ fun DefaultChatAppBarPreview() {
             )
         ),
         isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
@@ -260,6 +264,7 @@ fun SelectionModeChatAppBarPreview() {
             )
         ),
         isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},

@@ -164,7 +164,8 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems)
+            onDeleteSelectedItems(selectedItems.toList())
+            selectedItems.clear()
         },
         onDismissClicked = {
             deleteContactsConfirmationVisible = false
@@ -175,11 +176,13 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            if (selectedItems.size == 1) {
-                onContactRenamed(selectedItems.single(), name)
+            val contact = selectedItems.singleOrNull()
+            if (contact != null) {
+                onContactRenamed(contact, name)
             }
             renameContactDialogVisible = false
             isSelectionMode = false
+            selectedItems.clear()
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -216,9 +219,10 @@ fun ContactsScreen(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            onGroupCreated(selectedItems, name)
+            onGroupCreated(selectedItems.toList(), name)
             createGroupDialogVisible = false
             isSelectionMode = false
+            selectedItems.clear()
         },
         onDismissClicked = {
             onContactSaveDismissed()
@@ -249,6 +253,7 @@ fun ContactsScreen(
         selectedItemsCount = selectedItems.size,
         onSelectionModeExited = {
             isSelectionMode = false
+            selectedItems.clear()
         }
     )
 
