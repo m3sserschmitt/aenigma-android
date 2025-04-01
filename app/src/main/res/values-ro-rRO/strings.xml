@@ -106,4 +106,5 @@
     <string name="are_you_sure_leave_group">Părăsiți grupul? Această acțiune este ireversibilă.</string>
     <string name="reset_username">Resetați numele de utilizator</string>
     <string name="cannot_share_groups">Grupurile nu pot fi distribuite.</string>
+    <string name="cannot_select_groups_to_create_group">Nu poteți selecta grupuri pentru a crea un nou grup.</string>
 </resources>

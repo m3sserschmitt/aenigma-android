@@ -107,7 +107,7 @@ fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            text = PrettyDateFormatter.formatPastDate(message.message.date),
+            text = PrettyDateFormatter.formatMessageDateTime(message.message.date),
             style = MaterialTheme.typography.bodyLarge
         )
     }

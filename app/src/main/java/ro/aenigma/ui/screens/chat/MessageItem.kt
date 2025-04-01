@@ -141,7 +141,7 @@ fun MessageItem(
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.getTime(message.message.date),
+                            text = PrettyDateFormatter.formatTime(message.message.date),
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )

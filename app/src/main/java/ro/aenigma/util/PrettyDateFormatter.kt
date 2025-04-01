@@ -1,80 +1,47 @@
 package ro.aenigma.util
 
 import org.ocpsoft.prettytime.PrettyTime
-import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
-class PrettyDateFormatter
-{
-    companion object {
+object PrettyDateFormatter {
+    @JvmStatic
+    fun formatTime(date: ZonedDateTime): String {
+        val formatter = DateTimeFormatter.ofPattern("HH:mm")
+        return date.withZoneSameInstant(ZoneId.systemDefault()).format(formatter)
+    }
 
-        @JvmStatic
-        fun getTime(date: ZonedDateTime): String
-        {
-            val formatter = DateTimeFormatter.ofPattern("HH:mm")
-            return date.withZoneSameInstant(ZoneId.systemDefault()).format(formatter)
+    @JvmStatic
+    fun formatMessageDateTime(zonedDateTime: ZonedDateTime): String {
+        val now = ZonedDateTime.now()
+        val targetDateTime = zonedDateTime.withZoneSameInstant(ZoneId.systemDefault())
+        val daysAgo = ChronoUnit.DAYS.between(targetDateTime, now)
+        val yearsAgo = ChronoUnit.YEARS.between(targetDateTime, now)
+
+        return if (daysAgo < 2) {
+            PrettyTime().formatUnrounded(targetDateTime)
+        } else if (daysAgo < 7) {
+            val formater = DateTimeFormatter.ofPattern("EEE")
+            targetDateTime.format(formater)
+        } else if(yearsAgo < 1) {
+            val formater = DateTimeFormatter.ofPattern("EEE, d MMM")
+            targetDateTime.format(formater)
+        } else {
+            val formater = DateTimeFormatter.ofPattern("EEE, d MMM yyyy")
+            targetDateTime.format(formater)
         }
+    }
 
-        @JvmStatic
-        fun formatPastDate(date: ZonedDateTime): String {
-            val currentDate = ZonedDateTime.now().toLocalDate()
-            val inputDate = date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
-
-            return when {
-                inputDate.isEqual(currentDate) -> "Today"
-                inputDate.isEqual(currentDate.minusDays(1)) -> "Yesterday"
-                inputDate.isAfter(currentDate.minusWeeks(1)) -> getDayOfWeek(inputDate)
-                inputDate.isAfter(currentDate.minusMonths(1)) ->
-                    "${getDayOfWeekShort(inputDate)}, ${getMonth(inputDate)} ${inputDate.dayOfMonth}${getDayOfMonthSuffix(inputDate)}"
-                else ->
-                    "${getDayOfWeekShort(inputDate)}, ${getMonth(inputDate)} ${inputDate.dayOfMonth}${getDayOfMonthSuffix(inputDate)} ${inputDate.year}"
-            }
-        }
-
-        @JvmStatic
-        fun getMonth(date: LocalDate): String
-        {
-            return date.month.name.lowercase().replaceFirstChar { char -> char.uppercase() }
-        }
-
-        @JvmStatic
-        fun getDayOfWeek(date: LocalDate): String
-        {
-            return date.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }
-        }
-
-        @JvmStatic
-        fun getDayOfWeekShort(date: LocalDate): String
-        {
-            return getDayOfWeek(date).substring(0 until 2)
-        }
-
-        @JvmStatic
-        fun getDayOfMonthSuffix(date: LocalDate): String {
-            return when {
-                date.dayOfMonth % 10 == 1 -> "st"
-                date.dayOfMonth % 10 == 2 -> "nd"
-                date.dayOfMonth % 10 == 3 -> "rd"
-                else -> "th"
-            }
-        }
-
-        @JvmStatic
-        fun prettyTimeFormat(dateTimeOffset: String?): String?
-        {
-            if(dateTimeOffset == null)
-            {
-                return null
-            }
-            return try {
-                PrettyTime().format(ZonedDateTime.parse(dateTimeOffset))
-            }
-            catch (_: Exception)
-            {
-                return null
-            }
+    @JvmStatic
+    fun formatDateTime(zonedDateTime: String?): String? {
+        return try {
+            val parsedZonedDateTime =
+                ZonedDateTime.parse(zonedDateTime).withZoneSameInstant(ZoneId.systemDefault())
+            PrettyTime().format(parsedZonedDateTime)
+        } catch (_: Exception) {
+            return null
         }
     }
 }

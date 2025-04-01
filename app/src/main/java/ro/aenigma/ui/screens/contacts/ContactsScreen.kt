@@ -307,7 +307,15 @@ fun ContactsScreen(
                     }
                 },
                 onCreateGroupClicked = {
-                    createGroupDialogVisible = true
+                    if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.cannot_select_groups_to_create_group),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        createGroupDialogVisible = true
+                    }
                 },
                 onResetUsernameClicked = onResetUserNameClicked,
                 onRetryConnection = onRetryConnection,

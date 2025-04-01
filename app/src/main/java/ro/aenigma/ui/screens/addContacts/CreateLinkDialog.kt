@@ -91,15 +91,14 @@ fun CreateLinkDialog(
                             when (sharedData) {
                                 is RequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        val validUntil = PrettyDateFormatter.prettyTimeFormat(
+                                        val validUntil = PrettyDateFormatter.formatDateTime(
                                             sharedData.data.validUntil
                                         )
                                         if (validUntil != null) {
                                             Text(
                                                 text = stringResource(
                                                     id = R.string.link_valid_for
-                                                )
-                                                    .format(validUntil),
+                                                ).format(validUntil),
                                                 textAlign = TextAlign.Center,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onBackground
