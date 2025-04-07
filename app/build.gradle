@@ -102,9 +102,9 @@ dependencies {
     implementation 'com.google.zxing:core:3.4.1'
 
     // camera x
-    implementation "androidx.camera:camera-camera2:1.4.1"
-    implementation "androidx.camera:camera-lifecycle:1.4.1"
-    implementation "androidx.camera:camera-view:1.4.1"
+    implementation "androidx.camera:camera-camera2:1.4.2"
+    implementation "androidx.camera:camera-lifecycle:1.4.2"
+    implementation "androidx.camera:camera-view:1.4.2"
 
     // Serializer
     implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0"
@@ -121,7 +121,7 @@ dependencies {
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
 
     // DataStore
-    implementation "androidx.datastore:datastore-preferences:1.1.3"
+    implementation "androidx.datastore:datastore-preferences:1.1.4"
 
     // Material3
     implementation 'com.google.android.material:material:1.12.0'

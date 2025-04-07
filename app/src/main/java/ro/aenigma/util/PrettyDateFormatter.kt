@@ -20,7 +20,7 @@ object PrettyDateFormatter {
         val daysAgo = ChronoUnit.DAYS.between(targetDateTime, now)
         val yearsAgo = ChronoUnit.YEARS.between(targetDateTime, now)
 
-        return if (daysAgo < 2) {
+        return if (daysAgo < 1) {
             PrettyTime().formatUnrounded(targetDateTime)
         } else if (daysAgo < 7) {
             val formater = DateTimeFormatter.ofPattern("EEE")

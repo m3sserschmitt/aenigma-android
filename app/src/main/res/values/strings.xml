@@ -29,7 +29,6 @@
     <string name="erase_entire_conversation">Erase entire conversation?</string>
     <string name="this_action_is_permanent">This action is permanent and cannot be undone</string>
     <string name="delete">Delete</string>
-    <string name="reply">Reply</string>
     <string name="they_said">%s said: </string>
     <string name="you_said">You said:</string>
     <string name="delete_selected_messages">Delete selected messages?</string>

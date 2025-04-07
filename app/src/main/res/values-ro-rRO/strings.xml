@@ -30,7 +30,6 @@
     <string name="erase_entire_conversation">Ștergeți intreaga conversație?</string>
     <string name="this_action_is_permanent">Această acțiune este permanentă și nu poate fi revocată</string>
     <string name="delete">Ștergeți</string>
-    <string name="reply">Răspundeți</string>
     <string name="they_said">%s a spus:</string>
     <string name="you_said">Dvs. ați spus:</string>
     <string name="delete_selected_messages">Ștergeți mesajele selectate?</string>
