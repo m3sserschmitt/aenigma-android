@@ -178,10 +178,19 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun initialConversationLoad(messages: List<MessageWithDetails>) {
+    private fun searchFilterMatched(message: MessageWithDetails?): Boolean {
+        return message != null && message.message.text != null && message.message.text.contains(
+            _filterQuery.value,
+            ignoreCase = true
+        )
+    }
+
+    private fun addItemsToConversation(messages: List<MessageWithDetails>) {
         messages.forEach { item ->
-            readMessageDeliveryStatus(item)
-            _conversationSortedSet.add(item)
+            if(searchFilterMatched(item)) {
+                readMessageDeliveryStatus(item)
+                _conversationSortedSet.add(item)
+            }
         }
         _nextPageAvailable.value = messages.isFullPage()
     }
@@ -197,18 +206,20 @@ class ChatViewModel @Inject constructor(
         _conversationSortedSet.clear()
     }
 
-    private fun addNewItemToConversation(message: MessageWithDetails) {
-        if (message.message.actionFor != null && message.message.type == MessageType.DELETE) {
+    private fun addNewItemToConversation(messages: List<MessageWithDetails>) {
+        val message = messages.firstOrNull()
+        if (message?.message?.actionFor != null && message.message.type == MessageType.DELETE) {
             removeItemFromConversation(message.message.actionFor)
-        } else if (message.message.type == MessageType.DELETE_ALL) {
+        } else if (message?.message?.type == MessageType.DELETE_ALL) {
             clearConversation()
         }
-        if(_conversationSortedSet.add(message)) {
+        if (searchFilterMatched(message) && _conversationSortedSet.add(message)) {
+            message ?: return
             readMessageDeliveryStatus(message)
         }
     }
 
-    private fun setConversation() {
+    private fun setConversationReadSuccess() {
         _conversation.value = RequestState.Success(
             ArrayList(_conversationSortedSet)
         )
@@ -220,19 +231,11 @@ class ChatViewModel @Inject constructor(
                 repository.local.getConversationFlow(chatId).collect { messages ->
                     synchronized(_conversationSortedSet) {
                         if (_conversationSortedSet.isEmpty()) {
-                            initialConversationLoad(messages)
+                            addItemsToConversation(messages)
                         } else {
-                            val firstMessage = messages.firstOrNull()
-                            val filterQueryMatched = firstMessage?.message?.text == null
-                                    || firstMessage.message.text.contains(
-                                _filterQuery.value,
-                                ignoreCase = true
-                            )
-                            if (firstMessage != null && filterQueryMatched) {
-                                addNewItemToConversation(firstMessage)
-                            }
+                            addNewItemToConversation(messages)
                         }
-                        setConversation()
+                        setConversationReadSuccess()
                     }
                 }
             } catch (ex: Exception) {
@@ -250,8 +253,8 @@ class ChatViewModel @Inject constructor(
                         repository.local.getConversation(chatId, getLastMessageId(), query)
                     synchronized(_conversationSortedSet) {
                         clearConversation()
-                        initialConversationLoad(searchResult)
-                        setConversation()
+                        addItemsToConversation(searchResult)
+                        setConversationReadSuccess()
                     }
                 } catch (ex: Exception) {
                     _conversation.value = RequestState.Error(ex)
@@ -265,13 +268,13 @@ class ChatViewModel @Inject constructor(
             try {
                 val lastIndex = _conversationSortedSet.last().message.id
                 val nextPage =
-                    repository.local.getConversation(chatId, lastIndex - 1, _filterQuery.value)
+                    repository.local.getConversation(chatId, lastIndex + 1, _filterQuery.value)
                 synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
                     } else {
-                        initialConversationLoad(nextPage)
-                        setConversation()
+                        addItemsToConversation(nextPage)
+                        setConversationReadSuccess()
                     }
                 }
             } catch (ex: Exception) {
