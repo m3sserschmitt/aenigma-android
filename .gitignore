@@ -32,6 +32,6 @@ google-services.json
 # Android Profiling
 *.hprof
 
-app/src/main/cpp/openssl-*
-app/src/main/cpp/openssl-*-bin
-app/src/main/cpp/openssl-*.tar.gz
+app/src/main/cpp/openssl/
+app/src/main/cpp/aenigma7/
+

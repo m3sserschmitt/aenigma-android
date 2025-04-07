@@ -1,1 +1,9 @@
 
+[submodule "app/src/main/cpp/aenigma7"]
+	path = app/src/main/cpp/aenigma7
+	url = https://github.com/m3sserschmitt/libaenigma7
+	branch = main
+[submodule "app/src/main/cpp/openssl"]
+	path = app/src/main/cpp/openssl
+	url = https://github.com/openssl/openssl/
+	branch = openssl-3.0
