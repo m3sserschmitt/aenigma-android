@@ -361,9 +361,9 @@ class SignalRClient @Inject constructor(
             } else if (result.data == null) {
                 updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
             } else {
-                updateStatus(SignalRStatus.Synchronized())
                 CoroutineScope(Dispatchers.IO).launch {
                     messageSaver.handlePendingMessages(result.data)
+                    updateStatus(SignalRStatus.Synchronized())
                 }
             }
             subscription?.dispose()

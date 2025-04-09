@@ -55,7 +55,7 @@ class MessageSaver @Inject constructor(
                 else -> {}
             }
             if (repository.local.insertMessage(data) > 0) {
-                notify(data)
+                return notify(data)
             }
         } catch (_: Exception) {
             return
@@ -99,7 +99,7 @@ class MessageSaver @Inject constructor(
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item -> parseContent(item) }
-        saveIncomingMessages(messageEntities)
+        return saveIncomingMessages(messageEntities)
     }
 
     suspend fun saveOutgoingMessage(
@@ -158,7 +158,7 @@ class MessageSaver @Inject constructor(
     }
 
     private suspend fun saveIncomingMessages(messages: List<MessageEntity>) {
-        messages.forEach { item -> postToDatabase(item) }
+        return messages.forEach { item -> postToDatabase(item) }
     }
 
     private suspend fun notify(message: MessageEntity) {

@@ -146,7 +146,7 @@ fun MoreActions(
             imageVector = Icons.Filled.Edit,
             contentDescription = stringResource(id = R.string.rename),
             text = stringResource(id = R.string.rename),
-            visible = (isGroup && isMember) || !isGroup,
+            visible = (isGroup && isMember && isAdmin) || !isGroup,
             onClick = {
                 onRenameContactClicked()
                 expanded = false

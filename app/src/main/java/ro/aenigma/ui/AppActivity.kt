@@ -89,10 +89,8 @@ class AppActivity : ComponentActivity() {
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
             actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
         )
-        val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
         WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
-            .then(cleanupRequest)
             .enqueue()
     }
 
@@ -120,6 +118,11 @@ class AppActivity : ComponentActivity() {
 
             is SignalRStatus.Error -> {
                 onClientError()
+            }
+
+            is SignalRStatus.Synchronized -> {
+                val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
+                WorkManager.getInstance(this).enqueue(cleanupRequest)
             }
         }
     }

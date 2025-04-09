@@ -179,10 +179,15 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun searchFilterMatched(message: MessageWithDetails?): Boolean {
-        return message != null && message.message.text != null && message.message.text.contains(
-            _filterQuery.value,
-            ignoreCase = true
-        )
+        val filterQuery = _filterQuery.value
+        return if (filterQuery.isBlank()) {
+            true
+        } else {
+            message != null && message.message.text != null && message.message.text.contains(
+                _filterQuery.value,
+                ignoreCase = true
+            )
+        }
     }
 
     private fun addItemsToConversation(messages: List<MessageWithDetails>) {
@@ -208,13 +213,13 @@ class ChatViewModel @Inject constructor(
 
     private fun addNewItemToConversation(messages: List<MessageWithDetails>) {
         val message = messages.firstOrNull()
-        if (message?.message?.actionFor != null && message.message.type == MessageType.DELETE) {
+        message ?: return
+        if (message.message.actionFor != null && message.message.type == MessageType.DELETE) {
             removeItemFromConversation(message.message.actionFor)
-        } else if (message?.message?.type == MessageType.DELETE_ALL) {
+        } else if (message.message.type == MessageType.DELETE_ALL) {
             clearConversation()
         }
         if (searchFilterMatched(message) && _conversationSortedSet.add(message)) {
-            message ?: return
             readMessageDeliveryStatus(message)
         }
     }
