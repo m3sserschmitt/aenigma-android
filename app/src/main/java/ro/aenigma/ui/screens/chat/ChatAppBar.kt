@@ -16,12 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -33,13 +33,13 @@ import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.RequestState
-import java.time.ZonedDateTime
 
 @Composable
 fun ChatAppBar(
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
+    isAdmin: Boolean,
     connectionStatus: SignalRStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
@@ -53,7 +53,7 @@ fun ChatAppBar(
     onSearchModeTriggered: () -> Unit,
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
-    onGroupActionClicked: (MessageActionType) -> Unit,
+    onGroupActionClicked: (MessageType) -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
@@ -92,7 +92,7 @@ fun ChatAppBar(
             )
         } else if(contact is RequestState.Success){
             StandardAppBar(
-                title = contact.data.contact.name,
+                title = contact.data.contact.name.toString(),
                 navigateBack = navigateToContactsScreen,
                 actions = {
                     ConnectionStatusAppBarAction(
@@ -109,6 +109,7 @@ fun ChatAppBar(
                         messages = messages,
                         isGroup = contact.data.contact.type == ContactType.GROUP,
                         isMember = isMember,
+                        isAdmin = isAdmin,
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
@@ -124,13 +125,14 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     isGroup: Boolean,
     isMember: Boolean,
+    isAdmin: Boolean,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit,
-    onGroupActionClicked: (MessageActionType) -> Unit
+    onGroupActionClicked: (MessageType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -144,7 +146,7 @@ fun MoreActions(
             imageVector = Icons.Filled.Edit,
             contentDescription = stringResource(id = R.string.rename),
             text = stringResource(id = R.string.rename),
-            visible = (isGroup && isMember) || !isGroup,
+            visible = (isGroup && isMember && isAdmin) || !isGroup,
             onClick = {
                 onRenameContactClicked()
                 expanded = false
@@ -164,9 +166,9 @@ fun MoreActions(
             imageVector = Icons.Filled.Add,
             contentDescription = stringResource(id = R.string.add_group_member),
             text = stringResource(id = R.string.add_group_member),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && isAdmin,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_ADD)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
                 expanded = false
             }
         )
@@ -174,9 +176,9 @@ fun MoreActions(
             imageVector = Icons.Filled.Clear,
             contentDescription = stringResource(id = R.string.remove_group_member),
             text = stringResource(id = R.string.remove_group_member),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && isAdmin,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_REMOVE)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
                 expanded = false
             }
         )
@@ -184,9 +186,9 @@ fun MoreActions(
             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
             contentDescription = stringResource(id = R.string.leave_group),
             text = stringResource(id = R.string.leave_group),
-            visible = isGroup && isMember,
+            visible = isGroup && isMember && !isAdmin,
             onClick = {
-                onGroupActionClicked(MessageActionType.GROUP_MEMBER_LEFT)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
                 expanded = false
             }
         )
@@ -215,19 +217,17 @@ fun DefaultChatAppBarPreview() {
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",
                     guardHostname = "guard-hostname",
                     guardAddress = "guard-address",
-                    type = ContactType.CONTACT,
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),
         isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
@@ -254,19 +254,17 @@ fun SelectionModeChatAppBarPreview() {
         connectionStatus = SignalRStatus.NotConnected(),
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",
                     guardHostname = "guard-hostname",
                     guardAddress = "guard-address",
-                    type = ContactType.CONTACT,
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),
         isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},

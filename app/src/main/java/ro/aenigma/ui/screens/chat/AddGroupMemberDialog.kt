@@ -8,22 +8,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
 import ro.aenigma.util.RequestState
-import java.time.ZonedDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddGroupMemberDialog(
-    action: MessageActionType,
+    action: MessageType,
     visible: Boolean,
     contactWithGroup: RequestState<ContactWithGroup>,
     allContacts: RequestState<List<ContactEntity>>,
@@ -31,13 +30,12 @@ fun AddGroupMemberDialog(
     onConfirmClicked: (List<String>) -> Unit
 ) {
     if (visible && allContacts is RequestState.Success && contactWithGroup is RequestState.Success) {
-        val add = action == MessageActionType.GROUP_MEMBER_ADD
+        val add = action == MessageType.GROUP_MEMBER_ADD
         val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
         val memberAddresses = remember(contactWithGroup.data.group?.groupData?.members) {
             val items = hashSetOf<String>()
-            contactWithGroup.data.group?.groupData?.members?.mapNotNullTo(items) { item ->
-                item.publicKey.getAddressFromPublicKey()
-            } ?: hashSetOf()
+            contactWithGroup.data.group?.groupData?.members?.mapNotNullTo(items) { item -> item.address }
+                ?: hashSetOf()
         }
         val items = remember(allContacts, memberAddresses, add) {
             allContacts.data.mapNotNull { item ->
@@ -90,30 +88,24 @@ fun AddGroupMemberDialog(
 @Composable
 fun AddGroupMemberDialogPreview() {
     AddGroupMemberDialog(
-        action = MessageActionType.GROUP_MEMBER_ADD,
+        action = MessageType.GROUP_MEMBER_ADD,
         visible = true,
         contactWithGroup = RequestState.Idle,
         allContacts = RequestState.Success(
             listOf(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                    hasNewMessage = true,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 ),
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 )
             )
         ),

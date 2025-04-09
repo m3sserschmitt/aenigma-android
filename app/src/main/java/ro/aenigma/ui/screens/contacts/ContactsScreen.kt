@@ -25,8 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
@@ -40,7 +40,6 @@ import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
-import java.time.ZonedDateTime
 
 @Composable
 fun ContactsScreen(
@@ -165,7 +164,8 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems)
+            onDeleteSelectedItems(selectedItems.toList())
+            selectedItems.clear()
         },
         onDismissClicked = {
             deleteContactsConfirmationVisible = false
@@ -176,10 +176,13 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            if (selectedItems.size == 1) {
-                onContactRenamed(selectedItems.single(), name)
+            val contact = selectedItems.singleOrNull()
+            if (contact != null) {
+                onContactRenamed(contact, name)
             }
             renameContactDialogVisible = false
+            isSelectionMode = false
+            selectedItems.clear()
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -216,8 +219,10 @@ fun ContactsScreen(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            onGroupCreated(selectedItems, name)
+            onGroupCreated(selectedItems.toList(), name)
             createGroupDialogVisible = false
+            isSelectionMode = false
+            selectedItems.clear()
         },
         onDismissClicked = {
             onContactSaveDismissed()
@@ -248,6 +253,7 @@ fun ContactsScreen(
         selectedItemsCount = selectedItems.size,
         onSelectionModeExited = {
             isSelectionMode = false
+            selectedItems.clear()
         }
     )
 
@@ -301,7 +307,15 @@ fun ContactsScreen(
                     }
                 },
                 onCreateGroupClicked = {
-                    createGroupDialogVisible = true
+                    if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.cannot_select_groups_to_create_group),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        createGroupDialogVisible = true
+                    }
                 },
                 onResetUsernameClicked = onResetUserNameClicked,
                 onRetryConnection = onRetryConnection,
@@ -376,27 +390,21 @@ fun ContactsScreenPreview() {
         contacts = RequestState.Success(
             listOf(
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "123",
                         name = "John",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = true,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 ),
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "124",
                         name = "Paul",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = false,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 )
             )

@@ -1,10 +1,11 @@
 package ro.aenigma.crypto.services
 
 import android.content.Context
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
+import ro.aenigma.models.SignatureDto
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,17 +39,16 @@ class SignatureService @Inject constructor(@ApplicationContext context: Context)
         }
     }
 
-    fun sign(data: ByteArray): Pair<String, String>? {
+    fun sign(data: ByteArray): SignatureDto {
         if (_publicKey == null || !ready) {
-            return null
+            return SignatureDto(_publicKey, null)
         }
         synchronized(_publicKey!!)
         {
             return try {
-                val signature = CryptoProvider.signEx(data)
-                if (signature != null) Pair(_publicKey!!, signature) else null
+                SignatureDto(_publicKey, CryptoProvider.signEx(data))
             } catch (_: Exception) {
-                null
+                SignatureDto(_publicKey, null)
             }
         }
     }

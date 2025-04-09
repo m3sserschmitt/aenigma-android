@@ -1,7 +1,8 @@
 package ro.aenigma.models
 
-class GroupData(
-    val address: String?,
-    val name: String?,
-    val members: List<GroupMember>?,
+data class GroupData(
+    val address: String? = null,
+    val name: String? = null,
+    val members: List<GroupMember>? = null,
+    val admins: List<String?>? = null
 )

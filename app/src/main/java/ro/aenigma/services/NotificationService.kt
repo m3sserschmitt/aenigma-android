@@ -93,7 +93,7 @@ class NotificationService @Inject constructor(
         )
         val intent = createChatNavigationIntent()
         val notification = createBasicNotification(
-            contact.name, messageEntity.getMessageTextByAction(context),
+            contact.name.toString(), messageEntity.getMessageTextByAction(context),
             R.drawable.ic_message,
             NEW_MESSAGE_CHANNEL_ID
         )

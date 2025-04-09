@@ -9,13 +9,13 @@ import java.time.ZonedDateTime
 @Entity(tableName = CONTACTS_TABLE)
 data class ContactEntity(
     @PrimaryKey val address: String,
-    var name: String,
-    var publicKey: String,
-    var guardHostname: String?,
-    var guardAddress: String,
+    val name: String?,
+    val publicKey: String?,
+    val guardHostname: String?,
+    val guardAddress: String?,
+    val lastMessageId: Long?,
+    val hasNewMessage: Boolean,
     val type: ContactType,
-    var hasNewMessage: Boolean,
-    var lastSynchronized: ZonedDateTime
-) {
-    var lastMessageId: Long? = null
-}
+    val dateCreated: ZonedDateTime,
+    val dateUpdated: ZonedDateTime
+)

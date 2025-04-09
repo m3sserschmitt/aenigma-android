@@ -2,7 +2,6 @@ package ro.aenigma.ui.screens.about
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,8 +31,8 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.BuildConfig
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.DialogContentTemplate
-
 import ro.aenigma.ui.screens.common.StandardAppBar
+import androidx.core.net.toUri
 
 @Composable
 fun AboutScreen(
@@ -185,7 +184,7 @@ fun LicenseDialog(
 }
 
 fun openLinkInBrowser(context: Context, url: String) {
-    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
     context.startActivity(intent)
 }
 

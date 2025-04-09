@@ -23,7 +23,7 @@ import ro.aenigma.ui.screens.common.CameraPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.RequestPermission
 import ro.aenigma.util.QrCodeAnalyzer
-import ro.aenigma.util.fromJson
+import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.openApplicationDetails
 
 @Composable

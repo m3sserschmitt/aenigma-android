@@ -12,11 +12,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import ro.aenigma.crypto.AddressExtensions.isValidAddress
-import ro.aenigma.crypto.Base64Extensions.isValidBase64
+import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.CryptoProvider
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
-import ro.aenigma.crypto.PublicKeyExtensions.publicKeyMatchAddress
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
@@ -24,15 +21,15 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.MessageWithMetadata
-import ro.aenigma.models.Vertex
 import ro.aenigma.services.PathFinder
-import com.google.gson.Gson
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.models.MessageActionDto
+import ro.aenigma.crypto.extensions.SignatureExtensions.sign
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.models.enums.ContactType
-import java.time.ZonedDateTime
+import ro.aenigma.util.SerializerExtensions.toJson
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -50,7 +47,6 @@ class MessageSenderWorker @AssistedInject constructor(
         const val MESSAGE_ID_ARG = "MessageId"
         const val RESOURCE_URL_ARG = "ResourceUrl"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-//        private const val MIN_CONTACT_SYNC_INTERVAL_MINUTES: Long = 15
         private const val DELAY_BETWEEN_RETRIES: Long = 10
         private const val MAX_RETRY_COUNT = 5
 
@@ -89,7 +85,7 @@ class MessageSenderWorker @AssistedInject constructor(
         groupAddress: String?,
         groupResourceUrl: String?
     ): String? {
-        if (path.isEmpty()) {
+        if (path.isEmpty() || destination.publicKey == null) {
             return null
         }
 
@@ -100,90 +96,33 @@ class MessageSenderWorker @AssistedInject constructor(
             arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-        val action = MessageActionDto(
-            actionType = message.action.actionType,
-            refId = message.action.refId
-        )
-        val messageDetails = MessageWithMetadata(
+        val message = MessageWithMetadata(
             text = message.text,
-            action = action,
+            type = message.type,
+            actionFor = message.actionFor,
             senderName = userName,
             senderGuardAddress = guard.address,
             senderGuardHostname = guard.hostname,
-            senderPublicKey = signatureService.publicKey, // TODO: public key & guard should not be sent in every message
+            senderPublicKey = signatureService.publicKey,
             refId = message.refId,
-            groupResourceUrl = groupResourceUrl,
-        )
-        val serializedData = Gson().toJson(messageDetails).toByteArray()
-        return CryptoProvider.sealOnionEx(serializedData, keys, addresses)
-    }
-
-    private fun validateVertex(
-        vertex: Vertex?,
-        isLeaf: Boolean,
-        publicKey: String? = null
-    ): Boolean {
-        if (vertex == null) {
-            return false
-        }
-        val key = if(publicKey.isNullOrBlank()) vertex.publicKey else publicKey
-        if (!key.isValidPublicKey()) {
-            return false
-        }
-        if ((isLeaf && vertex.neighborhood?.neighbors?.count() != 1)
-            || vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true
-        ) {
-            return false
-        }
-        if (!vertex.neighborhood.address.isValidAddress()) {
-            return false
-        }
-        if (!isLeaf && !key.publicKeyMatchAddress(vertex.neighborhood.address)) {
-            return false
-        }
-        return vertex.signedData.isValidBase64() && CryptoProvider.verifyEx(
-            key!!,
-            vertex.signedData!!
-        )
+            groupResourceUrl = groupResourceUrl
+        ).sign(signatureService).toJson()?.toByteArray() ?: return null
+        return CryptoProvider.sealOnionEx(message, keys, addresses)
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
-//        val threshold = ZonedDateTime.now().minusMinutes(MIN_CONTACT_SYNC_INTERVAL_MINUTES)
-//        val aboveThreshold = contactEntity.lastSynchronized.isBefore(threshold)
-//        if (!aboveThreshold) {
-//            return true
-//        }
-
-        if(contactEntity.guardAddress.isValidAddress())
-        {
+        if (contactEntity.guardAddress.isValidAddress()) {
             return true
         }
         try {
-            val vertexResponse = repository.remote.getVertex(contactEntity.address)
-            val vertex = vertexResponse.body()
-
-            if (vertexResponse.code() != 200 || !validateVertex(
-                    vertex,
-                    true,
-                    contactEntity.publicKey
-                )
-            ) {
-                return false
-            }
-
-            val guardAddress = vertex?.neighborhood?.neighbors?.firstOrNull() ?: return false
-            val guardResponse = repository.remote.getVertex(guardAddress)
-            val guard = guardResponse.body()
-
-            if (guardResponse.code() != 200 || !validateVertex(guard, false)) {
-                return false
-            }
-
-            contactEntity.guardAddress = guard!!.neighborhood!!.address!!
-            contactEntity.guardHostname = guard.neighborhood!!.hostname
-            contactEntity.lastSynchronized = ZonedDateTime.now()
-
-            repository.local.updateContact(contactEntity)
+            val vertex =
+                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
+                    ?: return false
+            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
+            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
+            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
+                .withGuardHostname(guardVertex.neighborhood?.hostname)
+            updatedContact?.let { repository.local.updateContact(it) }
         } catch (_: Exception) {
             return false
         }
@@ -211,9 +150,8 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.retry()
         }
 
-        message.sent = true
-        repository.local.updateMessage(message)
-
+        val entity = message.markAsSent() ?: return Result.success()
+        repository.local.updateMessage(entity)
         return Result.success()
     }
 
@@ -238,11 +176,8 @@ class MessageSenderWorker @AssistedInject constructor(
         val contact = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = (if (contact.contact.type == ContactType.CONTACT) listOf(contact.contact)
         else contact.group?.groupData?.members?.mapNotNull { item ->
-            val address = item.publicKey.getAddressFromPublicKey()
-            if (address != null && address != signatureService.address) {
-                repository.local.getContact(
-                    address
-                )
+            if (item.address != null && item.address != signatureService.address) {
+                repository.local.getContact(item.address)
             } else {
                 null
             }

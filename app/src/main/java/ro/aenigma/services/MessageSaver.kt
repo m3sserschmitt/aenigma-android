@@ -2,23 +2,26 @@ package ro.aenigma.services
 
 import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import com.google.gson.Gson
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
+import ro.aenigma.crypto.extensions.SignatureExtensions.verify
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.models.MessageAction
-import ro.aenigma.models.enums.ContactType
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
+import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.SignedMessageWithMetadata
+import ro.aenigma.models.enums.MessageType
+import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.MessageSenderWorker
-import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,63 +35,54 @@ class MessageSaver @Inject constructor(
 ) {
     private val localAddress = signatureService.address
 
-    private fun deserializeContent(message: ParsedMessageDto): MessageWithMetadata? {
-        return try {
-            Gson().fromJson(message.content, MessageWithMetadata::class.java)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private suspend fun execute(data: MessageEntity) {
+    private suspend fun postToDatabase(data: MessageEntity) {
         try {
-            if (data.uuid == null || repository.local.getMessageByUuid(data.uuid) != null) {
+            if (data.serverUUID == null || repository.local.getMessageByUuid(data.serverUUID) != null) {
                 return
             }
 
-            when (data.action.actionType) {
-                MessageActionType.DELETE -> {
-                    data.action.refId?.let {
+            when (data.type) {
+                MessageType.DELETE -> {
+                    data.actionFor?.let {
                         repository.local.removeMessageSoft(it)
                     }
                 }
 
-                MessageActionType.DELETE_ALL -> {
+                MessageType.DELETE_ALL -> {
                     data.chatId.let { repository.local.clearConversationSoft(it) }
                 }
 
                 else -> {}
             }
             if (repository.local.insertMessage(data) > 0) {
-                notify(data)
+                return notify(data)
             }
         } catch (_: Exception) {
             return
         }
     }
 
-    private suspend fun interpret(message: ParsedMessageDto): MessageEntity? {
+    private suspend fun parseContent(message: ParsedMessageDto): MessageEntity? {
         return try {
-            val messageWithMetadata = deserializeContent(message) ?: return null
-            if (messageWithMetadata.action == null && messageWithMetadata.text == null) {
+            if (message.chatId == null) {
+                return null
+            }
+            val messageWithMetadata =
+                message.content.fromJson<SignedMessageWithMetadata>() ?: return null
+            if (!messageWithMetadata.verify()) {
                 return null
             }
             createOrUpdateEntities(messageWithMetadata, message.chatId)
-            val text = messageWithMetadata.text ?: messageWithMetadata.action?.actionType.toString()
-            val action = MessageAction(
-                actionType = messageWithMetadata.action?.actionType ?: MessageActionType.TEXT,
-                refId = messageWithMetadata.action?.refId,
-                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey() ?: message.chatId
-            )
-            MessageEntity(
+            MessageEntityFactory.createIncoming(
                 chatId = message.chatId,
-                text = text,
-                incoming = true,
-                uuid = message.uuid,
-                sent = false,
-                dateReceivedOnServer = message.dateReceivedOnServer,
+                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey()
+                    ?: message.chatId,
+                serverUUID = message.uuid,
+                text = messageWithMetadata.text,
+                type = messageWithMetadata.type ?: MessageType.TEXT,
+                actionFor = messageWithMetadata.actionFor,
                 refId = messageWithMetadata.refId,
-                action = action
+                dateReceivedOnServer = message.dateReceivedOnServer,
             )
         } catch (_: Exception) {
             null
@@ -97,21 +91,25 @@ class MessageSaver @Inject constructor(
 
     suspend fun handleRoutingRequest(routingRequest: RoutingRequest) {
         val parsedMessage = onionParsingService.parse(routingRequest)
-        val messageEntity = parsedMessage.mapNotNull { item -> interpret(item) }
+        val messageEntity = parsedMessage.mapNotNull { item -> parseContent(item) }
         saveIncomingMessages(messageEntity)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessage>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
-            .mapNotNull { item -> interpret(item) }
-        saveIncomingMessages(messageEntities)
+            .mapNotNull { item -> parseContent(item) }
+        return saveIncomingMessages(messageEntities)
     }
 
-    suspend fun saveOutgoingMessage(message: MessageEntity, userName: String, resourceUrl: String? = null): Long? {
+    suspend fun saveOutgoingMessage(
+        message: MessageEntity,
+        userName: String,
+        resourceUrl: String? = null
+    ): Long? {
         try {
-            message.action.senderAddress = localAddress!!
-            val messageId = repository.local.insertMessage(message)
+            val entity = message.withSenderAddress(localAddress) ?: return null
+            val messageId = repository.local.insertMessage(entity)
             if (messageId > 0) {
                 MessageSenderWorker.createWorkRequest(workManager, messageId, userName, resourceUrl)
             }
@@ -126,21 +124,19 @@ class MessageSaver @Inject constructor(
             return
         }
         val originAddress = onionDetails.senderPublicKey.getAddressFromPublicKey() ?: return
-        val contact = repository.local.getContact(originAddress) ?: ContactEntity(
-            address = originAddress,
-            name = onionDetails.senderName ?: return,
-            publicKey = onionDetails.senderPublicKey,
-            guardHostname = onionDetails.senderGuardHostname,
-            guardAddress = onionDetails.senderGuardAddress ?: return,
-            type = ContactType.CONTACT,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
-        )
-        contact.guardAddress = onionDetails.senderGuardAddress ?: contact.guardAddress
-        contact.guardHostname = onionDetails.senderGuardHostname ?: contact.guardHostname
-        contact.lastSynchronized = ZonedDateTime.now()
-
-        repository.local.insertOrUpdateContact(contact)
+        val contact =
+            repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
+                address = originAddress,
+                name = onionDetails.senderName,
+                publicKey = onionDetails.senderPublicKey,
+                guardHostname = onionDetails.senderGuardHostname,
+                guardAddress = onionDetails.senderGuardAddress,
+            )
+        val updatedContact =
+            contact.withGuardAddress(onionDetails.senderGuardAddress ?: contact.guardAddress)
+                .withGuardHostname(onionDetails.senderGuardHostname ?: contact.guardHostname)
+                ?: return
+        repository.local.insertOrUpdateContact(updatedContact)
     }
 
     private suspend fun createOrUpdateGroup(onionDetails: MessageWithMetadata, chatId: String) {
@@ -162,7 +158,7 @@ class MessageSaver @Inject constructor(
     }
 
     private suspend fun saveIncomingMessages(messages: List<MessageEntity>) {
-        messages.forEach { item -> execute(item) }
+        return messages.forEach { item -> postToDatabase(item) }
     }
 
     private suspend fun notify(message: MessageEntity) {

@@ -21,14 +21,15 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
+import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
-import ro.aenigma.models.MessageAction
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.models.enums.MessageActionType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
@@ -56,6 +57,7 @@ fun ChatScreen(
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val allContacts by chatViewModel.allContacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
+    val isAdmin by chatViewModel.isAdmin.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -66,6 +68,7 @@ fun ChatScreen(
     ChatScreen(
         contact = selectedContact,
         isMember = isMember,
+        isAdmin = isAdmin,
         allContacts = allContacts,
         connectionStatus = connectionStatus,
         replyToMessage = replyToMessage,
@@ -98,10 +101,11 @@ fun ChatScreen(
 fun ChatScreen(
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
+    isAdmin: Boolean,
     allContacts: RequestState<List<ContactEntity>>,
     connectionStatus: SignalRStatus,
-    messages: RequestState<List<MessageEntity>>,
-    replyToMessage: MessageEntity?,
+    messages: RequestState<List<MessageWithDetails>>,
+    replyToMessage: MessageWithDetails?,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     onRetryConnection: () -> Unit,
@@ -111,10 +115,10 @@ fun ChatScreen(
     onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
-    onDelete: (List<MessageEntity>) -> Unit,
-    onReplyToMessage: (MessageEntity?) -> Unit,
+    onDelete: (List<MessageWithDetails>) -> Unit,
+    onReplyToMessage: (MessageWithDetails?) -> Unit,
     onSearch: (String) -> Unit,
-    onAddGroupMembers: (List<String>, MessageActionType) -> Unit,
+    onAddGroupMembers: (List<String>, MessageType) -> Unit,
     onLeaveGroup: () -> Unit,
     loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit,
@@ -125,10 +129,10 @@ fun ChatScreen(
     var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
     var addGroupMemberDialogVisible by remember { mutableStateOf(false) }
     var leaveGroupDialogVisible by remember { mutableStateOf(false) }
-    var addGroupMembers by remember { mutableStateOf(MessageActionType.GROUP_MEMBER_ADD) }
+    var addGroupMembers by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<MessageEntity>() }
+    val selectedItems = remember { mutableStateListOf<MessageWithDetails>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
@@ -247,6 +251,7 @@ fun ChatScreen(
                 messages = messages,
                 contact = contact,
                 isMember = isMember,
+                isAdmin = isAdmin,
                 connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
@@ -284,12 +289,12 @@ fun ChatScreen(
                 },
                 onGroupActionClicked = { action ->
                     when (action) {
-                        MessageActionType.GROUP_MEMBER_ADD, MessageActionType.GROUP_MEMBER_REMOVE -> {
+                        MessageType.GROUP_MEMBER_ADD, MessageType.GROUP_MEMBER_REMOVE -> {
                             addGroupMembers = action
                             addGroupMemberDialogVisible = true
                         }
 
-                        MessageActionType.GROUP_MEMBER_LEFT -> {
+                        MessageType.GROUP_MEMBER_LEFT -> {
                             leaveGroupDialogVisible = true
                         }
 
@@ -345,7 +350,7 @@ fun ChatScreen(
 @Composable
 fun MarkConversationAsRead(
     chatId: String,
-    messages: RequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     chatViewModel: ChatViewModel
 ) {
     LaunchedEffect(key1 = messages)
@@ -360,43 +365,41 @@ fun MarkConversationAsRead(
 @Preview
 @Composable
 fun ChatScreenPreview() {
-    val message1 = MessageEntity(
-        chatId = "123",
-        text = "Hey",
-        incoming = true,
-        sent = false,
-        deleted = false,
-        uuid = null,
-        action = MessageAction(MessageActionType.TEXT, null, "123")
+    val message1 = MessageWithDetails(
+        MessageEntityFactory.createIncoming(
+            chatId = "123",
+            senderAddress = null,
+            text = "Hey",
+            serverUUID = null,
+            type = MessageType.TEXT,
+            refId = null,
+            actionFor = null,
+            dateReceivedOnServer = ZonedDateTime.now()
+        ).withId(1)!!, null, null
     )
-    val message2 = MessageEntity(
-        chatId = "123",
-        text = "Hey, how are you?",
-        incoming = false,
-        sent = true,
-        deleted = false,
-        uuid = null,
-        action = MessageAction(MessageActionType.TEXT, null, "123")
+    val message2 = MessageWithDetails(
+        MessageEntityFactory.createOutgoing(
+            chatId = "123",
+            text = "Hey, how are you?",
+            type = MessageType.TEXT,
+            actionFor = null,
+        ).withId(2)!!, null, null
     )
-    message1.id = 1
-    message2.id = 2
 
     ChatScreen(
         contact = RequestState.Success(
             ContactWithGroup(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "key",
                     guardHostname = "host",
                     guardAddress = "guard-address",
-                    hasNewMessage = false,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),
         isMember = true,
+        isAdmin = false,
         allContacts = RequestState.Idle,
         connectionStatus = SignalRStatus.Connected(),
         replyToMessage = null,
@@ -414,7 +417,7 @@ fun ChatScreenPreview() {
         onDelete = {},
         onReplyToMessage = {},
         onSearch = {},
-        onAddGroupMembers = { _: List<String>, _: MessageActionType -> },
+        onAddGroupMembers = { _: List<String>, _: MessageType -> },
         onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },

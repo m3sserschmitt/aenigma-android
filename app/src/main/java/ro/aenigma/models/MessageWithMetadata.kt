@@ -1,12 +1,15 @@
 package ro.aenigma.models
 
-data class MessageWithMetadata(
-    val text: String?,
-    val action: MessageActionDto?,
-    val senderName: String?,
-    val groupResourceUrl: String?,
-    val senderGuardAddress: String?,
-    val senderGuardHostname: String?,
-    val senderPublicKey: String?,
-    val refId: String?
+import ro.aenigma.models.enums.MessageType
+
+open class MessageWithMetadata(
+    val text: String? = null,
+    val type: MessageType? = null,
+    val senderName: String? = null,
+    val groupResourceUrl: String? = null,
+    val senderGuardAddress: String? = null,
+    val senderGuardHostname: String? = null,
+    val senderPublicKey: String? = null,
+    val refId: String? = null,
+    val actionFor: String? = null
 )

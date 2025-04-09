@@ -30,7 +30,6 @@
     <string name="erase_entire_conversation">Ștergeți intreaga conversație?</string>
     <string name="this_action_is_permanent">Această acțiune este permanentă și nu poate fi revocată</string>
     <string name="delete">Ștergeți</string>
-    <string name="reply">Răspundeți</string>
     <string name="they_said">%s a spus:</string>
     <string name="you_said">Dvs. ați spus:</string>
     <string name="delete_selected_messages">Ștergeți mesajele selectate?</string>
@@ -106,4 +105,5 @@
     <string name="are_you_sure_leave_group">Părăsiți grupul? Această acțiune este ireversibilă.</string>
     <string name="reset_username">Resetați numele de utilizator</string>
     <string name="cannot_share_groups">Grupurile nu pot fi distribuite.</string>
+    <string name="cannot_select_groups_to_create_group">Nu poteți selecta grupuri pentru a crea un nou grup.</string>
 </resources>

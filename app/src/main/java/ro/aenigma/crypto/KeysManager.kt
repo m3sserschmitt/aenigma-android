@@ -39,7 +39,7 @@ class KeysManager {
                 privateOutputStream.close()
 
                 true
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 false
             }
         }
@@ -54,7 +54,7 @@ class KeysManager {
                 val data = stream.readBytes()
                 stream.close()
                 data
-            } catch (ex: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }

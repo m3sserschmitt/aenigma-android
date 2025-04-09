@@ -3,14 +3,12 @@ package ro.aenigma.ui.screens.contacts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.models.enums.ContactType
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.util.RequestState
-import java.time.ZonedDateTime
 
 @Composable
 fun ContactsContent(
@@ -72,27 +70,21 @@ fun ContactsContentPreview() {
         contacts = RequestState.Success(
             listOf(
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "123",
                         name = "John",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = true,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 ),
                 ContactWithLastMessage(
-                    ContactEntity(
+                    ContactEntityFactory.createContact(
                         address = "124",
                         name = "Paul",
                         publicKey = "",
                         guardHostname = "",
                         guardAddress = "",
-                        hasNewMessage = false,
-                        type = ContactType.CONTACT,
-                        lastSynchronized = ZonedDateTime.now()
                     ), null
                 )
             )
@@ -101,15 +93,12 @@ fun ContactsContentPreview() {
         isSelectionMode = true,
         selectedContacts = listOf(
             ContactWithLastMessage(
-                ContactEntity(
+                ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                    hasNewMessage = true,
-                    type = ContactType.CONTACT,
-                    lastSynchronized = ZonedDateTime.now()
                 ), null
             )
         ),

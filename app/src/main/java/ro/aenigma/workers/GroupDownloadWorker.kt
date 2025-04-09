@@ -14,18 +14,16 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.GroupEntity
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
+import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
-import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.getTagQueryParameter
-import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -63,17 +61,13 @@ class GroupDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun createContactEntities(groupData: GroupData, resourceUrl: String) {
-        val contact = ContactEntity(
-            address = groupData.address!!,
-            name = groupData.name!!,
-            publicKey = "",
-            guardHostname = null,
-            guardAddress = "",
-            type = ContactType.GROUP,
-            hasNewMessage = false,
-            lastSynchronized = ZonedDateTime.now()
-        )
-        val group = GroupEntity(
+        groupData.address ?: return
+        val contact = (repository.local.getContactWithGroup(groupData.address)?.contact
+            ?: ContactEntityFactory.createGroup(
+            address = groupData.address,
+            name = groupData.name,
+        )).withName(groupData.name) ?: return
+        val group = GroupEntityFactory.create(
             address = groupData.address,
             groupData = groupData,
             resourceUrl = resourceUrl
@@ -84,21 +78,17 @@ class GroupDownloadWorker @AssistedInject constructor(
         groupData.members ?: return
 
         for (member in groupData.members) {
-            val address = member.publicKey.getAddressFromPublicKey()
-            if (member.name == null || address == null || signatureService.address == address
+            if (member.name == null || member.address == null || signatureService.address == member.address
                 || !member.publicKey.isValidPublicKey()
             ) {
                 continue
             }
-            val c = ContactEntity(
-                address = address,
+            val c = ContactEntityFactory.createContact(
+                address = member.address,
                 name = member.name,
-                publicKey = member.publicKey!!,
+                publicKey = member.publicKey,
                 guardHostname = null,
-                guardAddress = "",
-                type = ContactType.CONTACT,
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
+                guardAddress = null,
             )
             repository.local.insertOrIgnoreContact(c)
         }
@@ -111,8 +101,11 @@ class GroupDownloadWorker @AssistedInject constructor(
         val resourceUrl = inputData.getString(GROUP_RESOURCE_URL) ?: return Result.failure()
         val api = EnigmaApi.initApi(resourceUrl)
         val tag = resourceUrl.getTagQueryParameter() ?: return Result.failure()
+        val existentGroups =
+            repository.local.getContactsWithGroup().mapNotNull { item -> item.group?.groupData }
         val groupData =
-            RemoteDataSource(api, signatureService).getGroupData(tag) ?: return Result.failure()
+            RemoteDataSource(api, signatureService).getGroupData(tag, existentGroups)
+                ?: return Result.failure()
         createContactEntities(groupData, resourceUrl)
         return Result.success()
     }
