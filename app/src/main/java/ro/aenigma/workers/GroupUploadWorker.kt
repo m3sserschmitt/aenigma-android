@@ -162,7 +162,7 @@ class GroupUploadWorker @AssistedInject constructor(
             }
 
             MessageType.GROUP_CREATE -> {
-                if(memberAddresses.isEmpty()) return null
+                if (memberAddresses.isEmpty()) return null
                 userName ?: return null
                 groupName ?: return null
                 createNewGroup(memberAddresses, userName, groupName, admins)
@@ -175,7 +175,7 @@ class GroupUploadWorker @AssistedInject constructor(
 
             MessageType.GROUP_MEMBER_ADD,
             MessageType.GROUP_MEMBER_REMOVE -> {
-                if(memberAddresses.isEmpty()) return null
+                if (memberAddresses.isEmpty()) return null
                 existingGroupData ?: return null
                 modifyGroupMembers(existingGroupData, memberAddresses, actionType)
             }
@@ -184,7 +184,10 @@ class GroupUploadWorker @AssistedInject constructor(
         }
     }
 
-    private fun encryptGroupData(groupData: GroupData, membersToEncryptFor: List<GroupMember>): String? {
+    private fun encryptGroupData(
+        groupData: GroupData,
+        membersToEncryptFor: List<GroupMember>
+    ): String? {
         val serializedGroupData = groupData.toJson()?.toByteArray() ?: return null
         val encryptedGroupData = membersToEncryptFor.mapNotNull { item ->
             item.publicKey?.let { publicKey ->
@@ -256,7 +259,14 @@ class GroupUploadWorker @AssistedInject constructor(
         val existingGroupData =
             if (groupAddress != null) repository.local.getContactWithGroup(groupAddress)?.group?.groupData else null
         val groupData =
-            createGroupData(existingGroupData, groupName, memberAddresses, userName, admins, actionType)
+            createGroupData(
+                existingGroupData,
+                groupName,
+                memberAddresses,
+                userName,
+                admins,
+                actionType
+            )
                 ?: return Result.failure()
         groupData.members ?: return Result.failure()
         val membersToEncryptFor =
@@ -267,7 +277,8 @@ class GroupUploadWorker @AssistedInject constructor(
         val encryptedGroupData = encryptGroupData(groupData, membersToEncryptFor)
             ?: return Result.failure()
         val response =
-            repository.remote.createSharedData(encryptedGroupData, groupData.members.size) ?: return Result.retry()
+            repository.remote.createSharedData(encryptedGroupData, membersToEncryptFor.size - 1)
+                ?: return Result.retry()
         response.resourceUrl ?: return Result.failure()
         saveGroupEntity(groupData, response.resourceUrl)
         saveMessageEntity(groupData, userName, memberAddresses, response.resourceUrl, actionType)
