@@ -19,3 +19,48 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-dontwarn java.beans.ConstructorProperties
+-dontwarn java.beans.Transient
+-dontwarn org.bouncycastle.jsse.BCSSLParameters
+-dontwarn org.bouncycastle.jsse.BCSSLSocket
+-dontwarn org.bouncycastle.jsse.provider.BouncyCastleJsseProvider
+-dontwarn org.conscrypt.Conscrypt$Version
+-dontwarn org.conscrypt.Conscrypt
+-dontwarn org.conscrypt.ConscryptHostnameVerifier
+-dontwarn org.openjsse.javax.net.ssl.SSLParameters
+-dontwarn org.openjsse.javax.net.ssl.SSLSocket
+-dontwarn org.openjsse.net.ssl.OpenJSSE
+-dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# Keep all model classes used in Retrofit response/requests
+# Keep all model classes and their members
+-keep class ro.aenigma.models.** {
+    <fields>;
+    <methods>;
+}
+-keep class ro.aenigma.models.** { *; }
+
+# Jackson annotations (like @JsonProperty) should be retained
+-keepattributes *Annotation*
+
+# Keep default constructors (used by Jackson)
+-keepclassmembers class * {
+    public <init>();
+}
+
+# Keep all classes annotated with @JsonSerialize or @JsonDeserialize
+-keep @com.fasterxml.jackson.databind.annotation.JsonSerialize class * { *; }
+-keep @com.fasterxml.jackson.databind.annotation.JsonDeserialize class * { *; }
+
+# Keep all database models
+-keep class ro.aenigma.data.** { *; }
+
+# Sometimes needed to keep enum constants
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# Keep everything SignalR related
+-keep class com.microsoft.signalr.** { *; }
