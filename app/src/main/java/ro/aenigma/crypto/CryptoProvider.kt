@@ -1,16 +1,16 @@
 package ro.aenigma.crypto
 
 import android.util.Base64
-import ro.aenigma.crypto.AddressExtensions.isValidAddress
-import ro.aenigma.crypto.Base64Extensions.isValidBase64
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPrivateKey
-import ro.aenigma.crypto.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
+import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPrivateKey
+import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 
 class CryptoProvider {
     companion object {
 
         init {
-            System.loadLibrary("libaenigma-wrapper")
+            System.loadLibrary("aenigma-wrapper")
         }
 
         private external fun initDecryption(privateKey: String, passphrase: String): Boolean
@@ -34,6 +34,15 @@ class CryptoProvider {
         ): ByteArray?
 
         private external fun getPKeySize(publicKey: String): Int
+
+        @JvmStatic
+        fun getPublicKeySize(publicKey: String): Int {
+            return if (publicKey.isValidPublicKey()) {
+                getPKeySize(publicKey)
+            } else {
+                -1
+            }
+        }
 
         @JvmStatic
         fun initDecryptionEx(privateKey: String, passphrase: String): Boolean {
@@ -62,16 +71,22 @@ class CryptoProvider {
         }
 
         @JvmStatic
-        fun encryptEx(publicKey: String, plaintext: ByteArray): ByteArray? {
+        fun encryptEx(publicKey: String, plaintext: ByteArray): String? {
             if (!publicKey.isValidPublicKey()) {
                 return null
             }
-            return encrypt(publicKey, plaintext)
+            val encryptedData = encrypt(publicKey, plaintext) ?: return null
+            return Base64.encodeToString(encryptedData, Base64.DEFAULT)
         }
 
         @JvmStatic
-        fun decryptEx(ciphertext: ByteArray): ByteArray? {
-            return decrypt(ciphertext)
+        fun decryptEx(ciphertext: String): ByteArray? {
+            if(!ciphertext.isValidBase64())
+            {
+                return null
+            }
+            val decodedCiphertext = Base64.decode(ciphertext, Base64.DEFAULT) ?: return null
+            return decrypt(decodedCiphertext)
         }
 
         @JvmStatic
@@ -110,22 +125,6 @@ class CryptoProvider {
             }
             val decodedMessage = Base64.decode(ciphertext, Base64.DEFAULT) ?: return null
             return unsealOnion(decodedMessage)
-        }
-
-        @JvmStatic
-        fun getDataFromSignature(signedData: String, publicKey: String): ByteArray? {
-            if (!publicKey.isValidPublicKey() || !signedData.isValidBase64()) {
-                return null
-            }
-
-            val decodedData = Base64.decode(signedData, Base64.DEFAULT) ?: return null
-            val digestSize = getPKeySize(publicKey)
-
-            if (decodedData.size < digestSize + 1) {
-                return null
-            }
-
-            return decodedData.sliceArray(0 until decodedData.size - digestSize)
         }
     }
 }

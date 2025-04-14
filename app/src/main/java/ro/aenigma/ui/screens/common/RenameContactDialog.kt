@@ -9,7 +9,7 @@ import ro.aenigma.R
 fun RenameContactDialog(
     visible: Boolean,
     onNewContactNameChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     if(visible) {

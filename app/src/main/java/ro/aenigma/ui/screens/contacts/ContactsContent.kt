@@ -3,27 +3,27 @@ package ro.aenigma.ui.screens.contacts
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.DatabaseRequestState
-import java.time.ZonedDateTime
+import ro.aenigma.util.RequestState
 
 @Composable
 fun ContactsContent(
     modifier: Modifier = Modifier,
-    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
+    contacts: RequestState<List<ContactWithLastMessage>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
-    selectedContacts: List<ContactWithConversationPreview>,
-    onItemSelected: (ContactWithConversationPreview) -> Unit,
-    onItemDeselected: (ContactWithConversationPreview) -> Unit,
+    selectedContacts: List<ContactWithLastMessage>,
+    onItemSelected: (ContactWithLastMessage) -> Unit,
+    onItemDeselected: (ContactWithLastMessage) -> Unit,
     navigateToChatScreen: (chatId: String) -> Unit
 ) {
     when(contacts)
     {
-        is DatabaseRequestState.Success -> {
+        is RequestState.Success -> {
             if(contacts.data.isNotEmpty())
             {
                 ItemsList(
@@ -34,7 +34,7 @@ fun ContactsContent(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {
-                                navigateToChatScreen(contact.address)
+                                navigateToChatScreen(contact.contact.address)
                             },
                             contact = contact,
                             isSelectionMode = isSelectionMode,
@@ -42,7 +42,7 @@ fun ContactsContent(
                         )
                     },
                     selectedItems = selectedContacts,
-                    itemKeyProvider = { c -> c.address }
+                    itemKeyProvider = { c -> c.contact.address }
                 )
 
             } else {
@@ -57,51 +57,50 @@ fun ContactsContent(
                 }
             }
         }
-        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
-        is DatabaseRequestState.Loading -> LoadingScreen(modifier)
-        is DatabaseRequestState.Idle -> { }
+        is RequestState.Error -> GenericErrorScreen(modifier)
+        is RequestState.Loading -> LoadingScreen(modifier)
+        is RequestState.Idle -> { }
     }
 }
 
 @Preview
 @Composable
-fun ContactsContentPreview()
-{
+fun ContactsContentPreview() {
     ContactsContent(
-        contacts = DatabaseRequestState.Success(
+        contacts = RequestState.Success(
             listOf(
-                ContactWithConversationPreview(
-                    address = "123",
-                    name = "John",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntityFactory.createContact(
+                        address = "123",
+                        name = "John",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                    ), null
                 ),
-                ContactWithConversationPreview(
-                    address = "124",
-                    name = "Paul",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = false,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntityFactory.createContact(
+                        address = "124",
+                        name = "Paul",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                    ), null
                 )
             )
         ),
         isSearchMode = false,
         isSelectionMode = true,
         selectedContacts = listOf(
-            ContactWithConversationPreview(
-            address = "123",
-            name = "John",
-            publicKey = "",
-            guardHostname = "",
-            guardAddress = "",
-            hasNewMessage = true,
-            lastSynchronized = ZonedDateTime.now()
-        )
+            ContactWithLastMessage(
+                ContactEntityFactory.createContact(
+                    address = "123",
+                    name = "John",
+                    publicKey = "",
+                    guardHostname = "",
+                    guardAddress = "",
+                ), null
+            )
         ),
         onItemSelected = { },
         onItemDeselected = { },

@@ -19,11 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.models.enums.MessageType
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -31,17 +35,20 @@ import java.time.ZonedDateTime
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
+    isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    notSentMessages: List<MessageEntity>,
+    messages: RequestState<List<MessageWithDetails>>,
+    allContacts: RequestState<List<ContactEntity>>,
+    replyToMessage: MessageWithDetails?,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageEntity>,
+    selectedMessages: List<MessageWithDetails>,
     messageInputText: String,
     onInputTextChanged: (String) -> Unit,
     onSendClicked: () -> Unit,
-    onMessageSelected: (MessageEntity) -> Unit,
-    onMessageDeselected: (MessageEntity) -> Unit,
+    onReplyAborted: () -> Unit,
+    onMessageSelected: (MessageWithDetails) -> Unit,
+    onMessageDeselected: (MessageWithDetails) -> Unit,
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -65,7 +72,7 @@ fun ChatContent(
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
                 messages = messages,
-                notSentMessages = notSentMessages,
+                allContacts = allContacts,
                 conversationListState = conversationListState,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedMessages,
@@ -76,28 +83,31 @@ fun ChatContent(
 
             ChatInput(
                 modifier = Modifier.height(80.dp),
+                enabled = isMember,
                 messageInputText = messageInputText,
+                replyToMessage = replyToMessage,
                 onInputTextChanged = onInputTextChanged,
                 onSendClicked = {
                     onSendClicked()
                     messageSent = true
-                }
+                },
+                onReplyAborted = onReplyAborted
             )
         }
     }
 }
 
 @Composable
-fun MessageDate(next: MessageEntity?, message: MessageEntity) {
-    val localDate1 = next?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
-    val localDate2 = message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
+    val localDate1 = next?.message?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
+    val localDate2 = message.message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
     if (localDate1 == null || localDate1 != localDate2) {
         Text(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
-            text = PrettyDateFormatter.formatPastDate(message.date),
+            text = PrettyDateFormatter.formatMessageDateTime(message.message.date),
             style = MaterialTheme.typography.bodyLarge
         )
     }
@@ -108,20 +118,18 @@ fun DisplayMessages(
     modifier: Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    notSentMessages: List<MessageEntity>,
+    messages: RequestState<List<MessageWithDetails>>,
+    allContacts: RequestState<List<ContactEntity>>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageEntity>,
+    selectedMessages: List<MessageWithDetails>,
     conversationListState: LazyListState = rememberLazyListState(),
-    onItemSelected: (MessageEntity) -> Unit,
-    onItemDeselected: (MessageEntity) -> Unit,
+    onItemSelected: (MessageWithDetails) -> Unit,
+    onItemDeselected: (MessageWithDetails) -> Unit,
     loadNextPage: () -> Unit
 ) {
-    when(messages)
-    {
-        is DatabaseRequestState.Success -> {
-            if(messages.data.isNotEmpty())
-            {
+    when {
+        messages is RequestState.Success && allContacts is RequestState.Success -> {
+            if (messages.data.isNotEmpty()) {
                 AutoScrollItemsList(
                     modifier = modifier,
                     items = messages.data,
@@ -131,8 +139,8 @@ fun DisplayMessages(
                         MessageItem(
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
-                            isSent = notSentMessages.contains(messageEntity),
                             message = messageEntity,
+                            allContacts = allContacts.data,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {}
@@ -140,50 +148,72 @@ fun DisplayMessages(
                         MessageDate(next = next, message = messageEntity)
                     },
                     listState = conversationListState,
-                    itemKeyProvider = { m -> m.id },
+                    itemKeyProvider = { m -> m.message.id },
                     reversedLayout = true,
                     loadNextPage = loadNextPage
                 )
             } else {
-                if(isSearchMode)
-                {
+                if (isSearchMode) {
                     EmptySearchResult(modifier)
-                }
-                else
-                {
+                } else {
                     EmptyChatScreen(modifier)
                 }
             }
         }
-        is DatabaseRequestState.Loading -> LoadingScreen(modifier)
-        is DatabaseRequestState.Error -> GenericErrorScreen(modifier)
-        is DatabaseRequestState.Idle -> {  }
+
+        listOf(messages, allContacts).any { obj -> obj is RequestState.Loading } -> LoadingScreen(
+            modifier = modifier
+        )
+
+        listOf(messages, allContacts).any { obj -> obj is RequestState.Error } -> GenericErrorScreen(
+            modifier = modifier
+        )
+
+        else -> {}
     }
 }
 
 @Preview
 @Composable
-fun ChatContentPreview()
-{
-    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, ZonedDateTime.now())
-    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, ZonedDateTime.now())
-    message1.id = 1
-    message2.id = 2
+fun ChatContentPreview() {
+    val message1 = MessageWithDetails(
+        MessageEntityFactory.createIncoming(
+            chatId = "123",
+            text = "Hey",
+            serverUUID = null,
+            type = MessageType.TEXT,
+            actionFor = null,
+            senderAddress = null,
+            refId = null,
+            dateReceivedOnServer = ZonedDateTime.now()
+        ).withId(1)!!, null, null
+    )
+    val message2 = MessageWithDetails(
+        MessageEntityFactory.createOutgoing(
+            chatId = "123",
+            text = "Hey, how are you?",
+            type = MessageType.TEXT,
+            actionFor = null,
+        ).withId(2)!!, null, null
+    )
 
     ChatContent(
-        messages = DatabaseRequestState.Success(
+        messages = RequestState.Success(
             listOf(message1, message2)
         ),
-        notSentMessages = listOf(),
+        isMember = true,
+        replyToMessage = null,
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "Can't wait to see you on Monday",
         onSendClicked = {},
+        onReplyAborted = {},
         onInputTextChanged = {},
         selectedMessages = listOf(),
         onMessageDeselected = { },
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
+        allContacts = RequestState.Idle,
     )
 }

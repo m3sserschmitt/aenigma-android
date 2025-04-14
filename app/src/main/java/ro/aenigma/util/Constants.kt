@@ -6,6 +6,7 @@ class Constants {
         // datastore
         const val DATASTORE_PREFERENCES = "datastore-preference"
         const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"
+        const val NAME_PREFERENCE = "name"
 
         const val ADDRESS_SIZE = 32 // bytes
         const val KEY_SIZE = 2048 // bits !!
@@ -19,6 +20,7 @@ class Constants {
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
         const val GRAPH_VERSIONS_TABLE = "GraphVersions"
+        const val GROUPS_TABLE = "Groups"
 
         const val APP_DOMAIN = "aenigma.ro"
 

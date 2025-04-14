@@ -30,6 +30,8 @@
     <string name="erase_entire_conversation">Ștergeți intreaga conversație?</string>
     <string name="this_action_is_permanent">Această acțiune este permanentă și nu poate fi revocată</string>
     <string name="delete">Ștergeți</string>
+    <string name="they_said">%s a spus:</string>
+    <string name="you_said">Dvs. ați spus:</string>
     <string name="delete_selected_messages">Ștergeți mesajele selectate?</string>
     <string name="delete_selected_contacts">Ștergeți contactele selectete?</string>
     <string name="no_message_found">Nu a fost găsit niciun mesaj</string>
@@ -49,6 +51,10 @@
     <string name="do_not_allow">Nu permite</string>
     <string name="loading">Încărcare…</string>
     <string name="share">Distribuie</string>
+    <string name="whats_your_name">Cum vă numiți?</string>
+    <string name="name_dialog_body">Acesta va putea fi văzut de către contactele dvs.</string>
+    <string name="create_group">Creați un grup</string>
+    <string name="enter_group_name">Introduceți numele noului grup</string>
     <string name="camera_permission_required">Este necesară permisiunea pentru utilizarea Camerei</string>
     <string name="create_link">Creați un link</string>
     <string name="use_link">Folosiți un link</string>
@@ -84,4 +90,20 @@
     <string name="share_via">Distribuiți către</string>
     <string name="failed_to_share">Nu se poate distribui</string>
     <string name="failed_to_copy_to_clipboard">Nu se poate copia in clipboard</string>
+    <string name="message_deleted">Mesaj șters</string>
+    <string name="conversation_deleted">Conversație ștearsă</string>
+    <string name="group_created">A creat grupul</string>
+    <string name="group_member_added">A adăugat noi membri</string>
+    <string name="group_member_removed">A eliminat persoane din grup</string>
+    <string name="group_member_left">A părăsit grupul</string>
+    <string name="group_renamed">A redenumit grupul</string>
+    <string name="add_group_member">Adăugați un nou membru</string>
+    <string name="remove_group_member">Eliminați un membru</string>
+    <string name="select_contacts_to_add">Adăugați contacte în grup</string>
+    <string name="select_members_to_remove">Eliminați membri din grup</string>
+    <string name="leave_group">Părăsiți grupul</string>
+    <string name="are_you_sure_leave_group">Părăsiți grupul? Această acțiune este ireversibilă.</string>
+    <string name="reset_username">Resetați numele de utilizator</string>
+    <string name="cannot_share_groups">Grupurile nu pot fi distribuite.</string>
+    <string name="cannot_select_groups_to_create_group">Nu poteți selecta grupuri pentru a crea un nou grup.</string>
 </resources>

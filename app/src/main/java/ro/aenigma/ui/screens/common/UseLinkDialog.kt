@@ -9,14 +9,12 @@ import ro.aenigma.R
 @Composable
 fun UseLinkDialog(
     visible: Boolean,
-    onTextChanged: (String) -> Unit,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     if (visible) {
         TextInputDialog(
             onTextChanged = { link ->
-                onTextChanged(link)
                 Patterns.WEB_URL.matcher(link).matches()
             },
             title = stringResource(
@@ -38,7 +36,6 @@ fun UseLinkDialogPreview()
 {
     UseLinkDialog(
         visible = true,
-        onTextChanged = { },
         onConfirmClicked = { },
         onDismissClicked = { }
     )

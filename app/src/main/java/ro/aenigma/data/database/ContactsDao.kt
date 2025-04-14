@@ -2,31 +2,36 @@ package ro.aenigma.data.database
 
 import androidx.room.*
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
-import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ContactsDao {
 
     @Query("SELECT * FROM $CONTACTS_TABLE")
-    fun get(): Flow<List<ContactEntity>>
+    fun getFlow(): Flow<List<ContactEntity>>
 
-    @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId," +
-                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
-                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
-    )
-    fun getWithConversationPreviewFlow(): Flow<List<ContactWithConversationPreview>>
+    @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    fun getWithMessagesFlow(): Flow<List<ContactWithLastMessage>>
 
-    @Query(
-        "SELECT c.address, c.name, c.guardHostname, c.guardAddress, c.publicKey, c.hasNewMessage, c.lastSynchronized, c.lastMessageId," +
-                "m.text AS lastMessageText, m.incoming AS lastMessageIncoming " +
-                "FROM $CONTACTS_TABLE c LEFT JOIN $MESSAGES_TABLE m ON m.id = c.lastMessageId "
-    )
-    suspend fun getWithConversationPreview(): List<ContactWithConversationPreview>
+    @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    suspend fun getWithMessages(): List<ContactWithLastMessage>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?
+
+    @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
+    suspend fun getWithGroup(address: String): ContactWithGroup?
+
+    @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    suspend fun getWithGroup(): List<ContactWithGroup>
+
+    @Transaction
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
+    fun getWithGroupFlow(address: String): Flow<ContactWithGroup?>
 
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     fun getFlow(address: String): Flow<ContactEntity?>
@@ -44,13 +49,10 @@ interface ContactsDao {
     suspend fun insertOrUpdate(contact : ContactEntity)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertOrUpdate(contact : List<ContactEntity>): List<Long>
+    suspend fun insertOrUpdate(groupEntity: GroupEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(contact: ContactEntity)
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insert(contact : List<ContactEntity>): List<Long>
+    suspend fun insertOrIgnore(contact: ContactEntity)
 
     @Update
     suspend fun update(contact: ContactEntity)

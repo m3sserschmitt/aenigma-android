@@ -11,28 +11,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoadingDialog(
-    state: DatabaseRequestState<*>,
+    state: RequestState<*>,
     onConfirmButtonClicked: () -> Unit
 ) {
-    if (state !is DatabaseRequestState.Idle) {
+    if (state !is RequestState.Idle) {
         val title = when (state) {
-            is DatabaseRequestState.Loading -> stringResource(R.string.please_wait)
-            is DatabaseRequestState.Success -> stringResource(R.string.request_successfully_completed)
-            is DatabaseRequestState.Error -> stringResource(R.string.request_completed_with_errors)
+            is RequestState.Loading -> stringResource(R.string.please_wait)
+            is RequestState.Success -> stringResource(R.string.request_successfully_completed)
+            is RequestState.Error -> stringResource(R.string.request_completed_with_errors)
             else -> ""
         }
         val okButtonVisible = when (state) {
-            is DatabaseRequestState.Success,
-            is DatabaseRequestState.Error -> true
+            is RequestState.Success,
+            is RequestState.Error -> true
             else -> false
         }
         val spinnerVisible = when (state) {
-            is DatabaseRequestState.Loading -> true
+            is RequestState.Loading -> true
             else -> false
         }
         BasicAlertDialog(
@@ -68,7 +68,7 @@ fun LoadingDialog(
 @Composable
 fun LoadingDialog(
     visible: Boolean,
-    state: DatabaseRequestState<*>,
+    state: RequestState<*>,
     onConfirmButtonClicked: () -> Unit)
 {
     if(visible)
@@ -85,7 +85,7 @@ fun LoadingDialog(
 fun LoadingDialogPreview()
 {
     LoadingDialog(
-        state = DatabaseRequestState.Loading,
+        state = RequestState.Loading,
         onConfirmButtonClicked = { }
     )
 }
@@ -95,7 +95,7 @@ fun LoadingDialogPreview()
 fun LoadingDialogSuccessPreview()
 {
     LoadingDialog(
-        state = DatabaseRequestState.Success(true),
+        state = RequestState.Success(true),
         onConfirmButtonClicked = { }
     )
 }
@@ -105,7 +105,7 @@ fun LoadingDialogSuccessPreview()
 fun LoadingDialogErrorPreview()
 {
     LoadingDialog(
-        state = DatabaseRequestState.Error(Exception()),
+        state = RequestState.Error(Exception()),
         onConfirmButtonClicked = { }
     )
 }

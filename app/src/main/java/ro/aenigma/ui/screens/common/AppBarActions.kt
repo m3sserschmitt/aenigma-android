@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
@@ -61,6 +62,23 @@ fun DeleteAppBarAction(
     ) {
         Icon(
             imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(
+                id = R.string.delete
+            ),
+            tint = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    }
+}
+
+@Composable
+fun ReplyToMessageAppBarAction(
+    onReplyToMessageClicked: () -> Unit
+) {
+    IconButton(
+        onClick = onReplyToMessageClicked
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_reply),
             contentDescription = stringResource(
                 id = R.string.delete
             ),
@@ -180,6 +198,26 @@ fun ShareTopAppBarAction(
                 imageVector = Icons.Filled.Share,
                 contentDescription = stringResource(
                     id = R.string.share
+                ),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+fun CreateGroupTopAppBarAction(
+    visible: Boolean,
+    onCreateGroupClicked: () -> Unit
+) {
+    if(visible) {
+        IconButton(
+            onClick = onCreateGroupClicked
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_group),
+                contentDescription = stringResource(
+                    id = R.string.create_group
                 ),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )

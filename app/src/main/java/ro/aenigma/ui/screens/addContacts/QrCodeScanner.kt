@@ -23,11 +23,12 @@ import ro.aenigma.ui.screens.common.CameraPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.RequestPermission
 import ro.aenigma.util.QrCodeAnalyzer
+import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.openApplicationDetails
 
 @Composable
-fun QrCodeScanner(
-    onQrCodeFound: (String) -> Unit
+inline fun<reified T> QrCodeScanner(
+    crossinline onQrCodeFound: (T) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -79,8 +80,12 @@ fun QrCodeScanner(
                     ContextCompat.getMainExecutor(ctx),
                     QrCodeAnalyzer { result ->
                         result?.let { decodedData ->
-                            cameraProviderFuture.get().unbindAll()
-                            onQrCodeFound(decodedData)
+                            val data = decodedData.fromJson<T>()
+                            if(data != null) {
+                                cameraProviderFuture.get().unbindAll()
+                                onQrCodeFound(data)
+                            }
+
                         }
                     }
                 )

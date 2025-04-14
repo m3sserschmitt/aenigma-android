@@ -17,14 +17,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
+import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.models.enums.MessageType
+import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
 
@@ -43,12 +49,15 @@ fun ChatScreen(
 
     val selectedContact by chatViewModel.selectedContact.collectAsState()
     val messages by chatViewModel.conversation.collectAsState()
-    val notSentMessages by chatViewModel.notSentMessages.collectAsState()
+    val replyToMessage by chatViewModel.replyToMessage.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
+    val allContacts by chatViewModel.allContacts.collectAsState()
+    val isMember by chatViewModel.isMember.collectAsState()
+    val isAdmin by chatViewModel.isAdmin.collectAsState()
 
     MarkConversationAsRead(
         chatId = chatId,
@@ -58,41 +67,31 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
+        isMember = isMember,
+        isAdmin = isAdmin,
+        allContacts = allContacts,
         connectionStatus = connectionStatus,
+        replyToMessage = replyToMessage,
         messages = messages,
-        notSentMessages = notSentMessages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
-        onRetryConnection = {
-            chatViewModel.retryClientConnection()
+        onRetryConnection = { chatViewModel.retryClientConnection() },
+        onInputTextChanged = { newInputTextValue ->
+            chatViewModel.setMessageInputText(
+                newInputTextValue
+            )
         },
-        onInputTextChanged = {
-            newInputTextValue -> chatViewModel.setMessageInputText(newInputTextValue)
-        },
-        onNewContactNameChanged = {
-            newContactNameValue -> chatViewModel.setNewContactName(newContactNameValue)
-        },
-        onRenameContactConfirmed = {
-            chatViewModel.saveContactChanges()
-        },
-        onRenameContactDismissed = {
-            chatViewModel.cleanupContactChanges()
-        },
-        onSendClicked = {
-            chatViewModel.sendMessage()
-        },
-        onDeleteAll = {
-            chatViewModel.clearConversation(chatId)
-        },
-        onDelete = {
-            selectedMessages -> chatViewModel.removeMessages(selectedMessages)
-        },
-        onSearch = {
-            searchQuery -> chatViewModel.searchConversation(searchQuery)
-        },
-        loadNextPage = {
-            chatViewModel.loadNextPage(chatId)
-        },
+        onNewContactNameChanged = { name -> chatViewModel.validateNewContactName(name) },
+        onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
+        onRenameContactDismissed = {  },
+        onSendClicked = { chatViewModel.sendMessage() },
+        onDeleteAll = { chatViewModel.clearConversation(chatId) },
+        onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
+        onReplyToMessage = { selectedMessage -> chatViewModel.setReplyTo(selectedMessage) },
+        onSearch = { searchQuery -> chatViewModel.searchConversation(searchQuery) },
+        onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
+        onLeaveGroup = { chatViewModel.leaveGroup() },
+        loadNextPage = { chatViewModel.loadNextPage(chatId) },
         navigateToContactsScreen = navigateToContactsScreen,
         navigateToAddContactsScreen = navigateToAddContactsScreen
     )
@@ -100,21 +99,27 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    contact: DatabaseRequestState<ContactEntity>,
+    contact: RequestState<ContactWithGroup>,
+    isMember: Boolean,
+    isAdmin: Boolean,
+    allContacts: RequestState<List<ContactEntity>>,
     connectionStatus: SignalRStatus,
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    notSentMessages: List<MessageEntity>,
+    messages: RequestState<List<MessageWithDetails>>,
+    replyToMessage: MessageWithDetails?,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     onRetryConnection: () -> Unit,
     onInputTextChanged: (String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onRenameContactConfirmed: () -> Unit,
+    onRenameContactConfirmed: (String) -> Unit,
     onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
-    onDelete: (List<MessageEntity>) -> Unit,
+    onDelete: (List<MessageWithDetails>) -> Unit,
+    onReplyToMessage: (MessageWithDetails?) -> Unit,
     onSearch: (String) -> Unit,
+    onAddGroupMembers: (List<String>, MessageType) -> Unit,
+    onLeaveGroup: () -> Unit,
     loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
@@ -122,17 +127,45 @@ fun ChatScreen(
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
     var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
+    var addGroupMemberDialogVisible by remember { mutableStateOf(false) }
+    var leaveGroupDialogVisible by remember { mutableStateOf(false) }
+    var addGroupMembers by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<MessageEntity>() }
+    val selectedItems = remember { mutableStateListOf<MessageWithDetails>() }
     val snackBarHostState = remember { SnackbarHostState() }
+
+    AddGroupMemberDialog(
+        action = addGroupMembers,
+        visible = addGroupMemberDialogVisible,
+        contactWithGroup = contact,
+        allContacts = allContacts,
+        onConfirmClicked = { members ->
+            addGroupMemberDialogVisible = false
+            onAddGroupMembers(members, addGroupMembers)
+        },
+        onDismissClicked = {
+            addGroupMemberDialogVisible = false
+        }
+    )
+
+    LeaveGroupDialog(
+        visible = leaveGroupDialogVisible,
+        onConfirmClicked = {
+            leaveGroupDialogVisible = false
+            onLeaveGroup()
+        },
+        onDismissClicked = {
+            leaveGroupDialogVisible = false
+        }
+    )
 
     RenameContactDialog(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
+        onConfirmClicked = { name ->
             renameContactDialogVisible = false
-            onRenameContactConfirmed()
+            onRenameContactConfirmed(name)
         },
         onDismiss = {
             onRenameContactDismissed()
@@ -196,7 +229,7 @@ fun ChatScreen(
 
     LaunchedEffect(key1 = messages)
     {
-        if(messages is DatabaseRequestState.Success)
+        if(messages is RequestState.Success)
         {
             selectedItems.removeAll { item -> !messages.data.contains(item) }
         }
@@ -217,6 +250,8 @@ fun ChatScreen(
             ChatAppBar(
                 messages = messages,
                 contact = contact,
+                isMember = isMember,
+                isAdmin = isAdmin,
                 connectionStatus = connectionStatus,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
@@ -232,6 +267,14 @@ fun ChatScreen(
                 onDeleteClicked = {
                     deleteMessagesConfirmationVisible = true
                 },
+                onReplyToMessageClicked = {
+                    val selectedItem = selectedItems.firstOrNull()
+                    if(selectedItem != null)
+                    {
+                        onReplyToMessage(selectedItem)
+                    }
+                    selectedItems.clear()
+                },
                 navigateToContactsScreen = navigateToContactsScreen,
                 isSearchMode = isSearchMode,
                 onSearchModeClosed = {
@@ -244,6 +287,20 @@ fun ChatScreen(
                 onSearchModeTriggered = {
                     isSearchMode = true
                 },
+                onGroupActionClicked = { action ->
+                    when (action) {
+                        MessageType.GROUP_MEMBER_ADD, MessageType.GROUP_MEMBER_REMOVE -> {
+                            addGroupMembers = action
+                            addGroupMemberDialogVisible = true
+                        }
+
+                        MessageType.GROUP_MEMBER_LEFT -> {
+                            leaveGroupDialogVisible = true
+                        }
+
+                        else -> {}
+                    }
+                },
                 onRetryConnection = onRetryConnection,
                 navigateToAddContactsScreen = navigateToAddContactsScreen
             )
@@ -252,17 +309,27 @@ fun ChatScreen(
             ChatContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding()
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = 4.dp,
+                    end = 4.dp
                 ),
+                isMember = isMember,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
+                allContacts = allContacts,
+                replyToMessage = replyToMessage,
                 messages = messages,
-                notSentMessages = notSentMessages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
                 onInputTextChanged = onInputTextChanged,
-                onSendClicked = onSendClicked,
+                onSendClicked = {
+                    onSendClicked()
+                    selectedItems.clear()
+                },
+                onReplyAborted = {
+                    onReplyToMessage(null)
+                },
                 onMessageSelected = { selectedMessage ->
                     if(!isSelectionMode)
                     {
@@ -283,12 +350,12 @@ fun ChatScreen(
 @Composable
 fun MarkConversationAsRead(
     chatId: String,
-    messages: DatabaseRequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
     chatViewModel: ChatViewModel
 ) {
     LaunchedEffect(key1 = messages)
     {
-        if(messages is DatabaseRequestState.Success)
+        if(messages is RequestState.Success)
         {
             chatViewModel.markConversationAsRead(chatId)
         }
@@ -297,30 +364,48 @@ fun MarkConversationAsRead(
 
 @Preview
 @Composable
-fun ChatScreenPreview()
-{
-    val message1 = MessageEntity(chatId = "123", text = "Hey", incoming = true, sent = false, ZonedDateTime.now())
-    val message2 = MessageEntity(chatId = "123", text = "Hey, how are you?", incoming = false, sent = true, ZonedDateTime.now())
-    message1.id = 1
-    message2.id = 2
+fun ChatScreenPreview() {
+    val message1 = MessageWithDetails(
+        MessageEntityFactory.createIncoming(
+            chatId = "123",
+            senderAddress = null,
+            text = "Hey",
+            serverUUID = null,
+            type = MessageType.TEXT,
+            refId = null,
+            actionFor = null,
+            dateReceivedOnServer = ZonedDateTime.now()
+        ).withId(1)!!, null, null
+    )
+    val message2 = MessageWithDetails(
+        MessageEntityFactory.createOutgoing(
+            chatId = "123",
+            text = "Hey, how are you?",
+            type = MessageType.TEXT,
+            actionFor = null,
+        ).withId(2)!!, null, null
+    )
 
     ChatScreen(
-        contact = DatabaseRequestState.Success(
-            ContactEntity(
-                address = "123",
-                name = "John",
-                publicKey = "key",
-                guardHostname = "host",
-                guardAddress = "guard-address",
-                hasNewMessage = false,
-                lastSynchronized = ZonedDateTime.now()
+        contact = RequestState.Success(
+            ContactWithGroup(
+                ContactEntityFactory.createContact(
+                    address = "123",
+                    name = "John",
+                    publicKey = "key",
+                    guardHostname = "host",
+                    guardAddress = "guard-address",
+                ), null
             )
         ),
+        isMember = true,
+        isAdmin = false,
+        allContacts = RequestState.Idle,
         connectionStatus = SignalRStatus.Connected(),
-        messages = DatabaseRequestState.Success(
+        replyToMessage = null,
+        messages = RequestState.Success(
             listOf(message1, message2)
         ),
-        notSentMessages = listOf(),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
         messageInputText = "Can't wait to see you on Monday",
@@ -330,7 +415,10 @@ fun ChatScreenPreview()
         onNewContactNameChanged = { true },
         onDeleteAll = {},
         onDelete = {},
+        onReplyToMessage = {},
         onSearch = {},
+        onAddGroupMembers = { _: List<String>, _: MessageType -> },
+        onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },
         navigateToContactsScreen = {},

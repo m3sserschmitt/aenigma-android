@@ -1,6 +1,5 @@
 package ro.aenigma.ui.screens.addContacts
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,14 +21,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.models.QrCodeDto
 import ro.aenigma.ui.themes.ApplicationComposeTheme
 import ro.aenigma.util.QrCodeGenerator
 
 @Composable
 fun QrCode(
     modifier: Modifier = Modifier,
-    qrCodeLabel: String,
-    qrCode: Bitmap
+    qrCode: QrCodeDto
 ) {
     Column(
         modifier = modifier,
@@ -55,7 +54,7 @@ fun QrCode(
                 .clip(RoundedCornerShape(24.dp))
                 .fillMaxWidth(),
             contentScale = ContentScale.FillWidth,
-            bitmap = qrCode.asImageBitmap(),
+            bitmap = qrCode.code.asImageBitmap(),
             contentDescription = stringResource(
                 id = R.string.contact_qr_code
             )
@@ -69,7 +68,7 @@ fun QrCode(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            text = qrCodeLabel,
+            text = qrCode.label,
             style = MaterialTheme.typography.bodyLarge
         )
     }
@@ -83,8 +82,7 @@ fun QrCodePreview()
     if(bitmap != null) {
         ApplicationComposeTheme(darkTheme = true) {
             QrCode(
-                qrCode = bitmap,
-                qrCodeLabel = "John"
+                qrCode = QrCodeDto(bitmap, "John", false),
             )
         }
     }

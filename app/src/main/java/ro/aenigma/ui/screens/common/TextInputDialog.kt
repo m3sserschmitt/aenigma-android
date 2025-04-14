@@ -35,12 +35,14 @@ fun TextInputDialog(
     title: String,
     body: String,
     placeholderText: String,
+    dismissible: Boolean = true,
+    initialText: String = "",
     onTextChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     var isValidationError by remember { mutableStateOf(false) }
-    var text by remember { mutableStateOf("") }
+    var text by remember { mutableStateOf(initialText) }
 
     BasicAlertDialog(
         onDismissRequest = { },
@@ -76,11 +78,11 @@ fun TextInputDialog(
             },
             title = title,
             body = body,
-            dismissible = true,
+            dismissible = dismissible,
             onPositiveButtonClicked = {
                 isValidationError = isValidationError || text.isEmpty()
                 if (!isValidationError) {
-                    onConfirmClicked()
+                    onConfirmClicked(text)
                     text = ""
                 }
             },

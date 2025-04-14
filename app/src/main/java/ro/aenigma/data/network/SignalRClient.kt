@@ -3,7 +3,6 @@ package ro.aenigma.data.network
 import android.util.Base64
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.google.gson.GsonBuilder
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
@@ -13,8 +12,8 @@ import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import ro.aenigma.crypto.SignatureService
-import ro.aenigma.data.MessageSaver
+import ro.aenigma.crypto.services.SignatureService
+import ro.aenigma.services.MessageSaver
 import ro.aenigma.models.Neighborhood
 import ro.aenigma.models.VertexBroadcastRequest
 import ro.aenigma.models.hubInvocation.AuthenticateResult
@@ -25,7 +24,7 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.models.hubInvocation.VertexBroadcastResult
-import ro.aenigma.util.CapitalizedFieldNamingStrategy
+import ro.aenigma.util.SerializerExtensions.toJson
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -61,9 +60,6 @@ class SignalRClient @Inject constructor(
         private const val PULL_DATA_NULL_ERROR =
             "Data returned from $PULL_METHOD invocation was null."
 
-        private const val GENERATE_NONCE_INVOCATION_ERROR =
-            "Error while invoking $GENERATE_NONCE_METHOD method."
-
         private const val COULD_NOT_CREATE_CONNECTION_ERROR =
             "Could not create connection or invalid URL."
 
@@ -87,8 +83,6 @@ class SignalRClient @Inject constructor(
 
     val status: LiveData<SignalRStatus> get() = _status
 
-    val failedAttempts: LiveData<Int> get() = _failedAttempts
-
     private fun configureConnection() {
         synchronized(_hubConnection) {
             _hubConnection.onClosed {
@@ -97,7 +91,7 @@ class SignalRClient @Inject constructor(
         }
         synchronized(_hubConnection) {
             _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
-                if (data.payload != null) {
+                if (data.payloads != null) {
                     CoroutineScope(Dispatchers.IO).launch {
                         messageSaver.handleRoutingRequest(data)
                     }
@@ -114,7 +108,7 @@ class SignalRClient @Inject constructor(
             _hubConnection = createConnection(hostname)
             this._guardAddress = guardAddress
             configureConnection()
-        } catch (ex: Exception) {
+        } catch (_: Exception) {
             updateStatus(SignalRStatus.Error(_status.value!!, COULD_NOT_CREATE_CONNECTION_ERROR))
         }
         return start()
@@ -137,7 +131,7 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun resetStatus() {
+    fun resetAborted() {
         if (status.value is SignalRStatus.Error.Aborted) {
             _failedAttempts.postValue(0)
             updateStatus(SignalRStatus.Reset(_status.value))
@@ -210,18 +204,14 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Broadcasting())
             val neighborhood =
                 Neighborhood(signatureService.address, null, listOf(_guardAddress))
-            val serializedNeighborhood = GsonBuilder()
-                .setFieldNamingStrategy(CapitalizedFieldNamingStrategy())
-                .create()
-                .toJson(neighborhood)
-            val signature = signatureService.sign(serializedNeighborhood.toByteArray())
-
-            if (signature == null) {
+            val data = neighborhood.toJson()?.toByteArray() ?: return
+            val signature = signatureService.sign(data)
+            if (signature.publicKey == null || signature.signedData == null) {
                 updateStatus(SignalRStatus.Error(_status.value))
                 return
             }
 
-            val broadcastRequest = VertexBroadcastRequest(signature.first, signature.second)
+            val broadcastRequest = VertexBroadcastRequest(signature.publicKey, signature.signedData)
             synchronized(_hubConnection) {
                 return _hubConnection.invoke(
                     VertexBroadcastResult::class.java, BROADCAST_METHOD,
@@ -295,8 +285,8 @@ class SignalRClient @Inject constructor(
                     val signature =
                         if (decodedToken != null) signatureService.sign(decodedToken) else null
 
-                    if (signature != null) {
-                        authenticate(signature.first, signature.second)
+                    if (signature != null && signature.publicKey != null && signature.signedData != null) {
+                        authenticate(signature.publicKey, signature.signedData)
                     } else {
                         updateStatus(SignalRStatus.Error(_status.value, INTERNAL_ERROR))
                     }
@@ -371,9 +361,9 @@ class SignalRClient @Inject constructor(
             } else if (result.data == null) {
                 updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
             } else {
-                updateStatus(SignalRStatus.Synchronized())
                 CoroutineScope(Dispatchers.IO).launch {
                     messageSaver.handlePendingMessages(result.data)
+                    updateStatus(SignalRStatus.Synchronized())
                 }
             }
             subscription?.dispose()
@@ -402,13 +392,14 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun sendMessage(message: String): Boolean {
+    fun sendMessages(messages: List<String>): Boolean
+    {
         var r = false
         if (isConnected()) {
             synchronized(_hubConnection) {
                 _hubConnection.invoke(
                     RouteResult::class.java, ROUTE_MESSAGE_METHOD,
-                    RoutingRequest(message)
+                    RoutingRequest(messages)
                 ).blockingSubscribe(
                     { result -> r = result.success == true },
                     { _ -> r = false }

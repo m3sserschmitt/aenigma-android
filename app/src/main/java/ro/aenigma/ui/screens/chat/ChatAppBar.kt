@@ -1,6 +1,9 @@
 package ro.aenigma.ui.screens.chat
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
@@ -13,25 +16,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
+import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
 import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
-import ro.aenigma.util.DatabaseRequestState
-import java.time.ZonedDateTime
+import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatAppBar(
-    messages: DatabaseRequestState<List<MessageEntity>>,
-    contact: DatabaseRequestState<ContactEntity>,
+    messages: RequestState<List<MessageWithDetails>>,
+    contact: RequestState<ContactWithGroup>,
+    isMember: Boolean,
+    isAdmin: Boolean,
     connectionStatus: SignalRStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
@@ -39,11 +47,13 @@ fun ChatAppBar(
     onRetryConnection: () -> Unit,
     onDeleteAllClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
+    onReplyToMessageClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onSelectionModeExited: () -> Unit,
     onSearchModeTriggered: () -> Unit,
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
+    onGroupActionClicked: (MessageType) -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
@@ -60,6 +70,11 @@ fun ChatAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
             actions = {
+                if (selectedItemsCount == 1) {
+                    ReplyToMessageAppBarAction(
+                        onReplyToMessageClicked = onReplyToMessageClicked
+                    )
+                }
                 DeleteAppBarAction(
                     onDeleteClicked = onDeleteClicked
                 )
@@ -75,9 +90,9 @@ fun ChatAppBar(
                 onClose = onSearchModeClosed,
                 onSearchClicked = onSearchClicked
             )
-        } else {
+        } else if(contact is RequestState.Success){
             StandardAppBar(
-                title = if (contact is DatabaseRequestState.Success) contact.data.name else "",
+                title = contact.data.contact.name.toString(),
                 navigateBack = navigateToContactsScreen,
                 actions = {
                     ConnectionStatusAppBarAction(
@@ -92,13 +107,15 @@ fun ChatAppBar(
                     )
                     MoreActions(
                         messages = messages,
+                        isGroup = contact.data.contact.type == ContactType.GROUP,
+                        isMember = isMember,
+                        isAdmin = isAdmin,
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
-                            if (contact is DatabaseRequestState.Success) {
-                                navigateToAddContactsScreen(contact.data.address)
-                            }
-                        }
+                            navigateToAddContactsScreen(contact.data.contact.address)
+                        },
+                        onGroupActionClicked = onGroupActionClicked
                     )
                 }
             )
@@ -108,10 +125,14 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: DatabaseRequestState<List<MessageEntity>>,
+    messages: RequestState<List<MessageWithDetails>>,
+    isGroup: Boolean,
+    isMember: Boolean,
+    isAdmin: Boolean,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
-    onShareContactClicked: () -> Unit
+    onShareContactClicked: () -> Unit,
+    onGroupActionClicked: (MessageType) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -125,6 +146,7 @@ fun MoreActions(
             imageVector = Icons.Filled.Edit,
             contentDescription = stringResource(id = R.string.rename),
             text = stringResource(id = R.string.rename),
+            visible = (isGroup && isMember && isAdmin) || !isGroup,
             onClick = {
                 onRenameContactClicked()
                 expanded = false
@@ -134,49 +156,88 @@ fun MoreActions(
             imageVector = Icons.Filled.Share,
             contentDescription = stringResource(id = R.string.share),
             text = stringResource(id = R.string.share),
+            visible = !isGroup,
             onClick = {
                 onShareContactClicked()
                 expanded = false
             }
         )
         BasicDropDownMenuItem(
-            imageVector = Icons.Filled.Delete,
-            contentDescription = stringResource(id = R.string.delete),
-            enabled = messages is DatabaseRequestState.Success && messages.data.isNotEmpty(),
-            text = stringResource(id = R.string.clear_conversation),
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(id = R.string.add_group_member),
+            text = stringResource(id = R.string.add_group_member),
+            visible = isGroup && isMember && isAdmin,
             onClick = {
-                onDeleteAllClicked()
+                onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
                 expanded = false
             }
         )
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.Clear,
+            contentDescription = stringResource(id = R.string.remove_group_member),
+            text = stringResource(id = R.string.remove_group_member),
+            visible = isGroup && isMember && isAdmin,
+            onClick = {
+                onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
+                expanded = false
+            }
+        )
+        BasicDropDownMenuItem(
+            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+            contentDescription = stringResource(id = R.string.leave_group),
+            text = stringResource(id = R.string.leave_group),
+            visible = isGroup && isMember && !isAdmin,
+            onClick = {
+                onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
+                expanded = false
+            }
+        )
+        if(messages is RequestState.Success)
+        {
+            BasicDropDownMenuItem(
+                imageVector = Icons.Filled.Delete,
+                contentDescription = stringResource(id = R.string.delete),
+                visible = messages.data.isNotEmpty(),
+                text = stringResource(id = R.string.clear_conversation),
+                onClick = {
+                    onDeleteAllClicked()
+                    expanded = false
+                }
+            )
+        }
     }
 }
 
 @Composable
 @Preview
-fun DefaultChatAppBarPreview()
-{
+fun DefaultChatAppBarPreview() {
     ChatAppBar(
-        messages = DatabaseRequestState.Success(listOf()),
+        messages = RequestState.Success(listOf()),
         isSelectionMode = false,
         connectionStatus = SignalRStatus.NotConnected(),
-        contact = DatabaseRequestState.Success(ContactEntity(
-            "123456-5678-5678-123456",
-            "John",
-            "public-key",
-            "guard-hostname",
-            "guard-address",
-            true,
-            ZonedDateTime.now()
-        )),
+        contact = RequestState.Success(
+            ContactWithGroup(
+                ContactEntityFactory.createContact(
+                    address = "123456-5678-5678-123456",
+                    name = "John",
+                    publicKey = "public-key",
+                    guardHostname = "guard-hostname",
+                    guardAddress = "guard-address",
+                ), null
+            )
+        ),
+        isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
         navigateToContactsScreen = {},
         onDeleteClicked = {},
+        onReplyToMessageClicked = {},
         selectedItemsCount = 0,
         onSelectionModeExited = {},
         onSearchModeTriggered = {},
+        onGroupActionClicked = {},
         onSearchClicked = {},
         onSearchModeClosed = {},
         isSearchMode = false,
@@ -186,28 +247,33 @@ fun DefaultChatAppBarPreview()
 
 @Preview
 @Composable
-fun SelectionModeChatAppBarPreview()
-{
+fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
-        messages = DatabaseRequestState.Success(listOf()),
+        messages = RequestState.Success(listOf()),
         isSelectionMode = true,
         connectionStatus = SignalRStatus.NotConnected(),
-        contact = DatabaseRequestState.Success(ContactEntity(
-            "123456-5678-5678-123456",
-            "John",
-            "public-key",
-            "guard-hostname",
-            "guard-address",
-            true,
-            ZonedDateTime.now()
-        )),
+        contact = RequestState.Success(
+            ContactWithGroup(
+                ContactEntityFactory.createContact(
+                    address = "123456-5678-5678-123456",
+                    name = "John",
+                    publicKey = "public-key",
+                    guardHostname = "guard-hostname",
+                    guardAddress = "guard-address",
+                ), null
+            )
+        ),
+        isMember = true,
+        isAdmin = false,
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
         navigateToContactsScreen = {},
         onDeleteClicked = {},
+        onReplyToMessageClicked = {},
         selectedItemsCount = 3,
         onSelectionModeExited = {},
+        onGroupActionClicked = {},
         onSearchModeTriggered = {},
         onSearchClicked = {},
         onSearchModeClosed = {},

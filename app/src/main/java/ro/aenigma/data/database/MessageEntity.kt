@@ -1,24 +1,41 @@
 package ro.aenigma.data.database
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
+import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.fasterxml.jackson.annotation.JsonIgnore
+import kotlinx.coroutines.flow.MutableStateFlow
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.Constants
 import java.time.ZonedDateTime
 
-@Entity(tableName = Constants.MESSAGES_TABLE)
+@Entity(
+    tableName = Constants.MESSAGES_TABLE,
+    indices = [
+        Index(value = ["chatId"]),
+        Index(value = ["deleted"]),
+        Index(value = ["refId"], unique = true),
+        Index(value = ["serverUUID"], unique = true)
+    ]
+)
 data class MessageEntity (
+    @PrimaryKey var id: Long = 0,
     val chatId: String,
-    val text: String,
+    val senderAddress: String?,
+    val serverUUID: String?,
+    val text: String?,
+    val type: MessageType?,
+    val actionFor: String?,
+    val refId: String?,
     val incoming: Boolean,
-    var sent: Boolean,
-    val date: ZonedDateTime = ZonedDateTime.now(),
-    @ColumnInfo(index = true) val uuid: String? = null,
-    val dateReceivedOnServer: ZonedDateTime? = null
-) {
-    @PrimaryKey
-    @ColumnInfo(index = true)
-    var id: Long = 0
+    val sent: Boolean,
+    val deleted: Boolean,
+    val date: ZonedDateTime,
+    val dateReceivedOnServer: ZonedDateTime?) {
+    @Ignore
+    @JsonIgnore
+    val deliveryStatus = MutableStateFlow(false)
 
     override fun hashCode(): Int {
         return id.hashCode()

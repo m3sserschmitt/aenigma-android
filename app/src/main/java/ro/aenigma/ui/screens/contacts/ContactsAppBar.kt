@@ -1,6 +1,7 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +16,7 @@ import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
+import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
 import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
@@ -37,6 +39,8 @@ fun ContactsAppBar(
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
+    onResetUsernameClicked: () -> Unit,
+    onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
     var searchQueryState by remember { mutableStateOf("") }
@@ -64,6 +68,10 @@ fun ContactsAppBar(
                 ShareTopAppBarAction(
                     visible = selectedItemsCount == 1,
                     onShareContactClick = onShareSelectedItemsClicked
+                )
+                CreateGroupTopAppBarAction(
+                    visible = selectedItemsCount > 0,
+                    onCreateGroupClicked = onCreateGroupClicked
                 )
             }
         )
@@ -96,7 +104,8 @@ fun ContactsAppBar(
                     onSearchModeTriggered = onSearchTriggered
                 )
                 MoreActions(
-                    navigateToAboutScreen = navigateToAboutScreen
+                    navigateToAboutScreen = navigateToAboutScreen,
+                    onResetUsernameClicked = onResetUsernameClicked
                 )
             }
         )
@@ -105,6 +114,7 @@ fun ContactsAppBar(
 
 @Composable
 fun MoreActions(
+    onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -114,6 +124,15 @@ fun MoreActions(
             expanded = isExpended
         }
     ) {
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.AccountCircle,
+            contentDescription = stringResource(id = R.string.reset_username),
+            text = stringResource(id = R.string.reset_username),
+            onClick = {
+                onResetUsernameClicked()
+                expanded = false
+            }
+        )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Info,
             contentDescription = stringResource(id = R.string.about_app),

@@ -11,7 +11,8 @@ import androidx.room.TypeConverters
         GuardEntity::class,
         VertexEntity::class,
         EdgeEntity::class,
-        GraphVersionEntity::class],
+        GraphVersionEntity::class,
+        GroupEntity::class],
     version = 1,
     exportSchema = false)
 @TypeConverters(Converters::class)

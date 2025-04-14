@@ -8,8 +8,9 @@ import ro.aenigma.R
 @Composable
 fun SaveNewContactDialog(
     visible: Boolean,
+    initialName: String = "",
     onContactNameChanged: (String) -> Boolean,
-    onConfirmClicked: () -> Unit,
+    onConfirmClicked: (String) -> Unit,
     onDismissClicked: () -> Unit
 ) {
     if(visible) {
@@ -21,6 +22,7 @@ fun SaveNewContactDialog(
             body = stringResource(
                 id = R.string.save_contact_message
             ),
+            initialText = initialName,
             placeholderText = stringResource(id = R.string.contact_name),
             onConfirmClicked = onConfirmClicked,
             onDismissClicked = onDismissClicked
@@ -34,6 +36,7 @@ fun SaveNewContactDialogPreview()
 {
     SaveNewContactDialog(
         visible = true,
+        initialName = "John",
         onContactNameChanged = { true },
         onConfirmClicked = { },
         onDismissClicked = { },

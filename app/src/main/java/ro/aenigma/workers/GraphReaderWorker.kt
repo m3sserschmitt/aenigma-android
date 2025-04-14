@@ -5,18 +5,13 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.EdgeEntity
-import ro.aenigma.data.database.GraphVersionEntity
 import ro.aenigma.data.database.GuardEntity
-import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.Vertex
 import ro.aenigma.util.GraphRequestResult
@@ -24,19 +19,19 @@ import ro.aenigma.util.GuardSelectionResult
 import ro.aenigma.util.isAppDomain
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import java.util.Date
+import ro.aenigma.data.database.factories.EdgeEntityFactory
+import ro.aenigma.data.database.factories.GraphVersionEntityFactory
+import ro.aenigma.data.database.factories.GuardEntityFactory
+import ro.aenigma.data.database.factories.VertexEntityFactory
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
-    @Assisted private val context: Context,
+    @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository
 ) : CoroutineWorker(context, params) {
     companion object {
-
-        private const val UNIQUE_REQUEST_IDENTIFIER = "GraphReaderWorkerRequest"
-
         private const val MAX_RETRY_COUNT = 2
 
         private const val DELAY_BETWEEN_RETRIES: Long = 3
@@ -52,18 +47,6 @@ class GraphReaderWorker @AssistedInject constructor(
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
                 .build()
-        }
-
-        @JvmStatic
-        fun sync(
-            context: Context,
-        ) {
-            WorkManager.getInstance(context)
-                .enqueueUniqueWork(
-                    UNIQUE_REQUEST_IDENTIFIER,
-                    ExistingWorkPolicy.KEEP,
-                    createSyncRequest()
-                )
         }
     }
 
@@ -111,34 +94,51 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun saveGraph(graphRequestResult: GraphRequestResult)
-    {
-        if(graphRequestResult is GraphRequestResult.Error) return
+    private suspend fun saveGraph(graphRequestResult: GraphRequestResult) {
+        if (graphRequestResult is GraphRequestResult.Error) return
 
-        if(graphRequestResult.guardSelectionResult is GuardSelectionResult.Success)
-        {
-            val chosenGuard = graphRequestResult.guardSelectionResult.chosenGuard!!
+        if (graphRequestResult.guardSelectionResult is GuardSelectionResult.Success) {
+            val chosenGuard = graphRequestResult.guardSelectionResult.chosenGuard ?: return
+            chosenGuard.neighborhood?.address ?: return
+            chosenGuard.publicKey ?: return
+            chosenGuard.neighborhood.hostname ?: return
             repository.local.insertGuard(
-                GuardEntity(
-                    chosenGuard.neighborhood!!.address!!,
-                    chosenGuard.publicKey!!,
-                    chosenGuard.neighborhood.hostname!!,
-                    Date()
+                GuardEntityFactory.create(
+                    address = chosenGuard.neighborhood.address,
+                    publicKey = chosenGuard.publicKey,
+                    hostname = chosenGuard.neighborhood.hostname,
                 )
             )
         }
 
-        val graph = graphRequestResult.graph!!
+        val graph = graphRequestResult.graph ?: return
 
-        val vertices = graph.map { vertex ->
-            VertexEntity(vertex.neighborhood?.address ?: "", vertex.publicKey ?: "", vertex.neighborhood?.hostname)
+        val vertices = graph.mapNotNull { vertex ->
+            vertex.neighborhood?.address?.let { address ->
+                vertex.publicKey?.let { publicKey ->
+                    VertexEntityFactory.create(
+                        address = address,
+                        publicKey = publicKey,
+                        hostname = vertex.neighborhood.hostname
+                    )
+                }
+            }
         }
 
         repository.local.insertVertices(vertices)
 
-        graph.map { vertex ->
-            vertex.neighborhood?.neighbors?.map { neighbor ->
-                repository.local.insertEdge(EdgeEntity(vertex.neighborhood.address ?: "", neighbor))
+        graph.forEach { vertex ->
+            vertex.neighborhood?.neighbors?.map { neighborAddress ->
+                neighborAddress?.let { targetAddress ->
+                    vertex.neighborhood.address?.let { sourceAddress ->
+                        repository.local.insertEdge(
+                            EdgeEntityFactory.create(
+                                sourceAddress = sourceAddress,
+                                targetAddress = targetAddress
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -151,10 +151,8 @@ class GraphReaderWorker @AssistedInject constructor(
 
     private suspend fun requestNewGraph(): GraphRequestResult {
         return try {
-            val response = repository.remote.getVertices()
-            val vertices = response.body()
-
-            if (response.code() == 200 && vertices != null) {
+            val vertices = repository.remote.getVertices()
+            if (vertices.isNotEmpty()) {
                 val guardSelectionResult = selectGuard(vertices)
 
                 if(guardSelectionResult is GuardSelectionResult.Error)
@@ -203,7 +201,7 @@ class GraphReaderWorker @AssistedInject constructor(
                 saveGraph(graphRequestResult)
             }
 
-            repository.local.updateGraphVersion(GraphVersionEntity(serverInfo.graphVersion, Date()))
+            repository.local.updateGraphVersion(GraphVersionEntityFactory.create(serverInfo.graphVersion))
         }
         catch (_: Exception)
         {

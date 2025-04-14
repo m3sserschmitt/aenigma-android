@@ -1,7 +1,6 @@
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -60,7 +59,6 @@ fun <T> ItemsList(
 
     LazyColumn(
         modifier = modifier
-            .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
         state = listState,
         reverseLayout = reversedLayout
@@ -68,14 +66,14 @@ fun <T> ItemsList(
         itemsIndexed(
             items = items,
             key = { _, item -> itemKeyProvider(item) }
-        ) { index, message ->
-            val isSelected = selectedItems.any { item -> item == message }
+        ) { index, element ->
+            val isSelected = selectedItems.any { item -> itemKeyProvider(item) == itemKeyProvider(element) }
             val nextItem = if(index < items.size - 1)
                 items[index + 1]
             else
                 null
 
-            listItem(nextItem, message, isSelected)
+            listItem(nextItem, element, isSelected)
         }
     }
 }

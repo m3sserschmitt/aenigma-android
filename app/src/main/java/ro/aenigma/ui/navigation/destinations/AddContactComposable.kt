@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.addContacts.AddContactsScreen
-import ro.aenigma.util.NavigationTracker
+import ro.aenigma.services.NavigationTracker
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.addContactComposable(

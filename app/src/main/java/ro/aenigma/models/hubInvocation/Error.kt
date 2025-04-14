@@ -2,7 +2,7 @@ package ro.aenigma.models.hubInvocation
 
 data class Error(
     val message: String? = null,
-    val properties: List<String>? = null
+    val properties: List<String?>? = null
 ) {
     override fun toString(): String {
         return if(message != null) {

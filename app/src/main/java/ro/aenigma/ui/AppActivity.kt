@@ -8,25 +8,28 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import ro.aenigma.crypto.KeysManager
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.util.NavigationTracker
-import ro.aenigma.util.NotificationService
+import ro.aenigma.services.NavigationTracker
+import ro.aenigma.services.NotificationService
 import ro.aenigma.viewmodels.MainViewModel
 import ro.aenigma.workers.GraphReaderWorker
-import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import dagger.hilt.android.AndroidEntryPoint
+import ro.aenigma.data.network.SignalRClient
+import ro.aenigma.workers.CleanupWorker
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var signalRClient: SignalRClient
 
     @Inject
     lateinit var navigationTracker: NavigationTracker
@@ -52,7 +55,6 @@ class AppActivity : ComponentActivity() {
             }
         }
 
-        KeysManager.generateKeyIfNotExistent(this)
         startConnection()
         observeClientConnectivity()
         observeNavigation()
@@ -93,21 +95,11 @@ class AppActivity : ComponentActivity() {
     }
 
     private fun observeClientConnectivity() {
-        mainViewModel.signalRClientStatus.observe(this, signalRStatusObserver)
-    }
-
-    private fun observeOutgoingMessages() {
-        mainViewModel.outgoingMessages.observe(this, outgoingMessagesObserver)
+        signalRClient.status.observe(this, signalRStatusObserver)
     }
 
     private fun observeNavigation() {
         navigationTracker.currentRoute.observe(this, navigationObserver)
-    }
-
-    private val outgoingMessagesObserver = Observer<List<MessageEntity>> { messages ->
-        for (message in messages) {
-            onOutgoingMessage(message)
-        }
     }
 
     private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
@@ -127,17 +119,15 @@ class AppActivity : ComponentActivity() {
             is SignalRStatus.Error -> {
                 onClientError()
             }
-        }
-        if (clientStatus greaterOrEqualThan SignalRStatus.Authenticated()) {
-            onClientAuthenticated()
+
+            is SignalRStatus.Synchronized -> {
+                val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
+                WorkManager.getInstance(this).enqueue(cleanupRequest)
+            }
         }
     }
 
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onClientAuthenticated() {
-        observeOutgoingMessages()
-    }
 
     private fun onClientConnectionRefused() {
         SignalRClientWorker.startDelayed(this)
@@ -156,10 +146,6 @@ class AppActivity : ComponentActivity() {
 
     private fun onSignalRClientReset() {
         SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onOutgoingMessage(message: MessageEntity) {
-        MessageSenderWorker.sendMessage(this, message)
     }
 
     private fun onScreenChanged(route: String) {

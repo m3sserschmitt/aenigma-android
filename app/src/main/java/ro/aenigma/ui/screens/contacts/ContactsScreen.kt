@@ -25,9 +25,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithConversationPreview
+import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
@@ -35,10 +37,9 @@ import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
-import ro.aenigma.util.DatabaseRequestState
+import ro.aenigma.util.RequestState
 import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
-import java.time.ZonedDateTime
 
 @Composable
 fun ContactsScreen(
@@ -56,9 +57,8 @@ fun ContactsScreen(
     val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
         initial = SignalRStatus.NotConnected()
     )
-    val notificationsAllowed by mainViewModel.notificationsPermissionGranted.collectAsState(
-        initial = true
-    )
+    val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
+    val userName by mainViewModel.userName.collectAsState()
     val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
 
     ContactsScreen(
@@ -66,54 +66,51 @@ fun ContactsScreen(
         contacts = allContacts,
         sharedDataRequest = sharedDataRequest,
         notificationsAllowed = notificationsAllowed,
+        nameDialogVisible = userName.isBlank(),
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
-        onRetryConnection = {
-            mainViewModel.retryClientConnection()
-        },
-        onSearch = {
-            searchQuery -> mainViewModel.searchContacts(searchQuery)
-        },
+        onRetryConnection = { mainViewModel.retryClientConnection() },
+        onSearch = { searchQuery -> mainViewModel.searchContacts(searchQuery) },
         navigateToChatScreen = navigateToChatScreen,
-        onDeleteSelectedItems = {
-            contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete)
-        },
+        onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
         navigateToAboutScreen = navigateToAboutScreen,
-        onContactRenamed = {
-            contactToBeRenamed -> mainViewModel.renameContact(contactToBeRenamed)
+        onContactRenamed = { contactToBeRenamed, newName ->
+            mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  {
-            newValue -> mainViewModel.setNewContactName(newValue)
-        },
-        onContactSaved = {
-            mainViewModel.saveContactChanges()
-        },
-        onContactSaveDismissed = {
-            mainViewModel.cleanupContactChanges()
-        }
+        onNewContactNameChanged =  { newValue -> mainViewModel.validateNewContactName(newValue) },
+        onContactSaved = { name -> mainViewModel.saveNewContact(name) },
+        onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
+        onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
+        onResetUserNameClicked = { mainViewModel.resetUserName() },
+        onContactSaveDismissed = { mainViewModel.resetContactChanges() }
     )
 }
 
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: DatabaseRequestState<List<ContactWithConversationPreview>>,
-    sharedDataRequest: DatabaseRequestState<SharedData>,
+    contacts: RequestState<List<ContactWithLastMessage>>,
+    sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
+    nameDialogVisible: Boolean,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithConversationPreview>) -> Unit,
-    onContactRenamed: (ContactWithConversationPreview) -> Unit,
+    onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
+    onContactRenamed: (ContactWithLastMessage, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onContactSaved: () -> Unit,
+    onContactSaved: (String) -> Unit,
+    onGroupCreated: (List<ContactWithLastMessage>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
+    onNameConfirmed: (String) -> Unit,
+    onResetUserNameClicked: () -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
 ) {
+    var createGroupDialogVisible by remember { mutableStateOf(false) }
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
@@ -121,13 +118,13 @@ fun ContactsScreen(
     var saveContactDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<ContactWithConversationPreview>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
     val snackBarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
     LaunchedEffect(key1 = contacts)
     {
-        if (contacts is DatabaseRequestState.Success) {
+        if (contacts is RequestState.Success) {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
@@ -139,7 +136,7 @@ fun ContactsScreen(
     }
 
     LaunchedEffect(key1 = sharedDataRequest) {
-        if (sharedDataRequest is DatabaseRequestState.Error) {
+        if (sharedDataRequest is RequestState.Error) {
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -167,7 +164,8 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems)
+            onDeleteSelectedItems(selectedItems.toList())
+            selectedItems.clear()
         },
         onDismissClicked = {
             deleteContactsConfirmationVisible = false
@@ -177,11 +175,14 @@ fun ContactsScreen(
     RenameContactDialog(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
-            if (selectedItems.size == 1) {
-                onContactRenamed(selectedItems.single())
+        onConfirmClicked = { name ->
+            val contact = selectedItems.singleOrNull()
+            if (contact != null) {
+                onContactRenamed(contact, name)
             }
             renameContactDialogVisible = false
+            isSelectionMode = false
+            selectedItems.clear()
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -192,7 +193,7 @@ fun ContactsScreen(
         visible = getContactDataLoadingDialogVisible,
         state = sharedDataRequest,
         onConfirmButtonClicked = {
-            if (sharedDataRequest is DatabaseRequestState.Error) {
+            if (sharedDataRequest is RequestState.Error) {
                 onContactSaveDismissed()
             } else {
                 saveContactDialogVisible = true
@@ -202,16 +203,36 @@ fun ContactsScreen(
     )
 
     SaveNewContactDialog(
-        visible = sharedDataRequest is DatabaseRequestState.Success && saveContactDialogVisible,
+        visible = sharedDataRequest is RequestState.Success && saveContactDialogVisible,
         onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = {
-            onContactSaved()
+        onConfirmClicked = { name ->
+            onContactSaved(name)
             saveContactDialogVisible = false
         },
         onDismissClicked = {
             onContactSaveDismissed()
             saveContactDialogVisible = false
         }
+    )
+
+    CreateGroupDialog(
+        visible = createGroupDialogVisible,
+        onTextChanged = onNewContactNameChanged,
+        onConfirmClicked = { name ->
+            onGroupCreated(selectedItems.toList(), name)
+            createGroupDialogVisible = false
+            isSelectionMode = false
+            selectedItems.clear()
+        },
+        onDismissClicked = {
+            onContactSaveDismissed()
+            createGroupDialogVisible = false
+        }
+    )
+
+    SetupUserNameDialog(
+        visible = nameDialogVisible,
+        onConfirmClicked = onNameConfirmed
     )
 
     BackHandler(
@@ -232,6 +253,7 @@ fun ContactsScreen(
         selectedItemsCount = selectedItems.size,
         onSelectionModeExited = {
             isSelectionMode = false
+            selectedItems.clear()
         }
     )
 
@@ -273,10 +295,29 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    if (selectedItems.size == 1) {
-                        navigateToAddContactScreen(selectedItems.single().address)
+                    val selectedItem = selectedItems.singleOrNull()?.contact
+                    if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
+                        navigateToAddContactScreen(selectedItem.address)
+                    } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.cannot_share_groups),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 },
+                onCreateGroupClicked = {
+                    if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.cannot_select_groups_to_create_group),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        createGroupDialogVisible = true
+                    }
+                },
+                onResetUsernameClicked = onResetUserNameClicked,
                 onRetryConnection = onRetryConnection,
                 navigateToAboutScreen = navigateToAboutScreen
             )
@@ -334,44 +375,47 @@ fun ContactsFab(
 
 @Preview
 @Composable
-fun ContactsScreenPreview()
-{
+fun ContactsScreenPreview() {
     ContactsScreen(
         connectionStatus = SignalRStatus.Connected(),
         notificationsAllowed = true,
+        nameDialogVisible = false,
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
-        onContactRenamed = { },
+        onContactRenamed = { _, _ -> },
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
-        contacts = DatabaseRequestState.Success(
+        onGroupCreated = { _, _ -> },
+        contacts = RequestState.Success(
             listOf(
-                ContactWithConversationPreview(
-                    address = "123",
-                    name = "John",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = true,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntityFactory.createContact(
+                        address = "123",
+                        name = "John",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                    ), null
                 ),
-                ContactWithConversationPreview(
-                    address = "124",
-                    name = "Paul",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                    hasNewMessage = false,
-                    lastSynchronized = ZonedDateTime.now()
+                ContactWithLastMessage(
+                    ContactEntityFactory.createContact(
+                        address = "124",
+                        name = "Paul",
+                        publicKey = "",
+                        guardHostname = "",
+                        guardAddress = "",
+                    ), null
                 )
             )
         ),
+        onResetUserNameClicked = {},
         navigateToChatScreen = {},
         navigateToAddContactScreen = {},
         onContactSaved = {},
         onContactSaveDismissed = {},
-        sharedDataRequest = DatabaseRequestState.Idle,
-        navigateToAboutScreen = { }
+        sharedDataRequest = RequestState.Idle,
+        navigateToAboutScreen = { },
+        onNameConfirmed = {}
     )
 }

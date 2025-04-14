@@ -9,7 +9,7 @@ import ro.aenigma.ui.navigation.destinations.addContactComposable
 import ro.aenigma.ui.navigation.destinations.chatComposable
 import ro.aenigma.ui.navigation.destinations.contactsComposable
 import ro.aenigma.ui.navigation.destinations.licensesComposable
-import ro.aenigma.util.NavigationTracker
+import ro.aenigma.services.NavigationTracker
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
