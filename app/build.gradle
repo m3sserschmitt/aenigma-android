@@ -62,7 +62,6 @@ android {
     }
 
     namespace 'ro.aenigma'
-    ndkVersion '29.0.13113456'
 }
 
 dependencies {

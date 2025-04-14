@@ -1,50 +1,70 @@
-## Getting Started
+# Aenigma – Secure and Anonymous Communication
 
-These instructions will get you a copy of the project up and running on your local machine.
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+![Platform](https://img.shields.io/badge/platform-android-green)
+![Status](https://img.shields.io/badge/status-active-brightgreen)
+![OpenSSL](https://img.shields.io/badge/openssl-%3E%3D%203.0-blue)
 
-### Prerequisites
+## 📝 Overview
 
-Make sure to have Android Studio, Android SDK, Android NDK (Side by side) and Android Emulator (or
-physical Android device) installed. The following instructions will guide you to setup the project
-for Ubuntu Linux distribution.
+**Aenigma** is a free and open-source Android application focused on secure, private communication 
+through **end-to-end encryption** using **public key cryptography**.
 
-### Building the source code
+- Anonymous sign-up with **no personal information required**
+- No data collection or processing
+- Built with transparency, privacy, and user autonomy in mind
 
-You need a copy of the source code. Clone the repository using git:
 
-`git clone https://github.com/m3sserschmitt/aenigma-android.git --recursive`
+## 🚀 Getting Started
 
-This app statically links to cryptographic [OpenSSL](https://www.openssl.org/) library. We
-need to download and compile this library.
+Follow the instructions below to clone, configure, and build the Aenigma project on your local machine.
 
-Before that configure `ANDROID_NDK_ROOT` and `PATH`:
+### ✅ Prerequisites
 
-`export ANDROID_NDK_ROOT=<sdk-path>/ndk/<ndk-version>`
+Before building the application, ensure you have the following tools installed:
 
-`PATH=PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/<system>/bin:$PATH`
+- [Android Studio](https://developer.android.com/studio)
+- Android SDK
+- Android NDK (Side by side)
+- Android Emulator _or_ a physical Android device
 
-where,
+> These instructions are tailored for **Ubuntu Linux** distributions but can be adapted for other platforms.
 
-`<ndk-version>` is your installed NDK version,
+### 📥 Clone the Repository
 
-`<sdk-path>` is the path of your installed Android SDK and
+Clone the project using Git:
 
-`<system>` is your local machine OS: `linux-x86_64`, `darwin-x86_64`, `windows-x86_64` or `windows`.
+```bash
+git clone https://github.com/m3sserschmitt/aenigma-android.git --recursive
+```
 
-Change the working directory to newly downloaded source code and then into
-the `./app/src/main/cpp`. Run `./compile-openssl.sh` script. Make the script executable (if not
-already) using command `sudo chmod +x ./compile-openssl.sh`. This script will download, extract and 
-compile the source code for OpenSSL library for `armeabi-v7a`, `arm64-v8a`, `x86` and `x86_64`.
-Resulted binaries are located into `openssl-<version>-bin` directory.
+## 🔐 OpenSSL Integration & NDK Setup - [OPTIONAL]
+
+This application statically links against the [OpenSSL](https://www.openssl.org/) cryptographic 
+library. A **pre-built version of OpenSSL (≥ 3.0)** is included directly in the project repository 
+for convenience.
+
+If you prefer to build the OpenSSL library yourself, an **automation script** is available:
+
+```bash
+cd ./app/src/main/cpp
+export ANDROID_NDK_ROOT=<sdk-path>/ndk/<ndk-version>
+export PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/<system>/bin:$PATH
+./make-openssl.sh
+```
+
+>In the previous commands `<ndk-version>` is your installed NDK version,
+>`<sdk-path>` is the path of your installed Android SDK and
+>`<system>` is your local machine OS: `linux-x86_64`, `darwin-x86_64` `windows-x86_64` or `windows`.
 
 After completing this step you are
 ready to open the project into Android Studio IDE to build the application.
 
-## Authors
+## 👤 Authors
 
-* **Romulus-Emanuel Ruja** <<romulus-emanuel.ruja@tutanota.com>>
+* [Romulus-Emanuel Ruja](mailto:youremail@example.com)
 
-## License
+## 📜 License
 
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](./LICENSE)
 file for details.
