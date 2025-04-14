@@ -62,7 +62,7 @@ ready to open the project into Android Studio IDE to build the application.
 
 ## 👤 Authors
 
-* [Romulus-Emanuel Ruja](mailto:youremail@example.com)
+* [Romulus-Emanuel Ruja](mailto:romulus-emanuel.ruja@tutanota.com)
 
 ## 📜 License
 
