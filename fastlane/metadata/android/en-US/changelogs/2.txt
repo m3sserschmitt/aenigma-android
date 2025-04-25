@@ -1,0 +1,4 @@
+* Implemented group chats
+* Implemented delete and clear conversation (on both ends)
+* Implemented reply to message
+* Small UI improvements
