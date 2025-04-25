@@ -1,11 +1,12 @@
 package ro.aenigma.ui.screens.addContacts
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -31,8 +33,11 @@ fun QrCode(
     qrCode: QrCodeDto
 ) {
     Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.background(
+            color = MaterialTheme.colorScheme.background
+        ),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
         Text(
             modifier = Modifier
@@ -44,13 +49,14 @@ fun QrCode(
                 id = R.string.qr_code_caption
             )
         )
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.background,
-            thickness = 12.dp
-        )
         Image(
             modifier = Modifier
-                .padding(horizontal = 24.dp)
+                .padding(
+                    start = 24.dp,
+                    end = 24.dp,
+                    top = 24.dp,
+                    bottom = 12.dp
+                )
                 .clip(RoundedCornerShape(24.dp))
                 .fillMaxWidth(),
             contentScale = ContentScale.FillWidth,
@@ -59,17 +65,15 @@ fun QrCode(
                 id = R.string.contact_qr_code
             )
         )
-        HorizontalDivider(
-            color = MaterialTheme.colorScheme.background,
-            thickness = 12.dp
-        )
         Text(
             modifier = Modifier.alpha(.75f),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             text = qrCode.label,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
         )
     }
 }

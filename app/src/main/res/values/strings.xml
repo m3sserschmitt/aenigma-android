@@ -12,7 +12,7 @@
     <string name="contact">Contact</string>
     <string name="back">Back</string>
     <string name="contact_qr_code">Contact QR Code</string>
-    <string name="qr_code_caption">Scan the code from other devices to connect</string>
+    <string name="qr_code_caption">Scan to get in touch with anyone using Aenigma</string>
     <string name="contact_details_successfully_retrieved">Contact data successfully retrieved</string>
     <string name="save_contact_message">Would you like to save it?</string>
     <string name="dismiss">Dismiss</string>
@@ -55,7 +55,7 @@
     <string name="create_group">Create group</string>
     <string name="enter_group_name">Enter group name</string>
     <string name="camera_permission_required">Camera permission required</string>
-    <string name="create_link">Create link</string>
+    <string name="share_link">Share link</string>
     <string name="use_link">Use link</string>
     <string name="copy">Copy</string>
     <string name="error">Error</string>

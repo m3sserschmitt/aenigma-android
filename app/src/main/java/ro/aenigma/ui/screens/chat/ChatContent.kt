@@ -1,5 +1,7 @@
 package ro.aenigma.ui.screens.chat
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -20,9 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -56,44 +56,43 @@ fun ChatContent(
 
     LaunchedEffect(key1 = messages)
     {
-        if(messageSent)
-        {
+        if (messageSent) {
             conversationListState.scrollToItem(0)
             messageSent = false
         }
     }
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
+    Column(
+        modifier = modifier.fillMaxSize()
+            .background(color = MaterialTheme.colorScheme.background),
+        verticalArrangement = Arrangement.Bottom
     ) {
-        Column {
-            DisplayMessages(
-                modifier = Modifier.weight(1f),
-                isSelectionMode = isSelectionMode,
-                isSearchMode = isSearchMode,
-                messages = messages,
-                allContacts = allContacts,
-                conversationListState = conversationListState,
-                nextConversationPageAvailable = nextConversationPageAvailable,
-                selectedMessages = selectedMessages,
-                onItemSelected = onMessageSelected,
-                onItemDeselected = onMessageDeselected,
-                loadNextPage = loadNextPage
-            )
+        DisplayMessages(
+            modifier = Modifier.weight(1f),
+            isSelectionMode = isSelectionMode,
+            isSearchMode = isSearchMode,
+            messages = messages,
+            allContacts = allContacts,
+            conversationListState = conversationListState,
+            nextConversationPageAvailable = nextConversationPageAvailable,
+            selectedMessages = selectedMessages,
+            onItemSelected = onMessageSelected,
+            onItemDeselected = onMessageDeselected,
+            loadNextPage = loadNextPage
+        )
 
-            ChatInput(
-                modifier = Modifier.height(80.dp),
-                enabled = isMember,
-                messageInputText = messageInputText,
-                replyToMessage = replyToMessage,
-                onInputTextChanged = onInputTextChanged,
-                onSendClicked = {
-                    onSendClicked()
-                    messageSent = true
-                },
-                onReplyAborted = onReplyAborted
-            )
-        }
+        ChatInput(
+            modifier = Modifier.height(80.dp),
+            enabled = isMember,
+            messageInputText = messageInputText,
+            replyToMessage = replyToMessage,
+            onInputTextChanged = onInputTextChanged,
+            onSendClicked = {
+                onSendClicked()
+                messageSent = true
+            },
+            onReplyAborted = onReplyAborted
+        )
     }
 }
 
@@ -115,7 +114,7 @@ fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
 
 @Composable
 fun DisplayMessages(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageWithDetails>>,
@@ -177,24 +176,38 @@ fun DisplayMessages(
 @Composable
 fun ChatContentPreview() {
     val message1 = MessageWithDetails(
-        MessageEntityFactory.createIncoming(
+        MessageEntity(
             chatId = "123",
+            senderAddress = "123",
             text = "Hey",
             serverUUID = null,
             type = MessageType.TEXT,
-            actionFor = null,
-            senderAddress = null,
             refId = null,
-            dateReceivedOnServer = ZonedDateTime.now()
-        ).withId(1)!!, null, null
+            actionFor = null,
+            dateReceivedOnServer = ZonedDateTime.now(),
+            id = 1,
+            incoming = true,
+            sent = true,
+            deleted = false,
+            date = ZonedDateTime.now()
+        ), null, null
     )
-    val message2 = MessageWithDetails(
-        MessageEntityFactory.createOutgoing(
+    val message2= MessageWithDetails(
+        MessageEntity(
             chatId = "123",
-            text = "Hey, how are you?",
+            text = "Please don't forget my green T-shirt...",
             type = MessageType.TEXT,
             actionFor = null,
-        ).withId(2)!!, null, null
+            id = 2,
+            senderAddress = "123",
+            serverUUID = null,
+            refId = null,
+            incoming = true,
+            sent = true,
+            deleted = false,
+            date = ZonedDateTime.now(),
+            dateReceivedOnServer = ZonedDateTime.now(),
+        ), null, null
     )
 
     ChatContent(
@@ -205,7 +218,7 @@ fun ChatContentPreview() {
         replyToMessage = null,
         nextConversationPageAvailable = true,
         isSelectionMode = false,
-        messageInputText = "Can't wait to see you on Monday",
+        messageInputText = "",
         onSendClicked = {},
         onReplyAborted = {},
         onInputTextChanged = {},
@@ -214,6 +227,6 @@ fun ChatContentPreview() {
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
-        allContacts = RequestState.Idle,
+        allContacts = RequestState.Success(listOf()),
     )
 }

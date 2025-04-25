@@ -2,6 +2,7 @@ package ro.aenigma.ui.themes
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -44,6 +45,32 @@ private val DarkColors = darkColorScheme(
 )
 
 @Composable
+fun ApplicationMaterialTheme(colorScheme: ColorScheme, content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        shapes = Shapes,
+        content = content
+    )
+}
+
+@Composable
+fun ApplicationComposeDarkTheme(content: @Composable () -> Unit) {
+    ApplicationMaterialTheme(
+        colorScheme = DarkColors,
+        content = content
+    )
+}
+
+@Composable
+fun ApplicationComposeLightTheme(content: @Composable () -> Unit) {
+    ApplicationMaterialTheme(
+        colorScheme = LightColors,
+        content = content
+    )
+}
+
+@Composable
 fun ApplicationComposeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
@@ -57,10 +84,9 @@ fun ApplicationComposeTheme(
         insetsController.isAppearanceLightStatusBars = !darkTheme
     }
 
-    MaterialTheme(
-        colorScheme = colors,
-        typography = Typography,
-        shapes = Shapes,
-        content = content
-    )
+    if (darkTheme) {
+        ApplicationComposeDarkTheme(content)
+    } else {
+        ApplicationComposeLightTheme(content)
+    }
 }

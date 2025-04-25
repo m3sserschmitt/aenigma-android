@@ -21,15 +21,15 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.withId
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
@@ -365,25 +365,57 @@ fun MarkConversationAsRead(
 @Preview
 @Composable
 fun ChatScreenPreview() {
-    val message1 = MessageWithDetails(
-        MessageEntityFactory.createIncoming(
+    val message3 = MessageWithDetails(
+        MessageEntity(
             chatId = "123",
-            senderAddress = null,
+            senderAddress = "123",
             text = "Hey",
             serverUUID = null,
             type = MessageType.TEXT,
             refId = null,
             actionFor = null,
-            dateReceivedOnServer = ZonedDateTime.now()
-        ).withId(1)!!, null, null
+            dateReceivedOnServer = ZonedDateTime.now(),
+            id = 1,
+            incoming = true,
+            sent = true,
+            deleted = false,
+            date = ZonedDateTime.now()
+        ), null, null
     )
-    val message2 = MessageWithDetails(
-        MessageEntityFactory.createOutgoing(
+    val message2= MessageWithDetails(
+        MessageEntity(
             chatId = "123",
-            text = "Hey, how are you?",
+            text = "Please don't forget my green T-shirt...",
             type = MessageType.TEXT,
             actionFor = null,
-        ).withId(2)!!, null, null
+            id = 2,
+            senderAddress = "123",
+            serverUUID = null,
+            refId = null,
+            incoming = true,
+            sent = true,
+            deleted = false,
+            date = ZonedDateTime.now(),
+            dateReceivedOnServer = ZonedDateTime.now(),
+        ), null, null
+    )
+
+    val message1 = MessageWithDetails(
+        MessageEntity(
+            chatId = "123",
+            text = "No worry bud!",
+            type = MessageType.TEXT,
+            actionFor = null,
+            id = 3,
+            senderAddress = null,
+            serverUUID = null,
+            refId = null,
+            incoming = false,
+            sent = true,
+            deleted = false,
+            date = ZonedDateTime.now(),
+            dateReceivedOnServer = ZonedDateTime.now(),
+        ), null, null
     )
 
     ChatScreen(
@@ -392,23 +424,23 @@ fun ChatScreenPreview() {
                 ContactEntityFactory.createContact(
                     address = "123",
                     name = "John",
-                    publicKey = "key",
-                    guardHostname = "host",
-                    guardAddress = "guard-address",
+                    publicKey = null,
+                    guardHostname = null,
+                    guardAddress = null,
                 ), null
             )
         ),
         isMember = true,
         isAdmin = false,
-        allContacts = RequestState.Idle,
-        connectionStatus = SignalRStatus.Connected(),
+        allContacts = RequestState.Success(listOf()),
+        connectionStatus = SignalRStatus.Authenticated(),
         replyToMessage = null,
         messages = RequestState.Success(
-            listOf(message1, message2)
+            listOf(message1, message2, message3)
         ),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
-        messageInputText = "Can't wait to see you on Monday",
+        messageInputText = "I've got you covered :)",
         onSendClicked = {},
         onRenameContactConfirmed = {},
         onInputTextChanged = {},
@@ -424,4 +456,12 @@ fun ChatScreenPreview() {
         navigateToContactsScreen = {},
         navigateToAddContactsScreen = {}
     )
+}
+
+@Preview
+@Composable
+fun ChatScreenDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ChatScreenPreview()
+    }
 }

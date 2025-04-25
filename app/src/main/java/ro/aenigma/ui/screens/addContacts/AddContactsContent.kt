@@ -160,7 +160,7 @@ fun DisplayQrCode(
             Column(
                 modifier = modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
                 QrCode(
                     qrCode = qrCode.data
@@ -182,7 +182,7 @@ fun DisplayQrCode(
                         ) {
                             Text(
                                 text = stringResource(
-                                    id = R.string.create_link
+                                    id = R.string.share_link
                                 ),
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                                 style = MaterialTheme.typography.bodyMedium

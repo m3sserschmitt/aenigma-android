@@ -3,8 +3,6 @@ package ro.aenigma.viewmodels
 import android.app.Application
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
-import ro.aenigma.R
-import ro.aenigma.AenigmaApp
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -236,7 +234,7 @@ class MainViewModel @Inject constructor(
                 if (code != null) {
                     emit(
                         QrCodeDto(
-                            code, getApplication<AenigmaApp>().getString(R.string.my_code), true
+                            code, "@${userName.value}", true
                         )
                     )
                 } else {
@@ -262,7 +260,7 @@ class MainViewModel @Inject constructor(
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if(code != null) {
-                    emit(QrCodeDto(code, contact.name.toString(), false))
+                    emit(QrCodeDto(code, "@${contact.name.toString()}", false))
                 } else {
                     emit(null)
                 }

@@ -27,9 +27,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.data.network.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
@@ -37,9 +39,11 @@ import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
+import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
+import java.time.ZonedDateTime
 
 @Composable
 fun ContactsScreen(
@@ -393,19 +397,33 @@ fun ContactsScreenPreview() {
                     ContactEntityFactory.createContact(
                         address = "123",
                         name = "John",
-                        publicKey = "",
-                        guardHostname = "",
-                        guardAddress = "",
-                    ), null
+                        publicKey = null,
+                        guardHostname = null,
+                        guardAddress = null,
+                    ), MessageEntityFactory.createOutgoing(
+                        chatId = "123",
+                        text = "No worry bud!",
+                        type = MessageType.TEXT,
+                        actionFor = null,
+                    )
                 ),
                 ContactWithLastMessage(
                     ContactEntityFactory.createContact(
                         address = "124",
-                        name = "Paul",
-                        publicKey = "",
-                        guardHostname = "",
-                        guardAddress = "",
-                    ), null
+                        name = "Elizabeth",
+                        publicKey = null,
+                        guardHostname = null,
+                        guardAddress = null,
+                    ), MessageEntityFactory.createIncoming(
+                        chatId = "124",
+                        text = "Can't wait to see you tomorrow!",
+                        type = MessageType.TEXT,
+                        senderAddress = "124",
+                        serverUUID = null,
+                        actionFor = null,
+                        refId = null,
+                        dateReceivedOnServer = ZonedDateTime.now()
+                    )
                 )
             )
         ),
@@ -418,4 +436,12 @@ fun ContactsScreenPreview() {
         navigateToAboutScreen = { },
         onNameConfirmed = {}
     )
+}
+
+@Preview
+@Composable
+fun ContactsScreenDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenPreview()
+    }
 }

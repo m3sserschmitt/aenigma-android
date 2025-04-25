@@ -30,7 +30,7 @@ import ro.aenigma.data.database.MessageWithDetails
 
 @Composable
 fun ChatInput(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     enabled: Boolean = true,
     replyToMessage: MessageWithDetails?,
     messageInputText: String,

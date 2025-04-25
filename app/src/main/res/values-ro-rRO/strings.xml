@@ -13,7 +13,7 @@
     <string name="contact">Contact</string>
     <string name="back">Înapoi</string>
     <string name="contact_qr_code">Codul QR al Contactului</string>
-    <string name="qr_code_caption">Scanați codul de pe alt dispozitiv pentru conectare</string>
+    <string name="qr_code_caption">Scanați codul pentru a vă conecta cu alte persoane ce folosesc Aenigma</string>
     <string name="contact_details_successfully_retrieved">Datele contactului au fost preluate cu succes</string>
     <string name="save_contact_message">Doriți să salvați?</string>
     <string name="dismiss">Renunță</string>
@@ -56,7 +56,7 @@
     <string name="create_group">Creați un grup</string>
     <string name="enter_group_name">Introduceți numele noului grup</string>
     <string name="camera_permission_required">Este necesară permisiunea pentru utilizarea Camerei</string>
-    <string name="create_link">Creați un link</string>
+    <string name="share_link">Distribuiți un link</string>
     <string name="use_link">Folosiți un link</string>
     <string name="copy">Copiați</string>
     <string name="error">Eroare</string>

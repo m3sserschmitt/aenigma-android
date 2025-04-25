@@ -1,6 +1,5 @@
 package ro.aenigma.ui.screens.addContacts
 
-import android.annotation.SuppressLint
 import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
@@ -25,6 +24,7 @@ import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
+import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.QrCodeGenerator
 import ro.aenigma.util.QrCodeScannerState
@@ -172,34 +172,44 @@ fun QrScannerFab(
     }
 }
 
-@SuppressLint("UseCompatLoadingForDrawables")
 @Preview
 @Composable
-fun AddContactsScreenPreview()
-{
-    val bitmap = QrCodeGenerator(400, 400).encodeAsBitmap("Hello world!")
-    if(bitmap != null) {
-        AddContactsScreen(
-            scannerState = QrCodeScannerState.SHARE_CODE,
-            qrCode = RequestState.Success(QrCodeDto(bitmap, "John", true)),
-            sharedDataCreate = RequestState.Idle,
-            sharedDataGet = RequestState.Idle,
-            importedContactDetails = ExportedContactData(
-                publicKey = "",
-                guardHostname = "",
-                guardAddress = "",
-                userName = ""
-            ),
-            floatingButtonVisible = true,
-            onNewContactNameChanged = { true },
-            onQrCodeFound = { },
-            onSaveContact = { },
-            onScannerStateChanged = { },
-            onSaveContactDismissed = { },
-            navigateToContactsScreen = { },
-            onCreateLinkClicked = { },
-            onGetLink = { },
-            onSharedDataConfirm = { }
-        )
+fun AddContactsScreenPreview() {
+    AddContactsScreen(
+        scannerState = QrCodeScannerState.SHARE_CODE,
+        qrCode = RequestState.Success(
+            QrCodeDto(
+                QrCodeGenerator(
+                    400,
+                    400
+                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
+            )
+        ),
+        sharedDataCreate = RequestState.Idle,
+        sharedDataGet = RequestState.Idle,
+        importedContactDetails = ExportedContactData(
+            publicKey = "",
+            guardHostname = "",
+            guardAddress = "",
+            userName = ""
+        ),
+        floatingButtonVisible = true,
+        onNewContactNameChanged = { true },
+        onQrCodeFound = { },
+        onSaveContact = { },
+        onScannerStateChanged = { },
+        onSaveContactDismissed = { },
+        navigateToContactsScreen = { },
+        onCreateLinkClicked = { },
+        onGetLink = { },
+        onSharedDataConfirm = { }
+    )
+}
+
+@Preview
+@Composable
+fun AddContactsScreenDarkPreview() {
+    ApplicationComposeDarkTheme {
+        AddContactsScreenPreview()
     }
 }

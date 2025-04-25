@@ -68,6 +68,7 @@ class AppActivity : ComponentActivity() {
             this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
+        signalRClient.resetAborted()
     }
 
     override fun onPause() {
