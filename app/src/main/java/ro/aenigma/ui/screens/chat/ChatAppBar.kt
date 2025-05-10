@@ -19,7 +19,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
@@ -214,7 +214,7 @@ fun DefaultChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = false,
-        connectionStatus = SignalRStatus.NotConnected(),
+        connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroup(
                 ContactEntityFactory.createContact(
@@ -251,7 +251,7 @@ fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = true,
-        connectionStatus = SignalRStatus.NotConnected(),
+        connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroup(
                 ContactEntityFactory.createContact(

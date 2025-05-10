@@ -43,8 +43,8 @@ class GroupUploadWorker @AssistedInject constructor(
 
     companion object {
         private const val UNIQUE_WORK_NAME = "UploadGroupWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 3
-        private const val MAX_ATTEMPTS_COUNT = 3
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
+        private const val MAX_ATTEMPTS_COUNT = 5
         const val GROUP_NAME_ARG = "GroupName"
         const val USER_NAME_ARG = "UserName"
         const val MEMBERS_ARG = "Members"
@@ -73,11 +73,9 @@ class GroupUploadWorker @AssistedInject constructor(
                 .build()
             val workName =
                 if (existingGroupAddress != null) "$UNIQUE_WORK_NAME-$existingGroupAddress" else UNIQUE_WORK_NAME
-            val existingWorkPolicy =
-                if (existingGroupAddress != null) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.APPEND_OR_REPLACE
             workManager.enqueueUniqueWork(
                 workName,
-                existingWorkPolicy,
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
                 workRequest
             )
         }
@@ -279,7 +277,7 @@ class GroupUploadWorker @AssistedInject constructor(
         val response =
             repository.remote.createSharedData(encryptedGroupData, membersToEncryptFor.size - 1)
                 ?: return Result.retry()
-        response.resourceUrl ?: return Result.failure()
+        response.resourceUrl ?: return Result.retry()
         saveGroupEntity(groupData, response.resourceUrl)
         saveMessageEntity(groupData, userName, memberAddresses, response.resourceUrl, actionType)
 

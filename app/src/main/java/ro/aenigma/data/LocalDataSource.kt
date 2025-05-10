@@ -12,7 +12,6 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessagesDao
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
-import ro.aenigma.data.network.BaseUrlInterceptor
 import kotlinx.coroutines.flow.Flow
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
@@ -28,12 +27,15 @@ class LocalDataSource @Inject constructor(
     private val verticesDao: VerticesDao,
     private val edgesDao: EdgesDao,
     private val graphVersionsDao: GraphVersionsDao,
-    private val preferencesDataStore: PreferencesDataStore,
-    private val baseUrlInterceptor: BaseUrlInterceptor
+    private val preferencesDataStore: PreferencesDataStore
 ) {
     suspend fun saveName(name: String)
     {
         return preferencesDataStore.saveName(name)
+    }
+
+    suspend fun saveTorPreference(useTor: Boolean) {
+        return preferencesDataStore.saveTorPreference(useTor)
     }
 
     suspend fun saveNotificationsAllowed(granted: Boolean) {
@@ -43,6 +45,8 @@ class LocalDataSource @Inject constructor(
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
 
     val name: Flow<String> = preferencesDataStore.name
+
+    val useTor: Flow<Boolean> = preferencesDataStore.useTor
 
     fun getContactsFlow(): Flow<List<ContactEntity>> {
         return contactsDao.getFlow()
@@ -184,16 +188,11 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun insertGuard(guard: GuardEntity) {
-        baseUrlInterceptor.setBaseUrl(guard.hostname)
         return guardsDao.insert(guard)
     }
 
     suspend fun getGuard(): GuardEntity? {
-        val guard = guardsDao.getLastGuard()
-        if (guard != null) {
-            baseUrlInterceptor.setBaseUrl(guard.hostname)
-        }
-        return guard
+        return guardsDao.getLastGuard()
     }
 
     suspend fun getGraphVersion(): GraphVersionEntity? {

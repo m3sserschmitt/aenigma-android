@@ -15,7 +15,7 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
-import ro.aenigma.data.network.SignalRClient
+import ro.aenigma.services.SignalRClient
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.concurrent.TimeUnit
@@ -34,8 +34,8 @@ class SignalRClientWorker @AssistedInject constructor(
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
         private const val INITIAL_PERIODIC_WORK_DELAY: Long = 10 // Minutes
         private const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15 // Minutes
-        private const val DELAY_BETWEEN_RETRIES: Long = 3 // Seconds
-        private const val MAX_RETRY_COUNT = 3 // Seconds
+        private const val DELAY_BETWEEN_RETRIES: Long = 5 // Seconds
+        private const val MAX_RETRY_COUNT = 5 // Seconds
 
         @JvmStatic
         fun schedulePeriodicSync(context: Context) {
@@ -66,7 +66,6 @@ class SignalRClientWorker @AssistedInject constructor(
 
         @JvmStatic
         fun createRequest(
-            initialDelay: Long = 0,
             actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup()
         ): OneTimeWorkRequest {
             val constraints = Constraints.Builder()
@@ -84,14 +83,7 @@ class SignalRClientWorker @AssistedInject constructor(
                     BackoffPolicy.LINEAR,
                     DELAY_BETWEEN_RETRIES,
                     TimeUnit.SECONDS
-                )
-
-            if (initialDelay > 0) {
-                workRequest.setInitialDelay(initialDelay, TimeUnit.SECONDS)
-            } else {
-                workRequest.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            }
-
+                ).setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             return workRequest.build()
         }
 
@@ -99,34 +91,22 @@ class SignalRClientWorker @AssistedInject constructor(
         fun start(
             context: Context,
             actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup(),
-            initialDelay: Long = 0
         ) {
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_ONE_TIME_REQUEST,
                     ExistingWorkPolicy.APPEND_OR_REPLACE,
-                    createRequest(initialDelay, actions)
+                    createRequest(actions)
                 )
-        }
-
-        @JvmStatic
-        fun startDelayed(
-            context: Context,
-            actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup()
-        ) {
-            start(context, actions, DELAY_BETWEEN_RETRIES)
         }
     }
 
     override suspend fun doWork(): Result {
-        val guard = repository.local.getGuard()
-
-        if (guard == null && runAttemptCount < MAX_RETRY_COUNT) {
-            return Result.retry()
-        } else if (guard == null) {
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
 
+        val guard = repository.local.getGuard() ?: return Result.failure()
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
 
         if (signalRClient.isConnected() && action contains SignalRWorkerAction.Disconnect()) {

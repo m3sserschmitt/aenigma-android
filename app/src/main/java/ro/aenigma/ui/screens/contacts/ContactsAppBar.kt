@@ -1,17 +1,29 @@
 package ro.aenigma.ui.screens.contacts
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -31,6 +43,8 @@ fun ContactsAppBar(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
+    useTor: Boolean,
+    useTorChanged: (Boolean) -> Unit,
     onSearchTriggered: () -> Unit,
     onRetryConnection: () -> Unit,
     onSearchModeExited: () -> Unit,
@@ -105,7 +119,9 @@ fun ContactsAppBar(
                 )
                 MoreActions(
                     navigateToAboutScreen = navigateToAboutScreen,
-                    onResetUsernameClicked = onResetUsernameClicked
+                    onResetUsernameClicked = onResetUsernameClicked,
+                    useTor = useTor,
+                    useTorChanged = useTorChanged
                 )
             }
         )
@@ -114,6 +130,8 @@ fun ContactsAppBar(
 
 @Composable
 fun MoreActions(
+    useTor: Boolean,
+    useTorChanged: (Boolean) -> Unit,
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -124,6 +142,10 @@ fun MoreActions(
             expanded = isExpended
         }
     ) {
+        TorSwitch(
+            useTor = useTor,
+            useTorChanged = useTorChanged
+        )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.AccountCircle,
             contentDescription = stringResource(id = R.string.reset_username),
@@ -143,4 +165,41 @@ fun MoreActions(
             }
         )
     }
+}
+
+@Composable
+fun TorSwitch(
+    useTor: Boolean,
+    useTorChanged: (Boolean) -> Unit
+) {
+    DropdownMenuItem(
+        enabled = true,
+        leadingIcon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                painter = painterResource(id = R.drawable.ic_vpn),
+                contentDescription = stringResource(id = R.string.tor),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        text = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Switch(
+                    checked = useTor,
+                    onCheckedChange = useTorChanged
+                )
+                Text(
+                    text = stringResource(id = R.string.tor),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        },
+        onClick = {
+            useTorChanged(!useTor)
+        }
+    )
 }

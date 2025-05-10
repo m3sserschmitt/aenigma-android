@@ -7,7 +7,6 @@ import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.util.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +22,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFullPage
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import java.util.SortedSet
@@ -33,10 +33,10 @@ class ChatViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
     private val workManager: WorkManager,
     signatureService: SignatureService,
-    signalRClient: SignalRClient,
+    signalrConnectionController: SignalrConnectionController,
     repository: Repository,
     application: Application,
-) : BaseViewModel(repository, signalRClient, application) {
+) : BaseViewModel(repository, signalrConnectionController, application) {
 
     private val localAddress = signatureService.address
 

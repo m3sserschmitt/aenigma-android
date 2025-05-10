@@ -17,7 +17,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 
 @Composable
 fun CloseAppBarAction(
@@ -113,7 +113,7 @@ fun ConnectionStatusAppBarAction(
         color = MaterialTheme.colorScheme.onBackground,
         textColor = MaterialTheme.colorScheme.onBackground,
         visible = connectionStatus greaterOrEqualThan connectionStatus
-                && connectionStatus smallerThan SignalRStatus.Authenticated(),
+                && connectionStatus smallerThan SignalRStatus.Authenticated,
         text = stringResource(id = R.string.connecting),
         textStyle = MaterialTheme.typography.bodyMedium
     )

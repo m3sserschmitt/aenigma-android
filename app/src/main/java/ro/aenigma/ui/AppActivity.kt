@@ -8,25 +8,28 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import ro.aenigma.data.network.SignalRStatus
+import dagger.hilt.android.AndroidEntryPoint
+import ro.aenigma.services.SignalRClient
+import ro.aenigma.services.NavigationTracker
+import ro.aenigma.services.NotificationService
+import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.TorServiceController
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.services.NavigationTracker
-import ro.aenigma.services.NotificationService
 import ro.aenigma.viewmodels.MainViewModel
-import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
-import dagger.hilt.android.AndroidEntryPoint
-import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.workers.CleanupWorker
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class AppActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var torServiceController: TorServiceController
+
+    @Inject
+    lateinit var signalrConnectionController: SignalrConnectionController
 
     @Inject
     lateinit var signalRClient: SignalRClient
@@ -54,8 +57,7 @@ class AppActivity : ComponentActivity() {
                 )
             }
         }
-
-        startConnection()
+        observeTorService()
         observeClientConnectivity()
         observeNavigation()
         handleAppLink()
@@ -64,11 +66,11 @@ class AppActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
+        signalRClient.resetAborted()
         SignalRClientWorker.start(
             this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
-        signalRClient.resetAborted()
     }
 
     override fun onPause() {
@@ -85,69 +87,19 @@ class AppActivity : ComponentActivity() {
         SignalRClientWorker.schedulePeriodicSync(this)
     }
 
-    private fun startConnection() {
-        val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
-        val startConnectionWorkRequest = SignalRClientWorker.createRequest(
-            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
-        )
-        WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
-            .then(startConnectionWorkRequest)
-            .enqueue()
+    private fun observeTorService() {
+        return torServiceController.observeTorService(this)
     }
 
     private fun observeClientConnectivity() {
-        signalRClient.status.observe(this, signalRStatusObserver)
+        return signalrConnectionController.observeSignalrConnection(this)
     }
 
     private fun observeNavigation() {
         navigationTracker.currentRoute.observe(this, navigationObserver)
     }
 
-    private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
-        when (clientStatus) {
-            is SignalRStatus.Reset -> {
-                onSignalRClientReset()
-            }
-
-            is SignalRStatus.Error.Disconnected -> {
-                onClientDisconnected()
-            }
-
-            is SignalRStatus.Error.ConnectionRefused -> {
-                onClientConnectionRefused()
-            }
-
-            is SignalRStatus.Error -> {
-                onClientError()
-            }
-
-            is SignalRStatus.Synchronized -> {
-                val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
-                WorkManager.getInstance(this).enqueue(cleanupRequest)
-            }
-        }
-    }
-
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onClientConnectionRefused() {
-        SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onClientDisconnected() {
-        SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onClientError() {
-        SignalRClientWorker.startDelayed(
-            this,
-            SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
-        )
-    }
-
-    private fun onSignalRClientReset() {
-        SignalRClientWorker.startDelayed(this)
-    }
 
     private fun onScreenChanged(route: String) {
         if (NavigationTracker.isChatScreenRoute(route)) {

@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +27,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -52,18 +51,12 @@ fun ContactsScreen(
     navigateToAboutScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
-    LaunchedEffect(key1 = true)
-    {
-        mainViewModel.loadContacts()
-    }
-
     val allContacts by mainViewModel.allContacts.collectAsState()
-    val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
-        initial = SignalRStatus.NotConnected()
-    )
+    val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
     val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
+    val useTor by mainViewModel.useTor.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
@@ -71,6 +64,8 @@ fun ContactsScreen(
         sharedDataRequest = sharedDataRequest,
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
+        useTor = useTor,
+        useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
@@ -99,6 +94,8 @@ fun ContactsScreen(
     sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
+    useTor: Boolean,
+    useTorChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
@@ -278,6 +275,8 @@ fun ContactsScreen(
             ContactsAppBar(
                 connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
+                useTor = useTor,
+                useTorChanged = useTorChanged,
                 onSearchTriggered = {
                     isSearchMode = true
                 },
@@ -381,9 +380,11 @@ fun ContactsFab(
 @Composable
 fun ContactsScreenPreview() {
     ContactsScreen(
-        connectionStatus = SignalRStatus.Connected(),
+        connectionStatus = SignalRStatus.Connected,
         notificationsAllowed = true,
         nameDialogVisible = false,
+        useTor = true,
+        useTorChanged = { _ -> },
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },

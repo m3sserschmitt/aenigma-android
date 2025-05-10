@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +23,7 @@ import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
@@ -51,9 +50,7 @@ fun ChatScreen(
     val messages by chatViewModel.conversation.collectAsState()
     val replyToMessage by chatViewModel.replyToMessage.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
-    val connectionStatus by chatViewModel.signalRClientStatus.observeAsState(
-        initial = SignalRStatus.NotConnected()
-    )
+    val connectionStatus by chatViewModel.clientStatus.collectAsState()
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val allContacts by chatViewModel.allContacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
@@ -433,7 +430,7 @@ fun ChatScreenPreview() {
         isMember = true,
         isAdmin = false,
         allContacts = RequestState.Success(listOf()),
-        connectionStatus = SignalRStatus.Authenticated(),
+        connectionStatus = SignalRStatus.Authenticated,
         replyToMessage = null,
         messages = RequestState.Success(
             listOf(message1, message2, message3)

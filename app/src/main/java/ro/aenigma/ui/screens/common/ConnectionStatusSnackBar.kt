@@ -8,7 +8,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import kotlinx.coroutines.delay
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import kotlinx.coroutines.launch
 
 @Composable

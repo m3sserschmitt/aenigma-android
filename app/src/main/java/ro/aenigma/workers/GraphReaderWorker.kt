@@ -32,9 +32,8 @@ class GraphReaderWorker @AssistedInject constructor(
     private val repository: Repository
 ) : CoroutineWorker(context, params) {
     companion object {
-        private const val MAX_RETRY_COUNT = 2
-
-        private const val DELAY_BETWEEN_RETRIES: Long = 3
+        private const val MAX_RETRY_COUNT = 5
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
 
         @JvmStatic
         fun createSyncRequest() : OneTimeWorkRequest
@@ -212,21 +211,20 @@ class GraphReaderWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
+        if(runAttemptCount >= MAX_RETRY_COUNT) {
+            return Result.failure()
+        }
 
         val serverInfo = requestServerInfo()
         val graphRequestResult = requestNewGraph()
 
-        if(serverInfo == null ||
+        return if(serverInfo == null ||
             graphRequestResult is GraphRequestResult.Error ||
             !updateLocalGraph(serverInfo, graphRequestResult))
         {
-            return if(runAttemptCount < MAX_RETRY_COUNT) {
-                Result.retry()
-            } else {
-                Result.success()
-            }
+            Result.retry()
+        } else {
+            Result.success()
         }
-
-        return Result.success()
     }
 }

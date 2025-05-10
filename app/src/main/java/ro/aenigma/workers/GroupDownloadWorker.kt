@@ -16,12 +16,10 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
-import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
-import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
 import ro.aenigma.util.getTagQueryParameter
 import java.util.concurrent.TimeUnit
@@ -36,9 +34,9 @@ class GroupDownloadWorker @AssistedInject constructor(
 
     companion object {
         private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 3
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
         const val GROUP_RESOURCE_URL = "GroupResourceUrl"
-        const val MAX_RETRY_COUNT = 2
+        const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
         fun createWorkRequest(workManager: WorkManager, resourceUrl: String) {
@@ -95,17 +93,13 @@ class GroupDownloadWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        if (runAttemptCount > MAX_RETRY_COUNT) {
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
         val resourceUrl = inputData.getString(GROUP_RESOURCE_URL) ?: return Result.failure()
-        val api = EnigmaApi.initApi(resourceUrl)
-        val tag = resourceUrl.getTagQueryParameter() ?: return Result.failure()
         val existentGroups =
             repository.local.getContactsWithGroup().mapNotNull { item -> item.group?.groupData }
-        val groupData =
-            RemoteDataSource(api, signatureService).getGroupData(tag, existentGroups)
-                ?: return Result.failure()
+        val groupData = repository.remote.getGroupDataByUrl(resourceUrl, existentGroups) ?: return Result.retry()
         createContactEntities(groupData, resourceUrl)
         return Result.success()
     }

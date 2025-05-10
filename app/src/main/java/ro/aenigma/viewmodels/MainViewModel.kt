@@ -6,8 +6,6 @@ import androidx.work.WorkManager
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.network.EnigmaApi
-import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactData
@@ -22,16 +20,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
-import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toJson
-import ro.aenigma.util.getQueryParameter
 import ro.aenigma.workers.GroupUploadWorker
 import javax.inject.Inject
 
@@ -40,10 +37,10 @@ class MainViewModel @Inject constructor(
     private val signatureService: SignatureService,
     repository: Repository,
     application: Application,
-    signalRClient: SignalRClient
+    signalrConnectionController: SignalrConnectionController,
 ) : BaseViewModel(
     repository,
-    signalRClient,
+    signalrConnectionController,
     application) {
     init {
         viewModelScope.launch(ioDispatcher) {
@@ -77,6 +74,8 @@ class MainViewModel @Inject constructor(
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
+    private val _useTor = MutableStateFlow(false)
+
     val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
@@ -89,6 +88,13 @@ class MainViewModel @Inject constructor(
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
+    val useTor: StateFlow<Boolean> = _useTor
+
+    init {
+        loadContacts()
+        collectUseTor()
+    }
+
     fun loadContacts() {
         if (_allContacts.value is RequestState.Success
             || _allContacts.value is RequestState.Loading
@@ -97,6 +103,14 @@ class MainViewModel @Inject constructor(
         _allContacts.value = RequestState.Loading
         collectContacts()
         collectSearches()
+    }
+
+    private fun collectUseTor() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.useTor.collect {
+                useTor -> _useTor.value = useTor
+            }
+        }
     }
 
     private fun collectContacts() {
@@ -215,6 +229,12 @@ class MainViewModel @Inject constructor(
     fun resetUserName() {
         viewModelScope.launch(ioDispatcher) {
             repository.local.saveName("")
+        }
+    }
+
+    fun useTorChanged(useTor: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveTorPreference(useTor)
         }
     }
 
@@ -341,10 +361,7 @@ class MainViewModel @Inject constructor(
         _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val tag = url.getQueryParameter("tag") ?: throw Exception()
-                val response =
-                    RemoteDataSource(EnigmaApi.initApi(url), signatureService).getSharedData(tag)
-                        ?: throw Exception()
+                val response = repository.remote.getSharedDataByUrl(url) ?: throw Exception()
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception()
                 _importedContactDetails.value =

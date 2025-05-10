@@ -1,6 +1,5 @@
 package ro.aenigma.data
 
-import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.SharedData
@@ -15,22 +14,51 @@ import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.publicKeyMatchAddress
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
+import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood
 import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
+import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.getBaseUrl
+import ro.aenigma.util.getQueryParameter
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class RemoteDataSource @Inject constructor(
-    private val enigmaApi: EnigmaApi,
+    private val retrofitProvider: RetrofitProvider,
     private val signatureService: SignatureService
 ) {
+    companion object {
+        @JvmStatic
+        private suspend fun getSharedData(api: EnigmaApi, tag: String): SharedData? {
+            try {
+                val response = api.getSharedData(tag)
+                val body = response.body() ?: return null
+                if (body.publicKey == null || body.data == null) {
+                    return null
+                }
+                if (response.code() != 200 || body.tag != tag || !CryptoProvider.verifyEx(
+                        body.publicKey,
+                        body.data
+                    )
+                ) {
+                    return null
+                }
+                return body
+            } catch (_: Exception) {
+                return null
+            }
+        }
+    }
+
     suspend fun getServerInfo(): Response<ServerInfo?> {
-        return enigmaApi.getServerInfo()
+        return retrofitProvider.getApi().getServerInfo()
     }
 
     suspend fun getVertices(): List<Vertex> {
-        val response = enigmaApi.getVertices()
+        val response = retrofitProvider.getApi().getVertices()
         val body = response.body()
 
         if (response.code() != 200 || body == null) {
@@ -47,7 +75,7 @@ class RemoteDataSource @Inject constructor(
             signature.publicKey ?: return null
             val sharedDataCreate =
                 SharedDataCreate(signature.publicKey, signature.signedData, accessCount)
-            val response = enigmaApi.createSharedData(sharedDataCreate)
+            val response = retrofitProvider.getApi().createSharedData(sharedDataCreate)
             val body = response.body()
             if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
                 return null
@@ -58,24 +86,10 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getSharedData(tag: String): SharedData? {
-        try {
-            val response = enigmaApi.getSharedData(tag)
-            val body = response.body() ?: return null
-            if (body.publicKey == null || body.data == null) {
-                return null
-            }
-            if (response.code() != 200 || body.tag != tag || !CryptoProvider.verifyEx(
-                    body.publicKey,
-                    body.data
-                )
-            ) {
-                return null
-            }
-            return body
-        } catch (_: Exception) {
-            return null
-        }
+    suspend fun getSharedDataByUrl(url: String): SharedData? {
+        val tag = url.getQueryParameter("tag") ?: return null
+        val baseUrl = url.getBaseUrl()
+        return getSharedData(retrofitProvider.getApi(baseUrl), tag)
     }
 
     private fun decryptGroupData(sharedData: SharedData): GroupData? {
@@ -101,9 +115,9 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getGroupData(tag: String, existentGroups: List<GroupData>): GroupData? {
+    suspend fun getGroupDataByUrl(url: String, existentGroups: List<GroupData>): GroupData? {
         try {
-            val response = getSharedData(tag) ?: return null
+            val response = getSharedDataByUrl(url) ?: return null
             val groupData = decryptGroupData(response) ?: return null
             val publisherAddress = response.publicKey.getAddressFromPublicKey() ?: return null
             return validateGroupData(groupData, publisherAddress, existentGroups)
@@ -155,7 +169,7 @@ class RemoteDataSource @Inject constructor(
     }
 
     suspend fun getVertex(address: String, isLeaf: Boolean, publicKey: String? = null): Vertex? {
-        val response = enigmaApi.getVertex(address)
+        val response = retrofitProvider.getApi().getVertex(address)
         val vertex = response.body()
 
         if (response.code() != 200 || vertex == null) {

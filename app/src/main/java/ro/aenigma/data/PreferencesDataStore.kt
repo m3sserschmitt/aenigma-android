@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import ro.aenigma.util.Constants.Companion.NAME_PREFERENCE
+import ro.aenigma.util.Constants.Companion.TOR_PREFERENCE
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,6 +28,7 @@ class PreferencesDataStore @Inject constructor(
     private object PreferenceKeys {
         val notificationsAllowed = booleanPreferencesKey(ALLOW_NOTIFICATIONS_PREFERENCE)
         val name = stringPreferencesKey(NAME_PREFERENCE)
+        val useTor = booleanPreferencesKey(TOR_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -49,6 +51,10 @@ class PreferencesDataStore @Inject constructor(
         return savePreference(name, PreferenceKeys.name)
     }
 
+    suspend fun saveTorPreference(useTor: Boolean) {
+        return savePreference(useTor, PreferenceKeys.useTor)
+    }
+
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
             .catch {
@@ -63,4 +69,6 @@ class PreferencesDataStore @Inject constructor(
         getPreference(PreferenceKeys.notificationsAllowed, true)
 
     val name: Flow<String> = getPreference(PreferenceKeys.name, "")
+
+    val useTor: Flow<Boolean> = getPreference(PreferenceKeys.useTor, false)
 }

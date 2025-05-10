@@ -19,7 +19,7 @@ import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
-import ro.aenigma.data.network.SignalRClient
+import ro.aenigma.services.SignalRClient
 import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
@@ -47,7 +47,7 @@ class MessageSenderWorker @AssistedInject constructor(
         const val MESSAGE_ID_ARG = "MessageId"
         const val RESOURCE_URL_ARG = "ResourceUrl"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 10
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
@@ -156,7 +156,7 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-        if (runAttemptCount > MAX_RETRY_COUNT) {
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
 

@@ -108,4 +108,5 @@
     <string name="reset_username">Reset user name</string>
     <string name="cannot_share_groups">Groups cannot be shared.</string>
     <string name="cannot_select_groups_to_create_group">Groups cannot be selected while creating new group.</string>
+    <string name="tor">TOR</string>
 </resources>

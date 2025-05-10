@@ -1,7 +1,6 @@
-package ro.aenigma.data.network
+package ro.aenigma.services
 
 import android.util.Base64
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
@@ -11,9 +10,12 @@ import io.reactivex.rxjava3.core.SingleObserver
 import io.reactivex.rxjava3.disposables.Disposable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.services.SignatureService
-import ro.aenigma.services.MessageSaver
+import ro.aenigma.data.Repository
 import ro.aenigma.models.Neighborhood
 import ro.aenigma.models.VertexBroadcastRequest
 import ro.aenigma.models.hubInvocation.AuthenticateResult
@@ -24,12 +26,17 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.models.hubInvocation.VertexBroadcastResult
+import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
+import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
 import ro.aenigma.util.SerializerExtensions.toJson
+import java.net.InetSocketAddress
+import java.net.Proxy
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SignalRClient @Inject constructor(
+    private val repository: Repository,
     private val signatureService: SignatureService,
     private val messageSaver: MessageSaver
 ) {
@@ -64,9 +71,24 @@ class SignalRClient @Inject constructor(
             "Could not create connection or invalid URL."
 
         @JvmStatic
-        private fun createConnection(hostname: String): HubConnection {
+        fun createConnection(useTor: Boolean, hostname: String): HubConnection {
+            val endpointUrl =
+                hostname.trimEnd('/', ' ') + "/" + ONION_ROUTING_ENDPOINT.trimStart('/')
+
             return HubConnectionBuilder
-                .create("${hostname.trim('/', ' ')}/$ONION_ROUTING_ENDPOINT")
+                .create(endpointUrl)
+                .apply {
+                    if (useTor) {
+                        setHttpClientBuilderCallback { builder ->
+                            builder.proxy(
+                                Proxy(
+                                    Proxy.Type.SOCKS,
+                                    InetSocketAddress(SOCKS5_PROXY_ADDRESS, SOCKS5_PROXY_PORT)
+                                )
+                            )
+                        }
+                    }
+                }
                 .build()
         }
     }
@@ -75,13 +97,12 @@ class SignalRClient @Inject constructor(
 
     private lateinit var _guardAddress: String
 
-    private var _status: MutableLiveData<SignalRStatus> =
-        MutableLiveData(SignalRStatus.NotConnected())
+    private var _status: MutableStateFlow<SignalRStatus> = MutableStateFlow(SignalRStatus.NotConnected)
 
     private var _failedAttempts: MutableLiveData<Int> =
         MutableLiveData(0)
 
-    val status: LiveData<SignalRStatus> get() = _status
+    val status: StateFlow<SignalRStatus> = _status
 
     private fun configureConnection() {
         synchronized(_hubConnection) {
@@ -100,16 +121,17 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun connect(hostname: String, guardAddress: String) {
+    suspend fun connect(hostname: String, guardAddress: String) {
         if (isConnected()) {
             return
         }
         try {
-            _hubConnection = createConnection(hostname)
+            val useTor = repository.local.useTor.firstOrNull() == true
+            _hubConnection = createConnection(useTor, hostname)
             this._guardAddress = guardAddress
             configureConnection()
         } catch (_: Exception) {
-            updateStatus(SignalRStatus.Error(_status.value!!, COULD_NOT_CREATE_CONNECTION_ERROR))
+            updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
         }
         return start()
     }
@@ -144,15 +166,13 @@ class SignalRClient @Inject constructor(
             _failedAttempts.postValue(newValue ?: 0)
 
             if (newValue != null && newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
-                _status.postValue(
-                    SignalRStatus.Error.Aborted(
-                        MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
-                    )
+                _status.value = SignalRStatus.Error.Aborted(
+                    MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
                 )
                 return
             }
         }
-        _status.postValue(status)
+        _status.value = status
     }
 
     fun isConnected(): Boolean {
@@ -167,7 +187,7 @@ class SignalRClient @Inject constructor(
 
     private fun start() {
         if (!isConnected()) {
-            updateStatus(SignalRStatus.Connecting())
+            updateStatus(SignalRStatus.Connecting)
             synchronized(_hubConnection)
             {
                 return _hubConnection.start().blockingSubscribe(connectionsEstablishedObserver)
@@ -177,7 +197,7 @@ class SignalRClient @Inject constructor(
 
     private fun generateNonce() {
         if (isConnected()) {
-            updateStatus(SignalRStatus.Authenticating())
+            updateStatus(SignalRStatus.Authenticating)
             synchronized(_hubConnection) {
                 return _hubConnection.invoke(GenerateTokenResult::class.java, GENERATE_NONCE_METHOD)
                     .blockingSubscribe(nonceObserver)
@@ -201,7 +221,7 @@ class SignalRClient @Inject constructor(
             return
         }
         try {
-            updateStatus(SignalRStatus.Broadcasting())
+            updateStatus(SignalRStatus.Broadcasting)
             val neighborhood =
                 Neighborhood(signatureService.address, null, listOf(_guardAddress))
             val data = neighborhood.toJson()?.toByteArray() ?: return
@@ -225,7 +245,7 @@ class SignalRClient @Inject constructor(
 
     fun pull() {
         if (isConnected()) {
-            updateStatus(SignalRStatus.Pulling())
+            updateStatus(SignalRStatus.Pulling)
             synchronized(_hubConnection) {
                 return _hubConnection.invoke(PullResult::class.java, PULL_METHOD)
                     .blockingSubscribe(pullResultObserver)
@@ -235,7 +255,7 @@ class SignalRClient @Inject constructor(
 
     fun cleanup() {
         if (isConnected()) {
-            updateStatus(SignalRStatus.Cleaning())
+            updateStatus(SignalRStatus.Cleaning)
             synchronized(_hubConnection) {
                 return _hubConnection.invoke(CleanupResult::class.java, CLEANUP_METHOD)
                     .blockingSubscribe(cleanupResultObserver)
@@ -251,7 +271,7 @@ class SignalRClient @Inject constructor(
         }
 
         override fun onComplete() {
-            updateStatus(SignalRStatus.Connected())
+            updateStatus(SignalRStatus.Connected)
             generateNonce()
             subscription?.dispose()
         }
@@ -315,7 +335,7 @@ class SignalRClient @Inject constructor(
                 updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
                 subscription?.dispose()
             } else {
-                updateStatus(SignalRStatus.Authenticated())
+                updateStatus(SignalRStatus.Authenticated)
             }
             subscription?.dispose()
         }
@@ -337,7 +357,7 @@ class SignalRClient @Inject constructor(
             if (result.success != true) {
                 updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
             } else {
-                updateStatus(SignalRStatus.Broadcasted())
+                updateStatus(SignalRStatus.Broadcasted)
             }
             subscription?.dispose()
         }
@@ -363,7 +383,7 @@ class SignalRClient @Inject constructor(
             } else {
                 CoroutineScope(Dispatchers.IO).launch {
                     messageSaver.handlePendingMessages(result.data)
-                    updateStatus(SignalRStatus.Synchronized())
+                    updateStatus(SignalRStatus.Synchronized)
                 }
             }
             subscription?.dispose()
@@ -386,7 +406,7 @@ class SignalRClient @Inject constructor(
             if (result.success != true) {
                 updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
             } else {
-                updateStatus(SignalRStatus.Clean())
+                updateStatus(SignalRStatus.Clean)
             }
             subscription?.dispose()
         }
