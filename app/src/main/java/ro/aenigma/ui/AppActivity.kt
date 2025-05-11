@@ -9,7 +9,6 @@ import androidx.lifecycle.Observer
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
-import ro.aenigma.services.SignalRClient
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
@@ -18,6 +17,7 @@ import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
 import ro.aenigma.viewmodels.MainViewModel
+import ro.aenigma.workers.CleanupWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
@@ -30,9 +30,6 @@ class AppActivity : ComponentActivity() {
 
     @Inject
     lateinit var signalrConnectionController: SignalrConnectionController
-
-    @Inject
-    lateinit var signalRClient: SignalRClient
 
     @Inject
     lateinit var navigationTracker: NavigationTracker
@@ -61,16 +58,15 @@ class AppActivity : ComponentActivity() {
         observeClientConnectivity()
         observeNavigation()
         handleAppLink()
+        schedulePeriodicSync()
+        schedulePeriodicCleanup()
     }
 
     override fun onResume() {
         super.onResume()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
-        signalRClient.resetAborted()
-        SignalRClientWorker.start(
-            this,
-            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
-        )
+        resetClient()
+        sync()
     }
 
     override fun onPause() {
@@ -78,9 +74,19 @@ class AppActivity : ComponentActivity() {
         onScreenChanged(Screens.NO_SCREEN)
     }
 
-    override fun onStop() {
-        super.onStop()
-        schedulePeriodicSync()
+    private fun sync() {
+        SignalRClientWorker.start(
+            this,
+            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
+        )
+    }
+
+    private fun schedulePeriodicCleanup() {
+        CleanupWorker.scheduleCleanup(this)
+    }
+
+    private fun resetClient() {
+        signalrConnectionController.resetClient()
     }
 
     private fun schedulePeriodicSync() {

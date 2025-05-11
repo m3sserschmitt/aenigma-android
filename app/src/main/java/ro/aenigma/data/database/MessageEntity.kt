@@ -13,14 +13,13 @@ import java.time.ZonedDateTime
 @Entity(
     tableName = Constants.MESSAGES_TABLE,
     indices = [
-        Index(value = ["chatId"]),
-        Index(value = ["deleted"]),
+        Index(value = ["chatId", "deleted", "id"]),
         Index(value = ["refId"], unique = true),
         Index(value = ["serverUUID"], unique = true)
     ]
 )
 data class MessageEntity (
-    @PrimaryKey var id: Long = 0,
+    @PrimaryKey(autoGenerate = true) var id: Long = 0,
     val chatId: String,
     val senderAddress: String?,
     val serverUUID: String?,

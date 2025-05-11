@@ -40,6 +40,11 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
+    fun MessageEntity?.markAsDeleted(): MessageEntity? {
+        return this.deepCopy()?.copy(deleted = true)
+    }
+
+    @JvmStatic
     fun List<MessageWithDetails>.isFullPage(): Boolean
     {
         return this.size == CONVERSATION_PAGE_SIZE

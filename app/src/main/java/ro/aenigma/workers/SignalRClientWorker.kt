@@ -59,7 +59,7 @@ class SignalRClientWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
                     UNIQUE_PERIODIC_WORK_REQUEST,
-                    ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+                    ExistingPeriodicWorkPolicy.KEEP,
                     signalRClientRequest
                 )
         }

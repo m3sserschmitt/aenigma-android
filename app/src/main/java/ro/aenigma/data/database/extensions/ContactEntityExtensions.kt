@@ -5,7 +5,7 @@ import ro.aenigma.util.SerializerExtensions.deepCopy
 import java.time.ZonedDateTime
 
 object ContactEntityExtensions {
-    fun ContactEntity?.withLastMessageId(lastMessageId: Long): ContactEntity? {
+    fun ContactEntity?.withLastMessageId(lastMessageId: Long?): ContactEntity? {
         return this.deepCopy()?.copy(lastMessageId = lastMessageId)
     }
 

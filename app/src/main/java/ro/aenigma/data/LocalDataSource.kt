@@ -18,6 +18,8 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
+import ro.aenigma.models.enums.MessageType
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -29,8 +31,7 @@ class LocalDataSource @Inject constructor(
     private val graphVersionsDao: GraphVersionsDao,
     private val preferencesDataStore: PreferencesDataStore
 ) {
-    suspend fun saveName(name: String)
-    {
+    suspend fun saveName(name: String) {
         return preferencesDataStore.saveName(name)
     }
 
@@ -112,12 +113,12 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getByServerUuid(uuid)
     }
 
-    suspend fun getConversation(
+    suspend fun getConversationPage(
         chatId: String,
-        infIndex: Long,
+        lastIndex: Long,
         searchQuery: String = ""
     ): List<MessageWithDetails> {
-        return messagesDao.getConversation(chatId, infIndex, searchQuery)
+        return messagesDao.getConversationPage(chatId, lastIndex, searchQuery)
     }
 
     suspend fun clearConversationSoft(chatId: String) {
@@ -127,7 +128,8 @@ class LocalDataSource @Inject constructor(
 
     private suspend fun updateContactLastMessageId(chatId: String) {
         val contact = contactsDao.get(chatId) ?: return
-        val updatedContact = contact.withLastMessageId(messagesDao.getLastMessageId(chatId)) ?: return
+        val updatedContact =
+            contact.withLastMessageId(messagesDao.getLastMessageId(chatId)) ?: return
         return contactsDao.update(updatedContact)
     }
 
@@ -148,23 +150,15 @@ class LocalDataSource @Inject constructor(
         return messagesDao.removeHard()
     }
 
-    suspend fun removeMessagesHard(messages: List<MessageEntity>) {
-        return messagesDao.removeHard(messages)
+    fun getLastDeletedMessage(charId: String): Flow<MessageEntity?> {
+        return messagesDao.getLastDeletedFlow(charId)
     }
 
     suspend fun insertMessage(message: MessageEntity): Long {
-        val messageId = messagesDao.insertOrIgnore(
-            chatId = message.chatId,
-            senderAddress = message.senderAddress,
-            serverUUID = message.serverUUID,
-            text = message.text,
-            type = message.type,
-            actionFor = message.actionFor,
-            refId = message.refId,
-            incoming = message.incoming,
-            date = message.date,
-            dateReceivedOnServer = message.dateReceivedOnServer,
-        )
+        val isDelete = message.type == MessageType.DELETE || message.type == MessageType.DELETE_ALL
+        val messageToBeInserted =
+            message.run { if (isDelete) markAsDeleted() else this } ?: return -1
+        val messageId = messagesDao.insertOrIgnore(messageToBeInserted)
         if (messageId != null && messageId > 0) {
             updateContactLastMessageId(message.chatId)
             if (message.incoming) {
