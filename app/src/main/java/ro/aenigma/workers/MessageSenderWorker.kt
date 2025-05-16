@@ -20,11 +20,10 @@ import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.services.SignalRClient
-import ro.aenigma.models.MessageWithMetadata
+import ro.aenigma.models.Artifact
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.extensions.SignatureExtensions.sign
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
@@ -90,24 +89,24 @@ class MessageSenderWorker @AssistedInject constructor(
         }
 
         val guard = repository.local.getGuard() ?: return null
-        val localAddress = groupAddress ?: (signatureService.address ?: return null)
+        val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
         val addresses =
-            arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
+            arrayOf(chatId, destination.address) + reversedPath.map { item -> item.address }
                 .subList(0, reversedPath.size - 1)
         val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-        val message = MessageWithMetadata(
+        val data = signatureService.sign(Artifact(
             text = message.text,
             type = message.type,
             actionFor = message.actionFor,
             senderName = userName,
             senderGuardAddress = guard.address,
             senderGuardHostname = guard.hostname,
-            senderPublicKey = signatureService.publicKey,
             refId = message.refId,
-            groupResourceUrl = groupResourceUrl
-        ).sign(signatureService).toJson()?.toByteArray() ?: return null
-        return CryptoProvider.sealOnionEx(message, keys, addresses)
+            groupResourceUrl = groupResourceUrl,
+            chatId = chatId
+        )).toJson()?.toByteArray() ?: return null
+        return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {

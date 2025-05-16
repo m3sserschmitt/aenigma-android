@@ -4,7 +4,7 @@ import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
-import ro.aenigma.models.MessageWithMetadata
+import ro.aenigma.models.Artifact
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
@@ -16,7 +16,7 @@ import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHost
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.SignedMessageWithMetadata
+import ro.aenigma.models.SignedData
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
@@ -37,7 +37,10 @@ class MessageSaver @Inject constructor(
 
     private suspend fun postToDatabase(data: MessageEntity) {
         try {
-            if (data.serverUUID == null || repository.local.getMessageByUuid(data.serverUUID) != null) {
+            if (data.serverUUID == null || data.refId == null
+                || repository.local.getMessageByUuid(data.serverUUID) != null
+                || repository.local.getMessageByRefId(data.refId) != null
+            ) {
                 return
             }
 
@@ -62,26 +65,19 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private suspend fun parseContent(message: ParsedMessageDto): MessageEntity? {
+    private suspend fun parseArtifact(message: ParsedMessageDto): MessageEntity? {
         return try {
-            if (message.chatId == null) {
-                return null
-            }
-            val messageWithMetadata =
-                message.content.fromJson<SignedMessageWithMetadata>() ?: return null
-            if (!messageWithMetadata.verify()) {
-                return null
-            }
-            createOrUpdateEntities(messageWithMetadata, message.chatId)
+            val signedData = message.content.fromJson<SignedData>() ?: return null
+            val artifact = signedData.verify<Artifact>() ?: return null
+            createOrUpdateEntities(artifact, signedData.publicKey ?: return null)
             MessageEntityFactory.createIncoming(
-                chatId = message.chatId,
-                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey()
-                    ?: message.chatId,
+                chatId = artifact.chatId ?: return null,
+                senderAddress = signedData.publicKey.getAddressFromPublicKey() ?: return null,
                 serverUUID = message.uuid,
-                text = messageWithMetadata.text,
-                type = messageWithMetadata.type ?: MessageType.TEXT,
-                actionFor = messageWithMetadata.actionFor,
-                refId = messageWithMetadata.refId,
+                text = artifact.text,
+                type = artifact.type ?: MessageType.TEXT,
+                actionFor = artifact.actionFor,
+                refId = artifact.refId,
                 dateReceivedOnServer = message.dateReceivedOnServer,
             )
         } catch (_: Exception) {
@@ -91,14 +87,14 @@ class MessageSaver @Inject constructor(
 
     suspend fun handleRoutingRequest(routingRequest: RoutingRequest) {
         val parsedMessage = onionParsingService.parse(routingRequest)
-        val messageEntity = parsedMessage.mapNotNull { item -> parseContent(item) }
+        val messageEntity = parsedMessage.mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntity)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessage>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
-            .mapNotNull { item -> parseContent(item) }
+            .mapNotNull { item -> parseArtifact(item) }
         return saveIncomingMessages(messageEntities)
     }
 
@@ -119,41 +115,38 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private suspend fun createOrUpdateContact(onionDetails: MessageWithMetadata) {
-        if (onionDetails.senderPublicKey == null) {
-            return
-        }
-        val originAddress = onionDetails.senderPublicKey.getAddressFromPublicKey() ?: return
+    private suspend fun createOrUpdateContact(artifact: Artifact, publicKey: String) {
+        val originAddress = publicKey.getAddressFromPublicKey() ?: return
         val contact =
             repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
                 address = originAddress,
-                name = onionDetails.senderName,
-                publicKey = onionDetails.senderPublicKey,
-                guardHostname = onionDetails.senderGuardHostname,
-                guardAddress = onionDetails.senderGuardAddress,
+                name = artifact.senderName,
+                publicKey = publicKey,
+                guardHostname = artifact.senderGuardHostname,
+                guardAddress = artifact.senderGuardAddress,
             )
         val updatedContact =
-            contact.withGuardAddress(onionDetails.senderGuardAddress ?: contact.guardAddress)
-                .withGuardHostname(onionDetails.senderGuardHostname ?: contact.guardHostname)
+            contact.withGuardAddress(artifact.senderGuardAddress ?: contact.guardAddress)
+                .withGuardHostname(artifact.senderGuardHostname ?: contact.guardHostname)
                 ?: return
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
-    private suspend fun createOrUpdateGroup(onionDetails: MessageWithMetadata, chatId: String) {
-        val resourceUrl = onionDetails.groupResourceUrl ?: return
+    private suspend fun createOrUpdateGroup(artifact: Artifact) {
+        val resourceUrl = artifact.groupResourceUrl ?: return
         val tag = resourceUrl.getTagQueryParameter() ?: return
-        val entity = repository.local.getContactWithGroup(chatId)
+        val entity = repository.local.getContactWithGroup(artifact.chatId ?: return)
         if (entity?.group?.resourceUrl?.getTagQueryParameter() == tag) {
             return
         }
         GroupDownloadWorker.createWorkRequest(workManager, resourceUrl)
     }
 
-    private suspend fun createOrUpdateEntities(onionDetails: MessageWithMetadata, chatId: String) {
-        return if (onionDetails.groupResourceUrl != null) {
-            createOrUpdateGroup(onionDetails, chatId)
+    private suspend fun createOrUpdateEntities(artifact: Artifact, publicKey: String) {
+        return if (artifact.groupResourceUrl != null) {
+            createOrUpdateGroup(artifact)
         } else {
-            createOrUpdateContact(onionDetails)
+            createOrUpdateContact(artifact, publicKey)
         }
     }
 

@@ -113,6 +113,10 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getByServerUuid(uuid)
     }
 
+    suspend fun getMessageByRefId(refId: String): MessageEntity? {
+        return messagesDao.getByRefId(refId)
+    }
+
     suspend fun getConversationPage(
         chatId: String,
         lastIndex: Long,
