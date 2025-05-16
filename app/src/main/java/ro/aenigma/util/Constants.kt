@@ -9,8 +9,8 @@ class Constants {
         const val TOR_PREFERENCE = "use-tor"
         const val NAME_PREFERENCE = "name"
 
-        const val ADDRESS_SIZE = 32 // bytes
-        const val KEY_SIZE = 2048 // bits !!
+        const val ADDRESS_SIZE_BYTES = 32
+        const val KEY_SIZE_BITS = 4096
 
         // Room Database
         const val DATABASE_NAME = "enigma-database"
