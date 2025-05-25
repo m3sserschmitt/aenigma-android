@@ -188,7 +188,7 @@ fun MoreActions(
             text = stringResource(id = R.string.leave_group),
             visible = isGroup && isMember && !isAdmin,
             onClick = {
-                onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_LEAVE)
                 expanded = false
             }
         )

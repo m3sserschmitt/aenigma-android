@@ -17,7 +17,7 @@ object SignatureExtensions {
         }
 
         val decodedData = Base64.decode(this, Base64.DEFAULT) ?: return null
-        val digestSize = CryptoProvider.Companion.getPublicKeySize(publicKey)
+        val digestSize = CryptoProvider.getPublicKeySize(publicKey)
 
         if (decodedData.size < digestSize + 1) {
             return null

@@ -18,8 +18,6 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
-import ro.aenigma.models.enums.MessageType
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -158,11 +156,8 @@ class LocalDataSource @Inject constructor(
         return messagesDao.getLastDeletedFlow(charId)
     }
 
-    suspend fun insertMessage(message: MessageEntity): Long {
-        val isDelete = message.type == MessageType.DELETE || message.type == MessageType.DELETE_ALL
-        val messageToBeInserted =
-            message.run { if (isDelete) markAsDeleted() else this } ?: return -1
-        val messageId = messagesDao.insertOrIgnore(messageToBeInserted)
+    suspend fun insertOrIgnoreMessage(message: MessageEntity): Long? {
+        val messageId = messagesDao.insertOrIgnore(message)
         if (messageId != null && messageId > 0) {
             updateContactLastMessageId(message.chatId)
             if (message.incoming) {
@@ -170,7 +165,7 @@ class LocalDataSource @Inject constructor(
             }
             return messageId
         }
-        return -1
+        return null
     }
 
     suspend fun updateMessage(message: MessageEntity) {

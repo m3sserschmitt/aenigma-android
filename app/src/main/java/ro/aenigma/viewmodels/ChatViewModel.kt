@@ -349,7 +349,6 @@ class ChatViewModel @Inject constructor(
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager,
                 groupName = group.groupData.name,
-                userName = userName.value,
                 members = members,
                 existingGroupAddress = group.address,
                 actionType = action
@@ -358,29 +357,21 @@ class ChatViewModel @Inject constructor(
     }
 
     fun leaveGroup() {
-        val group = getSelectedGroupEntity()
-        if (group != null && group.groupData.name != null) {
-            GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                workManager = workManager,
-                groupName = group.groupData.name,
-                userName = userName.value,
-                members = null,
-                existingGroupAddress = group.address,
-                actionType = MessageType.GROUP_MEMBER_LEFT
-            )
+        viewModelScope.launch(ioDispatcher) {
+            postToDatabase(MessageType.GROUP_MEMBER_LEAVE, null, null)
         }
     }
 
-    private suspend fun postToDatabase(type: MessageType, refId: String?, text: String?): Boolean {
+    private suspend fun postToDatabase(type: MessageType, actionFor: String?, text: String?): Boolean {
         try {
             val contact = getSelectedContactEntity() ?: return false
             val message = MessageEntityFactory.createOutgoing(
                 chatId = contact.address,
                 text = text,
                 type = type,
-                actionFor = refId
+                actionFor = actionFor
             )
-            return messageSaver.saveOutgoingMessage(message, userName.value) != null
+            return messageSaver.saveOutgoingMessage(message)
         } catch (_: Exception) {
             return false
         }
@@ -426,7 +417,6 @@ class ChatViewModel @Inject constructor(
         when (contact.type) {
             ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager,
-                userName = userName.value,
                 groupName = name,
                 existingGroupAddress = contact.address,
                 actionType = MessageType.GROUP_RENAMED,

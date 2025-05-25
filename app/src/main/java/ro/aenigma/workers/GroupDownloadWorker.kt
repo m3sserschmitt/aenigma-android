@@ -14,6 +14,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -35,13 +36,15 @@ class GroupDownloadWorker @AssistedInject constructor(
     companion object {
         private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
-        const val GROUP_RESOURCE_URL = "GroupResourceUrl"
+        private const val GROUP_RESOURCE_URL_ARG = "GroupResourceUrl"
+        private const val MESSAGE_ID_ARG = "MessageId"
         const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, resourceUrl: String) {
+        fun createWorkRequest(workManager: WorkManager, resourceUrl: String, messageId: Long) {
             val parameters = Data.Builder()
-                .putString(GROUP_RESOURCE_URL, resourceUrl)
+                .putString(GROUP_RESOURCE_URL_ARG, resourceUrl)
+                .putLong(MESSAGE_ID_ARG, messageId)
                 .build()
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -62,9 +65,9 @@ class GroupDownloadWorker @AssistedInject constructor(
         groupData.address ?: return
         val contact = (repository.local.getContactWithGroup(groupData.address)?.contact
             ?: ContactEntityFactory.createGroup(
-            address = groupData.address,
-            name = groupData.name,
-        )).withName(groupData.name) ?: return
+                address = groupData.address,
+                name = groupData.name,
+            )).withName(groupData.name) ?: return
         val group = GroupEntityFactory.create(
             address = groupData.address,
             groupData = groupData,
@@ -85,8 +88,8 @@ class GroupDownloadWorker @AssistedInject constructor(
                 address = member.address,
                 name = member.name,
                 publicKey = member.publicKey,
-                guardHostname = null,
-                guardAddress = null,
+                guardHostname = member.guardHostname,
+                guardAddress = member.guardAddress,
             )
             repository.local.insertOrIgnoreContact(c)
         }
@@ -96,10 +99,19 @@ class GroupDownloadWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val resourceUrl = inputData.getString(GROUP_RESOURCE_URL) ?: return Result.failure()
-        val existentGroups =
-            repository.local.getContactsWithGroup().mapNotNull { item -> item.group?.groupData }
-        val groupData = repository.remote.getGroupDataByUrl(resourceUrl, existentGroups) ?: return Result.retry()
+        val resourceUrl = inputData.getString(GROUP_RESOURCE_URL_ARG) ?: return Result.failure()
+        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
+        if (messageId < 0) {
+            return Result.failure()
+        }
+        val message = repository.local.getMessage(messageId) ?: return Result.failure()
+        val key = CryptoProvider.masterKeyDecryptEx(message.text ?: return Result.failure())
+            ?: return Result.failure()
+        val existentGroup =
+            repository.local.getContactsWithGroup()
+                .firstOrNull { item -> item.group?.groupData?.address == message.chatId }?.group?.groupData
+        val groupData = repository.remote.getGroupDataByUrl(resourceUrl, existentGroup, key)
+            ?: return Result.retry()
         createContactEntities(groupData, resourceUrl)
         return Result.success()
     }

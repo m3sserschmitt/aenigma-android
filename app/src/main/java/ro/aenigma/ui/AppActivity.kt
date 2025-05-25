@@ -17,7 +17,6 @@ import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
 import ro.aenigma.viewmodels.MainViewModel
-import ro.aenigma.workers.CleanupWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
@@ -59,7 +58,7 @@ class AppActivity : ComponentActivity() {
         observeNavigation()
         handleAppLink()
         schedulePeriodicSync()
-        schedulePeriodicCleanup()
+//        schedulePeriodicCleanup()
     }
 
     override fun onResume() {
@@ -81,9 +80,9 @@ class AppActivity : ComponentActivity() {
         )
     }
 
-    private fun schedulePeriodicCleanup() {
-        CleanupWorker.scheduleCleanup(this)
-    }
+//    private fun schedulePeriodicCleanup() {
+//        CleanupWorker.scheduleCleanup(this)
+//    }
 
     private fun resetClient() {
         signalrConnectionController.resetClient()

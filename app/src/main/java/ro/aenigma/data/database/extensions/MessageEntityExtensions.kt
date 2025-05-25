@@ -2,23 +2,24 @@ package ro.aenigma.data.database.extensions
 
 import android.content.Context
 import ro.aenigma.R
+import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.models.Artifact
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.SerializerExtensions.deepCopy
 
 object MessageEntityExtensions {
     @JvmStatic
-    fun MessageEntity.getMessageTextByAction(context: Context): String
-    {
+    fun MessageEntity.getMessageTextByAction(context: Context): String {
         return when (this.type) {
             MessageType.DELETE -> context.getString(R.string.message_deleted)
             MessageType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
             MessageType.GROUP_CREATE -> context.getString(R.string.group_created)
             MessageType.GROUP_MEMBER_ADD -> context.getString(R.string.group_member_added)
             MessageType.GROUP_MEMBER_REMOVE -> context.getString(R.string.group_member_removed)
-            MessageType.GROUP_MEMBER_LEFT -> context.getString(R.string.group_member_left)
+            MessageType.GROUP_MEMBER_LEAVE -> context.getString(R.string.group_member_left)
             MessageType.GROUP_RENAMED -> context.getString(R.string.group_renamed)
             MessageType.TEXT, MessageType.REPLY, null -> this.text.toString()
         }
@@ -40,13 +41,69 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
+    fun MessageEntity?.withText(text: String?): MessageEntity? {
+        return this.deepCopy()?.copy(text = text)
+    }
+
+    @JvmStatic
     fun MessageEntity?.markAsDeleted(): MessageEntity? {
         return this.deepCopy()?.copy(deleted = true)
     }
 
     @JvmStatic
-    fun List<MessageWithDetails>.isFullPage(): Boolean
-    {
+    fun List<MessageWithDetails>.isFullPage(): Boolean {
         return this.size == CONVERSATION_PAGE_SIZE
+    }
+
+    @JvmStatic
+    fun MessageEntity.decryptedText(): String? {
+        return CryptoProvider.base64Encode(CryptoProvider.masterKeyDecryptEx(text ?: return null) ?: return null)
+    }
+
+    @JvmStatic
+    fun MessageEntity.toArtifact(
+        senderName: String?,
+        guardAddress: String?,
+        guardHostname: String?,
+        resourceUrl: String?,
+        chatId: String?
+    ): Artifact? {
+        val text = if (isText()) {
+            text
+        } else if (isGroupUpdate()) {
+            decryptedText()
+        } else {
+            text
+        }
+        return Artifact(
+            text = text,
+            type = type,
+            actionFor = actionFor,
+            senderName = senderName,
+            guardAddress = guardAddress,
+            guardHostname = guardHostname,
+            refId = refId,
+            resourceUrl = resourceUrl,
+            senderAddress = senderAddress,
+            chatId = chatId
+        )
+    }
+
+    @JvmStatic
+    fun MessageEntity.isText(): Boolean {
+        return type == MessageType.TEXT || type == MessageType.REPLY
+    }
+
+    @JvmStatic
+    fun MessageEntity.isGroupUpdate(): Boolean {
+        return type == MessageType.GROUP_CREATE
+                || type == MessageType.GROUP_RENAMED
+                || type == MessageType.GROUP_MEMBER_ADD
+                || type == MessageType.GROUP_MEMBER_REMOVE
+    }
+
+    @JvmStatic
+    fun MessageEntity.isDelete(): Boolean {
+        return type == MessageType.DELETE || type == MessageType.DELETE_ALL
     }
 }

@@ -12,16 +12,16 @@ import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.publicKeyMatchAddress
+import ro.aenigma.crypto.extensions.SignatureExtensions.getDataFromSignature
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood
-import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
 import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getBaseUrl
-import ro.aenigma.util.getQueryParameter
+import ro.aenigma.util.getTagQueryParameter
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,9 +68,9 @@ class RemoteDataSource @Inject constructor(
         return body.mapNotNull { vertex -> validateVertex(vertex, false) }
     }
 
-    suspend fun createSharedData(data: String, accessCount: Int = 1): CreatedSharedData? {
+    suspend fun createSharedData(data: ByteArray, accessCount: Int = 1): CreatedSharedData? {
         try {
-            val signature = signatureService.sign(data.toByteArray())
+            val signature = signatureService.sign(data)
             signature.signedData ?: return null
             signature.publicKey ?: return null
             val sharedDataCreate =
@@ -87,40 +87,24 @@ class RemoteDataSource @Inject constructor(
     }
 
     suspend fun getSharedDataByUrl(url: String): SharedData? {
-        val tag = url.getQueryParameter("tag") ?: return null
+        val tag = url.getTagQueryParameter()?: return null
         val baseUrl = url.getBaseUrl()
         return getSharedData(retrofitProvider.getApi(baseUrl), tag)
     }
 
-    private fun decryptGroupData(sharedData: SharedData): GroupData? {
-        try {
-            val encryptedDataList =
-                sharedData.data.getStringDataFromSignature(sharedData.publicKey!!)
-                    .fromJson<List<String>>()
-                    ?: return null
-
-            var decryptedContent: ByteArray? = null
-            for (data in encryptedDataList) {
-                decryptedContent = CryptoProvider.decryptEx(data)
-                if (decryptedContent != null) {
-                    break
-                }
-            }
-            if (decryptedContent == null) {
-                return null
-            }
-            return decryptedContent.toString(Charsets.UTF_8).fromJson<GroupData>()
-        } catch (_: Exception) {
-            return null
-        }
-    }
-
-    suspend fun getGroupDataByUrl(url: String, existentGroups: List<GroupData>): GroupData? {
+    suspend fun getGroupDataByUrl(
+        url: String,
+        existentGroup: GroupData?,
+        key: ByteArray
+    ): GroupData? {
         try {
             val response = getSharedDataByUrl(url) ?: return null
-            val groupData = decryptGroupData(response) ?: return null
-            val publisherAddress = response.publicKey.getAddressFromPublicKey() ?: return null
-            return validateGroupData(groupData, publisherAddress, existentGroups)
+            val data =
+                response.data.getDataFromSignature(response.publicKey ?: return null) ?: return null
+            val groupData =
+                String(CryptoProvider.decrypt(key, data) ?: return null).fromJson<GroupData>()
+                    ?: return null
+            return validateGroupData(groupData, response, existentGroup)
         } catch (_: Exception) {
             return null
         }
@@ -128,8 +112,8 @@ class RemoteDataSource @Inject constructor(
 
     private fun validateGroupData(
         groupData: GroupData,
-        publisherAddress: String,
-        existingGroups: List<GroupData>
+        sharedData: SharedData,
+        existentGroup: GroupData?
     ): GroupData? {
         if (groupData.name == null || groupData.address == null || groupData.members == null
             || groupData.members.isEmpty()
@@ -139,32 +123,14 @@ class RemoteDataSource @Inject constructor(
         ) {
             return null
         }
-
-        val existingGroupData =
-            existingGroups.firstOrNull { item -> item.address == groupData.address }
+        val publisherAddress = sharedData.publicKey.getAddressFromPublicKey()
         val publisherIsAdmin = groupData.admins.contains(publisherAddress)
-        val publisherIsNotAdmin = !publisherIsAdmin
-        val newGroup = existingGroupData == null
-        val existingGroup = !newGroup
-        val adminModifiesGroup = !newGroup
-                && existingGroupData.admins?.contains(publisherAddress) == true
-
-        when {
-            publisherIsNotAdmin && existingGroup -> {
-                val eliminatedMember =
-                    existingGroupData.members?.toSet()?.subtract(groupData.members)?.singleOrNull()
-                return if (existingGroupData.members?.size == groupData.members.size + 1
-                    && eliminatedMember?.address == publisherAddress
-                ) {
-                    groupData.withMembers(groupData.members)
-                } else {
-                    null
-                }
-            }
-
-            publisherIsAdmin && (newGroup || adminModifiesGroup) -> return groupData
-
-            else -> return null
+        val newGroup = existentGroup == null
+        val adminModifiesGroup =
+            !newGroup && existentGroup.admins?.contains(publisherAddress) == true
+        return when {
+            publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupData
+            else -> null
         }
     }
 

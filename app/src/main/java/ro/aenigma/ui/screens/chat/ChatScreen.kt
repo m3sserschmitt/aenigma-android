@@ -291,7 +291,7 @@ fun ChatScreen(
                             addGroupMemberDialogVisible = true
                         }
 
-                        MessageType.GROUP_MEMBER_LEFT -> {
+                        MessageType.GROUP_MEMBER_LEAVE -> {
                             leaveGroupDialogVisible = true
                         }
 
