@@ -31,15 +31,13 @@ class SignatureService @Inject constructor(keysManager: KeysManager) {
     private var ready = false
 
     init {
-        if (keysManager.generateKeyIfNotExistent()) {
-            _publicKey = keysManager.readPublicKey()
-            _address = _publicKey.getAddressFromPublicKey()
-            val privateKey = keysManager.readPrivateKey()
-            ready =
-                _publicKey != null && _address != null && privateKey != null && CryptoProvider.initSignatureEx(
-                    privateKey
-                )
-        }
+        _publicKey = keysManager.readPublicKey()
+        _address = _publicKey.getAddressFromPublicKey()
+        val privateKey = keysManager.readPrivateKey()
+        ready =
+            _publicKey != null && _address != null && privateKey != null && CryptoProvider.initSignatureEx(
+                privateKey
+            )
     }
 
     fun sign(data: ByteArray): SignatureDto {

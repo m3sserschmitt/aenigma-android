@@ -14,12 +14,10 @@ class KeysHelper {
 
         private const val KEYS_ALGORITHM = "RSA"
 
-        private const val KEYS_PROVIDER = "BC"
-
         @JvmStatic
         fun generateKeyPair(): KeyPair? {
             return try {
-                val keyPairGenerator = KeyPairGenerator.getInstance(KEYS_ALGORITHM, KEYS_PROVIDER)
+                val keyPairGenerator = KeyPairGenerator.getInstance(KEYS_ALGORITHM)
                 keyPairGenerator.initialize(KEY_SIZE_BITS)
                 keyPairGenerator.generateKeyPair()
             } catch (_: Exception) {

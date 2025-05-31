@@ -109,4 +109,12 @@
     <string name="cannot_share_groups">Groups cannot be shared.</string>
     <string name="cannot_select_groups_to_create_group">Groups cannot be selected while creating new group.</string>
     <string name="tor">TOR</string>
+    <string name="access_database">Access Database</string>
+    <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
+    <string name="authentication_failed">Authentication failed</string>
+    <string name="guard_syncing">Guard syncing in progress</string>
+    <string name="downloading_channel_info">Downloading channel info</string>
+    <string name="uploading_channel_info">Uploading channel info</string>
+    <string name="sending_message">Sending message</string>
+    <string name="connecting_server">Connecting server</string>
 </resources>

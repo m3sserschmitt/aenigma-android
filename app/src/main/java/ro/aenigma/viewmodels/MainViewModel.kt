@@ -44,13 +44,6 @@ class MainViewModel @Inject constructor(
     repository,
     signalrConnectionController,
     application) {
-    init {
-        viewModelScope.launch(ioDispatcher) {
-            repository.local.notificationsAllowed.collect { allowed ->
-                _notificationsAllowed.value = allowed
-            }
-        }
-    }
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
@@ -95,6 +88,7 @@ class MainViewModel @Inject constructor(
     init {
         loadContacts()
         collectUseTor()
+        collectNotificationsPreferences()
     }
 
     fun loadContacts() {
@@ -105,6 +99,15 @@ class MainViewModel @Inject constructor(
         _allContacts.value = RequestState.Loading
         collectContacts()
         collectSearches()
+    }
+
+    private fun collectNotificationsPreferences()
+    {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.notificationsAllowed.collect { allowed ->
+                _notificationsAllowed.value = allowed
+            }
+        }
     }
 
     private fun collectUseTor() {

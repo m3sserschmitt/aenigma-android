@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -14,6 +15,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
@@ -22,6 +24,7 @@ import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.models.GroupData
+import ro.aenigma.services.NotificationService
 import ro.aenigma.util.getTagQueryParameter
 import java.util.concurrent.TimeUnit
 
@@ -30,10 +33,12 @@ class GroupDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository,
-    private val signatureService: SignatureService
+    private val signatureService: SignatureService,
+    private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
 
     companion object {
+        private const val WORKER_NOTIFICATION_ID = 101
         private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val GROUP_RESOURCE_URL_ARG = "GroupResourceUrl"
@@ -114,5 +119,12 @@ class GroupDownloadWorker @AssistedInject constructor(
             ?: return Result.retry()
         createContactEntities(groupData, resourceUrl)
         return Result.success()
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            WORKER_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
+        )
     }
 }

@@ -1,18 +1,26 @@
 package ro.aenigma.ui
 
+import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.navigation.NavHostController
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import ro.aenigma.data.PreferencesDataStore
+import ro.aenigma.di.DbPassphraseKeeper
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.TorServiceController
+import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
@@ -22,7 +30,7 @@ import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class AppActivity : ComponentActivity() {
+class AppActivity : FragmentActivity() {
 
     @Inject
     lateinit var torServiceController: TorServiceController
@@ -36,36 +44,63 @@ class AppActivity : ComponentActivity() {
     @Inject
     lateinit var notificationService: NotificationService
 
-    private lateinit var navController: NavHostController
+    @Inject
+    lateinit var preferencesDataStore: PreferencesDataStore
+
+    private val dbPassphraseLoaded = MutableStateFlow(false)
 
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        loadDbPassphrase()
+        val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
-                navController = rememberNavController()
-                SetupNavigation(
-                    navigationTracker = navigationTracker,
-                    navHostController = navController,
-                    mainViewModel = mainViewModel
-                )
+                SecuredApp(
+                    isDeviceSecured = keyguardManager.isDeviceSecure,
+                    dbPassphraseLoaded = dbPassphraseLoaded,
+                ) {
+                    val navController = rememberNavController()
+
+                    LaunchedEffect(key1 = true) {
+                        observeTorService()
+                        observeClientConnectivity()
+                        observeNavigation()
+                        handleAppLink()
+                        schedulePeriodicSync()
+                    }
+
+                    SetupNavigation(
+                        navigationTracker = navigationTracker,
+                        navHostController = navController,
+                        mainViewModel = mainViewModel
+                    )
+                }
             }
         }
-        observeTorService()
-        observeClientConnectivity()
-        observeNavigation()
-        handleAppLink()
-        schedulePeriodicSync()
-//        schedulePeriodicCleanup()
+    }
+
+    private fun loadDbPassphrase() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            preferencesDataStore.encryptedDatabasePassphrase.collect { data ->
+                if (data.isEmpty()) {
+                    preferencesDataStore.saveEncryptedDatabasePassphrase()
+                } else {
+                    DbPassphraseKeeper.dbPassphrase.value = data
+                    dbPassphraseLoaded.value = true
+                }
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
-        resetClient()
-        sync()
+        if (dbPassphraseLoaded.value) {
+            resetClient()
+            sync()
+        }
     }
 
     override fun onPause() {

@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -15,6 +16,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -32,6 +34,7 @@ import ro.aenigma.models.extensions.GroupDataExtensions.withName
 import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.services.MessageSaver
+import ro.aenigma.services.NotificationService
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.util.concurrent.TimeUnit
 
@@ -41,10 +44,12 @@ class GroupUploadWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val repository: Repository,
     private val messageSaver: MessageSaver,
-    private val signatureService: SignatureService
+    private val signatureService: SignatureService,
+    private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
 
     companion object {
+        private const val WORKER_NOTIFICATION_ID = 102
         private const val UNIQUE_WORK_NAME = "UploadGroupWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MAX_ATTEMPTS_COUNT = 5
@@ -254,5 +259,12 @@ class GroupUploadWorker @AssistedInject constructor(
         sendGroupUpdate(groupData, encryptionDto.key, actionType, destinations)
 
         return Result.success()
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            WORKER_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
+        )
     }
 }

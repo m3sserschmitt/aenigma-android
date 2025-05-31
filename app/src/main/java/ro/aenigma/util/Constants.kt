@@ -5,9 +5,6 @@ class Constants {
 
         // datastore
         const val DATASTORE_PREFERENCES = "datastore-preference"
-        const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"
-        const val TOR_PREFERENCE = "use-tor"
-        const val NAME_PREFERENCE = "name"
 
         const val ADDRESS_SIZE_BYTES = 32
         const val KEY_SIZE_BITS = 4096

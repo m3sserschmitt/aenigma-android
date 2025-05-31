@@ -20,10 +20,8 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
     private var ready = false
 
     init {
-        if (keysManager.generateKeyIfNotExistent()) {
-            val key = keysManager.readPrivateKey()
-            ready = key != null && CryptoProvider.initDecryptionEx(key)
-        }
+        val key = keysManager.readPrivateKey()
+        ready = key != null && CryptoProvider.initDecryptionEx(key)
     }
 
     fun parse(routingRequest: RoutingRequest): List<ParsedMessageDto> {

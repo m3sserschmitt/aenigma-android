@@ -11,8 +11,6 @@ import javax.inject.Singleton
 @Singleton
 class KeysManager @Inject constructor(@ApplicationContext private val context: Context) {
 
-    private val lock = Any()
-
     companion object {
 
         private const val PRIVATE_KEY_FILE = "private-key.locked"
@@ -39,6 +37,10 @@ class KeysManager @Inject constructor(@ApplicationContext private val context: C
         }
     }
 
+    init {
+        generateKeyIfNotExistent()
+    }
+
     private fun getPrivateKeyFile(): File {
         return File(context.filesDir, PRIVATE_KEY_FILE)
     }
@@ -57,7 +59,6 @@ class KeysManager @Inject constructor(@ApplicationContext private val context: C
 
     private fun generateKeys(): Boolean {
         return try {
-            CryptoProvider.generateMasterKey()
             val keyPairDto = KeysHelper.keyPairToPEM()
             val encryptedPrivateKey =
                 CryptoProvider.masterKeyEncrypt(
@@ -73,7 +74,10 @@ class KeysManager @Inject constructor(@ApplicationContext private val context: C
 
     fun readPrivateKey(): String? {
         return try {
-            String(CryptoProvider.masterKeyDecrypt(readKey(getPrivateKeyFile()) ?: return null) ?: return null)
+            String(
+                CryptoProvider.masterKeyDecrypt(readKey(getPrivateKeyFile()) ?: return null)
+                    ?: return null
+            )
         } catch (_: Exception) {
             null
         }
@@ -87,13 +91,11 @@ class KeysManager @Inject constructor(@ApplicationContext private val context: C
         }
     }
 
-    fun generateKeyIfNotExistent(): Boolean {
-        synchronized(lock) {
-            return if (!keysExists()) {
-                generateKeys()
-            } else {
-                true
-            }
+    private fun generateKeyIfNotExistent(): Boolean {
+        return if (!keysExists()) {
+            generateKeys()
+        } else {
+            true
         }
     }
 }

@@ -17,6 +17,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 object CryptoProvider {
     init {
+        generateMasterKey()
         System.loadLibrary("aenigma-wrapper")
     }
 
@@ -148,7 +149,7 @@ object CryptoProvider {
 
     @JvmStatic
     fun encrypt(plaintext: ByteArray): EncryptionDto? {
-        val key = generateKey()
+        val key = generateRandomBytes(DEFAULT_SYMMETRIC_KEY_SIZE)
         return EncryptionDto(key, encryptSymmetric(key, plaintext) ?: return null)
     }
 
@@ -158,16 +159,23 @@ object CryptoProvider {
     }
 
     @JvmStatic
-    private fun generateKey(size: Int = DEFAULT_SYMMETRIC_KEY_SIZE): ByteArray {
+    fun generateRandomBytes(size: Int): ByteArray {
         val random = SecureRandom()
         val bytes = ByteArray(size)
         random.nextBytes(bytes)
         return bytes
     }
 
+    private fun getKeyStore(): KeyStore {
+        return KeyStore.getInstance(MASTER_KEY_PROVIDER).apply { load(null) }
+    }
+
     @JvmStatic
-    fun generateMasterKey(): Boolean {
+    private fun generateMasterKey(): Boolean {
         try {
+            if (getKeyStore().containsAlias(MASTER_KEY_ALIAS)) {
+                return true
+            }
             val keyGen = KeyGenerator.getInstance(
                 KeyProperties.KEY_ALGORITHM_AES,
                 MASTER_KEY_PROVIDER
@@ -189,8 +197,7 @@ object CryptoProvider {
 
     @JvmStatic
     private fun getMasterKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(MASTER_KEY_PROVIDER).apply { load(null) }
-        return (keyStore.getEntry(MASTER_KEY_ALIAS, null) as KeyStore.SecretKeyEntry).secretKey
+        return (getKeyStore().getEntry(MASTER_KEY_ALIAS, null) as KeyStore.SecretKeyEntry).secretKey
     }
 
     @JvmStatic

@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -24,6 +25,7 @@ import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
@@ -33,6 +35,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withText
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.services.NotificationService
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -44,10 +47,12 @@ class MessageSenderWorker @AssistedInject constructor(
     private val signalRClient: SignalRClient,
     private val repository: Repository,
     private val signatureService: SignatureService,
+    private val notificationService: NotificationService,
     private val pathFinder: PathFinder
 ) : CoroutineWorker(context, params) {
 
     companion object {
+        private const val WORKER_NOTIFICATION_ID = 103
         private const val MESSAGE_ID_ARG = "MessageId"
         private const val ADDITIONAL_DESTINATIONS_ARG = "AdditionalDestinations"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
@@ -219,5 +224,12 @@ class MessageSenderWorker @AssistedInject constructor(
         } else {
             return Result.retry()
         }
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            WORKER_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
+        )
     }
 }
