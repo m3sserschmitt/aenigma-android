@@ -116,6 +116,7 @@ class RemoteDataSource @Inject constructor(
         existentGroup: GroupData?
     ): GroupData? {
         if (groupData.name == null || groupData.address == null || groupData.members == null
+            || groupData.nonce == null
             || groupData.members.isEmpty()
             || groupData.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
             || groupData.admins == null || groupData.admins.isEmpty()
@@ -126,8 +127,10 @@ class RemoteDataSource @Inject constructor(
         val publisherAddress = sharedData.publicKey.getAddressFromPublicKey()
         val publisherIsAdmin = groupData.admins.contains(publisherAddress)
         val newGroup = existentGroup == null
+        val nonceIsGreaterThanPrevious = !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
         val adminModifiesGroup =
             !newGroup && existentGroup.admins?.contains(publisherAddress) == true
+                    && nonceIsGreaterThanPrevious
         return when {
             publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupData
             else -> null

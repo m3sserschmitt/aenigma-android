@@ -28,6 +28,7 @@ import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.GroupDataExtensions.incrementNonce
 import ro.aenigma.models.extensions.GroupDataExtensions.removeMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withName
@@ -116,14 +117,14 @@ class GroupUploadWorker @AssistedInject constructor(
     }
 
     private fun renameGroup(existingGroupData: GroupData, name: String): GroupData? {
-        return existingGroupData.withName(name)
+        return existingGroupData.withName(name)?.incrementNonce()
     }
 
     private fun removeGroupMembers(
         existingGroupData: GroupData,
         memberAddresses: List<String>
     ): GroupData? {
-        return existingGroupData.removeMembers(memberAddresses)
+        return existingGroupData.removeMembers(memberAddresses)?.incrementNonce()
     }
 
     private suspend fun addGroupMembers(
@@ -140,7 +141,7 @@ class GroupUploadWorker @AssistedInject constructor(
                 }
             }
         }
-        return existingGroupData.withMembers(members.toList())
+        return existingGroupData.withMembers(members.toList())?.incrementNonce()
     }
 
     private suspend fun createGroupData(

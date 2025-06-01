@@ -32,4 +32,10 @@ object GroupDataExtensions {
     fun GroupData.iAmAdmin(localAddress: String): Boolean {
         return admins?.contains(localAddress) == true
     }
+
+    @JvmStatic
+    fun GroupData.incrementNonce(): GroupData? {
+        val newNonce = (nonce ?: 0) + 1
+        return deepCopy()?.copy(nonce = newNonce)
+    }
 }

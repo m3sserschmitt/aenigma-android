@@ -12,7 +12,8 @@ object GroupDataFactory {
             address = UUID.randomUUID().toString().getSha256Hex(),
             name = name,
             members = members,
-            admins = admins
+            admins = admins,
+            nonce = 1
         )
     }
 }
