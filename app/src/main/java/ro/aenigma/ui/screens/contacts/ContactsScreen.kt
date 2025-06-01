@@ -125,7 +125,7 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = contacts)
     {
-        if (contacts is RequestState.Success) {
+        if (contacts is RequestState.Success && !isSearchMode) {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
@@ -241,9 +241,7 @@ fun ContactsScreen(
     ) {
         if (isSearchMode) {
             isSearchMode = false
-        }
-
-        if (isSelectionMode) {
+        } else if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
         }

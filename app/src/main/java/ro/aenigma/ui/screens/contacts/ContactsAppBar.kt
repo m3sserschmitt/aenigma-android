@@ -60,18 +60,31 @@ fun ContactsAppBar(
     var searchQueryState by remember { mutableStateOf("") }
     LaunchedEffect(key1 = isSearchMode)
     {
-        if(!isSearchMode)
-        {
+        if (!isSearchMode) {
             searchQueryState = ""
         }
     }
 
-    if(isSelectionMode)
-    {
+    if (isSearchMode) {
+        SearchAppBar(
+            searchQuery = searchQueryState,
+            onSearchQueryChanged = { newSearchQuery ->
+                searchQueryState = newSearchQuery
+            },
+            onClose = onSearchModeExited,
+            onSearchClicked = { searchQuery ->
+                onSearchClicked(searchQuery)
+            }
+        )
+    } else if (isSelectionMode) {
         SelectionModeAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
             actions = {
+                ActivateSearchAppBarAction(
+                    onSearchModeTriggered = onSearchTriggered,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
                 DeleteAppBarAction(
                     onDeleteClicked = onDeleteSelectedItemsClicked
                 )
@@ -87,17 +100,6 @@ fun ContactsAppBar(
                     visible = selectedItemsCount > 0,
                     onCreateGroupClicked = onCreateGroupClicked
                 )
-            }
-        )
-    } else if (isSearchMode){
-        SearchAppBar(
-            searchQuery = searchQueryState,
-            onSearchQueryChanged = {
-                    newSearchQuery -> searchQueryState = newSearchQuery
-            },
-            onClose = onSearchModeExited,
-            onSearchClicked = {
-                searchQuery -> onSearchClicked(searchQuery)
             }
         )
     } else {
