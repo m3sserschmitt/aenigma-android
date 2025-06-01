@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -105,7 +106,37 @@ class SignalrConnectionController @Inject constructor(
         }
     }
 
+    val authToken: StateFlow<String> = signalRClient.authToken
+
     fun resetClient() {
         return signalRClient.resetAborted()
+    }
+
+    fun sendMessages(messages: List<String>): Boolean {
+        return signalRClient.sendMessages(messages)
+    }
+
+    fun isConnected(): Boolean {
+        return signalRClient.isConnected()
+    }
+
+    fun pull() {
+        return signalRClient.pull()
+    }
+
+    fun broadcast() {
+        return signalRClient.broadcast()
+    }
+
+    suspend fun connect(host: String) {
+        return signalRClient.connect(host)
+    }
+
+    fun disconnect() {
+        return signalRClient.disconnect()
+    }
+
+    fun cleanup() {
+        return signalRClient.cleanup()
     }
 }

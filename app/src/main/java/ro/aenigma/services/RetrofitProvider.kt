@@ -20,23 +20,24 @@ import javax.inject.Singleton
 
 @Singleton
 class RetrofitProvider @Inject constructor(
-    private val localDataSource: LocalDataSource
+    private val localDataSource: LocalDataSource,
+    private val signalrController: dagger.Lazy<SignalrConnectionController>
 ) {
     companion object {
         private const val CONNECTION_TIMEOUT: Long = 15
 
         @JvmStatic
-        private fun createRetrofit(useTor: Boolean, baseUrl: String): Retrofit {
+        private fun createRetrofit(useTor: Boolean, baseUrl: String, authToken: String? = null): Retrofit {
             return Retrofit.Builder()
                 .baseUrl(baseUrl)
-                .client(createHttpClient(useTor))
+                .client(createHttpClient(useTor, authToken))
                 .addConverterFactory(createJsonConverterFactory())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build()
         }
 
         @JvmStatic
-        fun createHttpClient(useTor: Boolean): OkHttpClient {
+        fun createHttpClient(useTor: Boolean, authToken: String? = null): OkHttpClient {
             return OkHttpClient.Builder()
                 .readTimeout(CONNECTION_TIMEOUT, TimeUnit.SECONDS)
                 .connectTimeout(CONNECTION_TIMEOUT, TimeUnit.SECONDS)
@@ -50,6 +51,15 @@ class RetrofitProvider @Inject constructor(
                             )
                         )
                     }
+                    if(!authToken.isNullOrBlank()) {
+                        addInterceptor { chain ->
+                            chain.proceed(
+                                chain.request().newBuilder()
+                                    .addHeader("Authorization", "Bearer $authToken")
+                                    .build()
+                            )
+                        }
+                    }
                 }.build()
         }
     }
@@ -61,9 +71,10 @@ class RetrofitProvider @Inject constructor(
     suspend fun getInstance(): Retrofit {
         val useTor = localDataSource.useTor.firstOrNull() == true
         val baseUrl = localDataSource.getGuard()?.hostname?.getBaseUrl() ?: SERVER_URL
-        val hash = Objects.hash(useTor, baseUrl)
+        val authToken = signalrController.get().authToken.value
+        val hash = Objects.hash(useTor, baseUrl, authToken)
         if (hash != previousHash || instance == null) {
-            instance = createRetrofit(useTor, baseUrl)
+            instance = createRetrofit(useTor, baseUrl, authToken)
             previousHash = hash
         }
         return instance!!

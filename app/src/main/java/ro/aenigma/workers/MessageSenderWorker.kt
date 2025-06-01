@@ -20,7 +20,6 @@ import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
-import ro.aenigma.services.SignalRClient
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -36,6 +35,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withText
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.services.NotificationService
+import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalRClient: SignalRClient,
+    private val signalrController: SignalrConnectionController,
     private val repository: Repository,
     private val signatureService: SignatureService,
     private val notificationService: NotificationService,
@@ -164,7 +164,7 @@ class MessageSenderWorker @AssistedInject constructor(
                 } else null
             } else null
         }
-        return signalRClient.sendMessages(onions)
+        return signalrController.sendMessages(onions)
     }
 
     private suspend fun getDestinationContacts(contactWithGroup: ContactWithGroup, additionalDestinations: Array<String>?): List<ContactEntity> {
@@ -196,7 +196,7 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        if (!signalRClient.isConnected()) {
+        if (!signalrController.isConnected()) {
             return Result.retry()
         }
 

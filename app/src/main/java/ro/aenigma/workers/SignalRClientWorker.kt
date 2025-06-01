@@ -16,18 +16,18 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
-import ro.aenigma.services.SignalRClient
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.services.NotificationService
+import ro.aenigma.services.SignalrConnectionController
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class SignalRClientWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalRClient: SignalRClient,
+    private val signalrController: SignalrConnectionController,
     private val repository: Repository,
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
@@ -113,24 +113,24 @@ class SignalRClientWorker @AssistedInject constructor(
         val guard = repository.local.getGuard() ?: return Result.failure()
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
 
-        if (signalRClient.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
-            signalRClient.disconnect()
+        if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
+            signalrController.disconnect()
         }
 
-        if (!signalRClient.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            signalRClient.connect(guard.hostname, guard.address)
+        if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
+            signalrController.connect(guard.hostname)
         }
 
-        if (signalRClient.isConnected() && action contains SignalRWorkerAction.Pull()) {
-            signalRClient.pull()
+        if (signalrController.isConnected() && action contains SignalRWorkerAction.Pull()) {
+            signalrController.pull()
         }
 
-        if (signalRClient.isConnected() && action contains SignalRWorkerAction.Broadcast()) {
-            signalRClient.broadcast()
+        if (signalrController.isConnected() && action contains SignalRWorkerAction.Broadcast()) {
+            signalrController.broadcast()
         }
 
-        if (signalRClient.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
-            signalRClient.cleanup()
+        if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
+            signalrController.cleanup()
         }
 
         return Result.success()

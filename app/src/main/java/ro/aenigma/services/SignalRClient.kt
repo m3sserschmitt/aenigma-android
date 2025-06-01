@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.models.Neighborhood
@@ -71,10 +72,10 @@ class SignalRClient @Inject constructor(
             "Could not create connection or invalid URL."
 
         @JvmStatic
-        fun createConnection(useTor: Boolean, hostname: String): HubConnection {
+        fun createConnection(useTor: Boolean, hostname: String): HubConnection? {
             val endpointUrl =
-                hostname.trimEnd('/', ' ') + "/" + ONION_ROUTING_ENDPOINT.trimStart('/')
-
+                hostname.toHttpUrlOrNull()?.newBuilder()?.addPathSegment(ONION_ROUTING_ENDPOINT)
+                    ?.build().toString()
             return HubConnectionBuilder
                 .create(endpointUrl)
                 .apply {
@@ -93,25 +94,30 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    private lateinit var _hubConnection: HubConnection
+    private val _lock = Any()
 
-    private lateinit var _guardAddress: String
+    private val _authToken = MutableStateFlow("")
 
-    private var _status: MutableStateFlow<SignalRStatus> = MutableStateFlow(SignalRStatus.NotConnected)
+    private val _hubConnection = MutableStateFlow<HubConnection?>(null)
+
+    private val _guardAddress = MutableStateFlow<String>("")
+
+    private var _status: MutableStateFlow<SignalRStatus> =
+        MutableStateFlow(SignalRStatus.NotConnected)
 
     private var _failedAttempts: MutableLiveData<Int> =
         MutableLiveData(0)
 
     val status: StateFlow<SignalRStatus> = _status
 
+    val authToken: StateFlow<String> = _authToken
+
     private fun configureConnection() {
-        synchronized(_hubConnection) {
-            _hubConnection.onClosed {
+        synchronized(_lock) {
+            _hubConnection.value?.onClosed {
                 updateStatus(SignalRStatus.Error.Disconnected(_status.value))
             }
-        }
-        synchronized(_hubConnection) {
-            _hubConnection.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
+            _hubConnection.value?.on(ROUTE_MESSAGE_METHOD, { data: RoutingRequest ->
                 if (data.payloads != null) {
                     CoroutineScope(Dispatchers.IO).launch {
                         messageSaver.handleRoutingRequest(data)
@@ -121,14 +127,15 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    suspend fun connect(hostname: String, guardAddress: String) {
+    suspend fun connect(hostname: String) {
         if (isConnected()) {
             return
         }
         try {
             val useTor = repository.local.useTor.firstOrNull() == true
-            _hubConnection = createConnection(useTor, hostname)
-            this._guardAddress = guardAddress
+            _hubConnection.value = createConnection(useTor, hostname)
+            val guard = repository.local.getGuard() ?: throw Exception()
+            _guardAddress.value = guard.address
             configureConnection()
         } catch (_: Exception) {
             updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
@@ -140,16 +147,15 @@ class SignalRClient @Inject constructor(
         if (!isConnected()) {
             return
         }
-        if (::_hubConnection.isInitialized) {
-            try {
-                synchronized(_hubConnection)
-                {
-                    return _hubConnection.close()
-                }
-            } catch (_: Exception) {
-            } finally {
-                _failedAttempts.postValue(0)
+
+        try {
+            synchronized(_lock)
+            {
+                return _hubConnection.value?.close() ?: Unit
             }
+        } catch (_: Exception) {
+        } finally {
+            _failedAttempts.postValue(0)
         }
     }
 
@@ -176,21 +182,19 @@ class SignalRClient @Inject constructor(
     }
 
     fun isConnected(): Boolean {
-        if (::_hubConnection.isInitialized) {
-            synchronized(_hubConnection) {
-                return _hubConnection.connectionState == HubConnectionState.CONNECTED
-            }
+        synchronized(_lock) {
+            return _hubConnection.value?.connectionState == HubConnectionState.CONNECTED
         }
-
         return false
     }
 
     private fun start() {
         if (!isConnected()) {
             updateStatus(SignalRStatus.Connecting)
-            synchronized(_hubConnection)
+            synchronized(_lock)
             {
-                return _hubConnection.start().blockingSubscribe(connectionsEstablishedObserver)
+                return _hubConnection.value?.start()
+                    ?.blockingSubscribe(connectionsEstablishedObserver) ?: Unit
             }
         }
     }
@@ -198,20 +202,21 @@ class SignalRClient @Inject constructor(
     private fun generateNonce() {
         if (isConnected()) {
             updateStatus(SignalRStatus.Authenticating)
-            synchronized(_hubConnection) {
-                return _hubConnection.invoke(GenerateTokenResult::class.java, GENERATE_NONCE_METHOD)
-                    .blockingSubscribe(nonceObserver)
+            synchronized(_lock) {
+                return _hubConnection.value?.invoke(
+                    GenerateTokenResult::class.java,
+                    GENERATE_NONCE_METHOD)?.blockingSubscribe(nonceObserver) ?: Unit
             }
         }
     }
 
     private fun authenticate(publicKey: String, signedData: String) {
         if (isConnected()) {
-            synchronized(_hubConnection) {
-                return _hubConnection.invoke(
+            synchronized(_lock) {
+                return _hubConnection.value?.invoke(
                     AuthenticateResult::class.java, AUTHENTICATE_METHOD,
                     AuthenticationRequest(publicKey, signedData)
-                ).blockingSubscribe(authenticationResultObserver)
+                )?.blockingSubscribe(authenticationResultObserver) ?: Unit
             }
         }
     }
@@ -223,7 +228,7 @@ class SignalRClient @Inject constructor(
         try {
             updateStatus(SignalRStatus.Broadcasting)
             val neighborhood =
-                Neighborhood(signatureService.address, null, listOf(_guardAddress))
+                Neighborhood(signatureService.address, null, listOf(_guardAddress.value))
             val data = neighborhood.toJson()?.toByteArray() ?: return
             val signature = signatureService.sign(data)
             if (signature.publicKey == null || signature.signedData == null) {
@@ -232,11 +237,11 @@ class SignalRClient @Inject constructor(
             }
 
             val broadcastRequest = VertexBroadcastRequest(signature.publicKey, signature.signedData)
-            synchronized(_hubConnection) {
-                return _hubConnection.invoke(
+            synchronized(_lock) {
+                return _hubConnection.value?.invoke(
                     VertexBroadcastResult::class.java, BROADCAST_METHOD,
                     broadcastRequest
-                ).blockingSubscribe(broadcastResultObserver)
+                )?.blockingSubscribe(broadcastResultObserver) ?: Unit
             }
         } catch (ex: Exception) {
             updateStatus(SignalRStatus.Error(_status.value, ex.message))
@@ -246,9 +251,9 @@ class SignalRClient @Inject constructor(
     fun pull() {
         if (isConnected()) {
             updateStatus(SignalRStatus.Pulling)
-            synchronized(_hubConnection) {
-                return _hubConnection.invoke(PullResult::class.java, PULL_METHOD)
-                    .blockingSubscribe(pullResultObserver)
+            synchronized(_lock) {
+                return _hubConnection.value?.invoke(PullResult::class.java, PULL_METHOD)
+                    ?.blockingSubscribe(pullResultObserver) ?: Unit
             }
         }
     }
@@ -256,9 +261,9 @@ class SignalRClient @Inject constructor(
     fun cleanup() {
         if (isConnected()) {
             updateStatus(SignalRStatus.Cleaning)
-            synchronized(_hubConnection) {
-                return _hubConnection.invoke(CleanupResult::class.java, CLEANUP_METHOD)
-                    .blockingSubscribe(cleanupResultObserver)
+            synchronized(_lock) {
+                return _hubConnection.value?.invoke(CleanupResult::class.java, CLEANUP_METHOD)
+                    ?.blockingSubscribe(cleanupResultObserver) ?: Unit
             }
         }
     }
@@ -306,6 +311,7 @@ class SignalRClient @Inject constructor(
                         if (decodedToken != null) signatureService.sign(decodedToken) else null
 
                     if (signature != null && signature.publicKey != null && signature.signedData != null) {
+                        _authToken.value = signature.signedData.replace("\n", "")
                         authenticate(signature.publicKey, signature.signedData)
                     } else {
                         updateStatus(SignalRStatus.Error(_status.value, INTERNAL_ERROR))
@@ -412,15 +418,14 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun sendMessages(messages: List<String>): Boolean
-    {
+    fun sendMessages(messages: List<String>): Boolean {
         var r = false
         if (isConnected()) {
-            synchronized(_hubConnection) {
-                _hubConnection.invoke(
+            synchronized(_lock) {
+                _hubConnection.value?.invoke(
                     RouteResult::class.java, ROUTE_MESSAGE_METHOD,
                     RoutingRequest(messages)
-                ).blockingSubscribe(
+                )?.blockingSubscribe(
                     { result -> r = result.success == true },
                     { _ -> r = false }
                 )
