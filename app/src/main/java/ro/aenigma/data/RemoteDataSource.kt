@@ -5,7 +5,6 @@ import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.Vertex
-import retrofit2.Response
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.CryptoProvider
@@ -18,6 +17,7 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood
+import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getBaseUrl
@@ -53,8 +53,18 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getServerInfo(): Response<ServerInfo?> {
-        return retrofitProvider.getApi().getServerInfo()
+    suspend fun getServerInfo(): ServerInfo? {
+        return try {
+            val response = retrofitProvider.getApi().getServerInfo()
+            val body = response.body()
+
+            if (response.code() == 200 && body != null)
+                body
+            else
+                null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     suspend fun getVertices(): List<Vertex> {
@@ -87,7 +97,7 @@ class RemoteDataSource @Inject constructor(
     }
 
     suspend fun getSharedDataByUrl(url: String): SharedData? {
-        val tag = url.getTagQueryParameter()?: return null
+        val tag = url.getTagQueryParameter() ?: return null
         val baseUrl = url.getBaseUrl()
         return getSharedData(retrofitProvider.getApi(baseUrl), tag)
     }
@@ -127,7 +137,8 @@ class RemoteDataSource @Inject constructor(
         val publisherAddress = sharedData.publicKey.getAddressFromPublicKey()
         val publisherIsAdmin = groupData.admins.contains(publisherAddress)
         val newGroup = existentGroup == null
-        val nonceIsGreaterThanPrevious = !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
+        val nonceIsGreaterThanPrevious =
+            !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
         val adminModifiesGroup =
             !newGroup && existentGroup.admins?.contains(publisherAddress) == true
                     && nonceIsGreaterThanPrevious
@@ -180,7 +191,8 @@ class RemoteDataSource @Inject constructor(
         }
         val serializedNeighborhood =
             vertex.signedData.getStringDataFromSignature(key) ?: return null
-        val neighborhood = serializedNeighborhood.fromJson<Neighborhood>() ?: return null
+        val neighborhood =
+            serializedNeighborhood.fromJson<Neighborhood>()?.normalizeHostname() ?: return null
         return Vertex(vertex.publicKey, vertex.signedData, neighborhood)
     }
 }

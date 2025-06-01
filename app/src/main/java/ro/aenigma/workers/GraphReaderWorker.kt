@@ -169,20 +169,6 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun requestServerInfo(): ServerInfo? {
-        return try {
-            val response = repository.remote.getServerInfo()
-            val body = response.body()
-
-            if (response.code() == 200 && body != null)
-                body
-            else
-                null
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     private suspend fun updateLocalGraph(serverInfo: ServerInfo): Boolean {
         try {
             val previousGraphVersion = repository.local.lastGraphVersion.first()
@@ -208,7 +194,7 @@ class GraphReaderWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val serverInfo = requestServerInfo()
+        val serverInfo = repository.remote.getServerInfo()
 
         return if (serverInfo == null || !updateLocalGraph(serverInfo)) {
             Result.retry()
