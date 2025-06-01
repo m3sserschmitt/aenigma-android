@@ -30,6 +30,7 @@ class PreferencesDataStore @Inject constructor(
         private const val NAME_PREFERENCE = "name"
         private const val ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE = "encrypted-database-passphrase"
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
+        private const val LAST_GRAPH_VERSION_PREFERENCE = "last-graph-version"
     }
 
     private object PreferenceKeys {
@@ -38,6 +39,7 @@ class PreferencesDataStore @Inject constructor(
         val useTor = booleanPreferencesKey(TOR_PREFERENCE)
         val encryptedDatabasePassphrase =
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
+        val lastGraphVersion = stringPreferencesKey(LAST_GRAPH_VERSION_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -68,9 +70,15 @@ class PreferencesDataStore @Inject constructor(
     suspend fun saveEncryptedDatabasePassphrase() {
         val key = CryptoProvider.generateRandomBytes(DATABASE_PASSPHRASE_SIZE_BYTES)
         val encryptedKey = CryptoProvider.masterKeyEncrypt(key)
+        key.fill(0)
         if (encryptedKey != null) {
             savePreference(encryptedKey, PreferenceKeys.encryptedDatabasePassphrase)
+            encryptedKey.fill(0)
         }
+    }
+
+    suspend fun saveLastGraphVersion(graphVersion: String): Boolean {
+        return savePreference(graphVersion, PreferenceKeys.lastGraphVersion)
     }
 
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
@@ -92,4 +100,6 @@ class PreferencesDataStore @Inject constructor(
 
     val encryptedDatabasePassphrase: Flow<ByteArray> =
         getPreference(PreferenceKeys.encryptedDatabasePassphrase, byteArrayOf())
+
+    val lastGraphVersion: Flow<String> = getPreference(PreferenceKeys.lastGraphVersion, "")
 }

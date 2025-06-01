@@ -28,13 +28,21 @@ object DatabaseModule {
     fun provideDatabase(
         @ApplicationContext context: Context,
     ): AppDatabase {
-        SQLiteDatabase.loadLibs(context)
-        val key = CryptoProvider.masterKeyDecrypt(
-            DbPassphraseKeeper.dbPassphrase.value
-                ?: throw Exception("Database passphrase not ready.")
-        )
-        return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
-            .openHelperFactory(SupportFactory(key)).build()
+        var dbPassphrase: ByteArray? = null
+        var lockedDbPassphrase: ByteArray? = null
+        try {
+            SQLiteDatabase.loadLibs(context)
+            lockedDbPassphrase = DbPassphraseKeeper.dbPassphrase.value ?: throw Exception("Database passphrase not ready.")
+            dbPassphrase = CryptoProvider.masterKeyDecrypt(lockedDbPassphrase) ?: throw Exception("Failed to unlock database passphrase.")
+            val supportFactory = SupportFactory(dbPassphrase)
+            return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
+                .openHelperFactory(supportFactory)
+                .build()
+        } finally {
+            dbPassphrase?.fill(0)
+            lockedDbPassphrase?.fill(0)
+            DbPassphraseKeeper.dbPassphrase.value = null
+        }
     }
 
     @Singleton
@@ -56,8 +64,4 @@ object DatabaseModule {
     @Singleton
     @Provides
     fun provideEdgesDao(database: AppDatabase) = database.edgesDao()
-
-    @Singleton
-    @Provides
-    fun provideGraphVersionsDao(database: AppDatabase) = database.graphVersionsDao()
 }

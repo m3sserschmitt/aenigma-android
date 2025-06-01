@@ -20,9 +20,9 @@ import ro.aenigma.util.GuardSelectionResult
 import ro.aenigma.util.isAppDomain
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import ro.aenigma.R
 import ro.aenigma.data.database.factories.EdgeEntityFactory
-import ro.aenigma.data.database.factories.GraphVersionEntityFactory
 import ro.aenigma.data.database.factories.GuardEntityFactory
 import ro.aenigma.data.database.factories.VertexEntityFactory
 import ro.aenigma.services.NotificationService
@@ -128,13 +128,13 @@ class GraphReaderWorker @AssistedInject constructor(
             }
         }
 
-        repository.local.insertVertices(vertices)
+        repository.local.insertOrIgnoreVertices(vertices)
 
         graph.forEach { vertex ->
             vertex.neighborhood?.neighbors?.map { neighborAddress ->
                 neighborAddress?.let { targetAddress ->
                     vertex.neighborhood.address?.let { sourceAddress ->
-                        repository.local.insertEdge(
+                        repository.local.insertOrIgnoreEdge(
                             EdgeEntityFactory.create(
                                 sourceAddress = sourceAddress,
                                 targetAddress = targetAddress
@@ -183,23 +183,20 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun updateLocalGraph(
-        serverInfo: ServerInfo,
-        graphRequestResult: GraphRequestResult
-    ): Boolean {
-        if (serverInfo.graphVersion == null) {
-            return false
-        }
+    private suspend fun updateLocalGraph(serverInfo: ServerInfo): Boolean {
         try {
-            val graphVersion = repository.local.getGraphVersion()
+            val previousGraphVersion = repository.local.lastGraphVersion.first()
             val currentGuard = repository.local.getGuard()
 
-            if (serverInfo.graphVersion != graphVersion?.version || currentGuard == null) {
+            if (serverInfo.graphVersion != previousGraphVersion || currentGuard == null) {
+                val graphRequestResult = requestNewGraph()
                 clearDatabase()
                 saveGraph(graphRequestResult)
             }
-
-            repository.local.updateGraphVersion(GraphVersionEntityFactory.create(serverInfo.graphVersion))
+            if(serverInfo.graphVersion != null)
+            {
+                repository.local.saveLastGraphVersion(serverInfo.graphVersion)
+            }
         } catch (_: Exception) {
             return false
         }
@@ -212,12 +209,8 @@ class GraphReaderWorker @AssistedInject constructor(
             return Result.failure()
         }
         val serverInfo = requestServerInfo()
-        val graphRequestResult = requestNewGraph()
 
-        return if (serverInfo == null ||
-            graphRequestResult is GraphRequestResult.Error ||
-            !updateLocalGraph(serverInfo, graphRequestResult)
-        ) {
+        return if (serverInfo == null || !updateLocalGraph(serverInfo)) {
             Result.retry()
         } else {
             Result.success()

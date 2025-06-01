@@ -5,8 +5,6 @@ import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgeEntity
 import ro.aenigma.data.database.EdgesDao
-import ro.aenigma.data.database.GraphVersionEntity
-import ro.aenigma.data.database.GraphVersionsDao
 import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.GuardsDao
 import ro.aenigma.data.database.MessageEntity
@@ -39,9 +37,6 @@ class LocalDataSource @Inject constructor(
     @Inject
     lateinit var edgesDao: Lazy<EdgesDao>
 
-    @Inject
-    lateinit var graphVersionsDao: Lazy<GraphVersionsDao>
-
     suspend fun saveName(name: String): Boolean {
         return preferencesDataStore.saveName(name)
     }
@@ -54,11 +49,17 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
+    suspend fun saveLastGraphVersion(graphVersion: String): Boolean {
+        return preferencesDataStore.saveLastGraphVersion(graphVersion)
+    }
+
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
 
     val name: Flow<String> = preferencesDataStore.name
 
     val useTor: Flow<Boolean> = preferencesDataStore.useTor
+
+    val lastGraphVersion: Flow<String> = preferencesDataStore.lastGraphVersion
 
     fun getContactsFlow(): Flow<List<ContactEntity>> {
         return contactsDao.get().getFlow()
@@ -118,14 +119,6 @@ class LocalDataSource @Inject constructor(
 
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>> {
         return messagesDao.get().getConversationFlow(chatId)
-    }
-
-    suspend fun getMessageByUuid(uuid: String): MessageEntity? {
-        return messagesDao.get().getByServerUuid(uuid)
-    }
-
-    suspend fun getMessageByRefId(refId: String): MessageEntity? {
-        return messagesDao.get().getByRefId(refId)
     }
 
     suspend fun getConversationPage(
@@ -201,21 +194,12 @@ class LocalDataSource @Inject constructor(
         return guardsDao.get().getLastGuard()
     }
 
-    suspend fun getGraphVersion(): GraphVersionEntity? {
-        return graphVersionsDao.get().get()
-    }
-
-    suspend fun updateGraphVersion(graphVersion: GraphVersionEntity) {
-        graphVersionsDao.get().remove()
-        graphVersionsDao.get().insert(graphVersion)
-    }
-
     suspend fun removeVertices() {
         return verticesDao.get().remove()
     }
 
-    suspend fun insertVertices(vertices: List<VertexEntity>) {
-        return verticesDao.get().insert(vertices)
+    suspend fun insertOrIgnoreVertices(vertices: List<VertexEntity>) {
+        return verticesDao.get().insertOrIgnore(vertices)
     }
 
     suspend fun getVertices(): List<VertexEntity> {
@@ -226,8 +210,8 @@ class LocalDataSource @Inject constructor(
         return edgesDao.get().remove()
     }
 
-    suspend fun insertEdge(edge: EdgeEntity) {
-        return edgesDao.get().insert(edge)
+    suspend fun insertOrIgnoreEdge(edge: EdgeEntity) {
+        return edgesDao.get().insertOrIgnore(edge)
     }
 
     suspend fun getEdges(): List<EdgeEntity> {
