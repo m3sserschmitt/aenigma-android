@@ -1,0 +1,356 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "897d7aaa01dd9907bc7d3613b4dcd088",
+    "entities": [
+      {
+        "tableName": "Contacts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `name` TEXT, `publicKey` TEXT, `guardHostname` TEXT, `guardAddress` TEXT, `lastMessageId` INTEGER, `hasNewMessage` INTEGER NOT NULL, `type` TEXT NOT NULL, `dateCreated` TEXT NOT NULL, `dateUpdated` TEXT NOT NULL, PRIMARY KEY(`address`))",
+        "fields": [
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publicKey",
+            "columnName": "publicKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "guardHostname",
+            "columnName": "guardHostname",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "guardAddress",
+            "columnName": "guardAddress",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lastMessageId",
+            "columnName": "lastMessageId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "hasNewMessage",
+            "columnName": "hasNewMessage",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateCreated",
+            "columnName": "dateCreated",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateUpdated",
+            "columnName": "dateUpdated",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "address"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_Contacts_hasNewMessage_name",
+            "unique": false,
+            "columnNames": [
+              "hasNewMessage",
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Contacts_hasNewMessage_name` ON `${TABLE_NAME}` (`hasNewMessage`, `name`)"
+          }
+        ]
+      },
+      {
+        "tableName": "Messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `chatId` TEXT NOT NULL, `senderAddress` TEXT, `serverUUID` TEXT, `text` TEXT, `type` TEXT, `actionFor` TEXT, `refId` TEXT, `incoming` INTEGER NOT NULL, `sent` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, `date` TEXT NOT NULL, `dateReceivedOnServer` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chatId",
+            "columnName": "chatId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "senderAddress",
+            "columnName": "senderAddress",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "serverUUID",
+            "columnName": "serverUUID",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "actionFor",
+            "columnName": "actionFor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "refId",
+            "columnName": "refId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "incoming",
+            "columnName": "incoming",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sent",
+            "columnName": "sent",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deleted",
+            "columnName": "deleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateReceivedOnServer",
+            "columnName": "dateReceivedOnServer",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_Messages_chatId_deleted_id",
+            "unique": false,
+            "columnNames": [
+              "chatId",
+              "deleted",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Messages_chatId_deleted_id` ON `${TABLE_NAME}` (`chatId`, `deleted`, `id`)"
+          },
+          {
+            "name": "index_Messages_refId",
+            "unique": true,
+            "columnNames": [
+              "refId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_Messages_refId` ON `${TABLE_NAME}` (`refId`)"
+          },
+          {
+            "name": "index_Messages_serverUUID",
+            "unique": true,
+            "columnNames": [
+              "serverUUID"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_Messages_serverUUID` ON `${TABLE_NAME}` (`serverUUID`)"
+          }
+        ]
+      },
+      {
+        "tableName": "Guards",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `address` TEXT NOT NULL, `publicKey` TEXT NOT NULL, `hostname` TEXT NOT NULL, `dateCreated` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publicKey",
+            "columnName": "publicKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostname",
+            "columnName": "hostname",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateCreated",
+            "columnName": "dateCreated",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_Guards_address",
+            "unique": false,
+            "columnNames": [
+              "address"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Guards_address` ON `${TABLE_NAME}` (`address`)"
+          }
+        ]
+      },
+      {
+        "tableName": "Vertices",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `publicKey` TEXT NOT NULL, `hostname` TEXT, PRIMARY KEY(`address`))",
+        "fields": [
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publicKey",
+            "columnName": "publicKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hostname",
+            "columnName": "hostname",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "address"
+          ]
+        }
+      },
+      {
+        "tableName": "Edges",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`sourceAddress` TEXT NOT NULL, `targetAddress` TEXT NOT NULL, PRIMARY KEY(`sourceAddress`, `targetAddress`))",
+        "fields": [
+          {
+            "fieldPath": "sourceAddress",
+            "columnName": "sourceAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetAddress",
+            "columnName": "targetAddress",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "sourceAddress",
+            "targetAddress"
+          ]
+        }
+      },
+      {
+        "tableName": "Groups",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`address` TEXT NOT NULL, `groupData` TEXT NOT NULL, `resourceUrl` TEXT NOT NULL, PRIMARY KEY(`address`), FOREIGN KEY(`address`) REFERENCES `Contacts`(`address`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupData",
+            "columnName": "groupData",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "resourceUrl",
+            "columnName": "resourceUrl",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "address"
+          ]
+        },
+        "foreignKeys": [
+          {
+            "table": "Contacts",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "address"
+            ],
+            "referencedColumns": [
+              "address"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '897d7aaa01dd9907bc7d3613b4dcd088')"
+    ]
+  }
+}
