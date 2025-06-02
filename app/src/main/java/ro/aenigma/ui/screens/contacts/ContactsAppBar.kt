@@ -9,6 +9,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -191,7 +192,15 @@ fun TorSwitch(
             ) {
                 Switch(
                     checked = useTor,
-                    onCheckedChange = useTorChanged
+                    onCheckedChange = useTorChanged,
+                    colors = SwitchDefaults.colors().copy(
+                        checkedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        uncheckedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
                 )
                 Text(
                     text = stringResource(id = R.string.tor),

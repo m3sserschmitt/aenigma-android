@@ -302,7 +302,7 @@ fun ContactsScreen(
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.cannot_share_groups),
+                            context.getString(R.string.cannot_share_channels),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -311,7 +311,7 @@ fun ContactsScreen(
                     if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.cannot_select_groups_to_create_group),
+                            context.getString(R.string.cannot_select_channels_to_create_channel),
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {

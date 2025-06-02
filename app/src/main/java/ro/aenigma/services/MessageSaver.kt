@@ -13,6 +13,7 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
 import ro.aenigma.data.database.extensions.GroupEntityExtensions.removeMember
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isGroupUpdate
@@ -176,6 +177,7 @@ class MessageSaver @Inject constructor(
         val updatedContact =
             contact.withGuardAddress(artifact.guardAddress ?: contact.guardAddress)
                 .withGuardHostname(artifact.guardHostname ?: contact.guardHostname)
+                .withNewMessage()
                 ?: return
         repository.local.insertOrUpdateContact(updatedContact)
     }

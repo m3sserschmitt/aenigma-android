@@ -219,7 +219,7 @@ fun CreateGroupTopAppBarAction(
             Icon(
                 painter = painterResource(R.drawable.ic_group),
                 contentDescription = stringResource(
-                    id = R.string.create_group
+                    id = R.string.create_channel
                 ),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )

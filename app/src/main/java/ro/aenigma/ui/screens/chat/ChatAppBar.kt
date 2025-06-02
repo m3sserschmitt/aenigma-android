@@ -164,8 +164,8 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Add,
-            contentDescription = stringResource(id = R.string.add_group_member),
-            text = stringResource(id = R.string.add_group_member),
+            contentDescription = stringResource(id = R.string.add_channel_member),
+            text = stringResource(id = R.string.add_channel_member),
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
@@ -174,8 +174,8 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Clear,
-            contentDescription = stringResource(id = R.string.remove_group_member),
-            text = stringResource(id = R.string.remove_group_member),
+            contentDescription = stringResource(id = R.string.remove_channel_member),
+            text = stringResource(id = R.string.remove_channel_member),
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
@@ -184,8 +184,8 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-            contentDescription = stringResource(id = R.string.leave_group),
-            text = stringResource(id = R.string.leave_group),
+            contentDescription = stringResource(id = R.string.leave_channel),
+            text = stringResource(id = R.string.leave_channel),
             visible = isGroup && isMember && !isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_LEAVE)

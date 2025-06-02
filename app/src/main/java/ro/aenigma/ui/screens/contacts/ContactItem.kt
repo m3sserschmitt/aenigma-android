@@ -29,6 +29,7 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
@@ -79,14 +80,26 @@ fun ContactItem(
                 }
             }
 
-            Icon(
-                modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
-                imageVector = Icons.Filled.AccountCircle,
-                contentDescription = stringResource(
-                    id = R.string.contact
-                ),
-                tint = MaterialTheme.colorScheme.onBackground
-            )
+            if(contact.contact.type == ContactType.CONTACT)
+            {
+                Icon(
+                    modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
+                    imageVector = Icons.Filled.AccountCircle,
+                    contentDescription = stringResource(
+                        id = R.string.contact
+                    ),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            } else {
+                Icon(
+                    modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
+                    painter = painterResource(id = R.drawable.ic_group),
+                    contentDescription = stringResource(
+                        id = R.string.contact
+                    ),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
 
             val contactNameTextWeight = if (contact.contact.hasNewMessage) 8f else 9f
 

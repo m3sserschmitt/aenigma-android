@@ -21,6 +21,7 @@ import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.models.GroupData
@@ -72,7 +73,7 @@ class GroupDownloadWorker @AssistedInject constructor(
             ?: ContactEntityFactory.createGroup(
                 address = groupData.address,
                 name = groupData.name,
-            )).withName(groupData.name) ?: return
+            )).withName(groupData.name).withNewMessage() ?: return
         val group = GroupEntityFactory.create(
             address = groupData.address,
             groupData = groupData,

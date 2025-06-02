@@ -1,12 +1,18 @@
 package ro.aenigma.data.database
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
 import java.time.ZonedDateTime
 
-@Entity(tableName = CONTACTS_TABLE)
+@Entity(
+    tableName = CONTACTS_TABLE,
+    indices = [
+        Index(value = ["hasNewMessage", "name"])
+    ]
+)
 data class ContactEntity(
     @PrimaryKey val address: String,
     val name: String?,

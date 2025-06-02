@@ -15,6 +15,10 @@ object ContactEntityExtensions {
         return this.deepCopy()?.copy(name = name, dateUpdated = ZonedDateTime.now())
     }
 
+    fun ContactEntity?.withNewMessage(): ContactEntity? {
+        return deepCopy()?.copy(hasNewMessage = true)
+    }
+
     fun ContactEntity?.withGuardAddress(guardAddress: String?): ContactEntity? {
         return this.deepCopy()
             ?.copy(guardAddress = guardAddress, dateUpdated = ZonedDateTime.now())

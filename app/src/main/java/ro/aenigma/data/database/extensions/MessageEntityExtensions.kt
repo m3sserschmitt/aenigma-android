@@ -16,11 +16,11 @@ object MessageEntityExtensions {
         return when (this.type) {
             MessageType.DELETE -> context.getString(R.string.message_deleted)
             MessageType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
-            MessageType.GROUP_CREATE -> context.getString(R.string.group_created)
-            MessageType.GROUP_MEMBER_ADD -> context.getString(R.string.group_member_added)
-            MessageType.GROUP_MEMBER_REMOVE -> context.getString(R.string.group_member_removed)
-            MessageType.GROUP_MEMBER_LEAVE -> context.getString(R.string.group_member_left)
-            MessageType.GROUP_RENAMED -> context.getString(R.string.group_renamed)
+            MessageType.GROUP_CREATE -> context.getString(R.string.created_channel)
+            MessageType.GROUP_MEMBER_ADD -> context.getString(R.string.added_channel_members)
+            MessageType.GROUP_MEMBER_REMOVE -> context.getString(R.string.removed_channel_members)
+            MessageType.GROUP_MEMBER_LEAVE -> context.getString(R.string.channel_member_left)
+            MessageType.GROUP_RENAMED -> context.getString(R.string.channel_renamed)
             MessageType.TEXT, MessageType.REPLY, null -> this.text.toString()
         }
     }
