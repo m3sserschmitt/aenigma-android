@@ -10,7 +10,7 @@ import java.time.ZonedDateTime
     tableName = GUARDS_TABLE,
     indices = [Index(value = ["address"])]
 )
-class GuardEntity (
+data class GuardEntity (
     @PrimaryKey(autoGenerate = true) var id: Long = 0,
     val address: String,
     val publicKey: String,

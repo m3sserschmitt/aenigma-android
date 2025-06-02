@@ -101,10 +101,8 @@ class MessageSenderWorker @AssistedInject constructor(
         val guard = repository.local.getGuard() ?: return null
         val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
-        val addresses =
-            arrayOf(chatId, destination.address) + reversedPath.map { item -> item.address }
-                .subList(0, reversedPath.size - 1)
-        val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
+        val addresses = arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
+        val keys = reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
         val data = signatureService.sign(
             message.toArtifact(
                 senderName = userName,
@@ -155,7 +153,10 @@ class MessageSenderWorker @AssistedInject constructor(
     ): Boolean {
         val onions = contacts.mapNotNull { contact ->
             if (updateContactIfRequired(contact)) {
-                val paths = pathFinder.calculatePaths(contact)
+                val paths = pathFinder.calculatePaths(contact).filter { item ->
+                    item.startVertex.address == signatureService.address
+                            && item.endVertex.address == contact.address
+                }
                 if (paths.isNotEmpty()) {
                     buildOnion(
                         message, contact, userName, paths.random().vertexList, groupAddress,
