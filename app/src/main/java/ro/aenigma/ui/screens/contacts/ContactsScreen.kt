@@ -401,7 +401,7 @@ fun ContactsScreenPreview() {
                         guardAddress = null,
                     ), MessageEntityFactory.createOutgoing(
                         chatId = "123",
-                        text = "No worry bud!",
+                        text = "Awesome!",
                         type = MessageType.TEXT,
                         actionFor = null,
                     )

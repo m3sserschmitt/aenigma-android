@@ -1,0 +1,5 @@
+* Integrated TOR service
+* Implemented private key protection with Android Keystore
+* Implemented biometrics authentication
+* Small UI improvements
+* Not compatible with previous beta versions

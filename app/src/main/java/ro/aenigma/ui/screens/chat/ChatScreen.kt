@@ -382,7 +382,7 @@ fun ChatScreenPreview() {
     val message2= MessageWithDetails(
         MessageEntity(
             chatId = "123",
-            text = "Please don't forget my green T-shirt...",
+            text = "The green deal is secured =)",
             type = MessageType.TEXT,
             actionFor = null,
             id = 2,
@@ -400,7 +400,7 @@ fun ChatScreenPreview() {
     val message1 = MessageWithDetails(
         MessageEntity(
             chatId = "123",
-            text = "No worry bud!",
+            text = "Awesome!",
             type = MessageType.TEXT,
             actionFor = null,
             id = 3,
@@ -437,7 +437,7 @@ fun ChatScreenPreview() {
         ),
         nextConversationPageAvailable = true,
         onRetryConnection = {},
-        messageInputText = "I've got you covered :)",
+        messageInputText = "",
         onSendClicked = {},
         onRenameContactConfirmed = {},
         onInputTextChanged = {},
