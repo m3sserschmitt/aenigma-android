@@ -88,7 +88,7 @@ class NotificationService @Inject constructor(
     fun createTorServiceNotification(text: String): Notification {
         createNotificationChannel(
             TOR_SERVICE_CHANNEL_ID, TOR_SERVICE_CHANNEL_NAME, TOR_SERVICE_CHANNEL_DESCRIPTION,
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_MIN
         )
         return NotificationCompat.Builder(context, TOR_SERVICE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_vpn)
@@ -97,13 +97,14 @@ class NotificationService @Inject constructor(
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(text)
-            ).build()
+            ).setSilent(true)
+            .build()
     }
 
     fun createWorkerNotification(text: String): Notification {
         createNotificationChannel(
             WORKERS_CHANNEL_ID, WORKERS_CHANNEL_NAME, WORKERS_CHANNEL_DESCRIPTION,
-            NotificationManager.IMPORTANCE_DEFAULT
+            NotificationManager.IMPORTANCE_MIN
         )
         return NotificationCompat.Builder(context, WORKERS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_api)
@@ -112,7 +113,8 @@ class NotificationService @Inject constructor(
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(text)
-            ).build()
+            ).setSilent(true)
+            .build()
     }
 
     fun notifyTorStatus(text: String) {
