@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,7 +27,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -52,18 +51,12 @@ fun ContactsScreen(
     navigateToAboutScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
-    LaunchedEffect(key1 = true)
-    {
-        mainViewModel.loadContacts()
-    }
-
     val allContacts by mainViewModel.allContacts.collectAsState()
-    val connectionStatus by mainViewModel.signalRClientStatus.observeAsState(
-        initial = SignalRStatus.NotConnected()
-    )
+    val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
     val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
+    val useTor by mainViewModel.useTor.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
@@ -71,6 +64,8 @@ fun ContactsScreen(
         sharedDataRequest = sharedDataRequest,
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
+        useTor = useTor,
+        useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
         },
@@ -99,6 +94,8 @@ fun ContactsScreen(
     sharedDataRequest: RequestState<SharedData>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
+    useTor: Boolean,
+    useTorChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
@@ -128,7 +125,7 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = contacts)
     {
-        if (contacts is RequestState.Success) {
+        if (contacts is RequestState.Success && !isSearchMode) {
             selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
@@ -244,9 +241,7 @@ fun ContactsScreen(
     ) {
         if (isSearchMode) {
             isSearchMode = false
-        }
-
-        if (isSelectionMode) {
+        } else if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
         }
@@ -278,6 +273,8 @@ fun ContactsScreen(
             ContactsAppBar(
                 connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
+                useTor = useTor,
+                useTorChanged = useTorChanged,
                 onSearchTriggered = {
                     isSearchMode = true
                 },
@@ -305,7 +302,7 @@ fun ContactsScreen(
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.cannot_share_groups),
+                            context.getString(R.string.cannot_share_channels),
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -314,7 +311,7 @@ fun ContactsScreen(
                     if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.cannot_select_groups_to_create_group),
+                            context.getString(R.string.cannot_select_channels_to_create_channel),
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
@@ -381,9 +378,11 @@ fun ContactsFab(
 @Composable
 fun ContactsScreenPreview() {
     ContactsScreen(
-        connectionStatus = SignalRStatus.Connected(),
+        connectionStatus = SignalRStatus.Connected,
         notificationsAllowed = true,
         nameDialogVisible = false,
+        useTor = true,
+        useTorChanged = { _ -> },
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },
@@ -402,7 +401,7 @@ fun ContactsScreenPreview() {
                         guardAddress = null,
                     ), MessageEntityFactory.createOutgoing(
                         chatId = "123",
-                        text = "No worry bud!",
+                        text = "Awesome!",
                         type = MessageType.TEXT,
                         actionFor = null,
                     )

@@ -2,19 +2,17 @@ package ro.aenigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import ro.aenigma.data.Repository
-import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.data.network.SignalRStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import ro.aenigma.services.SignalrConnectionController
 
 abstract class BaseViewModel(
     protected val repository: Repository,
-    private val signalRClient: SignalRClient,
+    private val signalrConnectionController: SignalrConnectionController,
     application: Application,
 ): AndroidViewModel(application) {
 
@@ -30,14 +28,13 @@ abstract class BaseViewModel(
 
     protected var defaultDispatcher = Dispatchers.Default
 
-    val signalRClientStatus: LiveData<SignalRStatus> = signalRClient.status
-
     val userName: StateFlow<String> = _userName
+
+    val clientStatus = signalrConnectionController.clientStatus
 
     abstract fun init()
 
-    fun retryClientConnection()
-    {
-        signalRClient.resetAborted()
+    fun retryClientConnection() {
+        signalrConnectionController.resetClient()
     }
 }

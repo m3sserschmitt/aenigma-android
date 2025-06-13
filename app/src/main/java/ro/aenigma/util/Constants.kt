@@ -5,11 +5,9 @@ class Constants {
 
         // datastore
         const val DATASTORE_PREFERENCES = "datastore-preference"
-        const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"
-        const val NAME_PREFERENCE = "name"
 
-        const val ADDRESS_SIZE = 32 // bytes
-        const val KEY_SIZE = 2048 // bits !!
+        const val ADDRESS_SIZE_BYTES = 32
+        const val KEY_SIZE_BITS = 4096
 
         // Room Database
         const val DATABASE_NAME = "enigma-database"
@@ -25,5 +23,8 @@ class Constants {
         const val APP_DOMAIN = "aenigma.ro"
 
         const val SERVER_URL = "https://$APP_DOMAIN"
+
+        const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
+        const val SOCKS5_PROXY_PORT = 9050
     }
 }

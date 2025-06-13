@@ -1,19 +1,18 @@
 package ro.aenigma.data.database
 
 import androidx.room.Dao
-import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
-import ro.aenigma.models.enums.MessageType
-import java.time.ZonedDateTime
 
 @Dao
 interface MessagesDao {
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id = :id AND deleted = 0")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id = :id")
     suspend fun get(id: Long): MessageEntity?
 
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE serverUUID = :serverUUID")
@@ -22,46 +21,41 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE refId = :refId")
     suspend fun getByRefId(refId: String): MessageEntity?
 
-    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 LIMIT 1")
-    suspend fun getLastMessageId(chatId: String): Long
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId ORDER BY id DESC LIMIT 1")
+    fun getLastDeletedFlow(chatId: String): Flow<MessageEntity?>
 
-    @Query("INSERT OR IGNORE INTO $MESSAGES_TABLE(" +
-            "chatId, senderAddress, serverUUID, text, type, actionFor, refId, incoming, sent," +
-            "deleted, date, dateReceivedOnServer, id) " +
-            "VALUES(:chatId, :senderAddress, :serverUUID, :text, :type, :actionFor, :refId," +
-            ":incoming, 0, 0, :date, :dateReceivedOnServer, " +
-                "(SELECT CASE WHEN MIN(id) IS NULL THEN CAST(9223372036854775807 AS INTEGER) ELSE MIN(id) - 1 END AS min_value FROM $MESSAGES_TABLE))"
-    )
-    suspend fun insertOrIgnore(chatId: String, senderAddress: String?, serverUUID: String?,
-                               text: String?, type: MessageType?, actionFor: String?, refId: String?,
-                               incoming: Boolean, date: ZonedDateTime, dateReceivedOnServer: ZonedDateTime?
-    ): Long?
+    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY id DESC LIMIT 1")
+    suspend fun getLastMessageId(chatId: String): Long?
 
-    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1 WHERE chatId = :chatId")
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertOrIgnore(message: MessageEntity): Long?
+
+    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE chatId = :chatId")
     suspend fun clearConversationSoft(chatId: String)
 
-    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1 WHERE id IN (:ids)")
+    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE id IN (:ids)")
     suspend fun removeSoft(ids: List<Long>)
 
-    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1 WHERE refId = :refId")
+    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE refId = :refId")
     suspend fun removeSoft(refId: String?)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 LIMIT $CONVERSATION_PAGE_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>>
 
     @Transaction
     @Query(
         "SELECT * FROM $MESSAGES_TABLE " +
-                "WHERE id >= :infIndex " +
+                "WHERE id < :lastIndex " +
                 "AND chatId = :chatId " +
                 "AND deleted = 0 " +
                 "AND (:searchQuery = '' OR text LIKE '%' || :searchQuery || '%') " +
+                "ORDER BY id DESC " +
                 "LIMIT $CONVERSATION_PAGE_SIZE"
     )
-    suspend fun getConversation(
+    suspend fun getConversationPage(
         chatId: String,
-        infIndex: Long,
+        lastIndex: Long,
         searchQuery: String = ""
     ): List<MessageWithDetails>
 
@@ -70,7 +64,4 @@ interface MessagesDao {
 
     @Query("DELETE FROM $MESSAGES_TABLE WHERE deleted = 1")
     suspend fun removeHard()
-
-    @Delete
-    suspend fun removeHard(messages: List<MessageEntity>)
 }

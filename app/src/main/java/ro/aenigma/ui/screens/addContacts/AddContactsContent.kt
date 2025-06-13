@@ -97,7 +97,7 @@ fun AddContactsContent(
             saveContactDialogVisible = false
             onSaveContact(name)
         },
-        initialName = importedContactDetails?.userName ?: "",
+        initialName = importedContactDetails?.name ?: "",
         onDismissClicked = {
             saveContactDialogVisible = false
             onSaveContactDismissed()
@@ -226,7 +226,7 @@ fun AddContactsContentPreview()
                 importedContactDetails = ExportedContactData(
                     guardAddress = "",
                     guardHostname = "",
-                    userName = "",
+                    name = "",
                     publicKey = ""
                 ),
                 onQrCodeFound = { },

@@ -1,35 +1,42 @@
 package ro.aenigma.ui
 
+import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.LaunchedEffect
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
-import androidx.navigation.NavHostController
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.rememberNavController
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import ro.aenigma.data.network.SignalRStatus
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import ro.aenigma.data.PreferencesDataStore
+import ro.aenigma.di.DbPassphraseKeeper
+import ro.aenigma.services.NavigationTracker
+import ro.aenigma.services.NotificationService
+import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.TorServiceController
+import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.services.NavigationTracker
-import ro.aenigma.services.NotificationService
 import ro.aenigma.viewmodels.MainViewModel
-import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
-import dagger.hilt.android.AndroidEntryPoint
-import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.workers.CleanupWorker
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class AppActivity : ComponentActivity() {
+class AppActivity : FragmentActivity() {
 
     @Inject
-    lateinit var signalRClient: SignalRClient
+    lateinit var torServiceController: TorServiceController
+
+    @Inject
+    lateinit var signalrConnectionController: SignalrConnectionController
 
     @Inject
     lateinit var navigationTracker: NavigationTracker
@@ -37,38 +44,63 @@ class AppActivity : ComponentActivity() {
     @Inject
     lateinit var notificationService: NotificationService
 
-    private lateinit var navController: NavHostController
+    @Inject
+    lateinit var preferencesDataStore: PreferencesDataStore
+
+    private val dbPassphraseLoaded = MutableStateFlow(false)
 
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        loadDbPassphrase()
+        val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
-                navController = rememberNavController()
-                SetupNavigation(
-                    navigationTracker = navigationTracker,
-                    navHostController = navController,
-                    mainViewModel = mainViewModel
-                )
+                SecuredApp(
+                    isDeviceSecured = keyguardManager.isDeviceSecure,
+                    dbPassphraseLoaded = dbPassphraseLoaded,
+                ) {
+                    val navController = rememberNavController()
+
+                    LaunchedEffect(key1 = true) {
+                        observeTorService()
+                        observeClientConnectivity()
+                        observeNavigation()
+                        handleAppLink()
+                        schedulePeriodicSync()
+                    }
+
+                    SetupNavigation(
+                        navigationTracker = navigationTracker,
+                        navHostController = navController,
+                        mainViewModel = mainViewModel
+                    )
+                }
             }
         }
+    }
 
-        startConnection()
-        observeClientConnectivity()
-        observeNavigation()
-        handleAppLink()
+    private fun loadDbPassphrase() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            preferencesDataStore.encryptedDatabasePassphrase.collect { data ->
+                if (data.isEmpty()) {
+                    preferencesDataStore.saveEncryptedDatabasePassphrase()
+                } else {
+                    DbPassphraseKeeper.dbPassphrase.value = data
+                    dbPassphraseLoaded.value = true
+                }
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
-        SignalRClientWorker.start(
-            this,
-            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
-        )
-        signalRClient.resetAborted()
+        if (dbPassphraseLoaded.value) {
+            resetClient()
+            sync()
+        }
     }
 
     override fun onPause() {
@@ -76,78 +108,34 @@ class AppActivity : ComponentActivity() {
         onScreenChanged(Screens.NO_SCREEN)
     }
 
-    override fun onStop() {
-        super.onStop()
-        schedulePeriodicSync()
+    private fun sync() {
+        SignalRClientWorker.start(
+            this,
+            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
+        )
+    }
+
+    private fun resetClient() {
+        signalrConnectionController.resetClient()
     }
 
     private fun schedulePeriodicSync() {
         SignalRClientWorker.schedulePeriodicSync(this)
     }
 
-    private fun startConnection() {
-        val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
-        val startConnectionWorkRequest = SignalRClientWorker.createRequest(
-            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
-        )
-        WorkManager.getInstance(this).beginWith(syncGraphWorkRequest)
-            .then(startConnectionWorkRequest)
-            .enqueue()
+    private fun observeTorService() {
+        return torServiceController.observeTorService(this)
     }
 
     private fun observeClientConnectivity() {
-        signalRClient.status.observe(this, signalRStatusObserver)
+        return signalrConnectionController.observeSignalrConnection(this)
     }
 
     private fun observeNavigation() {
         navigationTracker.currentRoute.observe(this, navigationObserver)
     }
 
-    private val signalRStatusObserver = Observer<SignalRStatus> { clientStatus ->
-        when (clientStatus) {
-            is SignalRStatus.Reset -> {
-                onSignalRClientReset()
-            }
-
-            is SignalRStatus.Error.Disconnected -> {
-                onClientDisconnected()
-            }
-
-            is SignalRStatus.Error.ConnectionRefused -> {
-                onClientConnectionRefused()
-            }
-
-            is SignalRStatus.Error -> {
-                onClientError()
-            }
-
-            is SignalRStatus.Synchronized -> {
-                val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
-                WorkManager.getInstance(this).enqueue(cleanupRequest)
-            }
-        }
-    }
-
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onClientConnectionRefused() {
-        SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onClientDisconnected() {
-        SignalRClientWorker.startDelayed(this)
-    }
-
-    private fun onClientError() {
-        SignalRClientWorker.startDelayed(
-            this,
-            SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
-        )
-    }
-
-    private fun onSignalRClientReset() {
-        SignalRClientWorker.startDelayed(this)
-    }
 
     private fun onScreenChanged(route: String) {
         if (NavigationTracker.isChatScreenRoute(route)) {

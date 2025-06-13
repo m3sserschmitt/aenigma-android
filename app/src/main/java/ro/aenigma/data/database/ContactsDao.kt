@@ -11,7 +11,7 @@ interface ContactsDao {
     fun getFlow(): Flow<List<ContactEntity>>
 
     @Transaction
-    @Query("SELECT * FROM $CONTACTS_TABLE")
+    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY hasNewMessage DESC, name ASC")
     fun getWithMessagesFlow(): Flow<List<ContactWithLastMessage>>
 
     @Transaction

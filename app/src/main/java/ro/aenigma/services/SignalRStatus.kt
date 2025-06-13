@@ -1,6 +1,6 @@
-package ro.aenigma.data.network
+package ro.aenigma.services
 
-abstract class SignalRStatus(
+sealed class SignalRStatus(
     val error: String?,
     private val level: Int
 ) {
@@ -24,33 +24,33 @@ abstract class SignalRStatus(
         return level > status.level
     }
 
-    class NotConnected: SignalRStatus(null, 0)
+    object NotConnected: SignalRStatus(null, 0)
 
-    class Connecting: SignalRStatus(null, 1)
+    object Connecting: SignalRStatus(null, 1)
 
-    class Connected: SignalRStatus(null, 2)
+    object Connected: SignalRStatus(null, 2)
 
-    class Authenticating: SignalRStatus(null, 3)
+    object Authenticating: SignalRStatus(null, 3)
 
-    class Authenticated: SignalRStatus(null, 4)
+    object Authenticated: SignalRStatus(null, 4)
 
-    class Pulling: SignalRStatus(null, 5)
+    object Pulling: SignalRStatus(null, 5)
 
-    class Cleaning: SignalRStatus(null, 5)
+    object Cleaning: SignalRStatus(null, 5)
 
-    class Broadcasting: SignalRStatus(null, 5)
+    object Broadcasting: SignalRStatus(null, 5)
 
-    class Synchronized: SignalRStatus(null, 6)
+    object Synchronized: SignalRStatus(null, 6)
 
-    class Clean: SignalRStatus(null, 6)
+    object Clean: SignalRStatus(null, 6)
 
-    class Broadcasted: SignalRStatus(null, 6)
+    object Broadcasted: SignalRStatus(null, 6)
 
     class Reset(status: SignalRStatus?): SignalRStatus(null, status?.level ?: 0)
 
     open class Error(status: SignalRStatus?, error: String? = null): SignalRStatus(error, status?.level ?: 0)
     {
-        class ConnectionRefused(error: String? = null): Error(Connecting(), error)
+        class ConnectionRefused(error: String? = null): Error(Connecting, error)
 
         class Disconnected(status: SignalRStatus?, error: String? = null): Error(status, error)
 

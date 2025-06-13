@@ -191,7 +191,7 @@ fun AddContactsScreenPreview() {
             publicKey = "",
             guardHostname = "",
             guardAddress = "",
-            userName = ""
+            name = ""
         ),
         floatingButtonVisible = true,
         onNewContactNameChanged = { true },

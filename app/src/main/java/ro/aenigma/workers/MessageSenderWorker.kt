@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
@@ -19,43 +20,50 @@ import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.VertexEntity
-import ro.aenigma.data.network.SignalRClient
-import ro.aenigma.models.MessageWithMetadata
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import ro.aenigma.crypto.extensions.SignatureExtensions.sign
+import kotlinx.coroutines.flow.first
+import ro.aenigma.R
+import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isText
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.withText
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.services.NotificationService
+import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.toJson
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalRClient: SignalRClient,
+    private val signalrController: SignalrConnectionController,
     private val repository: Repository,
     private val signatureService: SignatureService,
+    private val notificationService: NotificationService,
     private val pathFinder: PathFinder
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        const val USER_NAME_ARG = "UserName"
-        const val MESSAGE_ID_ARG = "MessageId"
-        const val RESOURCE_URL_ARG = "ResourceUrl"
+        private const val WORKER_NOTIFICATION_ID = 103
+        private const val MESSAGE_ID_ARG = "MessageId"
+        private const val ADDITIONAL_DESTINATIONS_ARG = "AdditionalDestinations"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 10
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, messageId: Long, userName: String, resourceUrl: String? = null) {
+        fun createWorkRequest(workManager: WorkManager, messageId: Long, additionalDestinations: Set<String> = hashSetOf()): UUID {
             val parameters = Data.Builder()
-                .putString(USER_NAME_ARG, userName)
                 .putLong(MESSAGE_ID_ARG, messageId)
-                .putString(RESOURCE_URL_ARG, resourceUrl)
+                .putStringArray(ADDITIONAL_DESTINATIONS_ARG, additionalDestinations.toTypedArray())
                 .build()
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -70,6 +78,7 @@ class MessageSenderWorker @AssistedInject constructor(
                 ExistingWorkPolicy.KEEP,
                 workRequest
             )
+            return workRequest.id
         }
 
         fun getUniqueWorkRequestName(messageId: Long): String {
@@ -90,24 +99,20 @@ class MessageSenderWorker @AssistedInject constructor(
         }
 
         val guard = repository.local.getGuard() ?: return null
-        val localAddress = groupAddress ?: (signatureService.address ?: return null)
+        val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
-        val addresses =
-            arrayOf(localAddress, destination.address) + reversedPath.map { item -> item.address }
-                .subList(0, reversedPath.size - 1)
-        val keys = arrayOf(destination.publicKey) + reversedPath.map { item -> item.publicKey }
-        val message = MessageWithMetadata(
-            text = message.text,
-            type = message.type,
-            actionFor = message.actionFor,
-            senderName = userName,
-            senderGuardAddress = guard.address,
-            senderGuardHostname = guard.hostname,
-            senderPublicKey = signatureService.publicKey,
-            refId = message.refId,
-            groupResourceUrl = groupResourceUrl
-        ).sign(signatureService).toJson()?.toByteArray() ?: return null
-        return CryptoProvider.sealOnionEx(message, keys, addresses)
+        val addresses = arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
+        val keys = reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
+        val data = signatureService.sign(
+            message.toArtifact(
+                senderName = userName,
+                guardAddress = guard.address,
+                guardHostname = guard.hostname,
+                resourceUrl = groupResourceUrl,
+                chatId = chatId
+            )
+        ).toJson()?.toByteArray() ?: return null
+        return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
@@ -129,38 +134,70 @@ class MessageSenderWorker @AssistedInject constructor(
         return true
     }
 
+    private suspend fun saveMessageEntity(message: MessageEntity) {
+        message.markAsSent()?.let { m ->
+            if (!m.isText()) {
+                m.withText(null).markAsDeleted()
+            } else {
+                m
+            }
+        }?.let { m -> repository.local.updateMessage(m) }
+    }
+
     private suspend fun sendMessage(
         contacts: List<ContactEntity>,
         message: MessageEntity,
         userName: String?,
         groupAddress: String?,
         groupResourceUrl: String?
-    ): Result {
+    ): Boolean {
         val onions = contacts.mapNotNull { contact ->
-            if(updateContactIfRequired(contact)) {
-                val paths = pathFinder.calculatePaths(contact)
+            if (updateContactIfRequired(contact)) {
+                val paths = pathFinder.calculatePaths(contact).filter { item ->
+                    item.startVertex.address == signatureService.address
+                            && item.endVertex.address == contact.address
+                }
                 if (paths.isNotEmpty()) {
-                    buildOnion(message, contact, userName, paths.random().vertexList, groupAddress,
+                    buildOnion(
+                        message, contact, userName, paths.random().vertexList, groupAddress,
                         groupResourceUrl
                     )
                 } else null
             } else null
         }
-        if (!signalRClient.sendMessages(onions)) {
-            return Result.retry()
-        }
+        return signalrController.sendMessages(onions)
+    }
 
-        val entity = message.markAsSent() ?: return Result.success()
-        repository.local.updateMessage(entity)
-        return Result.success()
+    private suspend fun getDestinationContacts(contactWithGroup: ContactWithGroup, additionalDestinations: Array<String>?): List<ContactEntity> {
+        val addressesSet = hashSetOf<String>()
+        val results = mutableListOf<ContactEntity>()
+        if (contactWithGroup.contact.type == ContactType.CONTACT) {
+            addressesSet.add(contactWithGroup.contact.address)
+            results.add(contactWithGroup.contact)
+        } else {
+            contactWithGroup.group?.groupData?.members?.forEach { item ->
+                if (item.address != null && item.address != signatureService.address && addressesSet.add(
+                        item.address
+                    )
+                ) {
+                    repository.local.getContact(item.address)?.let { c -> results.add(c) }
+                }
+            }
+        }
+        additionalDestinations?.forEach { address ->
+            if (!addressesSet.contains(address)) {
+                repository.local.getContact(address)?.let { c -> results.add(c) }
+            }
+        }
+        return results
     }
 
     override suspend fun doWork(): Result {
-        if (runAttemptCount > MAX_RETRY_COUNT) {
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
 
-        if (!signalRClient.isConnected()) {
+        if (!signalrController.isConnected()) {
             return Result.retry()
         }
 
@@ -168,30 +205,32 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.retry()
         }
 
-        val messageId = inputData.getLong(MESSAGE_ID_ARG, -1)
-        val userName = inputData.getString(USER_NAME_ARG) ?: return Result.failure()
-        val resourceUrl = inputData.getString(RESOURCE_URL_ARG)
+        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
+        val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
+        val userName = repository.local.name.first()
         val message = if (messageId > 0) repository.local.getMessage(messageId) else null
         val chatId = message?.chatId ?: return Result.failure()
-        val contact = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
-        val contacts = (if (contact.contact.type == ContactType.CONTACT) listOf(contact.contact)
-        else contact.group?.groupData?.members?.mapNotNull { item ->
-            if (item.address != null && item.address != signatureService.address) {
-                repository.local.getContact(item.address)
-            } else {
-                null
-            }
-        }) ?: return Result.failure()
-        if(contacts.isEmpty())
-        {
-            return Result.success()
-        }
-        return sendMessage(
+        val contactWithGroup = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
+        val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
+        val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,
             message = message,
             userName = userName,
-            groupAddress = contact.group?.address,
-            groupResourceUrl = resourceUrl ?: contact.group?.resourceUrl
+            groupAddress = contactWithGroup.group?.address,
+            groupResourceUrl = contactWithGroup.group?.resourceUrl
+        )
+        if (ok) {
+            saveMessageEntity(message)
+            return Result.success()
+        } else {
+            return Result.retry()
+        }
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            WORKER_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
         )
     }
 }

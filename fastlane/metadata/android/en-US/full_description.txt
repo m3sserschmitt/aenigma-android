@@ -1,5 +1,5 @@
-Aenigma is a free and open-source Android application focused on secure, private communication through end-to-end encryption using public key cryptography.
+Aenigma is a free and open-source messaging application focused on secure, private communication through end-to-end encryption.
 
 • Anonymous sign-up with no personal information required
 • No data collection or processing
-• Built with transparency, privacy, and user autonomy in mind
+• Built with transparency, privacy and user autonomy in mind

@@ -6,8 +6,6 @@ import androidx.work.WorkManager
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.network.EnigmaApi
-import ro.aenigma.data.network.SignalRClient
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactData
@@ -22,16 +20,17 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
-import ro.aenigma.data.RemoteDataSource
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.SerializerExtensions.toJson
-import ro.aenigma.util.getQueryParameter
 import ro.aenigma.workers.GroupUploadWorker
 import javax.inject.Inject
 
@@ -40,18 +39,11 @@ class MainViewModel @Inject constructor(
     private val signatureService: SignatureService,
     repository: Repository,
     application: Application,
-    signalRClient: SignalRClient
+    signalrConnectionController: SignalrConnectionController,
 ) : BaseViewModel(
     repository,
-    signalRClient,
+    signalrConnectionController,
     application) {
-    init {
-        viewModelScope.launch(ioDispatcher) {
-            repository.local.notificationsAllowed.collect { allowed ->
-                _notificationsAllowed.value = allowed
-            }
-        }
-    }
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
@@ -77,6 +69,8 @@ class MainViewModel @Inject constructor(
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
+    private val _useTor = MutableStateFlow(false)
+
     val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
@@ -89,6 +83,14 @@ class MainViewModel @Inject constructor(
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
+    val useTor: StateFlow<Boolean> = _useTor
+
+    init {
+        loadContacts()
+        collectUseTor()
+        collectNotificationsPreferences()
+    }
+
     fun loadContacts() {
         if (_allContacts.value is RequestState.Success
             || _allContacts.value is RequestState.Loading
@@ -97,6 +99,23 @@ class MainViewModel @Inject constructor(
         _allContacts.value = RequestState.Loading
         collectContacts()
         collectSearches()
+    }
+
+    private fun collectNotificationsPreferences()
+    {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.notificationsAllowed.collect { allowed ->
+                _notificationsAllowed.value = allowed
+            }
+        }
+    }
+
+    private fun collectUseTor() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.useTor.collect {
+                useTor -> _useTor.value = useTor
+            }
+        }
     }
 
     private fun collectContacts() {
@@ -198,7 +217,6 @@ class MainViewModel @Inject constructor(
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager.get(),
                 groupName = name,
-                userName = userName.value,
                 members = memberAddresses,
                 existingGroupAddress = null,
                 actionType = MessageType.GROUP_CREATE
@@ -218,6 +236,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun useTorChanged(useTor: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveTorPreference(useTor)
+        }
+    }
+
     private fun getMyProfileBitmap(): Flow<QrCodeDto?> {
         return flow {
             val guard = repository.local.getGuard()
@@ -227,7 +251,7 @@ class MainViewModel @Inject constructor(
                     guardHostname = guard.hostname,
                     guardAddress = guard.address,
                     publicKey = signatureService.publicKey!!,
-                    userName = userName.value
+                    name = userName.value
                 )
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
@@ -251,12 +275,7 @@ class MainViewModel @Inject constructor(
             val contact = repository.local.getContact(profileId)
 
             if (contact != null) {
-                _exportedContactDetails.value = ExportedContactData(
-                    contact.guardHostname,
-                    contact.guardAddress,
-                    contact.publicKey,
-                    contact.name
-                )
+                _exportedContactDetails.value = contact.toExportedData()
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if(code != null) {
@@ -297,7 +316,6 @@ class MainViewModel @Inject constructor(
 
             ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
                 workManager = workManager.get(),
-                userName = userName.value,
                 groupName = name,
                 existingGroupAddress = contact.contact.address,
                 actionType = MessageType.GROUP_RENAMED,
@@ -319,7 +337,7 @@ class MainViewModel @Inject constructor(
     fun createContactShareLink() {
         _sharedDataCreateResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
-            val data = _exportedContactDetails.value.toJson()
+            val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
             if (data != null) {
                 val response = repository.remote.createSharedData(data)
                 if (response != null) {
@@ -341,10 +359,7 @@ class MainViewModel @Inject constructor(
         _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val tag = url.getQueryParameter("tag") ?: throw Exception()
-                val response =
-                    RemoteDataSource(EnigmaApi.initApi(url), signatureService).getSharedData(tag)
-                        ?: throw Exception()
+                val response = repository.remote.getSharedDataByUrl(url) ?: throw Exception()
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception()
                 _importedContactDetails.value =

@@ -1,56 +1,33 @@
 package ro.aenigma.crypto
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class KeysManager {
+@Singleton
+class KeysManager @Inject constructor(@ApplicationContext private val context: Context) {
 
     companion object {
 
-        private const val PRIVATE_KEY_FILE = "private-key"
+        private const val PRIVATE_KEY_FILE = "private-key.locked"
 
-        private const val PUBLIC_KEY_FILE = "public-key"
+        private const val PUBLIC_KEY_FILE = "public-key.pem"
 
         @JvmStatic
-        fun keysExists(context: Context): Boolean
-        {
-            return File(context.filesDir, PRIVATE_KEY_FILE).exists()
+        private fun writeKey(file: File, data: ByteArray) {
+            val outStream = FileOutputStream(file, false)
+            outStream.write(data)
+            outStream.close()
         }
 
         @JvmStatic
-        fun generateKeys(context: Context): Boolean
-        {
-            val keys = KeyGenerator.keyPairToPEM()
-
-            val publicKeyFile = File(context.filesDir, PUBLIC_KEY_FILE)
-            val privateKeyFile = File(context.filesDir, PRIVATE_KEY_FILE)
-
+        private fun readKey(file: File): ByteArray? {
             return try {
-                val publicOutputStream = FileOutputStream(publicKeyFile)
-                val privateOutputStream = FileOutputStream(privateKeyFile)
-
-                // TODO: implement encryption for private key
-                publicOutputStream.write(keys.first.toByteArray())
-                privateOutputStream.write(keys.second.toByteArray())
-
-                publicOutputStream.close()
-                privateOutputStream.close()
-
-                true
-            } catch (_: Exception) {
-                false
-            }
-        }
-
-        @JvmStatic
-        private fun readKey(context: Context, key: String): ByteArray?
-        {
-            return try {
-                val file = File(context.filesDir, key)
                 val stream = FileInputStream(file)
-
                 val data = stream.readBytes()
                 stream.close()
                 data
@@ -58,34 +35,67 @@ class KeysManager {
                 null
             }
         }
+    }
 
-        @JvmStatic
-        fun readPrivateKey(context: Context): String?
-        {
-            // TODO: implement decryption for private key
+    init {
+        generateKeyIfNotExistent()
+    }
 
-            val key = readKey(context, PRIVATE_KEY_FILE) ?: return null
+    private fun getPrivateKeyFile(): File {
+        return File(context.filesDir, PRIVATE_KEY_FILE)
+    }
 
-            return String(key)
+    private fun getPublicKeyFile(): File {
+        return File(context.filesDir, PUBLIC_KEY_FILE)
+    }
+
+    private fun keysExists(): Boolean {
+        return try {
+            getPrivateKeyFile().exists() && getPublicKeyFile().exists()
+        } catch (_: Exception) {
+            false
         }
+    }
 
-        @JvmStatic
-        fun readPublicKey(context: Context): String?
-        {
-            val key = readKey(context, PUBLIC_KEY_FILE) ?: return null
-
-            return String(key)
+    private fun generateKeys(): Boolean {
+        return try {
+            val keyPairDto = KeysHelper.keyPairToPEM()
+            val encryptedPrivateKey =
+                CryptoProvider.masterKeyEncrypt(
+                    keyPairDto.privateKey?.toByteArray() ?: return false
+                ) ?: return false
+            writeKey(getPrivateKeyFile(), encryptedPrivateKey)
+            writeKey(getPublicKeyFile(), keyPairDto.publicKey?.toByteArray() ?: return false)
+            true
+        } catch (_: Exception) {
+            false
         }
+    }
 
-        @JvmStatic
-        fun generateKeyIfNotExistent(context: Context): Boolean
-        {
-            if(!keysExists(context))
-            {
-                return generateKeys(context)
-            }
+    fun readPrivateKey(): String? {
+        return try {
+            String(
+                CryptoProvider.masterKeyDecrypt(readKey(getPrivateKeyFile()) ?: return null)
+                    ?: return null
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
 
-            return true
+    fun readPublicKey(): String? {
+        return try {
+            String(readKey(getPublicKeyFile()) ?: return null)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun generateKeyIfNotExistent(): Boolean {
+        return if (!keysExists()) {
+            generateKeys()
+        } else {
+            true
         }
     }
 }

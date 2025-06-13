@@ -92,9 +92,27 @@ static CryptoContext *createSignatureVerificationContext(JNIEnv *env, jstring ke
     return ctx;
 }
 
+static CryptoContext *createSymmetricEncryptionContext(JNIEnv *env, jbyteArray key)
+{
+    int keySize;
+    auto cKey = toUnsignedCharArray(env, key, keySize);
+    auto ctx = CreateSymmetricEncryptionContext(cKey);
+    delete[] cKey;
+    return ctx;
+}
+
+static CryptoContext *createSymmetricDecryptionContext(JNIEnv *env, jbyteArray key)
+{
+    int keySize;
+    auto cKey = toUnsignedCharArray(env, key, keySize);
+    auto ctx = CreateSymmetricDecryptionContext(cKey);
+    delete[] cKey;
+    return ctx;
+}
+
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initDecryption(JNIEnv *env,
+Java_ro_aenigma_crypto_CryptoProvider_initDecryption(JNIEnv *env,
                                                                             jobject thiz,
                                                                             jstring privateKey,
                                                                             jstring passphrase) {
@@ -106,7 +124,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initDecryption(JNIEnv *env,
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initSignature(JNIEnv *env,
+Java_ro_aenigma_crypto_CryptoProvider_initSignature(JNIEnv *env,
                                                                            jobject thiz,
                                                                            jstring privateKey,
                                                                            jstring passphrase) {
@@ -118,7 +136,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_initSignature(JNIEnv *env,
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_encrypt(
+Java_ro_aenigma_crypto_CryptoProvider_encrypt(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -150,7 +168,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_encrypt(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_decrypt(
+Java_ro_aenigma_crypto_CryptoProvider_decrypt(
         JNIEnv *env,
         jobject thiz,
         jbyteArray ciphertext) {
@@ -175,7 +193,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_decrypt(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sign(
+Java_ro_aenigma_crypto_CryptoProvider_sign(
         JNIEnv *env,
         jobject thiz,
         jbyteArray plaintext) {
@@ -200,7 +218,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sign(
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_verify(
+Java_ro_aenigma_crypto_CryptoProvider_verify(
         JNIEnv *env,
         jobject thiz,
         jstring key,
@@ -224,7 +242,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_verify(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_unsealOnion(
+Java_ro_aenigma_crypto_CryptoProvider_unsealOnion(
         JNIEnv *env, jobject thiz,
         jbyteArray onion) {
 
@@ -248,7 +266,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_unsealOnion(
 
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sealOnion(
+Java_ro_aenigma_crypto_CryptoProvider_sealOnion(
         JNIEnv *env,
         jobject thiz,
         jbyteArray plaintext,
@@ -291,7 +309,7 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_sealOnion(
 
 extern "C"
 JNIEXPORT jint JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_00024Companion_getPKeySize(
+Java_ro_aenigma_crypto_CryptoProvider_getPKeySize(
         JNIEnv *env,
         jobject thiz,
         jstring publicKey) {
@@ -299,4 +317,62 @@ Java_ro_aenigma_crypto_CryptoProvider_00024Companion_getPKeySize(
     auto result = GetPKeySize(key);
     env->ReleaseStringUTFChars(publicKey, key);
     return result;
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_ro_aenigma_crypto_CryptoProvider_encryptSymmetric(
+        JNIEnv *env,
+        jobject thiz,
+        jbyteArray key,
+        jbyteArray plaintext) {
+    auto ctx = createSymmetricEncryptionContext(env, key);
+    if(not ctx)
+    {
+        return nullptr;
+    }
+    int plaintextSize;
+    auto cPlaintext = toUnsignedCharArray(env, plaintext, plaintextSize);
+
+    int ciphertextSize;
+    auto ciphertext = EncryptData(ctx, cPlaintext, plaintextSize, ciphertextSize);
+
+    delete[] cPlaintext;
+    if(not ciphertext)
+    {
+        delete ctx;
+        return nullptr;
+    }
+    auto out = toJByteArray(env, ciphertext, ciphertextSize);
+    delete ctx;
+    return out;
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_ro_aenigma_crypto_CryptoProvider_decryptSymmetric(
+        JNIEnv *env,
+        jobject thiz,
+        jbyteArray key,
+        jbyteArray ciphertext) {
+    auto ctx = createSymmetricDecryptionContext(env, key);
+    if(not ctx)
+    {
+        return nullptr;
+    }
+    int ciphertextSize;
+    auto cCiphertext = toUnsignedCharArray(env, ciphertext, ciphertextSize);
+
+    int plaintextSize;
+    auto plaintext = DecryptData(ctx, cCiphertext, ciphertextSize, plaintextSize);
+
+    delete[] cCiphertext;
+    if(not plaintext)
+    {
+        delete ctx;
+        return nullptr;
+    }
+    auto out = toJByteArray(env, plaintext, plaintextSize);
+    delete ctx;
+    return out;
 }

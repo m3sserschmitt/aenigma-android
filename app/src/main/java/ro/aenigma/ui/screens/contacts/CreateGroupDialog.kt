@@ -16,10 +16,10 @@ fun CreateGroupDialog(
     if (visible) {
         TextInputDialog(
             title = stringResource(
-                id = R.string.create_group
+                id = R.string.create_channel
             ),
             body = stringResource(
-                id = R.string.enter_group_name
+                id = R.string.enter_channel_name
             ),
             onTextChanged = onTextChanged,
             onConfirmClicked = onConfirmClicked,

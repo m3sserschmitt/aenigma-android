@@ -27,28 +27,23 @@ class NotificationService @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
+        const val TOR_NOTIFICATION_ID = 1371
+        private const val TOR_SERVICE_CHANNEL_ID = "tor-service-channel"
+        private const val TOR_SERVICE_CHANNEL_NAME = "Tor Service Notification"
+        private const val TOR_SERVICE_CHANNEL_DESCRIPTION = "Channel used for Tor Foreground Service"
+        private const val TOR_SERVICE_NOTIFICATION_TITLE = "Tor"
+
+        private const val WORKERS_CHANNEL_ID = "workers-service-channel"
+        private const val WORKERS_CHANNEL_NAME = "Background Worker Notification"
+        private const val WORKERS_CHANNEL_DESCRIPTION = "Channel used for Background workers"
+        private const val WORKERS_NOTIFICATION_TITLE = "Background work"
+
         private const val NEW_MESSAGE_CHANNEL_ID = "new-message-channel"
         private const val NEW_MESSAGE_CHANNEL_NAME = "New message notifications"
         private const val NEW_MESSAGE_CHANNEL_DESCRIPTION =
             "Channel used to display notification related to incoming messages"
 
         const val NOTIFICATIONS_DISABLE_ALL = "*"
-    }
-
-    private fun createBasicNotification(
-        title: String,
-        text: String,
-        icon: Int,
-        channel: String
-    ): NotificationCompat.Builder {
-        return NotificationCompat.Builder(context, channel)
-            .setSmallIcon(icon)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(text)
-            )
     }
 
     private fun createNotificationChannel(
@@ -74,9 +69,57 @@ class NotificationService @Inject constructor(
         return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
     }
 
+    private fun notify(notification: Notification, id: Int) {
+        with(NotificationManagerCompat.from(context)) {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
+                notify(id, notification)
+            }
+        }
+    }
+
     private val _blockedNotificationsSource: MutableLiveData<String> = MutableLiveData("")
 
     val blockedNotificationsSource: LiveData<String> = _blockedNotificationsSource
+
+    fun createTorServiceNotification(text: String): Notification {
+        createNotificationChannel(
+            TOR_SERVICE_CHANNEL_ID, TOR_SERVICE_CHANNEL_NAME, TOR_SERVICE_CHANNEL_DESCRIPTION,
+            NotificationManager.IMPORTANCE_MIN
+        )
+        return NotificationCompat.Builder(context, TOR_SERVICE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_vpn)
+            .setContentTitle(TOR_SERVICE_NOTIFICATION_TITLE)
+            .setContentText(text)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(text)
+            ).setSilent(true)
+            .build()
+    }
+
+    fun createWorkerNotification(text: String): Notification {
+        createNotificationChannel(
+            WORKERS_CHANNEL_ID, WORKERS_CHANNEL_NAME, WORKERS_CHANNEL_DESCRIPTION,
+            NotificationManager.IMPORTANCE_MIN
+        )
+        return NotificationCompat.Builder(context, WORKERS_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_api)
+            .setContentTitle(WORKERS_NOTIFICATION_TITLE)
+            .setContentText(text)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(text)
+            ).setSilent(true)
+            .build()
+    }
+
+    fun notifyTorStatus(text: String) {
+        notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
+    }
 
     fun notify(contact: ContactEntity, messageEntity: MessageEntity) {
         if (listOf(NOTIFICATIONS_DISABLE_ALL, contact.address)
@@ -92,25 +135,18 @@ class NotificationService @Inject constructor(
             NotificationManager.IMPORTANCE_MAX
         )
         val intent = createChatNavigationIntent()
-        val notification = createBasicNotification(
-            contact.name.toString(), messageEntity.getMessageTextByAction(context),
-            R.drawable.ic_message,
-            NEW_MESSAGE_CHANNEL_ID
-        )
+        val text = messageEntity.getMessageTextByAction(context)
+        val notification = NotificationCompat.Builder(context, NEW_MESSAGE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_message)
+            .setContentTitle(contact.name.toString())
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setContentIntent(intent)
             .setAutoCancel(true)
             .build()
 
-        with(NotificationManagerCompat.from(context)) {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                notify(contact.address.hashCode(), notification)
-            }
-        }
+        notify(notification, contact.address.hashCode())
     }
 
     fun dismissNotifications(address: String) {

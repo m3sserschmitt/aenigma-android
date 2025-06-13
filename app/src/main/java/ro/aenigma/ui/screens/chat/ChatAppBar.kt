@@ -19,7 +19,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.network.SignalRStatus
+import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
@@ -164,8 +164,8 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Add,
-            contentDescription = stringResource(id = R.string.add_group_member),
-            text = stringResource(id = R.string.add_group_member),
+            contentDescription = stringResource(id = R.string.add_channel_member),
+            text = stringResource(id = R.string.add_channel_member),
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
@@ -174,8 +174,8 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Clear,
-            contentDescription = stringResource(id = R.string.remove_group_member),
-            text = stringResource(id = R.string.remove_group_member),
+            contentDescription = stringResource(id = R.string.remove_channel_member),
+            text = stringResource(id = R.string.remove_channel_member),
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
@@ -184,11 +184,11 @@ fun MoreActions(
         )
         BasicDropDownMenuItem(
             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-            contentDescription = stringResource(id = R.string.leave_group),
-            text = stringResource(id = R.string.leave_group),
+            contentDescription = stringResource(id = R.string.leave_channel),
+            text = stringResource(id = R.string.leave_channel),
             visible = isGroup && isMember && !isAdmin,
             onClick = {
-                onGroupActionClicked(MessageType.GROUP_MEMBER_LEFT)
+                onGroupActionClicked(MessageType.GROUP_MEMBER_LEAVE)
                 expanded = false
             }
         )
@@ -214,7 +214,7 @@ fun DefaultChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = false,
-        connectionStatus = SignalRStatus.NotConnected(),
+        connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroup(
                 ContactEntityFactory.createContact(
@@ -251,7 +251,7 @@ fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = true,
-        connectionStatus = SignalRStatus.NotConnected(),
+        connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroup(
                 ContactEntityFactory.createContact(

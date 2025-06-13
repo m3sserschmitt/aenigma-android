@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
@@ -19,26 +20,28 @@ import ro.aenigma.util.GuardSelectionResult
 import ro.aenigma.util.isAppDomain
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
+import ro.aenigma.R
 import ro.aenigma.data.database.factories.EdgeEntityFactory
-import ro.aenigma.data.database.factories.GraphVersionEntityFactory
 import ro.aenigma.data.database.factories.GuardEntityFactory
 import ro.aenigma.data.database.factories.VertexEntityFactory
+import ro.aenigma.services.NotificationService
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val repository: Repository
+    private val repository: Repository,
+    private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
     companion object {
-        private const val MAX_RETRY_COUNT = 2
-
-        private const val DELAY_BETWEEN_RETRIES: Long = 3
+        private const val WORKER_NOTIFICATION_ID = 100
+        private const val MAX_RETRY_COUNT = 5
+        private const val DELAY_BETWEEN_RETRIES: Long = 5
 
         @JvmStatic
-        fun createSyncRequest() : OneTimeWorkRequest
-        {
+        fun createSyncRequest(): OneTimeWorkRequest {
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
 
@@ -50,11 +53,11 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private fun guardSelectionRequired(graph: List<Vertex>, currentGuard: GuardEntity?): Boolean
-    {
-        return currentGuard == null || !graph.any { item -> item.neighborhood?.address == currentGuard.address
-                && item.publicKey == currentGuard.publicKey
-                && item.neighborhood.hostname == currentGuard.hostname
+    private fun guardSelectionRequired(graph: List<Vertex>, currentGuard: GuardEntity?): Boolean {
+        return currentGuard == null || !graph.any { item ->
+            item.neighborhood?.address == currentGuard.address
+                    && item.publicKey == currentGuard.publicKey
+                    && item.neighborhood.hostname == currentGuard.hostname
         }
     }
 
@@ -62,11 +65,12 @@ class GraphReaderWorker @AssistedInject constructor(
         try {
             val currentGuard = repository.local.getGuard()
             if (guardSelectionRequired(graph, currentGuard)) {
-                val availableGuards = graph.filter { item -> item.neighborhood != null
-                        && item.neighborhood.hostname.isAppDomain()
-                        && !item.neighborhood.address.isNullOrBlank()
-                        && !item.publicKey.isNullOrBlank()
-                        && !item.signedData.isNullOrBlank()
+                val availableGuards = graph.filter { item ->
+                    item.neighborhood != null
+                            && item.neighborhood.hostname.isAppDomain()
+                            && !item.neighborhood.address.isNullOrBlank()
+                            && !item.publicKey.isNullOrBlank()
+                            && !item.signedData.isNullOrBlank()
                 }
 
                 return try {
@@ -79,17 +83,16 @@ class GraphReaderWorker @AssistedInject constructor(
                 }
             }
 
-            val currentGuardVertex = if(currentGuard != null) graph.find {
-                item -> item.neighborhood?.address == currentGuard.address
+            val currentGuardVertex = if (currentGuard != null) graph.find { item ->
+                item.neighborhood?.address == currentGuard.address
             }
             else
                 null
-            return if(currentGuardVertex != null)
+            return if (currentGuardVertex != null)
                 GuardSelectionResult.SelectionNotRequired(currentGuardVertex)
             else
                 GuardSelectionResult.Error()
-        } catch (_: Exception)
-        {
+        } catch (_: Exception) {
             return GuardSelectionResult.Error()
         }
     }
@@ -125,13 +128,13 @@ class GraphReaderWorker @AssistedInject constructor(
             }
         }
 
-        repository.local.insertVertices(vertices)
+        repository.local.insertOrIgnoreVertices(vertices)
 
         graph.forEach { vertex ->
             vertex.neighborhood?.neighbors?.map { neighborAddress ->
                 neighborAddress?.let { targetAddress ->
                     vertex.neighborhood.address?.let { sourceAddress ->
-                        repository.local.insertEdge(
+                        repository.local.insertOrIgnoreEdge(
                             EdgeEntityFactory.create(
                                 sourceAddress = sourceAddress,
                                 targetAddress = targetAddress
@@ -143,8 +146,7 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun clearDatabase()
-    {
+    private suspend fun clearDatabase() {
         repository.local.removeVertices()
         repository.local.removeEdges()
     }
@@ -155,12 +157,11 @@ class GraphReaderWorker @AssistedInject constructor(
             if (vertices.isNotEmpty()) {
                 val guardSelectionResult = selectGuard(vertices)
 
-                if(guardSelectionResult is GuardSelectionResult.Error)
+                if (guardSelectionResult is GuardSelectionResult.Error)
                     GraphRequestResult.Error()
                 else
                     GraphRequestResult.Success(vertices, guardSelectionResult)
-            }
-            else {
+            } else {
                 GraphRequestResult.Error()
             }
         } catch (_: Exception) {
@@ -168,43 +169,21 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun requestServerInfo(): ServerInfo?
-    {
-        return try {
-            val response = repository.remote.getServerInfo()
-            val body = response.body()
-
-            if (response.code() == 200 && body != null)
-                body
-            else
-                null
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private suspend fun updateLocalGraph(
-        serverInfo: ServerInfo,
-        graphRequestResult: GraphRequestResult
-    ): Boolean
-    {
-        if(serverInfo.graphVersion == null)
-        {
-            return false
-        }
+    private suspend fun updateLocalGraph(serverInfo: ServerInfo): Boolean {
         try {
-            val graphVersion = repository.local.getGraphVersion()
+            val previousGraphVersion = repository.local.lastGraphVersion.first()
             val currentGuard = repository.local.getGuard()
 
-            if (serverInfo.graphVersion != graphVersion?.version || currentGuard == null) {
+            if (serverInfo.graphVersion != previousGraphVersion || currentGuard == null) {
+                val graphRequestResult = requestNewGraph()
                 clearDatabase()
                 saveGraph(graphRequestResult)
             }
-
-            repository.local.updateGraphVersion(GraphVersionEntityFactory.create(serverInfo.graphVersion))
-        }
-        catch (_: Exception)
-        {
+            if(serverInfo.graphVersion != null)
+            {
+                repository.local.saveLastGraphVersion(serverInfo.graphVersion)
+            }
+        } catch (_: Exception) {
             return false
         }
 
@@ -212,21 +191,22 @@ class GraphReaderWorker @AssistedInject constructor(
     }
 
     override suspend fun doWork(): Result {
-
-        val serverInfo = requestServerInfo()
-        val graphRequestResult = requestNewGraph()
-
-        if(serverInfo == null ||
-            graphRequestResult is GraphRequestResult.Error ||
-            !updateLocalGraph(serverInfo, graphRequestResult))
-        {
-            return if(runAttemptCount < MAX_RETRY_COUNT) {
-                Result.retry()
-            } else {
-                Result.success()
-            }
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
+            return Result.failure()
         }
+        val serverInfo = repository.remote.getServerInfo()
 
-        return Result.success()
+        return if (serverInfo == null || !updateLocalGraph(serverInfo)) {
+            Result.retry()
+        } else {
+            Result.success()
+        }
+    }
+
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return ForegroundInfo(
+            WORKER_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
+        )
     }
 }

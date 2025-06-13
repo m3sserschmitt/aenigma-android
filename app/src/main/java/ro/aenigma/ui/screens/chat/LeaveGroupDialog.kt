@@ -18,8 +18,8 @@ fun LeaveGroupDialog(
     if (visible) {
         BasicAlertDialog(onDismissRequest = onDismissClicked) {
             DialogContentTemplate(
-                title = stringResource(id = R.string.leave_group),
-                body = stringResource(id = R.string.are_you_sure_leave_group),
+                title = stringResource(id = R.string.leave_channel),
+                body = stringResource(id = R.string.are_you_sure_leave_channel),
                 dismissible = true,
                 onNegativeButtonClicked = onDismissClicked,
                 onPositiveButtonClicked = onConfirmClicked,

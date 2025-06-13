@@ -4,7 +4,7 @@ import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
-import ro.aenigma.models.MessageWithMetadata
+import ro.aenigma.models.Artifact
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
@@ -13,14 +13,22 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
+import ro.aenigma.data.database.extensions.GroupEntityExtensions.removeMember
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isGroupUpdate
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isText
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.SignedMessageWithMetadata
+import ro.aenigma.models.SignedData
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ArtifactExtensions.toMessage
+import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getTagQueryParameter
 import ro.aenigma.workers.GroupDownloadWorker
+import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,55 +43,82 @@ class MessageSaver @Inject constructor(
 ) {
     private val localAddress = signatureService.address
 
-    private suspend fun postToDatabase(data: MessageEntity) {
+    private suspend fun saveIncomingMessage(triple: Triple<SignedData, Artifact, MessageEntity>) {
         try {
-            if (data.serverUUID == null || repository.local.getMessageByUuid(data.serverUUID) != null) {
+            val signedData = triple.first
+            val artifact = triple.second
+            val messageEntity = triple.third
+            if (messageEntity.serverUUID == null || messageEntity.refId == null) {
                 return
             }
 
-            when (data.type) {
-                MessageType.DELETE -> {
-                    data.actionFor?.let {
-                        repository.local.removeMessageSoft(it)
+            when {
+                messageEntity.type == MessageType.DELETE -> {
+                    messageEntity.actionFor?.let { refId ->
+                        repository.local.removeMessageSoft(refId)
+                    }
+                    messageEntity.markAsDeleted()?.let { deletedMessage ->
+                        repository.local.insertOrIgnoreMessage(deletedMessage)
                     }
                 }
 
-                MessageType.DELETE_ALL -> {
-                    data.chatId.let { repository.local.clearConversationSoft(it) }
+                messageEntity.type == MessageType.DELETE_ALL -> {
+                    repository.local.clearConversationSoft(messageEntity.chatId)
+                    messageEntity.markAsDeleted()?.let { deletedMessage ->
+                        repository.local.insertOrIgnoreMessage(deletedMessage)
+                    }
                 }
 
-                else -> {}
-            }
-            if (repository.local.insertMessage(data) > 0) {
-                return notify(data)
+                messageEntity.type == MessageType.GROUP_MEMBER_LEAVE -> {
+                    repository.local.getContactWithGroup(messageEntity.chatId)
+                        ?.let { contactWithGroup ->
+                            if (localAddress != null && contactWithGroup.group?.groupData?.iAmAdmin(
+                                    localAddress
+                                ) == true
+                            ) {
+                                GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                                    workManager,
+                                    groupName = null,
+                                    members = listOf(messageEntity.senderAddress ?: return),
+                                    existingGroupAddress = messageEntity.chatId,
+                                    actionType = MessageType.GROUP_MEMBER_REMOVE
+                                )
+                            } else {
+                                repository.local.insertOrUpdateGroup(
+                                    contactWithGroup.group?.removeMember(
+                                        messageEntity.senderAddress ?: return
+                                    ) ?: return
+                                )
+                            }
+                        }
+                }
+
+                messageEntity.isGroupUpdate() -> {
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let { id ->
+                        createOrUpdateGroup(artifact, id)
+                        notify(messageEntity)
+                    }
+                }
+
+                messageEntity.isText() -> {
+                    repository.local.insertOrIgnoreMessage(messageEntity)
+                    createOrUpdateContact(artifact, signedData.publicKey ?: return)
+                    notify(messageEntity)
+                }
             }
         } catch (_: Exception) {
             return
         }
     }
 
-    private suspend fun parseContent(message: ParsedMessageDto): MessageEntity? {
+    private fun parseArtifact(message: ParsedMessageDto): Triple<SignedData, Artifact, MessageEntity>? {
         return try {
-            if (message.chatId == null) {
-                return null
-            }
-            val messageWithMetadata =
-                message.content.fromJson<SignedMessageWithMetadata>() ?: return null
-            if (!messageWithMetadata.verify()) {
-                return null
-            }
-            createOrUpdateEntities(messageWithMetadata, message.chatId)
-            MessageEntityFactory.createIncoming(
-                chatId = message.chatId,
-                senderAddress = messageWithMetadata.senderPublicKey.getAddressFromPublicKey()
-                    ?: message.chatId,
-                serverUUID = message.uuid,
-                text = messageWithMetadata.text,
-                type = messageWithMetadata.type ?: MessageType.TEXT,
-                actionFor = messageWithMetadata.actionFor,
-                refId = messageWithMetadata.refId,
-                dateReceivedOnServer = message.dateReceivedOnServer,
-            )
+            val signedData = message.content.fromJson<SignedData>() ?: return null
+            val artifact = signedData.verify<Artifact>() ?: return null
+            val message =
+                artifact.toMessage(message.uuid ?: return null, message.dateReceivedOnServer)
+                    ?: return null
+            Triple(signedData, artifact, message)
         } catch (_: Exception) {
             null
         }
@@ -91,74 +126,73 @@ class MessageSaver @Inject constructor(
 
     suspend fun handleRoutingRequest(routingRequest: RoutingRequest) {
         val parsedMessage = onionParsingService.parse(routingRequest)
-        val messageEntity = parsedMessage.mapNotNull { item -> parseContent(item) }
+        val messageEntity = parsedMessage.mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntity)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessage>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
-            .mapNotNull { item -> parseContent(item) }
+            .mapNotNull { item -> parseArtifact(item) }
         return saveIncomingMessages(messageEntities)
     }
 
     suspend fun saveOutgoingMessage(
         message: MessageEntity,
-        userName: String,
-        resourceUrl: String? = null
-    ): Long? {
+        additionalDestinations: Set<String> = hashSetOf()
+    ): Boolean {
         try {
-            val entity = message.withSenderAddress(localAddress) ?: return null
-            val messageId = repository.local.insertMessage(entity)
-            if (messageId > 0) {
-                MessageSenderWorker.createWorkRequest(workManager, messageId, userName, resourceUrl)
+            val entity = message.withSenderAddress(localAddress)?.run {
+                if (isDelete()) {
+                    markAsDeleted()
+                } else {
+                    this
+                }
+            } ?: return false
+            val messageId = repository.local.insertOrIgnoreMessage(entity)
+            if (messageId != null) {
+                MessageSenderWorker.createWorkRequest(
+                    workManager,
+                    messageId,
+                    additionalDestinations
+                )
+                return true
             }
-            return messageId
+            return false
         } catch (_: Exception) {
-            return null
+            return false
         }
     }
 
-    private suspend fun createOrUpdateContact(onionDetails: MessageWithMetadata) {
-        if (onionDetails.senderPublicKey == null) {
-            return
-        }
-        val originAddress = onionDetails.senderPublicKey.getAddressFromPublicKey() ?: return
+    private suspend fun createOrUpdateContact(artifact: Artifact, publicKey: String) {
+        val originAddress = publicKey.getAddressFromPublicKey() ?: return
         val contact =
             repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
-                address = originAddress,
-                name = onionDetails.senderName,
-                publicKey = onionDetails.senderPublicKey,
-                guardHostname = onionDetails.senderGuardHostname,
-                guardAddress = onionDetails.senderGuardAddress,
+                address = artifact.senderAddress ?: return,
+                name = artifact.senderName,
+                publicKey = publicKey,
+                guardHostname = artifact.guardHostname,
+                guardAddress = artifact.guardAddress,
             )
         val updatedContact =
-            contact.withGuardAddress(onionDetails.senderGuardAddress ?: contact.guardAddress)
-                .withGuardHostname(onionDetails.senderGuardHostname ?: contact.guardHostname)
+            contact.withGuardAddress(artifact.guardAddress ?: contact.guardAddress)
+                .withGuardHostname(artifact.guardHostname ?: contact.guardHostname)
+                .withNewMessage()
                 ?: return
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
-    private suspend fun createOrUpdateGroup(onionDetails: MessageWithMetadata, chatId: String) {
-        val resourceUrl = onionDetails.groupResourceUrl ?: return
-        val tag = resourceUrl.getTagQueryParameter() ?: return
-        val entity = repository.local.getContactWithGroup(chatId)
+    private suspend fun createOrUpdateGroup(artifact: Artifact, messageId: Long) {
+        val tag = artifact.resourceUrl?.getTagQueryParameter() ?: return
+        val entity = repository.local.getContactWithGroup(artifact.chatId ?: return)
         if (entity?.group?.resourceUrl?.getTagQueryParameter() == tag) {
             return
         }
-        GroupDownloadWorker.createWorkRequest(workManager, resourceUrl)
+        GroupDownloadWorker.createWorkRequest(workManager, artifact.resourceUrl, messageId)
     }
 
-    private suspend fun createOrUpdateEntities(onionDetails: MessageWithMetadata, chatId: String) {
-        return if (onionDetails.groupResourceUrl != null) {
-            createOrUpdateGroup(onionDetails, chatId)
-        } else {
-            createOrUpdateContact(onionDetails)
-        }
-    }
-
-    private suspend fun saveIncomingMessages(messages: List<MessageEntity>) {
-        return messages.forEach { item -> postToDatabase(item) }
+    private suspend fun saveIncomingMessages(messages: List<Triple<SignedData, Artifact, MessageEntity>>) {
+        return messages.forEach { item -> saveIncomingMessage(item) }
     }
 
     private suspend fun notify(message: MessageEntity) {
