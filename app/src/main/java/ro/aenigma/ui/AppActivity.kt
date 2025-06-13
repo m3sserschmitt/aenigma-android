@@ -115,10 +115,6 @@ class AppActivity : FragmentActivity() {
         )
     }
 
-//    private fun schedulePeriodicCleanup() {
-//        CleanupWorker.scheduleCleanup(this)
-//    }
-
     private fun resetClient() {
         signalrConnectionController.resetClient()
     }

@@ -65,6 +65,10 @@ android {
         }
     }
 
+    packagingOptions {
+        pickFirst "**/libsqlcipher.so"
+    }
+
     namespace 'ro.aenigma'
 }
 
@@ -76,7 +80,8 @@ dependencies {
     implementation "androidx.room:room-ktx:2.7.1"
 
     // SQLCipher
-    implementation "net.zetetic:android-database-sqlcipher:4.5.4"
+    implementation 'net.zetetic:sqlcipher-android:4.9.0@aar'
+    implementation 'androidx.sqlite:sqlite-ktx:2.5.1'
 
     // AndroidX Biometric
     implementation "androidx.biometric:biometric:1.4.0-alpha04"
@@ -90,9 +95,9 @@ dependencies {
 
     // Lifecycle
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.0'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.1'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.1'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.1'
 
     // SignalR
     implementation 'com.microsoft.signalr:signalr:8.0.0'
@@ -150,7 +155,7 @@ dependencies {
     // Kotlin
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1'
     implementation 'androidx.core:core-ktx:1.16.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
 
     // JUnit
     testImplementation 'junit:junit:4.13.2'

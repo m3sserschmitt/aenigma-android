@@ -10,8 +10,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.MutableStateFlow
-import net.sqlcipher.database.SQLiteDatabase
-import net.sqlcipher.database.SupportFactory
+import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import ro.aenigma.crypto.CryptoProvider
 import javax.inject.Singleton
 
@@ -31,10 +30,10 @@ object DatabaseModule {
         var dbPassphrase: ByteArray? = null
         var lockedDbPassphrase: ByteArray? = null
         try {
-            SQLiteDatabase.loadLibs(context)
+            System.loadLibrary("sqlcipher")
             lockedDbPassphrase = DbPassphraseKeeper.dbPassphrase.value ?: throw Exception("Database passphrase not ready.")
             dbPassphrase = CryptoProvider.masterKeyDecrypt(lockedDbPassphrase) ?: throw Exception("Failed to unlock database passphrase.")
-            val supportFactory = SupportFactory(dbPassphrase)
+            val supportFactory = SupportOpenHelperFactory(dbPassphrase.clone())
             return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
                 .openHelperFactory(supportFactory)
                 .build()
