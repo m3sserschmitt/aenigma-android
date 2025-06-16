@@ -177,8 +177,13 @@ class MessageSaver @Inject constructor(
         val updatedContact =
             contact.withGuardAddress(artifact.guardAddress ?: contact.guardAddress)
                 .withGuardHostname(artifact.guardHostname ?: contact.guardHostname)
-                .withNewMessage()
-                ?: return
+                .run {
+                    if (artifact.chatId == artifact.senderAddress) {
+                        withNewMessage()
+                    } else {
+                        this
+                    }
+                } ?: return
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
