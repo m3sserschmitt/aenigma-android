@@ -6,9 +6,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.mikepenz.aboutlibraries.ui.compose.android.rememberLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.StandardAppBar
@@ -17,6 +19,7 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 fun LicensesScreen(
     navigateBack: () -> Unit
 ) {
+    val libraries by rememberLibraries(R.raw.aboutlibraries)
     Scaffold(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
         topBar = {
@@ -27,13 +30,13 @@ fun LicensesScreen(
         }
     ) { padding ->
         LibrariesContainer(
-            modifier = Modifier.fillMaxSize()
-                .padding(
-                    top = padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding(),
-                    start = 8.dp,
-                    end = 8.dp
-                )
+            modifier = Modifier.fillMaxSize().padding(
+                top = padding.calculateTopPadding(),
+                bottom = padding.calculateBottomPadding(),
+                start = 8.dp,
+                end = 8.dp
+            ),
+            libraries = libraries
         )
     }
 }
