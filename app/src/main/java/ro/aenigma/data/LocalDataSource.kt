@@ -94,15 +94,18 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun insertOrUpdateContact(contactEntity: ContactEntity) {
-        return contactsDao.get().insertOrUpdate(contactEntity)
+        contactsDao.get().insertOrUpdate(contactEntity)
+        return updateContactLastMessageId(contactEntity.address)
     }
 
     suspend fun insertOrIgnoreContact(contactEntity: ContactEntity) {
-        return contactsDao.get().insertOrIgnore(contactEntity)
+        contactsDao.get().insertOrIgnore(contactEntity)
+        return updateContactLastMessageId(contactEntity.address)
     }
 
     suspend fun insertOrUpdateGroup(group: GroupEntity) {
-        return contactsDao.get().insertOrUpdate(group)
+        contactsDao.get().insertOrUpdate(group)
+        return updateContactLastMessageId(group.address)
     }
 
     suspend fun updateContact(contactEntity: ContactEntity) {

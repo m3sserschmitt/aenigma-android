@@ -1,16 +1,19 @@
 package ro.aenigma.ui.themes
 
-import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
+import ro.aenigma.util.findActivity
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF9575CD), // Light Purple
@@ -71,22 +74,33 @@ fun ApplicationComposeLightTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
+fun KeyboardAware(
+    content: @Composable () -> Unit
+) {
+    Box(modifier = Modifier.imePadding()) {
+        content()
+    }
+}
+
+@Composable
 fun ApplicationComposeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colors = if (darkTheme) DarkColors else LightColors
 
-    val activity = LocalContext.current as Activity
+    val activity = LocalContext.current.findActivity()
     activity.window?.let { window ->
         window.statusBarColor = colors.background.toArgb()
         val insetsController = WindowInsetsControllerCompat(window, window.decorView)
         insetsController.isAppearanceLightStatusBars = !darkTheme
     }
 
-    if (darkTheme) {
-        ApplicationComposeDarkTheme(content)
-    } else {
-        ApplicationComposeLightTheme(content)
+    KeyboardAware {
+        if (darkTheme) {
+            ApplicationComposeDarkTheme(content)
+        } else {
+            ApplicationComposeLightTheme(content)
+        }
     }
 }

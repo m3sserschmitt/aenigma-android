@@ -308,19 +308,27 @@ class MainViewModel @Inject constructor(
     }
 
     fun renameContact(contact: ContactWithLastMessage, name: String) {
-        when (contact.contact.type) {
-            ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
-                val updatedContact = contact.contact.withName(name)
-                updatedContact?.let { repository.local.updateContact(it) }
+        viewModelScope.launch(ioDispatcher) {
+            when (contact.contact.type) {
+                ContactType.CONTACT -> {
+                    val updatedContact = contact.contact.withName(name)
+                    updatedContact?.let { repository.local.updateContact(it) }
+                }
+                ContactType.GROUP -> {
+                    if (repository.local.getContactWithGroup(contact.contact.address)?.group?.groupData?.admins?.contains(
+                            signatureService.address
+                        ) == true
+                    ) {
+                        GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                            workManager = workManager.get(),
+                            groupName = name,
+                            existingGroupAddress = contact.contact.address,
+                            actionType = MessageType.GROUP_RENAMED,
+                            members = null
+                        )
+                    }
+                }
             }
-
-            ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                workManager = workManager.get(),
-                groupName = name,
-                existingGroupAddress = contact.contact.address,
-                actionType = MessageType.GROUP_RENAMED,
-                members = null
-            )
         }
     }
 

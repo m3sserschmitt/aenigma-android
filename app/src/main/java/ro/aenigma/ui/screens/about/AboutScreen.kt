@@ -67,6 +67,7 @@ fun AboutScreen(
                 .fillMaxSize()
                 .padding(
                     top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding(),
                     start = 8.dp,
                     end = 8.dp
                 )

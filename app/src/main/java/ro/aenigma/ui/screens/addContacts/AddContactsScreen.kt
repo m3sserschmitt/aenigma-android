@@ -117,7 +117,8 @@ fun AddContactsScreen(
             AddContactsContent(
                 modifier = Modifier
                     .padding(
-                        top = paddingValues.calculateTopPadding()
+                        top = paddingValues.calculateTopPadding(),
+                        bottom = paddingValues.calculateBottomPadding(),
                     ),
                 scannerState = scannerState,
                 qrCode = qrCode,
