@@ -2,7 +2,6 @@ package ro.aenigma.data.database.extensions
 
 import android.content.Context
 import ro.aenigma.R
-import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.models.Artifact
@@ -13,7 +12,7 @@ import ro.aenigma.util.SerializerExtensions.deepCopy
 object MessageEntityExtensions {
     @JvmStatic
     fun MessageEntity.getMessageTextByAction(context: Context): String {
-        return when (this.type) {
+        return when (type) {
             MessageType.DELETE -> context.getString(R.string.message_deleted)
             MessageType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
             MessageType.GROUP_CREATE -> context.getString(R.string.created_channel)
@@ -21,7 +20,8 @@ object MessageEntityExtensions {
             MessageType.GROUP_MEMBER_REMOVE -> context.getString(R.string.removed_channel_members)
             MessageType.GROUP_MEMBER_LEAVE -> context.getString(R.string.channel_member_left)
             MessageType.GROUP_RENAMED -> context.getString(R.string.channel_renamed)
-            MessageType.TEXT, MessageType.REPLY, null -> this.text.toString()
+            MessageType.FILES -> if (text.isNullOrBlank()) context.getString(R.string.files) else text
+            MessageType.TEXT, MessageType.REPLY, null -> text.toString()
         }
     }
 
@@ -56,25 +56,14 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
-    fun MessageEntity.decryptedText(): String? {
-        return CryptoProvider.base64Encode(CryptoProvider.masterKeyDecryptEx(text ?: return null) ?: return null)
-    }
-
-    @JvmStatic
     fun MessageEntity.toArtifact(
         senderName: String?,
         guardAddress: String?,
         guardHostname: String?,
         resourceUrl: String?,
-        chatId: String?
+        chatId: String?,
+        passphrase: String?
     ): Artifact? {
-        val text = if (isText()) {
-            text
-        } else if (isGroupUpdate()) {
-            decryptedText()
-        } else {
-            text
-        }
         return Artifact(
             text = text,
             type = type,
@@ -85,13 +74,19 @@ object MessageEntityExtensions {
             refId = refId,
             resourceUrl = resourceUrl,
             senderAddress = senderAddress,
-            chatId = chatId
+            chatId = chatId,
+            passphrase = passphrase
         )
     }
 
     @JvmStatic
     fun MessageEntity.isText(): Boolean {
         return type == MessageType.TEXT || type == MessageType.REPLY
+    }
+
+    @JvmStatic
+    fun MessageEntity.isFile(): Boolean {
+        return type == MessageType.FILES
     }
 
     @JvmStatic

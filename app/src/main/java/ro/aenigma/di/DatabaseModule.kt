@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.flow.MutableStateFlow
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
 import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.data.database.migrations.Migration1
 import javax.inject.Singleton
 
 object DbPassphraseKeeper {
@@ -35,6 +36,7 @@ object DatabaseModule {
             dbPassphrase = CryptoProvider.masterKeyDecrypt(lockedDbPassphrase) ?: throw Exception("Failed to unlock database passphrase.")
             val supportFactory = SupportOpenHelperFactory(dbPassphrase.clone())
             return Room.databaseBuilder(context, AppDatabase::class.java, DATABASE_NAME)
+                .addMigrations(Migration1)
                 .openHelperFactory(supportFactory)
                 .build()
         } finally {

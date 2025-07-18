@@ -44,7 +44,9 @@ fun ChatContent(
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageWithDetails>,
     messageInputText: String,
+    attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
+    onAttachmentsSelected: (List<String>) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit,
     onMessageSelected: (MessageWithDetails) -> Unit,
@@ -87,6 +89,8 @@ fun ChatContent(
             messageInputText = messageInputText,
             replyToMessage = replyToMessage,
             onInputTextChanged = onInputTextChanged,
+            attachments = attachments,
+            onAttachmentsSelected = onAttachmentsSelected,
             onSendClicked = {
                 onSendClicked()
                 messageSent = true
@@ -189,7 +193,8 @@ fun ChatContentPreview() {
             incoming = true,
             sent = true,
             deleted = false,
-            date = ZonedDateTime.now()
+            date = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
     val message2= MessageWithDetails(
@@ -207,6 +212,7 @@ fun ChatContentPreview() {
             deleted = false,
             date = ZonedDateTime.now(),
             dateReceivedOnServer = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
 
@@ -219,6 +225,8 @@ fun ChatContentPreview() {
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "",
+        attachments = listOf(),
+        onAttachmentsSelected = { },
         onSendClicked = {},
         onReplyAborted = {},
         onInputTextChanged = {},

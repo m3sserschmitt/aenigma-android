@@ -8,6 +8,7 @@ data class Artifact(
     val type: MessageType? = null,
     val senderName: String? = null,
     val resourceUrl: String? = null,
+    val passphrase: String? = null,
     val guardAddress: String? = null,
     val guardHostname: String? = null,
     val senderAddress: String? = null,

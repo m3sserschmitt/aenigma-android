@@ -347,7 +347,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(defaultDispatcher) {
             val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
             if (data != null) {
-                val response = repository.remote.createSharedData(data)
+                val response = repository.remote.createSharedData(data, null)
                 if (response != null) {
                     _sharedDataCreateResult.value = RequestState.Success(response)
                 } else {
@@ -367,7 +367,7 @@ class MainViewModel @Inject constructor(
         _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
             try {
-                val response = repository.remote.getSharedDataByUrl(url) ?: throw Exception()
+                val response = repository.remote.getSharedDataByUrl(url, null) ?: throw Exception()
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception()
                 _importedContactDetails.value =

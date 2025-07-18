@@ -3,7 +3,6 @@ package ro.aenigma.services
 import android.content.Context
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ro.aenigma.data.Repository
-import ro.aenigma.workers.CleanupWorker
 import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
@@ -41,11 +39,6 @@ class SignalrConnectionController @Inject constructor(
             .enqueue()
     }
 
-    private fun enqueueCleanupWorkRequest() {
-        val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
-        WorkManager.getInstance(applicationContext).enqueue(cleanupRequest)
-    }
-
     private suspend fun performClientAction(clientStatus: SignalRStatus) {
         when (clientStatus) {
             is SignalRStatus.Error.ConnectionRefused,
@@ -61,9 +54,7 @@ class SignalrConnectionController @Inject constructor(
                 )
             }
 
-            is SignalRStatus.Synchronized -> {
-                enqueueCleanupWorkRequest()
-            }
+            is SignalRStatus.Synchronized -> { }
 
             is SignalRStatus.NotConnected -> {
                 start()

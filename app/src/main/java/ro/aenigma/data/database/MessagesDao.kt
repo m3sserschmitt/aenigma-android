@@ -21,6 +21,10 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE refId = :refId")
     suspend fun getByRefId(refId: String): MessageEntity?
 
+    @Transaction
+    @Query("SELECT * FROM $MESSAGES_TABLE m WHERE id = :id")
+    suspend fun getWithAttachments(id: Long): MessageWithAttachments?
+
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId ORDER BY id DESC LIMIT 1")
     fun getLastDeletedFlow(chatId: String): Flow<MessageEntity?>
 
@@ -29,6 +33,9 @@ interface MessagesDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOrIgnore(message: MessageEntity): Long?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateAttachment(attachment: AttachmentEntity)
 
     @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE chatId = :chatId")
     suspend fun clearConversationSoft(chatId: String)

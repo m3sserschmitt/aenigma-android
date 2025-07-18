@@ -69,6 +69,8 @@ class ChatViewModel @Inject constructor(
 
     private val _messageInputText = MutableStateFlow("")
 
+    private val _attachments = MutableStateFlow<List<String>>(listOf())
+
     val selectedContact: StateFlow<RequestState<ContactWithGroup>> = _selectedContact
 
     val isMember: StateFlow<Boolean> = _isMember
@@ -80,6 +82,8 @@ class ChatViewModel @Inject constructor(
     val replyToMessage: StateFlow<MessageWithDetails?> = _replyToMessage
 
     val messageInputText: StateFlow<String> = _messageInputText
+
+    val attachments: StateFlow<List<String>> = _attachments
 
     val nextPageAvailable: StateFlow<Boolean> = _nextPageAvailable
 
@@ -210,9 +214,13 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun messageFilesReady(message: MessageWithDetails?): Boolean {
+        return message != null && (message.message.type != MessageType.FILES || (message.message.files != null && message.message.files.isNotEmpty()))
+    }
+
     private fun addItemsToConversation(messages: List<MessageWithDetails>) {
         messages.forEach { item ->
-            if (searchFilterMatched(item)) {
+            if (searchFilterMatched(item) && messageFilesReady(item)) {
                 readMessageDeliveryStatus(item)
                 _conversationSortedSet.add(item)
             }
@@ -234,7 +242,10 @@ class ChatViewModel @Inject constructor(
     private fun addNewItemToConversation(messages: List<MessageWithDetails>) {
         val message = messages.firstOrNull()
         message ?: return
-        if (searchFilterMatched(message) && _conversationSortedSet.add(message)) {
+        if (searchFilterMatched(message) && messageFilesReady(message) && _conversationSortedSet.add(
+                message
+            )
+        ) {
             readMessageDeliveryStatus(message)
         }
     }
@@ -335,12 +346,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun sendMessage() {
-        viewModelScope.launch(ioDispatcher) {
-            if (postToDatabase()) {
-                _messageInputText.value = ""
-                _replyToMessage.value = null
-            }
-        }
+        viewModelScope.launch(ioDispatcher) { postToDatabase() }
     }
 
     fun editGroupMembers(members: List<String>, action: MessageType) {
@@ -362,14 +368,20 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private suspend fun postToDatabase(type: MessageType, actionFor: String?, text: String?): Boolean {
+    private suspend fun postToDatabase(
+        type: MessageType,
+        actionFor: String?,
+        text: String?,
+        attachments: List<String> = listOf()
+    ): Boolean {
         try {
             val contact = getSelectedContactEntity() ?: return false
             val message = MessageEntityFactory.createOutgoing(
                 chatId = contact.address,
                 text = text,
                 type = type,
-                actionFor = actionFor
+                actionFor = actionFor,
+                attachments = attachments
             )
             return messageSaver.saveOutgoingMessage(message)
         } catch (_: Exception) {
@@ -377,18 +389,23 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private suspend fun postToDatabase(): Boolean {
-        if (messageInputText.value.isBlank()) {
-            return false
+    private suspend fun postToDatabase() {
+        if (attachments.value.isNotEmpty()) {
+            postToDatabase(MessageType.FILES, null, messageInputText.value, attachments.value)
+            _attachments.value = listOf()
+            _messageInputText.value = ""
+            return
         }
-        return if (replyToMessage.value != null) {
+        val hasText = messageInputText.value.isNotBlank()
+        if (replyToMessage.value != null && hasText) {
             postToDatabase(
-                MessageType.REPLY,
-                replyToMessage.value?.message?.refId,
-                messageInputText.value
+                MessageType.REPLY, replyToMessage.value?.message?.refId, messageInputText.value
             )
-        } else {
+            _replyToMessage.value = null
+            _messageInputText.value = ""
+        } else if (hasText) {
             postToDatabase(MessageType.TEXT, null, messageInputText.value)
+            _messageInputText.value = ""
         }
     }
 
@@ -432,6 +449,10 @@ class ChatViewModel @Inject constructor(
 
     fun setMessageInputText(text: String) {
         _messageInputText.value = text
+    }
+
+    fun setAttachments(attachments: List<String>) {
+        _attachments.value = attachments
     }
 
     private fun resetSearchQuery() {

@@ -12,9 +12,11 @@ import ro.aenigma.data.database.MessagesDao
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
+import ro.aenigma.data.database.AttachmentEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
+import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
 import javax.inject.Inject
@@ -120,6 +122,10 @@ class LocalDataSource @Inject constructor(
         return messagesDao.get().get(id)
     }
 
+    suspend fun getMessageWithAttachments(id: Long): MessageWithAttachments? {
+        return messagesDao.get().getWithAttachments(id)
+    }
+
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>> {
         return messagesDao.get().getConversationFlow(chatId)
     }
@@ -175,6 +181,10 @@ class LocalDataSource @Inject constructor(
             return messageId
         }
         return null
+    }
+
+    suspend fun insertOrUpdateAttachment(attachment: AttachmentEntity) {
+        return messagesDao.get().insertOrUpdateAttachment(attachment)
     }
 
     suspend fun updateMessage(message: MessageEntity) {

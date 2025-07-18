@@ -31,7 +31,8 @@ data class MessageEntity (
     val sent: Boolean,
     val deleted: Boolean,
     val date: ZonedDateTime,
-    val dateReceivedOnServer: ZonedDateTime?) {
+    val dateReceivedOnServer: ZonedDateTime?,
+    val files: List<String>?) {
     @Ignore
     @JsonIgnore
     val deliveryStatus = MutableStateFlow(false)

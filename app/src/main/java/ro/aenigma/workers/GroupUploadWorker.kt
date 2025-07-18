@@ -22,6 +22,7 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
+import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
@@ -36,6 +37,7 @@ import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.NotificationService
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.util.concurrent.TimeUnit
 
@@ -205,19 +207,27 @@ class GroupUploadWorker @AssistedInject constructor(
     private suspend fun sendGroupUpdate(
         groupData: GroupData,
         key: ByteArray,
+        resourceUrl: String,
         actionType: MessageType,
         additionalDestinations: Set<String> = hashSetOf()
     ): Boolean {
         groupData.address ?: return false
-        val message = MessageEntityFactory.createOutgoing(
-            chatId = groupData.address,
-            text = CryptoProvider.masterKeyEncryptEx(key),
-            type = actionType,
-            actionFor = null
-        )
+        val encodedKey = CryptoProvider.base64Encode(key)
         return messageSaver.saveOutgoingMessage(
-            message,
-            additionalDestinations = additionalDestinations
+            MessageEntityFactory.createOutgoing(
+                chatId = groupData.address,
+                text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
+                // to null in the future;
+                type = actionType,
+                actionFor = null
+            ),
+            additionalDestinations = additionalDestinations,
+            AttachmentEntityFactory.create(
+                id = 0,
+                path = null,
+                passphrase = encodedKey,
+                url = resourceUrl
+            )
         )
     }
 
@@ -248,16 +258,16 @@ class GroupUploadWorker @AssistedInject constructor(
         groupData.members ?: return Result.failure()
         val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
             ?: return Result.failure()
-        val encryptionDto = CryptoProvider.encrypt(serializedGroupData) ?: return Result.failure()
         val destinations = groupData.members.mapNotNull { item -> item.address }.toHashSet()
             .union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: hashSetOf())
         val accessCount = (destinations.count() - 1) * GroupDownloadWorker.MAX_RETRY_COUNT
-        val response = repository.remote.createSharedData(encryptionDto.encryptedData, accessCount)
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val response = repository.remote.createSharedData(serializedGroupData, key, accessCount)
             ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 
         saveGroupEntity(groupData, response.resourceUrl)
-        sendGroupUpdate(groupData, encryptionDto.key, actionType, destinations)
+        sendGroupUpdate(groupData, key, response.resourceUrl, actionType, destinations)
 
         return Result.success()
     }

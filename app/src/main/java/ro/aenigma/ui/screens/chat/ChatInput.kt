@@ -1,5 +1,9 @@
 package ro.aenigma.ui.screens.chat
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,20 +40,61 @@ fun ChatInput(
     enabled: Boolean = true,
     replyToMessage: MessageWithDetails?,
     messageInputText: String,
+    attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
+    onAttachmentsSelected: (List<String>) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
+    val context = LocalContext.current
+    val multiplePhotoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        val contentResolver = context.contentResolver
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+
+        uris.forEach { uri ->
+            try {
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (_: SecurityException) {
+            }
+        }
+
+        onAttachmentsSelected(uris.map { it.toString() })
+    }
+
     Column {
         ReplyToMessage(
             message = replyToMessage,
             onReplyAborted = onReplyAborted
         )
-
+        SelectedAttachments(
+            files = attachments,
+            onRemoveAttachments = {
+                onAttachmentsSelected(listOf())
+            }
+        )
         Row(
-            modifier = modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
+            modifier = modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    multiplePhotoPicker.launch(arrayOf("*/*"))
+                }
+            ) {
+                Icon(
+                    modifier = Modifier.alpha(.75f),
+                    painter = painterResource(id = R.drawable.ic_attachement),
+                    contentDescription = stringResource(
+                        id = R.string.send_file
+                    ),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
             TextField(
                 modifier = Modifier.weight(8f),
                 value = messageInputText,
@@ -88,6 +135,43 @@ fun ChatInput(
 }
 
 @Composable
+fun SelectedAttachments(
+    files: List<String>,
+    onRemoveAttachments: () -> Unit
+) {
+    if(files.isNotEmpty())
+    {
+        Row {
+            Text(
+                modifier = Modifier
+                    .weight(9f)
+                    .padding(4.dp)
+                    .align(alignment = Alignment.CenterVertically),
+                text = if (files.size > 1)
+                    stringResource(id = R.string.n_attachments_selected).format(files.size)
+                else
+                    stringResource(id = R.string.one_attachment_selected),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            IconButton(
+                modifier = Modifier.weight(1f),
+                onClick = onRemoveAttachments
+            ) {
+                Icon(
+                    modifier = Modifier.alpha(.75f),
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(
+                        id = R.string.close
+                    ),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ReplyToMessage(
     message: MessageWithDetails?,
     onReplyAborted: () -> Unit,
@@ -96,7 +180,9 @@ fun ReplyToMessage(
         return
     }
     Row(
-        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.background),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
@@ -147,5 +233,7 @@ fun ChatInputPreview()
         onInputTextChanged = {},
         onSendClicked = {},
         onReplyAborted = {},
+        attachments = listOf(),
+        onAttachmentsSelected = { },
     )
 }

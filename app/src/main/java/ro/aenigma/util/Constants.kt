@@ -17,8 +17,8 @@ class Constants {
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
-        const val GRAPH_VERSIONS_TABLE = "GraphVersions"
         const val GROUPS_TABLE = "Groups"
+        const val ATTACHMENTS_TABLE = "Attachments"
 
         const val APP_DOMAIN = "aenigma.ro"
 
@@ -26,5 +26,8 @@ class Constants {
 
         const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
+
+        const val ATTACHMENTS_METADATA_FILE = "metadata.json"
+        const val ENCRYPTION_KEY_SIZE = 32
     }
 }

@@ -115,4 +115,12 @@
     <string name="uploading_channel_info">Se distribuie informațiile canalului</string>
     <string name="sending_message">Se trimite un mesaj</string>
     <string name="connecting_server">Se conecteaza</string>
+    <string name="send_file">Trimiteți un atașament</string>
+    <string name="one_attachment_selected">1 atașament selectat</string>
+    <string name="n_attachments_selected">%s atașamente selectate</string>
+    <string name="downloading_file">Se descarcă un fișier</string>
+    <string name="files">Fișiere</string>
+    <string name="unknown_file">Fișier necunoscut</string>
+    <string name="no_app_to_open">Nu s-a găsit o aplicație pentru a deschide fișierul</string>
+    <string name="open">Deschide</string>
 </resources>

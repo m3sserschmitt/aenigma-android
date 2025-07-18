@@ -50,6 +50,7 @@ fun ChatScreen(
     val messages by chatViewModel.conversation.collectAsState()
     val replyToMessage by chatViewModel.replyToMessage.collectAsState()
     val messageInputText by chatViewModel.messageInputText.collectAsState()
+    val attachments by chatViewModel.attachments.collectAsState()
     val connectionStatus by chatViewModel.clientStatus.collectAsState()
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val allContacts by chatViewModel.allContacts.collectAsState()
@@ -72,12 +73,12 @@ fun ChatScreen(
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
+        attachments = attachments,
         onRetryConnection = { chatViewModel.retryClientConnection() },
         onInputTextChanged = { newInputTextValue ->
-            chatViewModel.setMessageInputText(
-                newInputTextValue
-            )
+            chatViewModel.setMessageInputText(newInputTextValue)
         },
+        onAttachmentsSelected = { attachments -> chatViewModel.setAttachments(attachments) },
         onNewContactNameChanged = { name -> chatViewModel.validateNewContactName(name) },
         onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
         onRenameContactDismissed = {  },
@@ -105,8 +106,10 @@ fun ChatScreen(
     replyToMessage: MessageWithDetails?,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
+    attachments: List<String>,
     onRetryConnection: () -> Unit,
     onInputTextChanged: (String) -> Unit,
+    onAttachmentsSelected: (List<String>) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onRenameContactConfirmed: (String) -> Unit,
     onRenameContactDismissed: () -> Unit,
@@ -319,7 +322,9 @@ fun ChatScreen(
                 nextConversationPageAvailable = nextConversationPageAvailable,
                 selectedMessages = selectedItems,
                 messageInputText = messageInputText,
+                attachments = attachments,
                 onInputTextChanged = onInputTextChanged,
+                onAttachmentsSelected = onAttachmentsSelected,
                 onSendClicked = {
                     onSendClicked()
                     selectedItems.clear()
@@ -376,7 +381,8 @@ fun ChatScreenPreview() {
             incoming = true,
             sent = true,
             deleted = false,
-            date = ZonedDateTime.now()
+            date = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
     val message2= MessageWithDetails(
@@ -394,6 +400,7 @@ fun ChatScreenPreview() {
             deleted = false,
             date = ZonedDateTime.now(),
             dateReceivedOnServer = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
 
@@ -412,6 +419,7 @@ fun ChatScreenPreview() {
             deleted = false,
             date = ZonedDateTime.now(),
             dateReceivedOnServer = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
 
@@ -438,6 +446,8 @@ fun ChatScreenPreview() {
         nextConversationPageAvailable = true,
         onRetryConnection = {},
         messageInputText = "",
+        attachments = listOf(),
+        onAttachmentsSelected = { },
         onSendClicked = {},
         onRenameContactConfirmed = {},
         onInputTextChanged = {},

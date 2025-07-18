@@ -66,13 +66,18 @@ android {
     }
 
     packagingOptions {
-        pickFirst "**/libsqlcipher.so"
+        jniLibs {
+            pickFirsts += ['**/libsqlcipher.so']
+        }
     }
 
     namespace 'ro.aenigma'
 }
 
 dependencies {
+
+    // Coil
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     // Room
     implementation "androidx.room:room-runtime:2.7.2"
@@ -174,4 +179,7 @@ dependencies {
     // TOR
     implementation 'info.guardianproject:tor-android:0.4.7.14'
     implementation 'info.guardianproject:jtorctl:0.4.5.7'
+
+    // Zip
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
 }

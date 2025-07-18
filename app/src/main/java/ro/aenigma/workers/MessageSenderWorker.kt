@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -26,17 +28,23 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
+import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isText
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.withText
+import ro.aenigma.data.database.factories.AttachmentEntityFactory
+import ro.aenigma.models.AttachmentsMetadata
 import ro.aenigma.models.enums.ContactType
+import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.Zipper
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.SerializerExtensions.toJson
+import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -44,6 +52,7 @@ import java.util.concurrent.TimeUnit
 class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
+    private val zipper: Zipper,
     private val signalrController: SignalrConnectionController,
     private val repository: Repository,
     private val signatureService: SignatureService,
@@ -60,7 +69,11 @@ class MessageSenderWorker @AssistedInject constructor(
         private const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, messageId: Long, additionalDestinations: Set<String> = hashSetOf()): UUID {
+        fun createWorkRequest(
+            workManager: WorkManager,
+            messageId: Long,
+            additionalDestinations: Set<String> = hashSetOf()
+        ): UUID {
             val parameters = Data.Builder()
                 .putLong(MESSAGE_ID_ARG, messageId)
                 .putStringArray(ADDITIONAL_DESTINATIONS_ARG, additionalDestinations.toTypedArray())
@@ -92,7 +105,8 @@ class MessageSenderWorker @AssistedInject constructor(
         userName: String?,
         path: List<VertexEntity>,
         groupAddress: String?,
-        groupResourceUrl: String?
+        groupResourceUrl: String?,
+        passphrase: String?
     ): String? {
         if (path.isEmpty() || destination.publicKey == null) {
             return null
@@ -101,15 +115,18 @@ class MessageSenderWorker @AssistedInject constructor(
         val guard = repository.local.getGuard() ?: return null
         val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
-        val addresses = arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
-        val keys = reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
-        val data = signatureService.sign(
+        val addresses =
+            arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
+        val keys =
+            reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
+        val data = signatureService.jsonSign(
             message.toArtifact(
                 senderName = userName,
                 guardAddress = guard.address,
                 guardHostname = guard.hostname,
                 resourceUrl = groupResourceUrl,
-                chatId = chatId
+                chatId = chatId,
+                passphrase = passphrase
             )
         ).toJson()?.toByteArray() ?: return null
         return CryptoProvider.sealOnionEx(data, keys, addresses)
@@ -134,14 +151,9 @@ class MessageSenderWorker @AssistedInject constructor(
         return true
     }
 
-    private suspend fun saveMessageEntity(message: MessageEntity) {
-        message.markAsSent()?.let { m ->
-            if (!m.isText()) {
-                m.withText(null).markAsDeleted()
-            } else {
-                m
-            }
-        }?.let { m -> repository.local.updateMessage(m) }
+    private suspend fun saveAsSent(message: MessageEntity) {
+        repository.local.updateMessage(
+            message.markAsSent()?.run { if (isDelete()) markAsDeleted() else this } ?: return)
     }
 
     private suspend fun sendMessage(
@@ -149,7 +161,8 @@ class MessageSenderWorker @AssistedInject constructor(
         message: MessageEntity,
         userName: String?,
         groupAddress: String?,
-        groupResourceUrl: String?
+        resourceUrl: String?,
+        passphrase: String?
     ): Boolean {
         val onions = contacts.mapNotNull { contact ->
             if (updateContactIfRequired(contact)) {
@@ -159,8 +172,13 @@ class MessageSenderWorker @AssistedInject constructor(
                 }
                 if (paths.isNotEmpty()) {
                     buildOnion(
-                        message, contact, userName, paths.random().vertexList, groupAddress,
-                        groupResourceUrl
+                        message = message,
+                        destination = contact,
+                        userName = userName,
+                        path = paths.random().vertexList,
+                        groupAddress = groupAddress,
+                        groupResourceUrl = resourceUrl,
+                        passphrase = passphrase
                     )
                 } else null
             } else null
@@ -168,7 +186,61 @@ class MessageSenderWorker @AssistedInject constructor(
         return signalrController.sendMessages(onions)
     }
 
-    private suspend fun getDestinationContacts(contactWithGroup: ContactWithGroup, additionalDestinations: Array<String>?): List<ContactEntity> {
+    suspend fun resolveAttachments(
+        messageWithAttachment: MessageWithAttachments,
+        accessCount: Int
+    ): MessageWithAttachments? {
+        if (messageWithAttachment.message.type != MessageType.FILES
+            || messageWithAttachment.message.files == null
+            || messageWithAttachment.message.files.isEmpty()
+            || messageWithAttachment.attachment?.url != null
+        ) {
+            return messageWithAttachment
+        }
+
+        setForeground(getForegroundInfo())
+
+        val archive = if (messageWithAttachment.attachment?.path != null)
+            File(applicationContext.cacheDir, messageWithAttachment.attachment.path)
+        else
+            zipper.createZip(
+                messageWithAttachment.message.files, AttachmentsMetadata(
+                    description = messageWithAttachment.message.text,
+                    filesCount = messageWithAttachment.message.files.size
+                )
+            ) ?: return null
+
+        val attachment = AttachmentEntityFactory.create(
+            id = messageWithAttachment.message.id,
+            path = archive.name,
+            url = null,
+            passphrase = null
+        )
+        repository.local.insertOrUpdateAttachment(attachment)
+
+        val passphrase = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val encryptedFile = CryptoProvider.encrypt(archive, passphrase) ?: return null
+        val createdSharedData = repository.remote.postFile(encryptedFile, accessCount)
+        createdSharedData?.resourceUrl ?: return null
+
+        archive.delete()
+
+        val finalAttachment = attachment.copy(
+            url = createdSharedData.resourceUrl,
+            passphrase = CryptoProvider.base64Encode(passphrase)
+        )
+        repository.local.insertOrUpdateAttachment(finalAttachment)
+
+        return MessageWithAttachments(
+            message = messageWithAttachment.message,
+            attachment = finalAttachment
+        )
+    }
+
+    private suspend fun getDestinationContacts(
+        contactWithGroup: ContactWithGroup,
+        additionalDestinations: Array<String>?
+    ): List<ContactEntity> {
         val addressesSet = hashSetOf<String>()
         val results = mutableListOf<ContactEntity>()
         if (contactWithGroup.contact.type == ContactType.CONTACT) {
@@ -208,29 +280,45 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
         val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
         val userName = repository.local.name.first()
-        val message = if (messageId > 0) repository.local.getMessage(messageId) else null
-        val chatId = message?.chatId ?: return Result.failure()
-        val contactWithGroup = repository.local.getContactWithGroup(chatId) ?: return Result.failure()
+        var messageToBeSent =
+            if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
+        val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
+        val contactWithGroup =
+            repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
+        val messageWithAttachments =
+            (if (!contacts.isEmpty()) resolveAttachments(
+                messageToBeSent,
+                contacts.size
+            ) else messageToBeSent)
+                ?: return Result.retry()
+
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,
-            message = message,
+            message = messageWithAttachments.message,
             userName = userName,
             groupAddress = contactWithGroup.group?.address,
-            groupResourceUrl = contactWithGroup.group?.resourceUrl
+            resourceUrl = messageWithAttachments.attachment?.url
+                ?: contactWithGroup.group?.resourceUrl,
+            passphrase = messageWithAttachments.attachment?.passphrase
         )
-        if (ok) {
-            saveMessageEntity(message)
-            return Result.success()
+        return if (ok) {
+            saveAsSent(messageWithAttachments.message)
+            Result.success()
         } else {
-            return Result.retry()
+            Result.retry()
         }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
             WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
-        )
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
+            FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        ) else
+            ForegroundInfo(
+                WORKER_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
+            )
     }
 }

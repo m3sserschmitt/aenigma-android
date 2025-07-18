@@ -7,7 +7,7 @@ import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPrivateKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
-import ro.aenigma.models.EncryptionDto
+import java.io.File
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -32,8 +32,6 @@ object CryptoProvider {
     private const val AUTHENTICATION_TAG_BITS_SIZE = 128
 
     private const val IV_BYTES_SIZE = 12
-
-    private const val DEFAULT_SYMMETRIC_KEY_SIZE = 32
 
     private external fun initDecryption(privateKey: String, passphrase: String): Boolean
 
@@ -148,13 +146,40 @@ object CryptoProvider {
     }
 
     @JvmStatic
-    fun encrypt(plaintext: ByteArray): EncryptionDto? {
-        val key = generateRandomBytes(DEFAULT_SYMMETRIC_KEY_SIZE)
-        return EncryptionDto(key, encryptSymmetric(key, plaintext) ?: return null)
+    fun encrypt(plaintext: ByteArray, key: ByteArray): ByteArray? {
+        return encryptSymmetric(key, plaintext)
     }
 
     @JvmStatic
-    fun decrypt(key: ByteArray, ciphertext: ByteArray): ByteArray? {
+    fun encrypt(file: File, key: ByteArray): File? {
+        return try {
+            val encryptedData = encrypt(file.readBytes(), key) ?: return null
+            val outFile = File(file.parentFile, "${file.name}_encrypted")
+            outFile.outputStream().use { output ->
+                output.write(encryptedData)
+            }
+            outFile
+        } catch (_: Exception){
+            null
+        }
+    }
+
+    @JvmStatic
+    fun decrypt(file: File, key: ByteArray): File? {
+        return try {
+            val decryptedData = decrypt(file.readBytes(), key) ?: return null
+            val outFile = File(file.parentFile, "${file.name}_decrypted")
+            outFile.outputStream().use { output ->
+                output.write(decryptedData)
+            }
+            outFile
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    @JvmStatic
+    fun decrypt(ciphertext: ByteArray, key: ByteArray, ): ByteArray? {
         return decryptSymmetric(key, ciphertext)
     }
 

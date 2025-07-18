@@ -8,26 +8,36 @@ import java.time.ZonedDateTime
 
 class Converters {
     @TypeConverter
-    fun zonedDateTimeToString(date: ZonedDateTime): String
-    {
+    fun zonedDateTimeToString(date: ZonedDateTime?): String? {
         return date.toString()
     }
 
     @TypeConverter
-    fun stringToZonedDateTime(date: String): ZonedDateTime?
-    {
-        return ZonedDateTime.parse(date)
+    fun stringToZonedDateTime(date: String?): ZonedDateTime? {
+        return try {
+            ZonedDateTime.parse(date)
+        } catch (_: Exception) {
+            ZonedDateTime.now()
+        }
     }
 
     @TypeConverter
-    fun fromGroupData(value: GroupData): String
-    {
-        return value.toJson()!!
+    fun fromGroupData(value: GroupData?): String? {
+        return value.toJson() ?: ""
     }
 
     @TypeConverter
-    fun toGroupData(value: String): GroupData
-    {
-        return value.fromJson()!!
+    fun toGroupData(value: String?): GroupData? {
+        return value.fromJson() ?: GroupData()
+    }
+
+    @TypeConverter
+    fun toListOfStrings(value: String?): List<String>? {
+        return value.fromJson() ?: listOf()
+    }
+
+    @TypeConverter
+    fun fromListOfStrings(value: List<String>?): String? {
+        return value.toJson() ?: ""
     }
 }

@@ -10,7 +10,7 @@ object MessageEntityFactory {
     fun createIncoming(
         chatId: String, senderAddress: String?, serverUUID: String?, text: String?,
         type: MessageType?, actionFor: String?, refId: String?,
-        dateReceivedOnServer: ZonedDateTime?
+        dateReceivedOnServer: ZonedDateTime?, attachments: List<String> = listOf()
     ): MessageEntity {
         return MessageEntity(
             chatId = chatId,
@@ -24,7 +24,8 @@ object MessageEntityFactory {
             sent = false,
             deleted = false,
             date = ZonedDateTime.now(),
-            dateReceivedOnServer = dateReceivedOnServer
+            dateReceivedOnServer = dateReceivedOnServer,
+            files = attachments
         )
     }
 
@@ -33,7 +34,8 @@ object MessageEntityFactory {
         chatId: String,
         text: String?,
         type: MessageType?,
-        actionFor: String?
+        actionFor: String?,
+        attachments: List<String> = listOf()
     ): MessageEntity {
         return MessageEntity(
             chatId = chatId,
@@ -47,7 +49,8 @@ object MessageEntityFactory {
             sent = false,
             deleted = false,
             date = ZonedDateTime.now(),
-            dateReceivedOnServer = null
+            dateReceivedOnServer = null,
+            files = attachments
         )
     }
 }
