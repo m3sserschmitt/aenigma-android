@@ -111,7 +111,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     ): AttachmentsMetadata? {
         var i = 0
         var metadata: AttachmentsMetadata? = null
-        var finalURIs = mutableListOf<String>()
+        val finalURIs = mutableListOf<String>()
         for (file in files) {
             if (file.name == ATTACHMENTS_METADATA_FILE) {
                 metadata = file.readText().fromJson()

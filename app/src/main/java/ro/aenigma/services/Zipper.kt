@@ -17,7 +17,7 @@ import androidx.core.net.toUri
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import java.util.UUID
 
-class Zipper @Inject constructor(@ApplicationContext val context: Context) {
+class Zipper @Inject constructor(@param:ApplicationContext val context: Context) {
     fun extractZipToFilesDir(
         context: Context,
         zipFile: File,
