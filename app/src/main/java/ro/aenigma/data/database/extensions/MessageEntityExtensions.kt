@@ -4,7 +4,10 @@ import android.content.Context
 import ro.aenigma.R
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.models.Artifact
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.SerializerExtensions.deepCopy
@@ -51,8 +54,8 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
-    fun List<MessageWithDetails>.isFullPage(): Boolean {
-        return this.size == CONVERSATION_PAGE_SIZE
+    fun List<MessageWithDetailsDto>.isFullPage(): Boolean {
+        return size == CONVERSATION_PAGE_SIZE
     }
 
     @JvmStatic
@@ -100,5 +103,34 @@ object MessageEntityExtensions {
     @JvmStatic
     fun MessageEntity.isDelete(): Boolean {
         return type == MessageType.DELETE || type == MessageType.DELETE_ALL
+    }
+
+    @JvmStatic
+    fun MessageEntity.toDto(): MessageDto {
+        return MessageDto(
+            id = id,
+            chatId = chatId,
+            senderAddress = senderAddress,
+            serverUUID = serverUUID,
+            text = text,
+            type = type,
+            actionFor = actionFor,
+            refId = refId,
+            incoming = incoming,
+            sent = sent,
+            deleted = deleted,
+            date = date,
+            dateReceivedOnServer = dateReceivedOnServer,
+            files = files
+        )
+    }
+
+    @JvmStatic
+    fun MessageWithDetails.toDto(): MessageWithDetailsDto {
+        return MessageWithDetailsDto(
+            message = message.toDto(),
+            actionFor = actionFor?.toDto(),
+            sender = sender?.toDto()
+        )
     }
 }

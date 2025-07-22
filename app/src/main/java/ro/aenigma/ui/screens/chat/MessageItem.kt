@@ -50,25 +50,27 @@ import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithDetails
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
 @Composable
 fun MessageItem(
-    message: MessageWithDetails,
-    allContacts: List<ContactEntity>,
+    message: MessageWithDetailsDto,
+    allContacts: List<ContactDto>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    onItemSelected: (MessageWithDetails) -> Unit,
-    onItemDeselected: (MessageWithDetails) -> Unit,
+    onItemSelected: (MessageWithDetailsDto) -> Unit,
+    onItemDeselected: (MessageWithDetailsDto) -> Unit,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
@@ -88,7 +90,7 @@ fun MessageItem(
             message.sender
         else null
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isSent = message.message.sent || deliveryStatus
+    val isSent = message.message.sent || deliveryStatus == true
     val replyToMessage = if (message.message.type == MessageType.REPLY) message.actionFor else null
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
@@ -194,7 +196,7 @@ fun MessageItem(
 
 @Composable
 fun SenderName(
-    contact: ContactEntity?,
+    contact: ContactDto?,
     color: Color
 ) {
     if(contact == null)
@@ -212,8 +214,8 @@ fun SenderName(
 
 @Composable
 fun ResponseTo(
-    message: MessageEntity?,
-    allContacts: List<ContactEntity>,
+    message: MessageDto?,
+    allContacts: List<ContactDto>,
     contentColor: Color,
     containerColor: Color
 ) {
@@ -347,7 +349,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
     MessageItem(
         isSelectionMode = true,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
@@ -357,7 +359,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ), null, null
+            ).toDto(), null, null
         ),
         allContacts = listOf(
             ContactEntityFactory.createContact(
@@ -366,7 +368,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-            )
+            ).toDto()
         ),
         onItemDeselected = {},
         onClick = {},
@@ -380,7 +382,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
     MessageItem(
         isSelectionMode = true,
         isSelected = true,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
@@ -390,7 +392,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ), null, null
+            ).toDto(), null, null
         ),
         allContacts = listOf(
             ContactEntityFactory.createContact(
@@ -399,7 +401,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-            )
+            ).toDto()
         ),
         onItemDeselected = {},
         onClick = {},
@@ -413,13 +415,13 @@ fun MessagePending() {
     MessageItem(
         isSelectionMode = false,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ), null, null
+            ).toDto(), null, null
         ),
         allContacts = listOf(
             ContactEntityFactory.createContact(
@@ -428,7 +430,7 @@ fun MessagePending() {
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-            )
+            ).toDto()
         ),
         onItemDeselected = {},
         onClick = {},
@@ -442,13 +444,13 @@ fun MessageSent() {
     MessageItem(
         isSelectionMode = false,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ), null, null
+            ).toDto(), null, null
         ),
         allContacts = listOf(
             ContactEntityFactory.createContact(
@@ -457,7 +459,7 @@ fun MessageSent() {
                 publicKey = "pkey",
                 guardHostname = "hostname",
                 guardAddress = "address",
-            )
+            ).toDto()
         ),
         onItemDeselected = {},
         onClick = {},

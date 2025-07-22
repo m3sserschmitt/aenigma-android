@@ -12,17 +12,22 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.GroupEntity
-import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFullPage
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
@@ -42,16 +47,16 @@ class ChatViewModel @Inject constructor(
     private val localAddress = signatureService.address
 
     private val _conversationSupportListComparator =
-        compareByDescending<MessageWithDetails> { item -> item.message.id }
+        compareByDescending<MessageWithDetailsDto> { item -> item.message.id }
 
     // TODO: To be replaced with more efficient approach
-    private val _conversationSortedSet: SortedSet<MessageWithDetails> =
+    private val _conversationSortedSet: SortedSet<MessageWithDetailsDto> =
         sortedSetOf(_conversationSupportListComparator)
 
     private var _filterQuery = MutableStateFlow("")
 
     private val _allContacts =
-        MutableStateFlow<RequestState<List<ContactEntity>>>(RequestState.Idle)
+        MutableStateFlow<RequestState<List<ContactDto>>>(RequestState.Idle)
 
     private val _selectedContact =
         MutableStateFlow<RequestState<ContactWithGroup>>(RequestState.Idle)
@@ -61,9 +66,9 @@ class ChatViewModel @Inject constructor(
     private val _isAdmin = MutableStateFlow(false)
 
     private val _conversation =
-        MutableStateFlow<RequestState<List<MessageWithDetails>>>(RequestState.Idle)
+        MutableStateFlow<RequestState<List<MessageWithDetailsDto>>>(RequestState.Idle)
 
-    private val _replyToMessage = MutableStateFlow<MessageWithDetails?>(null)
+    private val _replyToMessage = MutableStateFlow<MessageWithDetailsDto?>(null)
 
     private val _nextPageAvailable = MutableStateFlow(false)
 
@@ -77,9 +82,9 @@ class ChatViewModel @Inject constructor(
 
     val isAdmin: StateFlow<Boolean> = _isAdmin
 
-    val conversation: StateFlow<RequestState<List<MessageWithDetails>>> = _conversation
+    val conversation: StateFlow<RequestState<List<MessageWithDetailsDto>>> = _conversation
 
-    val replyToMessage: StateFlow<MessageWithDetails?> = _replyToMessage
+    val replyToMessage: StateFlow<MessageWithDetailsDto?> = _replyToMessage
 
     val messageInputText: StateFlow<String> = _messageInputText
 
@@ -87,7 +92,7 @@ class ChatViewModel @Inject constructor(
 
     val nextPageAvailable: StateFlow<Boolean> = _nextPageAvailable
 
-    val allContacts: StateFlow<RequestState<List<ContactEntity>>> = _allContacts
+    val allContacts: StateFlow<RequestState<List<ContactDto>>> = _allContacts
 
     fun loadContacts(selectedChatId: String) {
         if (_allContacts.value is RequestState.Loading
@@ -104,7 +109,8 @@ class ChatViewModel @Inject constructor(
     private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.getContactsFlow().collect { contacts ->
+                repository.local.getContactsFlow()
+                    .map { contacts -> contacts.map { item -> item.toDto() } }.collect { contacts ->
                     _allContacts.value = RequestState.Success(contacts)
                 }
             } catch (ex: Exception) {
@@ -183,7 +189,7 @@ class ChatViewModel @Inject constructor(
         collectLastDeletedMessage(chatId)
     }
 
-    private fun readMessageDeliveryStatus(message: MessageWithDetails) {
+    private fun readMessageDeliveryStatus(message: MessageWithDetailsDto) {
         if (!message.message.sent) {
             viewModelScope.launch(ioDispatcher) {
                 workManager.getWorkInfosForUniqueWorkFlow(
@@ -202,7 +208,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun searchFilterMatched(message: MessageWithDetails?): Boolean {
+    private fun searchFilterMatched(message: MessageWithDetailsDto?): Boolean {
         val filterQuery = _filterQuery.value
         return if (filterQuery.isBlank()) {
             true
@@ -214,11 +220,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun messageFilesReady(message: MessageWithDetails?): Boolean {
+    private fun messageFilesReady(message: MessageWithDetailsDto?): Boolean {
         return message != null && (message.message.type != MessageType.FILES || (message.message.files != null && message.message.files.isNotEmpty()))
     }
 
-    private fun addItemsToConversation(messages: List<MessageWithDetails>) {
+    private fun addItemsToConversation(messages: List<MessageWithDetailsDto>) {
         messages.forEach { item ->
             if (searchFilterMatched(item) && messageFilesReady(item)) {
                 readMessageDeliveryStatus(item)
@@ -239,7 +245,7 @@ class ChatViewModel @Inject constructor(
         _conversationSortedSet.clear()
     }
 
-    private fun addNewItemToConversation(messages: List<MessageWithDetails>) {
+    private fun addNewItemToConversation(messages: List<MessageWithDetailsDto>) {
         val message = messages.firstOrNull()
         message ?: return
         if (searchFilterMatched(message) && messageFilesReady(message) && _conversationSortedSet.add(
@@ -259,16 +265,18 @@ class ChatViewModel @Inject constructor(
     private fun collectConversation(chatId: String) {
         viewModelScope.launch(ioDispatcher) {
             try {
-                repository.local.getConversationFlow(chatId).collect { messages ->
-                    synchronized(_conversationSortedSet) {
-                        if (_conversationSortedSet.isEmpty()) {
-                            addItemsToConversation(messages)
-                        } else {
-                            addNewItemToConversation(messages)
+                repository.local.getConversationFlow(chatId)
+                    .map { messages -> messages.map { message -> message.toDto() } }
+                    .collect { messages ->
+                        synchronized(_conversationSortedSet) {
+                            if (_conversationSortedSet.isEmpty()) {
+                                addItemsToConversation(messages)
+                            } else {
+                                addNewItemToConversation(messages)
+                            }
+                            setConversationReadSuccess()
                         }
-                        setConversationReadSuccess()
                     }
-                }
             } catch (ex: Exception) {
                 _conversation.value = RequestState.Error(ex)
             }
@@ -282,6 +290,7 @@ class ChatViewModel @Inject constructor(
                 try {
                     val searchResult =
                         repository.local.getConversationPage(chatId, getLastMessageId(), query)
+                            .map { item -> item.toDto() }
                     synchronized(_conversationSortedSet) {
                         clearConversation()
                         addItemsToConversation(searchResult)
@@ -300,6 +309,7 @@ class ChatViewModel @Inject constructor(
                 val lastIndex = _conversationSortedSet.last().message.id
                 val nextPage =
                     repository.local.getConversationPage(chatId, lastIndex, _filterQuery.value)
+                        .map { item -> item.toDto() }
                 synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
@@ -330,18 +340,18 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun removeMessages(messages: List<MessageWithDetails>) {
+    fun removeMessages(messages: List<MessageWithDetailsDto>) {
         synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
             val textMessagesWithRefs = messages.filter { item -> item.message.refId != null }
-            repository.local.removeMessagesSoft(messages.map { item -> item.message })
+            repository.local.removeMessagesSoft(messages.map { item -> item.message.toEntity() })
             textMessagesWithRefs.forEach { item ->
                 postToDatabase(MessageType.DELETE, item.message.refId, null)
             }
         }
     }
 
-    fun setReplyTo(messageEntity: MessageWithDetails?) {
+    fun setReplyTo(messageEntity: MessageWithDetailsDto?) {
         _replyToMessage.value = messageEntity
     }
 

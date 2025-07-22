@@ -18,11 +18,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
@@ -100,10 +100,10 @@ fun ChatScreen(
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
     isAdmin: Boolean,
-    allContacts: RequestState<List<ContactEntity>>,
+    allContacts: RequestState<List<ContactDto>>,
     connectionStatus: SignalRStatus,
-    messages: RequestState<List<MessageWithDetails>>,
-    replyToMessage: MessageWithDetails?,
+    messages: RequestState<List<MessageWithDetailsDto>>,
+    replyToMessage: MessageWithDetailsDto?,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     attachments: List<String>,
@@ -115,8 +115,8 @@ fun ChatScreen(
     onRenameContactDismissed: () -> Unit,
     onSendClicked: () -> Unit,
     onDeleteAll: () -> Unit,
-    onDelete: (List<MessageWithDetails>) -> Unit,
-    onReplyToMessage: (MessageWithDetails?) -> Unit,
+    onDelete: (List<MessageWithDetailsDto>) -> Unit,
+    onReplyToMessage: (MessageWithDetailsDto?) -> Unit,
     onSearch: (String) -> Unit,
     onAddGroupMembers: (List<String>, MessageType) -> Unit,
     onLeaveGroup: () -> Unit,
@@ -132,7 +132,7 @@ fun ChatScreen(
     var addGroupMembers by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<MessageWithDetails>() }
+    val selectedItems = remember { mutableStateListOf<MessageWithDetailsDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
@@ -352,7 +352,7 @@ fun ChatScreen(
 @Composable
 fun MarkConversationAsRead(
     chatId: String,
-    messages: RequestState<List<MessageWithDetails>>,
+    messages: RequestState<List<MessageWithDetailsDto>>,
     chatViewModel: ChatViewModel
 ) {
     LaunchedEffect(key1 = messages)
@@ -367,8 +367,8 @@ fun MarkConversationAsRead(
 @Preview
 @Composable
 fun ChatScreenPreview() {
-    val message3 = MessageWithDetails(
-        MessageEntity(
+    val message3 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             senderAddress = "123",
             text = "Hey",
@@ -385,8 +385,8 @@ fun ChatScreenPreview() {
             files = listOf()
         ), null, null
     )
-    val message2= MessageWithDetails(
-        MessageEntity(
+    val message2 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             text = "The green deal is secured =)",
             type = MessageType.TEXT,
@@ -404,8 +404,8 @@ fun ChatScreenPreview() {
         ), null, null
     )
 
-    val message1 = MessageWithDetails(
-        MessageEntity(
+    val message1 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             text = "Awesome!",
             type = MessageType.TEXT,

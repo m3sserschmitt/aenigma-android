@@ -17,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -36,7 +36,7 @@ import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatAppBar(
-    messages: RequestState<List<MessageWithDetails>>,
+    messages: RequestState<List<MessageWithDetailsDto>>,
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
     isAdmin: Boolean,
@@ -125,7 +125,7 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: RequestState<List<MessageWithDetails>>,
+    messages: RequestState<List<MessageWithDetailsDto>>,
     isGroup: Boolean,
     isMember: Boolean,
     isAdmin: Boolean,

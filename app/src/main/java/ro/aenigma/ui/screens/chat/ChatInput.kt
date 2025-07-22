@@ -32,13 +32,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.models.MessageWithDetailsDto
 
 @Composable
 fun ChatInput(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    replyToMessage: MessageWithDetails?,
+    replyToMessage: MessageWithDetailsDto?,
     messageInputText: String,
     attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
@@ -173,7 +173,7 @@ fun SelectedAttachments(
 
 @Composable
 fun ReplyToMessage(
-    message: MessageWithDetails?,
+    message: MessageWithDetailsDto?,
     onReplyAborted: () -> Unit,
 ) {
     if(message == null){

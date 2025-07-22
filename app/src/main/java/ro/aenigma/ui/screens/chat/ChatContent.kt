@@ -20,9 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -38,19 +38,19 @@ fun ChatContent(
     isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageWithDetails>>,
-    allContacts: RequestState<List<ContactEntity>>,
-    replyToMessage: MessageWithDetails?,
+    messages: RequestState<List<MessageWithDetailsDto>>,
+    allContacts: RequestState<List<ContactDto>>,
+    replyToMessage: MessageWithDetailsDto?,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetails>,
+    selectedMessages: List<MessageWithDetailsDto>,
     messageInputText: String,
     attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
     onAttachmentsSelected: (List<String>) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit,
-    onMessageSelected: (MessageWithDetails) -> Unit,
-    onMessageDeselected: (MessageWithDetails) -> Unit,
+    onMessageSelected: (MessageWithDetailsDto) -> Unit,
+    onMessageDeselected: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -101,7 +101,7 @@ fun ChatContent(
 }
 
 @Composable
-fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
+fun MessageDate(next: MessageWithDetailsDto?, message: MessageWithDetailsDto) {
     val localDate1 = next?.message?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
     val localDate2 = message.message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
@@ -121,13 +121,13 @@ fun DisplayMessages(
     modifier: Modifier = Modifier,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageWithDetails>>,
-    allContacts: RequestState<List<ContactEntity>>,
+    messages: RequestState<List<MessageWithDetailsDto>>,
+    allContacts: RequestState<List<ContactDto>>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetails>,
+    selectedMessages: List<MessageWithDetailsDto>,
     conversationListState: LazyListState = rememberLazyListState(),
-    onItemSelected: (MessageWithDetails) -> Unit,
-    onItemDeselected: (MessageWithDetails) -> Unit,
+    onItemSelected: (MessageWithDetailsDto) -> Unit,
+    onItemDeselected: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
     when {
@@ -179,8 +179,8 @@ fun DisplayMessages(
 @Preview
 @Composable
 fun ChatContentPreview() {
-    val message1 = MessageWithDetails(
-        MessageEntity(
+    val message1 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             senderAddress = "123",
             text = "Hey",
@@ -197,8 +197,8 @@ fun ChatContentPreview() {
             files = listOf()
         ), null, null
     )
-    val message2= MessageWithDetails(
-        MessageEntity(
+    val message2 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             text = "Please don't forget my green T-shirt...",
             type = MessageType.TEXT,
