@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -38,6 +40,7 @@ import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.GROUP_UPLOAD_NOTIFICATION_ID
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.util.concurrent.TimeUnit
 
@@ -52,7 +55,7 @@ class GroupUploadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 102
+
         private const val UNIQUE_WORK_NAME = "UploadGroupWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MAX_ATTEMPTS_COUNT = 5
@@ -273,9 +276,15 @@ class GroupUploadWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            ForegroundInfo(
+                GROUP_UPLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info)),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            ) else
+            ForegroundInfo(
+                GROUP_UPLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
+            )
     }
 }

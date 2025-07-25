@@ -1,5 +1,6 @@
 package ro.aenigma.models
 
+import androidx.work.WorkInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import ro.aenigma.models.enums.MessageType
 import java.time.ZonedDateTime
@@ -19,7 +20,7 @@ data class MessageDto(
     val date: ZonedDateTime,
     val dateReceivedOnServer: ZonedDateTime?,
     val files: List<String>?,
-    val deliveryStatus: MutableStateFlow<Boolean?> = MutableStateFlow(null)
+    val deliveryStatus: MutableStateFlow<WorkInfo.State?> = MutableStateFlow(null)
 ) {
     override fun hashCode(): Int {
         return id.hashCode()

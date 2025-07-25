@@ -163,7 +163,7 @@ class MessageSaver @Inject constructor(
             } ?: return false
             val messageId = repository.local.insertOrIgnoreMessage(entity)
             if (messageId != null) {
-                if(attachment != null) {
+                if (attachment != null) {
                     repository.local.insertOrUpdateAttachment(attachment.copy(messageId = messageId))
                 }
                 MessageSenderWorker.createWorkRequest(
@@ -177,6 +177,10 @@ class MessageSaver @Inject constructor(
         } catch (_: Exception) {
             return false
         }
+    }
+
+    suspend fun saveOutgoingMessages(messages: List<MessageEntity>): Boolean {
+        return messages.map { message -> saveOutgoingMessage(message) }.all { it }
     }
 
     private suspend fun createOrUpdateContact(artifact: Artifact, publicKey: String) {

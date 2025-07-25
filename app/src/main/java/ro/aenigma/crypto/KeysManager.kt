@@ -9,7 +9,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class KeysManager @Inject constructor(@ApplicationContext private val context: Context) {
+class KeysManager @Inject constructor(
+    @param:ApplicationContext private val context: Context
+) {
 
     companion object {
 

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.work.WorkInfo
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import ro.aenigma.R
@@ -71,7 +73,8 @@ fun MessageItem(
     isSelected: Boolean,
     onItemSelected: (MessageWithDetailsDto) -> Unit,
     onItemDeselected: (MessageWithDetailsDto) -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onRetryFailed: (MessageWithDetailsDto) -> Unit
 ) {
     val context = LocalContext.current
     val text = message.message.getMessageTextByAction(context)
@@ -90,7 +93,8 @@ fun MessageItem(
             message.sender
         else null
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isSent = message.message.sent || deliveryStatus == true
+    val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
+    val isOutgoingFailed = !message.message.incoming && !message.message.sent && deliveryStatus == WorkInfo.State.FAILED
     val replyToMessage = if (message.message.type == MessageType.REPLY) message.actionFor else null
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
@@ -104,7 +108,12 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = onClick
+                    onClick = {
+                        if(isOutgoingFailed) {
+                            onRetryFailed(message)
+                        }
+                        onClick()
+                    }
                 ),
             color = containerColor,
             shape = RoundedCornerShape(12.dp)
@@ -172,18 +181,25 @@ fun MessageItem(
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )
-                        if (!message.message.incoming && isSent) {
+                        if (isOutgoingSent) {
                             Icon(
                                 modifier = Modifier.size(12.dp).alpha(.5f),
                                 imageVector = Icons.Outlined.Done,
-                                contentDescription = stringResource(R.string.message_sent),
+                                contentDescription = stringResource(R.string.message_delivery_status),
                                 tint = contentColor
+                            )
+                        } else if (isOutgoingFailed) {
+                            Icon(
+                                modifier = Modifier.size(16.dp).alpha(.5f),
+                                imageVector = Icons.Outlined.Warning,
+                                contentDescription = stringResource(R.string.message_delivery_status),
+                                tint = Color.Red
                             )
                         } else if (!message.message.incoming) {
                             Icon(
                                 modifier = Modifier.size(16.dp).alpha(.5f),
                                 painter = painterResource(R.drawable.ic_timer),
-                                contentDescription = stringResource(R.string.message_sent),
+                                contentDescription = stringResource(R.string.message_delivery_status),
                                 tint = contentColor
                             )
                         }
@@ -372,6 +388,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
         ),
         onItemDeselected = {},
         onClick = {},
+        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -405,6 +422,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
         ),
         onItemDeselected = {},
         onClick = {},
+        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -434,6 +452,7 @@ fun MessagePending() {
         ),
         onItemDeselected = {},
         onClick = {},
+        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -463,6 +482,7 @@ fun MessageSent() {
         ),
         onItemDeselected = {},
         onClick = {},
+        onRetryFailed = {},
         onItemSelected = {}
     )
 }

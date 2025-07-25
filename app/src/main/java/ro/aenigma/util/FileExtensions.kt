@@ -11,4 +11,6 @@ object FileExtensions {
             "${context.packageName}.fileprovider",
             this
         ).toString()
+
+    fun File.lengthSafe(): Long = runCatching { length() }.getOrDefault(-1L)
 }

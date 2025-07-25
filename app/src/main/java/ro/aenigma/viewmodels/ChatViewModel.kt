@@ -2,7 +2,6 @@ package ro.aenigma.viewmodels
 
 import android.app.Application
 import androidx.lifecycle.*
-import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
@@ -29,6 +28,7 @@ import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.UriBatcher
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import java.util.SortedSet
@@ -38,6 +38,7 @@ import javax.inject.Inject
 class ChatViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
     private val workManager: WorkManager,
+    private val uriBatcher: UriBatcher,
     signatureService: SignatureService,
     signalrConnectionController: SignalrConnectionController,
     repository: Repository,
@@ -111,8 +112,8 @@ class ChatViewModel @Inject constructor(
             try {
                 repository.local.getContactsFlow()
                     .map { contacts -> contacts.map { item -> item.toDto() } }.collect { contacts ->
-                    _allContacts.value = RequestState.Success(contacts)
-                }
+                        _allContacts.value = RequestState.Success(contacts)
+                    }
             } catch (ex: Exception) {
                 _allContacts.value = RequestState.Error(ex)
             }
@@ -198,10 +199,7 @@ class ChatViewModel @Inject constructor(
                     )
                 ).collect { workInfo ->
                     if (workInfo.isNotEmpty()) {
-                        val lastWorkRequest = workInfo.last()
-                        if (lastWorkRequest.state == WorkInfo.State.SUCCEEDED) {
-                            message.message.deliveryStatus.value = true
-                        }
+                        message.message.deliveryStatus.value = workInfo.last().state
                     }
                 }
             }
@@ -359,6 +357,13 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) { postToDatabase() }
     }
 
+    fun onRetryFailedMessage(message: MessageWithDetailsDto) {
+        MessageSenderWorker.createWorkRequest(
+            workManager = workManager,
+            messageId = message.message.id
+        )
+    }
+
     fun editGroupMembers(members: List<String>, action: MessageType) {
         val group = getSelectedGroupEntity()
         if (group != null && group.groupData.name != null) {
@@ -386,14 +391,27 @@ class ChatViewModel @Inject constructor(
     ): Boolean {
         try {
             val contact = getSelectedContactEntity() ?: return false
-            val message = MessageEntityFactory.createOutgoing(
-                chatId = contact.address,
-                text = text,
-                type = type,
-                actionFor = actionFor,
-                attachments = attachments
-            )
-            return messageSaver.saveOutgoingMessage(message)
+            val messages = if (type == MessageType.FILES) {
+                uriBatcher.split(attachments).map { batch ->
+                    MessageEntityFactory.createOutgoing(
+                        chatId = contact.address,
+                        text = text,
+                        type = type,
+                        actionFor = actionFor,
+                        attachments = batch
+                    )
+                }
+            } else {
+                listOf(
+                    MessageEntityFactory.createOutgoing(
+                        chatId = contact.address,
+                        text = text,
+                        type = type,
+                        actionFor = actionFor
+                    )
+                )
+            }
+            return messageSaver.saveOutgoingMessages(messages)
         } catch (_: Exception) {
             return false
         }

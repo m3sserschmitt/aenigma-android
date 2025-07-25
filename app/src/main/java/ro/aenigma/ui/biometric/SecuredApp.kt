@@ -12,7 +12,7 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.flow.StateFlow
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.findActivity
+import ro.aenigma.util.ContextExtensions.findActivity
 
 @Composable
 fun SecuredApp(

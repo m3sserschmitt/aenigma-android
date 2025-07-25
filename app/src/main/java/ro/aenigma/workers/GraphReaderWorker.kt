@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -26,6 +28,7 @@ import ro.aenigma.data.database.factories.EdgeEntityFactory
 import ro.aenigma.data.database.factories.GuardEntityFactory
 import ro.aenigma.data.database.factories.VertexEntityFactory
 import ro.aenigma.services.NotificationService
+import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -36,7 +39,6 @@ class GraphReaderWorker @AssistedInject constructor(
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 100
         private const val MAX_RETRY_COUNT = 5
         private const val DELAY_BETWEEN_RETRIES: Long = 5
 
@@ -204,9 +206,15 @@ class GraphReaderWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            ForegroundInfo(
+                GRAPH_READER_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing)),
+            FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        ) else
+            ForegroundInfo(
+                GRAPH_READER_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
+            )
     }
 }

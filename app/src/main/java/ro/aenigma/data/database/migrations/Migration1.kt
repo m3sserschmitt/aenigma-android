@@ -6,9 +6,9 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_TABLE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 
 object Migration1: Migration(1, 2) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE $MESSAGES_TABLE ADD COLUMN attachments TEXT;")
-        database.execSQL("""
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE $MESSAGES_TABLE ADD COLUMN attachments TEXT;")
+        db.execSQL("""
             CREATE TABLE IF NOT EXISTS $ATTACHMENTS_TABLE (
                 messageId INTEGER NOT NULL,
                 path TEXT,

@@ -29,5 +29,19 @@ class Constants {
 
         const val ATTACHMENTS_METADATA_FILE = "metadata.json"
         const val ENCRYPTION_KEY_SIZE = 32
+
+        const val ATTACHMENT_DOWNLOAD_NOTIFICATION_ID = 105
+
+        const val GRAPH_READER_NOTIFICATION_ID = 100
+
+        const val GROUP_DOWNLOAD_NOTIFICATION_ID = 101
+
+        const val GROUP_UPLOAD_NOTIFICATION_ID = 102
+
+        const val MESSAGE_SENDER_NOTIFICATION_ID = 103
+
+        const val SIGNALR_NOTIFICATION_ID = 104
+
+        const val ATTACHMENT_BIN_PACKING_SIZE = 15L * 1024 * 1024
     }
 }

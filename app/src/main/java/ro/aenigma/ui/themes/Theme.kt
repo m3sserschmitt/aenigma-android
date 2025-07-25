@@ -13,7 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
-import ro.aenigma.util.findActivity
+import ro.aenigma.util.ContextExtensions.findActivity
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF9575CD), // Light Purple

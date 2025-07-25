@@ -22,7 +22,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.
 
 @Singleton
 class PreferencesDataStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     companion object {
         private const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"

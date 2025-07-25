@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -26,6 +28,7 @@ import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.models.GroupData
 import ro.aenigma.services.NotificationService
+import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -38,7 +41,6 @@ class GroupDownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 101
         private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MESSAGE_ID_ARG = "MessageId"
@@ -128,9 +130,15 @@ class GroupDownloadWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            ForegroundInfo(
+                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info)),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            ) else
+            ForegroundInfo(
+                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
+            )
     }
 }

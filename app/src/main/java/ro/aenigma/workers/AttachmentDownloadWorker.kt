@@ -28,6 +28,7 @@ import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
 import ro.aenigma.util.FileExtensions.toContentUriString
 import ro.aenigma.util.SerializerExtensions.fromJson
 import java.io.File
@@ -43,7 +44,6 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 105
         private const val UNIQUE_WORK_REQUEST_NAME = "attachment-download-worker"
         private const val MESSAGE_ID_ARG = "message-id"
         private const val MAX_RETRY_COUNT = 5
@@ -159,12 +159,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
+            ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
             notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                WORKER_NOTIFICATION_ID,
+                ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
                 notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
             )
     }

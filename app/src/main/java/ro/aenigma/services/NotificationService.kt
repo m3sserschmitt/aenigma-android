@@ -24,7 +24,7 @@ import javax.inject.Singleton
 
 @Singleton
 class NotificationService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     companion object {
         const val TOR_NOTIFICATION_ID = 1371

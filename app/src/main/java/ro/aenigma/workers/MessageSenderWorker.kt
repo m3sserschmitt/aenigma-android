@@ -43,6 +43,7 @@ import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
 import ro.aenigma.util.SerializerExtensions.toJson
 import java.io.File
 import java.util.UUID
@@ -61,7 +62,6 @@ class MessageSenderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 103
         private const val MESSAGE_ID_ARG = "MessageId"
         private const val ADDITIONAL_DESTINATIONS_ARG = "AdditionalDestinations"
         private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
@@ -280,7 +280,7 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
         val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
         val userName = repository.local.name.first()
-        var messageToBeSent =
+        val messageToBeSent =
             if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
         val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
         val contactWithGroup =
@@ -312,12 +312,12 @@ class MessageSenderWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
+            MESSAGE_SENDER_NOTIFICATION_ID,
             notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                WORKER_NOTIFICATION_ID,
+                MESSAGE_SENDER_NOTIFICATION_ID,
                 notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
             )
     }

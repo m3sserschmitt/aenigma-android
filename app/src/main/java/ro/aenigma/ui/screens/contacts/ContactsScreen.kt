@@ -39,8 +39,8 @@ import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.RequestState
-import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
 import java.time.ZonedDateTime
 

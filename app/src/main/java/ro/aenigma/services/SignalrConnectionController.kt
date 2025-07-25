@@ -22,7 +22,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SignalrConnectionController @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val torServiceManager: TorServiceManager,
     private val signalRClient: SignalRClient,
     private val repository: Repository

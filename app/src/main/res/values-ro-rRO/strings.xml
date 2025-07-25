@@ -70,7 +70,7 @@
     <string name="request_completed_with_errors">Solicitarea a fost finalizată cu erori</string>
     <string name="camera_permission_required_to_scan">Vă rugăm sa acordați permisiunea pentru utilizarea camerei din meniul Setări pentru scanarea codului QR.</string>
     <string name="message_selection">Statusul de selectarea al mesajului</string>
-    <string name="message_sent">Statusul de expediere al mesajului</string>
+    <string name="message_delivery_status">Statusul de expediere al mesajului</string>
     <string name="please_wait">Vă rugăm așteptați</string>
     <string name="app_name_and_version">Aenigma\nVersiunea: %s</string>
     <string name="copyright_notices">Aplicație dezvoltată de Romulus-Emanuel Ruja.\n© 2025 Romulus-Emanuel Ruja. Toate drepturile rezervate.</string>
@@ -110,7 +110,7 @@
     <string name="access_database">Accesați baza de date</string>
     <string name="authenticate_using_biometrics_or_pin">Autentificați-vă folosind datele biometrice sau codul PIN</string>
     <string name="authentication_failed">Autentificarea a eșuat</string>
-    <string name="guard_syncing">Se sincronizeaza</string>
+    <string name="guard_syncing">Se sincronizează</string>
     <string name="downloading_channel_info">Se preiau informațiile canalului</string>
     <string name="uploading_channel_info">Se distribuie informațiile canalului</string>
     <string name="sending_message">Se trimite un mesaj</string>
