@@ -1,5 +1,7 @@
 package ro.aenigma.data
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -14,6 +16,7 @@ import ro.aenigma.crypto.extensions.SignatureExtensions.getDataFromSignature
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.network.EnigmaApi
+import ro.aenigma.models.Article
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.models.GroupData
 import ro.aenigma.models.Neighborhood
@@ -23,11 +26,13 @@ import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.Vertex
 import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
+import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_FILE_TEMPLATE
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getBaseUrl
 import ro.aenigma.util.getTagQueryParameter
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -166,8 +171,7 @@ class RemoteDataSource @Inject constructor(
         val nonceIsGreaterThanPrevious =
             !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
         val adminModifiesGroup =
-            !newGroup && groupData.admins.contains(expectedPublisherAddress) == true
-                    && nonceIsGreaterThanPrevious
+            !newGroup && groupData.admins.contains(expectedPublisherAddress) && nonceIsGreaterThanPrevious
         return when {
             publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupData
             else -> null
@@ -211,6 +215,19 @@ class RemoteDataSource @Inject constructor(
         }
         body.saveToFile(outFile)
         return true
+    }
+
+    fun getArticles(url: String): Flow<List<Article>> {
+        return flow {
+            val indexFile = String.format(ARTICLES_INDEX_FILE_TEMPLATE, Locale.getDefault().language)
+            val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(indexFile)
+            val body = response.body()
+            if (response.code() != 200 || body == null) {
+                emit(listOf())
+            } else {
+                emit(body)
+            }
+        }
     }
 
     private fun validateVertex(

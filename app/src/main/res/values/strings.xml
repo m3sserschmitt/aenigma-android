@@ -125,4 +125,6 @@
     <string name="unknown_file">Unknown file</string>
     <string name="no_app_to_open">No app found to open this file</string>
     <string name="open">Open</string>
+    <string name="news">News</string>
+    <string name="there_is_nothing_here">There is nothing here right now</string>
 </resources>

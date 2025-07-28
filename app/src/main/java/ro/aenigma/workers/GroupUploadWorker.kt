@@ -115,8 +115,8 @@ class GroupUploadWorker @AssistedInject constructor(
         } + ExportedContactDataFactory.create(
             name = userName,
             publicKey = signatureService.publicKey.toString(),
-            guardHostname = guard.hostname.toString(),
-            guardAddress = guard.address.toString()
+            guardHostname = guard.hostname,
+            guardAddress = guard.address
         )
         return GroupDataFactory.create(name = groupName, members = members, admins = admins)
     }

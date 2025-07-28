@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -24,9 +25,11 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.Article
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
@@ -36,6 +39,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val feedSampler: FeedSampler,
     private val signatureService: SignatureService,
     repository: Repository,
     application: Application,
@@ -54,6 +58,8 @@ class MainViewModel @Inject constructor(
         MutableStateFlow<RequestState<List<ContactWithLastMessage>>>(
             RequestState.Idle
         )
+
+    private val _latestNews = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
 
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
@@ -85,6 +91,8 @@ class MainViewModel @Inject constructor(
 
     val useTor: StateFlow<Boolean> = _useTor
 
+    val latestNews: StateFlow<RequestState<List<Article>>> = _latestNews
+
     init {
         loadContacts()
         collectUseTor()
@@ -101,8 +109,7 @@ class MainViewModel @Inject constructor(
         collectSearches()
     }
 
-    private fun collectNotificationsPreferences()
-    {
+    private fun collectNotificationsPreferences() {
         viewModelScope.launch(ioDispatcher) {
             repository.local.notificationsAllowed.collect { allowed ->
                 _notificationsAllowed.value = allowed
@@ -112,8 +119,8 @@ class MainViewModel @Inject constructor(
 
     private fun collectUseTor() {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.useTor.collect {
-                useTor -> _useTor.value = useTor
+            repository.local.useTor.collect { useTor ->
+                _useTor.value = useTor
             }
         }
     }
@@ -137,6 +144,17 @@ class MainViewModel @Inject constructor(
                 }
             } catch (ex: Exception) {
                 _allContacts.value = RequestState.Error(ex)
+            }
+        }
+    }
+
+    fun collectFeed() {
+        viewModelScope.launch(ioDispatcher) {
+            _latestNews.value = RequestState.Loading
+            try {
+                _latestNews.value = RequestState.Success(feedSampler.getFeed().first())
+            } catch (e: Exception) {
+                _latestNews.value = RequestState.Error(e)
             }
         }
     }
@@ -278,7 +296,7 @@ class MainViewModel @Inject constructor(
                 _exportedContactDetails.value = contact.toExportedData()
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
-                if(code != null) {
+                if (code != null) {
                     emit(QrCodeDto(code, "@${contact.name.toString()}", false))
                 } else {
                     emit(null)

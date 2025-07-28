@@ -15,12 +15,14 @@ class Screens(navController: NavController) {
         const val ADD_CONTACTS_BASE_ROUTE = "addContacts"
         const val ABOUT_BASE_ROUTE = "about"
         const val LICENSES_BASE_ROUTE = "licenses"
+        const val ARTICLES_BASE_ROUTE = "articles"
 
         const val CONTACTS_SCREEN_ROUTE_FULL = CONTACTS_SCREEN_BASE_ROUTE
         const val CHAT_SCREEN_ROUTE_FULL = "$CHAT_SCREEN_BASE_ROUTE/{$CHAT_SCREEN_CHAT_ID_ARG}"
         const val ADD_CONTACT_SCREEN_ROUTE_FULL = "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}"
         const val ABOUT_SCREEN_ROUTE_FULL = ABOUT_BASE_ROUTE
         const val LICENSES_SCREEN_ROUTE_FULL = LICENSES_BASE_ROUTE
+        const val ARTICLES_SCREEN_ROUTE_FULL = ARTICLES_BASE_ROUTE
 
         const val STARTING_SCREEN = CONTACTS_SCREEN_ROUTE_FULL
         const val NO_SCREEN = "none"
@@ -72,5 +74,9 @@ class Screens(navController: NavController) {
 
     val licenses: () -> Unit = {
         navController.navigate(LICENSES_SCREEN_ROUTE_FULL)
+    }
+
+    val articles: () -> Unit = {
+        navController.navigate(ARTICLES_SCREEN_ROUTE_FULL)
     }
 }

@@ -5,11 +5,13 @@ import ro.aenigma.R
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
+import ro.aenigma.models.Article
 import ro.aenigma.models.Artifact
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
+import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.SerializerExtensions.deepCopy
 
 object MessageEntityExtensions {
@@ -121,6 +123,17 @@ object MessageEntityExtensions {
             message = message.toDto(),
             actionFor = actionFor?.toDto(),
             sender = sender?.toDto()
+        )
+    }
+
+    @JvmStatic
+    fun MessageWithDetails.toArticle(context: Context): Article {
+        return Article(
+            title = sender?.name,
+            description = message.text,
+            url = null,
+            date = message.date.toString(),
+            imageUrls = message.files?.filter { file -> context.isImageUri(file) }
         )
     }
 }

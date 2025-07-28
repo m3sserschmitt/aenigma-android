@@ -1,10 +1,6 @@
 package ro.aenigma.ui.screens.chat
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +58,8 @@ import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.util.ContextExtensions.isImageUri
+import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
@@ -293,7 +291,7 @@ fun UriListDisplay(uris: List<String>?) {
     {
         Column {
             uris.forEach { uri ->
-                UriItem(uri = uri.toUri(), context = context)
+                UriItem(uri = uri, context = context)
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -301,9 +299,9 @@ fun UriListDisplay(uris: List<String>?) {
 }
 
 @Composable
-fun UriItem(uri: Uri, context: Context) {
-    val isImage = remember(uri) { isImageUri(context, uri) }
-
+fun UriItem(uri: String, context: Context) {
+    val isImage = remember(key1 = uri) { context.isImageUri(uri) }
+    val parsedUri = uri.toUri()
     if (isImage) {
         AsyncImage(
             model = ImageRequest.Builder(context)
@@ -328,34 +326,18 @@ fun UriItem(uri: Uri, context: Context) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = uri.lastPathSegment ?: stringResource(id = R.string.unknown_file),
+                    text = parsedUri.lastPathSegment ?: stringResource(id = R.string.unknown_file),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Button(onClick = { openUriInExternalApp(context, uri) }) {
+                Button(onClick = { context.openUriInExternalApp(parsedUri) }) {
                     Text(
                         text = stringResource(id = R.string.open)
                     )
                 }
             }
         }
-    }
-}
-
-fun isImageUri(context: Context, uri: Uri): Boolean {
-    return context.contentResolver.getType(uri)?.startsWith("image/") == true
-}
-
-fun openUriInExternalApp(context: Context, uri: Uri) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, context.contentResolver.getType(uri) ?: "*/*")
-        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-    }
-    try {
-        context.startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, context.getString(R.string.no_app_to_open), Toast.LENGTH_SHORT).show()
     }
 }
 

@@ -118,16 +118,16 @@ class LocalDataSource @Inject constructor(
         contactsDao.get().remove(contacts)
     }
 
-    suspend fun getMessage(id: Long): MessageEntity? {
-        return messagesDao.get().get(id)
-    }
-
     suspend fun getMessageWithAttachments(id: Long): MessageWithAttachments? {
         return messagesDao.get().getWithAttachments(id)
     }
 
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>> {
         return messagesDao.get().getConversationFlow(chatId)
+    }
+
+    fun getLatestSharedFiles(): Flow<List<MessageWithDetails>> {
+        return messagesDao.get().getLatestSharedFiles()
     }
 
     suspend fun getConversationPage(
@@ -161,10 +161,6 @@ class LocalDataSource @Inject constructor(
         val message = messagesDao.get().getByRefId(refId) ?: return
         messagesDao.get().removeSoft(refId)
         updateContactLastMessageId(message.chatId)
-    }
-
-    suspend fun removeMessagesHard() {
-        return messagesDao.get().removeHard()
     }
 
     fun getLastDeletedMessage(charId: String): Flow<MessageEntity?> {

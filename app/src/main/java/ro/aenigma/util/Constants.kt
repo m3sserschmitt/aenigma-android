@@ -14,6 +14,8 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
+        const val NEWS_FEED_SIZE = 150
+
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
@@ -22,7 +24,15 @@ class Constants {
 
         const val APP_DOMAIN = "aenigma.ro"
 
-        const val SERVER_URL = "https://$APP_DOMAIN"
+        const val API_BASE_URL = "https://$APP_DOMAIN/"
+
+        const val ARTICLES_BASE_URL = "https://articles.$APP_DOMAIN/"
+
+        const val ARTICLES_INDEX_FILE_TEMPLATE = "index-%s.json"
+
+        const val SHARED_FILES_FEED_WEIGHT = 0.65
+
+        const val ARTICLES_FEED_WEIGHT = 0.35
 
         const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050

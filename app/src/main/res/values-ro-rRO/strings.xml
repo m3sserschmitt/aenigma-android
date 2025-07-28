@@ -123,4 +123,6 @@
     <string name="unknown_file">Fișier necunoscut</string>
     <string name="no_app_to_open">Nu s-a găsit o aplicație pentru a deschide fișierul</string>
     <string name="open">Deschide</string>
+    <string name="news">Noutăți</string>
+    <string name="there_is_nothing_here">Nu este nimic aici pentru moment</string>
 </resources>

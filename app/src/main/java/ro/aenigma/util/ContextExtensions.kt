@@ -1,20 +1,27 @@
 package ro.aenigma.util
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import ro.aenigma.ui.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
+import ro.aenigma.R
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_BIN_PACKING_SIZE
 import ro.aenigma.util.FileExtensions.lengthSafe
 import java.io.File
 
 object ContextExtensions {
+    fun Context.isImageUri(uri: String): Boolean {
+        return contentResolver.getType(uri.toUri())?.startsWith("image/") == true
+    }
+
     private fun Context.sizeOf(uriString: String): Long {
         val uri = uriString.toUri()
 
@@ -39,7 +46,7 @@ object ContextExtensions {
         /* ---------- 1. Build [Entry] list with sizes ---------- */
         val entries = uriStrings.map { Entry(it, sizeOf(it)) }
 
-        if(entries.any { entry -> entry.size < 0 }) {
+        if (entries.any { entry -> entry.size < 0 }) {
             return listOf()
         }
 
@@ -86,12 +93,23 @@ object ContextExtensions {
         throw IllegalStateException("Permissions should be called in the context of an Activity")
     }
 
-    fun Context.openApplicationDetails()
-    {
+    fun Context.openApplicationDetails() {
         val intent = Intent(
             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
             Uri.fromParts("package", this.packageName, null)
         )
         this.startActivity(intent)
+    }
+
+    fun Context.openUriInExternalApp(uri: Uri) {
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, contentResolver.getType(uri) ?: "*/*")
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            Toast.makeText(this, getString(R.string.no_app_to_open), Toast.LENGTH_SHORT).show()
+        }
     }
 }

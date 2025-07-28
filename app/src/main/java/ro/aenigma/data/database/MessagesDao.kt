@@ -9,11 +9,10 @@ import androidx.room.Update
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
+import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 
 @Dao
 interface MessagesDao {
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id = :id")
-    suspend fun get(id: Long): MessageEntity?
 
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE serverUUID = :serverUUID")
     suspend fun getByServerUuid(serverUUID: String): MessageEntity?
@@ -69,6 +68,7 @@ interface MessagesDao {
     @Update
     suspend fun update(message: MessageEntity)
 
-    @Query("DELETE FROM $MESSAGES_TABLE WHERE deleted = 1")
-    suspend fun removeHard()
+    @Transaction
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 LIMIT $NEWS_FEED_SIZE")
+    fun getLatestSharedFiles(): Flow<List<MessageWithDetails>>
 }
