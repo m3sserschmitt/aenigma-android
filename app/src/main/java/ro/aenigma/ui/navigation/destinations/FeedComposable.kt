@@ -5,22 +5,24 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.ui.navigation.Screens
-import ro.aenigma.ui.screens.feed.ArticlesScreen
+import ro.aenigma.ui.screens.feed.FeedScreen
 import ro.aenigma.viewmodels.MainViewModel
 
-fun NavGraphBuilder.articlesComposable (
+fun NavGraphBuilder.feedComposable (
     navigationTracker: NavigationTracker,
-    mainViewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    navigateToArticle: (String) -> Unit
 ) {
     composable(
-        route = Screens.ARTICLES_SCREEN_ROUTE_FULL
+        route = Screens.FEED_SCREEN_ROUTE_FULL
     ) {
         LaunchedEffect(key1 = true) {
-            navigationTracker.postCurrentRoute(Screens.ARTICLES_SCREEN_ROUTE_FULL)
+            navigationTracker.postCurrentRoute(Screens.FEED_SCREEN_ROUTE_FULL)
         }
 
-        ArticlesScreen(
-            mainViewModel = mainViewModel
+        FeedScreen(
+            mainViewModel = mainViewModel,
+            navigateToArticle = navigateToArticle
         )
     }
 }

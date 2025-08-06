@@ -13,9 +13,10 @@ import org.apache.commons.rng.simple.RandomSource
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
 import ro.aenigma.models.Article
-import ro.aenigma.util.Constants.Companion.ARTICLES_BASE_URL
 import ro.aenigma.util.Constants.Companion.ARTICLES_FEED_WEIGHT
+import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.SHARED_FILES_FEED_WEIGHT
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.collections.listOf
 import kotlin.math.abs
@@ -75,7 +76,9 @@ class FeedSampler @Inject constructor(
         val latestSharedFilesFlow = repository.local.getLatestSharedFiles().catch {
             emit(listOf())
         }.map { items -> items.map { m -> m.toArticle(applicationContext) } }
-        val articlesFlow = repository.remote.getArticles(ARTICLES_BASE_URL).catch {
+        val indexUrl =
+            String.format(ARTICLES_INDEX_URL_TEMPLATE, Locale.getDefault().language)
+        val articlesFlow = repository.remote.getArticles(indexUrl).catch {
             emit(listOf())
         }
         return articlesFlow.combine(latestSharedFilesFlow) { a, b ->

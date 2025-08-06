@@ -26,9 +26,7 @@ class Constants {
 
         const val API_BASE_URL = "https://$APP_DOMAIN/"
 
-        const val ARTICLES_BASE_URL = "https://articles.$APP_DOMAIN/"
-
-        const val ARTICLES_INDEX_FILE_TEMPLATE = "index-%s.json"
+        const val ARTICLES_INDEX_URL_TEMPLATE = "https://articles.$APP_DOMAIN/index-%s.json"
 
         const val SHARED_FILES_FEED_WEIGHT = 0.65
 

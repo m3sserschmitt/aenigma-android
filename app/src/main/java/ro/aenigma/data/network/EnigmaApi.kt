@@ -14,9 +14,9 @@ import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.Part
-import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.Streaming
+import retrofit2.http.Url
 import ro.aenigma.models.Article
 
 interface EnigmaApi {
@@ -48,6 +48,9 @@ interface EnigmaApi {
         @Query("tag") tag: String
     ): Response<ResponseBody>
 
-    @GET("/{indexFile}")
-    suspend fun getArticlesIndex(@Path("indexFile") fileName: String): Response<List<Article>>
+    @GET
+    suspend fun getArticlesIndex(@Url url: String): Response<List<Article>>
+
+    @GET
+    suspend fun getStringContent(@Url url: String): Response<String>
 }

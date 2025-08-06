@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
+import retrofit2.converter.scalars.ScalarsConverterFactory
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.util.Constants.Companion.API_BASE_URL
@@ -31,6 +32,7 @@ class RetrofitProvider @Inject constructor(
             return Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .client(createHttpClient(useTor, authToken))
+                .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(createJsonConverterFactory())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build()

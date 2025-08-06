@@ -19,8 +19,9 @@ import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
-fun ArticlesScreen(
-    mainViewModel: MainViewModel
+fun FeedScreen(
+    mainViewModel: MainViewModel,
+    navigateToArticle: (String) -> Unit
 ) {
     val articles by mainViewModel.latestNews.collectAsState()
 
@@ -28,14 +29,20 @@ fun ArticlesScreen(
         mainViewModel.collectFeed()
     }
 
-    ArticlesScreen(
-        articles = articles
+    FeedScreen(
+        articles = articles,
+        onArticleClicked = { article ->
+            if(article.url?.isNotBlank() == true) {
+                navigateToArticle(article.url)
+            }
+        }
     )
 }
 
 @Composable
-fun ArticlesScreen(
-    articles: RequestState<List<Article>>
+fun FeedScreen(
+    articles: RequestState<List<Article>>,
+    onArticleClicked: (Article) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -45,27 +52,30 @@ fun ArticlesScreen(
             )
         }
     ) { padding ->
-        ArticlesScreenContent(
+        FeedScreenContent(
             modifier = Modifier.padding(
                 top = padding.calculateTopPadding()
             ).fillMaxSize(),
-            articles = articles
+            articles = articles,
+            onArticleClicked = onArticleClicked
         )
     }
 }
 
 @Composable
-fun ArticlesScreenContent(
+fun FeedScreenContent(
     modifier: Modifier,
-    articles: RequestState<List<Article>>
+    articles: RequestState<List<Article>>,
+    onArticleClicked: (Article) -> Unit
 ) {
     when(articles) {
         is RequestState.Success -> {
             if(articles.data.isNotEmpty())
             {
-                ArticleList(
+                FeedList(
                     modifier = modifier,
-                    articles = articles.data
+                    articles = articles.data,
+                    onArticleClicked = onArticleClicked,
                 )
             } else {
                 EmptyFeedScreen()
@@ -81,7 +91,7 @@ fun ArticlesScreenContent(
 
 @Preview
 @Composable
-fun ArticlesScreenPreview()
+fun FeedScreenPreview()
 {
     val articles = List(1) {
         Article(
@@ -92,7 +102,8 @@ fun ArticlesScreenPreview()
             imageUrls = null
         )
     }
-    ArticlesScreen(
-        articles = RequestState.Success(articles)
+    FeedScreen(
+        articles = RequestState.Success(articles),
+        onArticleClicked = {}
     )
 }

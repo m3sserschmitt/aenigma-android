@@ -100,7 +100,7 @@ class SignalRClient @Inject constructor(
 
     private val _hubConnection = MutableStateFlow<HubConnection?>(null)
 
-    private val _guardAddress = MutableStateFlow<String>("")
+    private val _guardAddress = MutableStateFlow("")
 
     private var _status: MutableStateFlow<SignalRStatus> =
         MutableStateFlow(SignalRStatus.NotConnected)
@@ -185,7 +185,6 @@ class SignalRClient @Inject constructor(
         synchronized(_lock) {
             return _hubConnection.value?.connectionState == HubConnectionState.CONNECTED
         }
-        return false
     }
 
     private fun start() {

@@ -22,7 +22,8 @@ import ro.aenigma.ui.navigation.destinations.chatComposable
 import ro.aenigma.ui.navigation.destinations.contactsComposable
 import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.services.NavigationTracker
-import ro.aenigma.ui.navigation.destinations.articlesComposable
+import ro.aenigma.ui.navigation.destinations.articleComposable
+import ro.aenigma.ui.navigation.destinations.feedComposable
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
@@ -52,14 +53,14 @@ fun SetupNavigation(
                 )
                 NavigationBarItem(
                     selected = currentDestination?.hierarchy
-                        ?.any { it.route == Screens.ARTICLES_SCREEN_ROUTE_FULL } == true,
+                        ?.any { it.route == Screens.FEED_SCREEN_ROUTE_FULL } == true,
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_article),
                             contentDescription = stringResource(id = R.string.news)
                         )
                     },
-                    onClick = screen.articles
+                    onClick = screen.feed
                 )
             }
         }
@@ -96,9 +97,15 @@ fun SetupNavigation(
                 mainViewModel = mainViewModel,
                 navigateToAboutScreen = screen.about
             )
-            articlesComposable(
+            feedComposable(
                 navigationTracker = navigationTracker,
-                mainViewModel = mainViewModel
+                mainViewModel = mainViewModel,
+                navigateToArticle = screen.article
+            )
+            articleComposable(
+                navigationTracker = navigationTracker,
+                mainViewModel = mainViewModel,
+                navigateToFeed = screen.feed
             )
         }
     }

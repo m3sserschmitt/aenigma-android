@@ -26,13 +26,11 @@ import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.Vertex
 import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
-import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_FILE_TEMPLATE
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.getBaseUrl
 import ro.aenigma.util.getTagQueryParameter
 import java.io.File
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -85,17 +83,25 @@ class RemoteDataSource @Inject constructor(
     }
 
     suspend fun getVertices(): List<Vertex> {
-        val response = retrofitProvider.getApi().getVertices()
-        val body = response.body()
+        return try {
+            val response = retrofitProvider.getApi().getVertices()
+            val body = response.body()
 
-        if (response.code() != 200 || body == null) {
-            return listOf()
+            if (response.code() != 200 || body == null) {
+                listOf()
+            } else {
+                body.mapNotNull { vertex -> validateVertex(vertex, false) }
+            }
+        } catch (_: Exception) {
+            listOf()
         }
-
-        return body.mapNotNull { vertex -> validateVertex(vertex, false) }
     }
 
-    suspend fun createSharedData(data: ByteArray, passphrase: ByteArray?, accessCount: Int = 1): CreatedSharedData? {
+    suspend fun createSharedData(
+        data: ByteArray,
+        passphrase: ByteArray?,
+        accessCount: Int = 1
+    ): CreatedSharedData? {
         try {
             val out = (if (passphrase != null) CryptoProvider.encrypt(data, passphrase) else data)
                 ?: return null
@@ -179,54 +185,87 @@ class RemoteDataSource @Inject constructor(
     }
 
     suspend fun getVertex(address: String, isLeaf: Boolean, publicKey: String? = null): Vertex? {
-        val response = retrofitProvider.getApi().getVertex(address)
-        val vertex = response.body()
+        return try {
+            val response = retrofitProvider.getApi().getVertex(address)
+            val vertex = response.body()
 
-        if (response.code() != 200 || vertex == null) {
-            return null
+            if (response.code() != 200 || vertex == null) {
+                null
+            } else {
+                validateVertex(vertex, isLeaf, publicKey)
+            }
+        } catch (_: Exception) {
+            null
         }
-
-        return validateVertex(vertex, isLeaf, publicKey)
     }
 
     suspend fun postFile(file: File, accessCount: Int = 1): CreatedSharedData? {
-        val filePart = MultipartBody.Part.createFormData(
-            name = "file",
-            filename = file.name,
-            body = file.asRequestBody("application/octet-stream".toMediaType())
-        )
-        val countPart = accessCount
-            .toString()
-            .toRequestBody("text/plain".toMediaType())
-        val response = retrofitProvider.getApi().postFile(file = filePart, maxAccessCount = countPart)
-        val body = response.body()
-        return if(response.code() != 200 || body?.tag == null || body.resourceUrl == null)
-            return null
-        else
-            body
+        return try {
+            val filePart = MultipartBody.Part.createFormData(
+                name = "file",
+                filename = file.name,
+                body = file.asRequestBody("application/octet-stream".toMediaType())
+            )
+            val countPart = accessCount
+                .toString()
+                .toRequestBody("text/plain".toMediaType())
+            val response =
+                retrofitProvider.getApi().postFile(file = filePart, maxAccessCount = countPart)
+            val body = response.body()
+            if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
+                null
+            } else {
+                body
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     suspend fun getFile(url: String, outFile: File): Boolean {
-        val tag = url.getTagQueryParameter() ?: return false
-        val response = retrofitProvider.getApi(url.getBaseUrl()).getFile(tag)
-        val body = response.body()
-        if (response.code() != 200 || body == null) {
-            return false
+        return try {
+            val tag = url.getTagQueryParameter() ?: return false
+            val response = retrofitProvider.getApi(url.getBaseUrl()).getFile(tag)
+            val body = response.body()
+            if (response.code() != 200 || body == null) {
+                false
+            } else {
+                body.saveToFile(outFile)
+                true
+            }
+        } catch (_: Exception) {
+            false
         }
-        body.saveToFile(outFile)
-        return true
+
     }
 
     fun getArticles(url: String): Flow<List<Article>> {
         return flow {
-            val indexFile = String.format(ARTICLES_INDEX_FILE_TEMPLATE, Locale.getDefault().language)
-            val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(indexFile)
-            val body = response.body()
-            if (response.code() != 200 || body == null) {
+            try {
+                val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(url)
+                val body = response.body()
+                if (response.code() != 200 || body == null) {
+                    emit(listOf())
+                } else {
+                    emit(body)
+                }
+            } catch (_: Exception) {
                 emit(listOf())
-            } else {
-                emit(body)
             }
+        }
+    }
+
+    suspend fun getStringContent(url: String): String? {
+        return try {
+            val response = retrofitProvider.getApi(url.getBaseUrl()).getStringContent(url)
+            val body = response.body() ?: return null
+            if (response.code() != 200) {
+                null
+            } else {
+                body
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 

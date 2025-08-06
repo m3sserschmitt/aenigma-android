@@ -61,6 +61,8 @@ class MainViewModel @Inject constructor(
 
     private val _latestNews = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
 
+    private val _articleContent = MutableStateFlow<RequestState<String>>(RequestState.Idle)
+
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
     private val _importedContactDetails = MutableStateFlow<ExportedContactData?>(null)
@@ -92,6 +94,8 @@ class MainViewModel @Inject constructor(
     val useTor: StateFlow<Boolean> = _useTor
 
     val latestNews: StateFlow<RequestState<List<Article>>> = _latestNews
+
+    val articleContent: StateFlow<RequestState<String>> = _articleContent
 
     init {
         loadContacts()
@@ -395,6 +399,22 @@ class MainViewModel @Inject constructor(
                 _sharedDataRequestResult.value = RequestState.Error(
                     Exception("Could not process shared data. Invalid content or link.")
                 )
+            }
+        }
+    }
+
+    fun fetchArticle(url: String) {
+        viewModelScope.launch {
+            _articleContent.value = RequestState.Loading
+            _articleContent.value = try {
+                val result = repository.remote.getStringContent(url)
+                 if(result != null) {
+                    RequestState.Success(result)
+                } else {
+                    RequestState.Error(Exception("Cannot fetch resource"))
+                }
+            } catch (e: Exception) {
+                RequestState.Error(e)
             }
         }
     }

@@ -29,10 +29,10 @@ import ro.aenigma.R
 import ro.aenigma.models.Article
 
 @Composable
-fun ArticleList(
+fun FeedList(
     modifier: Modifier = Modifier,
     articles: List<Article>,
-    onArticleClick: (Article) -> Unit = {}
+    onArticleClicked: (Article) -> Unit = {}
 ) {
     LazyColumn(
         modifier = modifier
@@ -42,8 +42,8 @@ fun ArticleList(
             key = { it.hashCode() }
         ) { article ->
             ArticleCard(
-                article = article,
-                modifier = Modifier.clickable { onArticleClick(article) }
+                modifier = Modifier.clickable { onArticleClicked(article) },
+                article = article
             )
         }
     }
@@ -94,7 +94,7 @@ fun ArticleCard(
 
 @Preview(showBackground = true)
 @Composable
-fun ArticleListPreview() {
+fun FeedListPreview() {
     val articles = List(1) {
         Article(
             title = "Article $it",
@@ -104,8 +104,8 @@ fun ArticleListPreview() {
             imageUrls = null
         )
     }
-    ArticleList(
+    FeedList(
         articles = articles,
-        onArticleClick = {}
+        onArticleClicked = { }
     )
 }

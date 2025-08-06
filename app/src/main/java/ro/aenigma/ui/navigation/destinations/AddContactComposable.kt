@@ -17,14 +17,15 @@ fun NavGraphBuilder.addContactComposable(
 ) {
     composable(
         route = Screens.ADD_CONTACT_SCREEN_ROUTE_FULL,
-        arguments = listOf(navArgument(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
-        {
-            type = NavType.StringType
-        })
+        arguments = listOf(
+            navArgument(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
+            {
+                type = NavType.StringType
+            })
     ) { navBackStackEntry ->
-        var profileId = navBackStackEntry.arguments!!.getString(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
-        if(profileId == null)
-        {
+        var profileId =
+            navBackStackEntry.arguments!!.getString(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
+        if (profileId == null) {
             profileId = Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
         }
 
