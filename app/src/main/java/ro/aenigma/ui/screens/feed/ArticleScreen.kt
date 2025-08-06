@@ -12,6 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.model.ImageTransformer
+import com.mikepenz.markdown.model.NoOpImageTransformerImpl
 import com.mikepenz.markdown.model.rememberMarkdownState
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
@@ -22,25 +24,30 @@ import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun ArticleScreen(
-    url: String,
+    url: String?,
     mainViewModel: MainViewModel,
     navigateBack: () -> Unit
 ) {
     LaunchedEffect(key1 = url) {
-        mainViewModel.fetchArticle(url)
+        if(!url.isNullOrBlank())
+        {
+            mainViewModel.fetchArticle(url)
+        }
     }
 
     val articleContent by mainViewModel.articleContent.collectAsState()
 
     ArticleScreen(
         content = articleContent,
-        navigateBack = navigateBack
+        navigateBack = navigateBack,
+        imageTransformer = mainViewModel.markdownImageTransformer
     )
 }
 
 @Composable
 fun ArticleScreen(
     content: RequestState<String>,
+    imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     navigateBack: () -> Unit
 ) {
     Scaffold(
@@ -57,7 +64,8 @@ fun ArticleScreen(
                     start = 8.dp,
                     end = 8.dp
                 ),
-                content = content
+                content = content,
+                imageTransformer = imageTransformer
             )
         }
     )
@@ -66,13 +74,15 @@ fun ArticleScreen(
 @Composable
 fun ArticleScreenContent(
     modifier: Modifier = Modifier,
-    content: RequestState<String>
+    content: RequestState<String>,
+    imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
 ) {
     when(content) {
         is RequestState.Success -> {
             MarkdownContent(
                 modifier = modifier,
-                content = content.data
+                content = content.data,
+                imageTransformer = imageTransformer
             )
         }
         is RequestState.Idle,
@@ -91,12 +101,14 @@ fun ArticleScreenContent(
 @Composable
 fun MarkdownContent(
     modifier: Modifier = Modifier,
-    content: String
+    content: String,
+    imageTransformer: ImageTransformer = NoOpImageTransformerImpl()
 ) {
     val state = rememberMarkdownState(content)
     val scrollState = rememberScrollState()
     Markdown(
         markdownState = state,
-        modifier = modifier.verticalScroll(scrollState)
+        modifier = modifier.verticalScroll(scrollState),
+        imageTransformer = imageTransformer
     )
 }

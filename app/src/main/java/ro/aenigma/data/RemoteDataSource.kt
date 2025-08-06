@@ -1,5 +1,8 @@
 package ro.aenigma.data
 
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
@@ -236,7 +239,22 @@ class RemoteDataSource @Inject constructor(
         } catch (_: Exception) {
             false
         }
+    }
 
+    suspend fun getImage(url: String): ImageBitmap? {
+        return try {
+            val response = retrofitProvider.getApi(url.getBaseUrl()).getFileByUrl(url)
+            val body = response.body()
+            if(response.code() != 200 || body == null) {
+                null
+            } else {
+                response.body()?.byteStream().use { stream ->
+                    BitmapFactory.decodeStream(stream).asImageBitmap()
+                }
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun getArticles(url: String): Flow<List<Article>> {

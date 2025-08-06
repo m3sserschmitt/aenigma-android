@@ -1,8 +1,8 @@
 package ro.aenigma.viewmodels
 
-import android.app.Application
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
+import com.mikepenz.markdown.model.ImageTransformer
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -30,6 +30,8 @@ import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.FeedSampler
+import ro.aenigma.services.ImageFetcher
+import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
@@ -39,15 +41,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val feedSampler: FeedSampler,
-    private val signatureService: SignatureService,
+    private val feedSamplerLazy: dagger.Lazy<FeedSampler>,
+    private val signatureServiceLazy: dagger.Lazy<SignatureService>,
+    private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
+    private val imageFetcherLazy: dagger.Lazy<ImageFetcher>,
     repository: Repository,
-    application: Application,
     signalrConnectionController: SignalrConnectionController,
-) : BaseViewModel(
-    repository,
-    signalrConnectionController,
-    application) {
+) : BaseViewModel(repository, signalrConnectionController) {
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
@@ -103,6 +103,16 @@ class MainViewModel @Inject constructor(
         collectNotificationsPreferences()
     }
 
+    val markdownImageTransformer: ImageTransformer
+        get() {
+            return markdownImageTransformerLazy.get()
+        }
+
+    val imageFetcher: ImageFetcher
+        get() {
+            return imageFetcherLazy.get()
+        }
+
     fun loadContacts() {
         if (_allContacts.value is RequestState.Success
             || _allContacts.value is RequestState.Loading
@@ -156,7 +166,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             _latestNews.value = RequestState.Loading
             try {
-                _latestNews.value = RequestState.Success(feedSampler.getFeed().first())
+                _latestNews.value = RequestState.Success(feedSamplerLazy.get().getFeed().first())
             } catch (e: Exception) {
                 _latestNews.value = RequestState.Error(e)
             }
@@ -267,7 +277,7 @@ class MainViewModel @Inject constructor(
     private fun getMyProfileBitmap(): Flow<QrCodeDto?> {
         return flow {
             val guard = repository.local.getGuard()
-
+            val signatureService = signatureServiceLazy.get()
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
                 _exportedContactDetails.value = ExportedContactData(
                     guardHostname = guard.hostname,
@@ -336,9 +346,10 @@ class MainViewModel @Inject constructor(
                     val updatedContact = contact.contact.withName(name)
                     updatedContact?.let { repository.local.updateContact(it) }
                 }
+
                 ContactType.GROUP -> {
                     if (repository.local.getContactWithGroup(contact.contact.address)?.group?.groupData?.admins?.contains(
-                            signatureService.address
+                            signatureServiceLazy.get().address
                         ) == true
                     ) {
                         GroupUploadWorker.createOrUpdateGroupWorkRequest(
@@ -408,7 +419,7 @@ class MainViewModel @Inject constructor(
             _articleContent.value = RequestState.Loading
             _articleContent.value = try {
                 val result = repository.remote.getStringContent(url)
-                 if(result != null) {
+                if (result != null) {
                     RequestState.Success(result)
                 } else {
                     RequestState.Error(Exception("Cannot fetch resource"))

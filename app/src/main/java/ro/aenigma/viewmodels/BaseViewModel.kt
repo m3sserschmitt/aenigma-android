@@ -1,7 +1,6 @@
 package ro.aenigma.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ro.aenigma.data.Repository
 import kotlinx.coroutines.Dispatchers
@@ -13,8 +12,7 @@ import ro.aenigma.services.SignalrConnectionController
 abstract class BaseViewModel(
     protected val repository: Repository,
     private val signalrConnectionController: SignalrConnectionController,
-    application: Application,
-): AndroidViewModel(application) {
+): ViewModel() {
 
     protected var ioDispatcher = Dispatchers.IO
 

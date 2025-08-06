@@ -2,6 +2,7 @@ package ro.aenigma.services
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -21,6 +22,7 @@ import javax.inject.Inject
 import kotlin.collections.listOf
 import kotlin.math.abs
 
+@ViewModelScoped
 class FeedSampler @Inject constructor(
     @param:ApplicationContext private val applicationContext: Context,
     private val repository: Repository

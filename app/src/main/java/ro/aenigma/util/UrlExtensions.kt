@@ -21,3 +21,7 @@ fun String.getQueryParameter(key: String): String? {
 fun String.getTagQueryParameter(): String? {
     return this.getQueryParameter("tag")
 }
+
+fun String?.isRemoteUri(): Boolean {
+    return this?.toUri()?.scheme in listOf("http", "https")
+}

@@ -49,6 +49,10 @@ interface EnigmaApi {
     ): Response<ResponseBody>
 
     @GET
+    @Streaming
+    suspend fun getFileByUrl(@Url url: String): Response<ResponseBody>
+
+    @GET
     suspend fun getArticlesIndex(@Url url: String): Response<List<Article>>
 
     @GET

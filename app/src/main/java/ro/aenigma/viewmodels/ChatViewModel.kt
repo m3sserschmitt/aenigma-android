@@ -1,6 +1,5 @@
 package ro.aenigma.viewmodels
 
-import android.app.Application
 import androidx.lifecycle.*
 import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
@@ -42,8 +41,7 @@ class ChatViewModel @Inject constructor(
     signatureService: SignatureService,
     signalrConnectionController: SignalrConnectionController,
     repository: Repository,
-    application: Application,
-) : BaseViewModel(repository, signalrConnectionController, application) {
+) : BaseViewModel(repository, signalrConnectionController) {
 
     private val localAddress = signatureService.address
 

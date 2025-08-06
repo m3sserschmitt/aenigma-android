@@ -32,9 +32,9 @@ fun NavGraphBuilder.articleComposable (
         }
 
         ArticleScreen(
-            url = url ?: "",
+            url = url,
             mainViewModel = mainViewModel,
-            navigateBack = navigateToFeed
+            navigateBack = navigateToFeed,
         )
     }
 }

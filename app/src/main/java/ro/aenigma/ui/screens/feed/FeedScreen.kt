@@ -12,6 +12,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.Article
+import ro.aenigma.services.ImageFetcher
+import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.StandardAppBar
@@ -31,6 +33,7 @@ fun FeedScreen(
 
     FeedScreen(
         articles = articles,
+        imageFetcher = mainViewModel.imageFetcher,
         onArticleClicked = { article ->
             if(article.url?.isNotBlank() == true) {
                 navigateToArticle(article.url)
@@ -42,6 +45,7 @@ fun FeedScreen(
 @Composable
 fun FeedScreen(
     articles: RequestState<List<Article>>,
+    imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
     onArticleClicked: (Article) -> Unit
 ) {
     Scaffold(
@@ -57,6 +61,7 @@ fun FeedScreen(
                 top = padding.calculateTopPadding()
             ).fillMaxSize(),
             articles = articles,
+            imageFetcher = imageFetcher,
             onArticleClicked = onArticleClicked
         )
     }
@@ -66,6 +71,7 @@ fun FeedScreen(
 fun FeedScreenContent(
     modifier: Modifier,
     articles: RequestState<List<Article>>,
+    imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
     onArticleClicked: (Article) -> Unit
 ) {
     when(articles) {
@@ -75,7 +81,8 @@ fun FeedScreenContent(
                 FeedList(
                     modifier = modifier,
                     articles = articles.data,
-                    onArticleClicked = onArticleClicked,
+                    imageFetcher = imageFetcher,
+                    onArticleClicked = onArticleClicked
                 )
             } else {
                 EmptyFeedScreen()
