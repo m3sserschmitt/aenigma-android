@@ -16,18 +16,17 @@ import com.mikepenz.markdown.model.ImageData
 import com.mikepenz.markdown.model.ImageTransformer
 import dagger.hilt.android.scopes.ViewModelScoped
 import ro.aenigma.R
-import ro.aenigma.data.Repository
 import javax.inject.Inject
 
 @ViewModelScoped
 class MarkdownImageTransformer @Inject constructor(
-    private val repository: Repository
+    private val imageFetcher: CachedImageFetcher
 ): ImageTransformer {
 
     @Composable
     override fun transform(link: String): ImageData? {
         val bitmapState by produceState<ImageBitmap?>(null, link) {
-            value = runCatching { repository.remote.getImage(link) }.getOrNull()
+            value = runCatching { imageFetcher.fetch(link) }.getOrNull()
         }
 
         val painter: Painter = when (val bmp = bitmapState) {

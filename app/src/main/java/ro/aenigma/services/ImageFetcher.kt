@@ -9,13 +9,13 @@ import javax.inject.Inject
 open class ImageFetcher @Inject constructor(
     private val repository: Repository?
 ) {
-    open suspend fun fetch(url: String): ImageBitmap? {
-        return repository?.remote?.getImage(url)
+    open suspend fun fetch(uri: String): ImageBitmap? {
+        return repository?.remote?.getImage(uri)
     }
 }
 
 class NoOpImageFetcherImpl: ImageFetcher(null) {
-    override suspend fun fetch(url: String): ImageBitmap? {
+    override suspend fun fetch(uri: String): ImageBitmap? {
         return null
     }
 }

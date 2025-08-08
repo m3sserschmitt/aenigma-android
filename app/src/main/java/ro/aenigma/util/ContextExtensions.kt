@@ -6,9 +6,12 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import ro.aenigma.ui.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
@@ -16,8 +19,20 @@ import ro.aenigma.R
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_BIN_PACKING_SIZE
 import ro.aenigma.util.FileExtensions.lengthSafe
 import java.io.File
+import androidx.core.graphics.createBitmap
 
 object ContextExtensions {
+    fun Context.getBitmapFromDrawable(drawableResId: Int, width: Int = 0, height: Int = 0): Bitmap? {
+        val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
+        val bitmapWidth = if(width > 0) width else drawable.intrinsicWidth
+        val bitmapHeight = if (height > 0) height else drawable.intrinsicHeight
+        val bitmap = createBitmap(bitmapWidth, bitmapHeight)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
     fun Context.isImageUri(uri: String): Boolean {
         return contentResolver.getType(uri.toUri())?.startsWith("image/") == true
     }

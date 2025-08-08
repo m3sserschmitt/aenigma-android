@@ -29,6 +29,7 @@ import ro.aenigma.models.Article
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.CachedImageFetcher
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.MarkdownImageTransformer
@@ -44,7 +45,7 @@ class MainViewModel @Inject constructor(
     private val feedSamplerLazy: dagger.Lazy<FeedSampler>,
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
-    private val imageFetcherLazy: dagger.Lazy<ImageFetcher>,
+    private val imageFetcherLazy: dagger.Lazy<CachedImageFetcher>,
     repository: Repository,
     signalrConnectionController: SignalrConnectionController,
 ) : BaseViewModel(repository, signalrConnectionController) {
@@ -59,7 +60,7 @@ class MainViewModel @Inject constructor(
             RequestState.Idle
         )
 
-    private val _latestNews = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
+    private val _newsFeed = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
 
     private val _articleContent = MutableStateFlow<RequestState<String>>(RequestState.Idle)
 
@@ -93,7 +94,7 @@ class MainViewModel @Inject constructor(
 
     val useTor: StateFlow<Boolean> = _useTor
 
-    val latestNews: StateFlow<RequestState<List<Article>>> = _latestNews
+    val newsFeed: StateFlow<RequestState<List<Article>>> = _newsFeed
 
     val articleContent: StateFlow<RequestState<String>> = _articleContent
 
@@ -163,14 +164,22 @@ class MainViewModel @Inject constructor(
     }
 
     fun collectFeed() {
+        if(_newsFeed.value is RequestState.Success)
+        {
+            return
+        }
         viewModelScope.launch(ioDispatcher) {
-            _latestNews.value = RequestState.Loading
+            _newsFeed.value = RequestState.Loading
             try {
-                _latestNews.value = RequestState.Success(feedSamplerLazy.get().getFeed().first())
+                _newsFeed.value = RequestState.Success(feedSamplerLazy.get().getFeed().first())
             } catch (e: Exception) {
-                _latestNews.value = RequestState.Error(e)
+                _newsFeed.value = RequestState.Error(e)
             }
         }
+    }
+
+    fun resetFeed() {
+        _newsFeed.value = RequestState.Idle
     }
 
     private fun collectSearches() {

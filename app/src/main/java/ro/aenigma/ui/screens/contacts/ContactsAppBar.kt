@@ -32,7 +32,7 @@ import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
-import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
+import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
@@ -113,9 +113,9 @@ fun ContactsAppBar(
                 ConnectionStatusAppBarAction(
                     connectionStatus = connectionStatus
                 )
-                RetryConnectionAppBarAction(
+                ReloadAppBarAction(
                     visible = connectionStatus is SignalRStatus.Error.Aborted,
-                    onRetryConnection = onRetryConnection
+                    onClick = onRetryConnection
                 )
                 ActivateSearchAppBarAction(
                     onSearchModeTriggered = onSearchTriggered

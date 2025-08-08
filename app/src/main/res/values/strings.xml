@@ -41,7 +41,7 @@
     <string name="connection_failed">Connection failed</string>
     <string name="connection_failed_reason">The service might be temporarily unavailable. You might try to restart the app or try again later</string>
     <string name="retry_now">Retry now</string>
-    <string name="retry_connection">Retry connection</string>
+    <string name="reload">Reload</string>
     <string name="retry">Retry</string>
     <string name="permission_required">Permission required</string>
     <string name="notifications_permission_required">This app needs permission to show notifications. For the best experience, please grant the required permission from settings.</string>
@@ -127,4 +127,5 @@
     <string name="open">Open</string>
     <string name="news">News</string>
     <string name="there_is_nothing_here">There is nothing here right now</string>
+    <string name="picture">Picture</string>
 </resources>

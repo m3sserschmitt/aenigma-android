@@ -16,6 +16,7 @@ import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
+import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
@@ -25,9 +26,9 @@ fun FeedScreen(
     mainViewModel: MainViewModel,
     navigateToArticle: (String) -> Unit
 ) {
-    val articles by mainViewModel.latestNews.collectAsState()
+    val articles by mainViewModel.newsFeed.collectAsState()
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(key1 = articles) {
         mainViewModel.collectFeed()
     }
 
@@ -35,10 +36,11 @@ fun FeedScreen(
         articles = articles,
         imageFetcher = mainViewModel.imageFetcher,
         onArticleClicked = { article ->
-            if(article.url?.isNotBlank() == true) {
+            if (article.url?.isNotBlank() == true) {
                 navigateToArticle(article.url)
             }
-        }
+        },
+        onReloadFeedClicked = { mainViewModel.resetFeed() }
     )
 }
 
@@ -46,13 +48,20 @@ fun FeedScreen(
 fun FeedScreen(
     articles: RequestState<List<Article>>,
     imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
-    onArticleClicked: (Article) -> Unit
+    onArticleClicked: (Article) -> Unit,
+    onReloadFeedClicked: () -> Unit
 ) {
     Scaffold(
         topBar = {
             StandardAppBar(
                 title = stringResource(id = R.string.news),
-                navigateBackVisible = false
+                navigateBackVisible = false,
+                actions = {
+                    ReloadAppBarAction(
+                        visible = true,
+                        onClick = onReloadFeedClicked
+                    )
+                }
             )
         }
     ) { padding ->
@@ -74,10 +83,9 @@ fun FeedScreenContent(
     imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
     onArticleClicked: (Article) -> Unit
 ) {
-    when(articles) {
+    when (articles) {
         is RequestState.Success -> {
-            if(articles.data.isNotEmpty())
-            {
+            if (articles.data.isNotEmpty()) {
                 FeedList(
                     modifier = modifier,
                     articles = articles.data,
@@ -88,9 +96,11 @@ fun FeedScreenContent(
                 EmptyFeedScreen()
             }
         }
+
         is RequestState.Error -> ErrorScreen(
             text = stringResource(id = R.string.something_went_wrong)
         )
+
         RequestState.Idle,
         RequestState.Loading -> LoadingScreen()
     }
@@ -98,8 +108,7 @@ fun FeedScreenContent(
 
 @Preview
 @Composable
-fun FeedScreenPreview()
-{
+fun FeedScreenPreview() {
     val articles = List(1) {
         Article(
             title = "Article $it",
@@ -111,6 +120,7 @@ fun FeedScreenPreview()
     }
     FeedScreen(
         articles = RequestState.Success(articles),
-        onArticleClicked = {}
+        onArticleClicked = {},
+        onReloadFeedClicked = {}
     )
 }

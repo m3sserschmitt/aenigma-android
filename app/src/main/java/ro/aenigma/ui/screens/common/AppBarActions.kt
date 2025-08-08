@@ -122,18 +122,18 @@ fun ConnectionStatusAppBarAction(
 }
 
 @Composable
-fun RetryConnectionAppBarAction(
+fun ReloadAppBarAction(
     visible: Boolean,
-    onRetryConnection: () -> Unit
+    onClick: () -> Unit
 ) {
     if(visible) {
         IconButton(onClick = {
-            onRetryConnection()
+            onClick()
         }) {
             Icon(
                 imageVector = Icons.Filled.Refresh,
                 contentDescription = stringResource(
-                    id = R.string.retry_connection
+                    id = R.string.reload
                 ),
                 tint = MaterialTheme.colorScheme.onBackground
             )

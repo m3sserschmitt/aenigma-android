@@ -1,8 +1,10 @@
 package ro.aenigma.ui.screens.feed
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.model.ImageTransformer
 import com.mikepenz.markdown.model.NoOpImageTransformerImpl
 import com.mikepenz.markdown.model.rememberMarkdownState
@@ -107,8 +110,12 @@ fun MarkdownContent(
     val state = rememberMarkdownState(content)
     val scrollState = rememberScrollState()
     Markdown(
+        modifier = modifier.verticalScroll(scrollState)
+            .background(color = MaterialTheme.colorScheme.background),
+        colors = markdownColor(
+            text = MaterialTheme.colorScheme.onBackground
+        ),
         markdownState = state,
-        modifier = modifier.verticalScroll(scrollState),
         imageTransformer = imageTransformer
     )
 }

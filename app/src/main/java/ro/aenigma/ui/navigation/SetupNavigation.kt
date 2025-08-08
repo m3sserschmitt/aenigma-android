@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -24,6 +23,8 @@ import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.ui.navigation.destinations.articleComposable
 import ro.aenigma.ui.navigation.destinations.feedComposable
+import ro.aenigma.util.NavBackStackEntryExtensions.isContactsSelected
+import ro.aenigma.util.NavBackStackEntryExtensions.isFeedSelected
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
@@ -33,7 +34,6 @@ fun SetupNavigation(
     mainViewModel: MainViewModel
 ) {
     val backStackEntry by navHostController.currentBackStackEntryAsState()
-    val currentDestination = backStackEntry?.destination
     val screen = remember(navHostController) {
         Screens(navController = navHostController)
     }
@@ -41,26 +41,32 @@ fun SetupNavigation(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = currentDestination?.hierarchy
-                        ?.any { it.route == Screens.CONTACTS_SCREEN_ROUTE_FULL } == true,
+                    selected = backStackEntry.isContactsSelected(),
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_people),
                             contentDescription = stringResource(id = R.string.contacts)
                         )
                     },
-                    onClick = screen.contacts
+                    onClick = {
+                        if(!backStackEntry.isContactsSelected()) {
+                            screen.contacts()
+                        }
+                    }
                 )
                 NavigationBarItem(
-                    selected = currentDestination?.hierarchy
-                        ?.any { it.route == Screens.FEED_SCREEN_ROUTE_FULL } == true,
+                    selected = backStackEntry.isFeedSelected(),
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_article),
                             contentDescription = stringResource(id = R.string.news)
                         )
                     },
-                    onClick = screen.feed
+                    onClick = {
+                        if(!backStackEntry.isFeedSelected()) {
+                            screen.feed()
+                        }
+                    }
                 )
             }
         }

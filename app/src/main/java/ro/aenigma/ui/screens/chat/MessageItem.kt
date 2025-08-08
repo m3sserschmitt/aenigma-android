@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -32,9 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,9 +42,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.work.WorkInfo
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import ro.aenigma.R
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
@@ -59,6 +53,7 @@ import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.ui.screens.common.SecureAsyncImage
 import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.PrettyDateFormatter
@@ -304,16 +299,8 @@ fun UriItem(uri: String, context: Context) {
     val isImage = remember(key1 = uri) { context.isImageUri(uri) }
     val parsedUri = uri.toUri()
     if (isImage) {
-        AsyncImage(
-            model = ImageRequest.Builder(context)
-                .data(uri)
-                .crossfade(true)
-                .build(),
-            contentDescription = stringResource(id = R.string.files),
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Fit
+        SecureAsyncImage(
+            uri = uri
         )
     } else {
         Card(

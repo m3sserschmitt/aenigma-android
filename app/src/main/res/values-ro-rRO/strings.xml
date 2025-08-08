@@ -42,7 +42,7 @@
     <string name="connection_failed">Conexiune nereușită</string>
     <string name="connection_failed_reason">Serviciul poate fi indisponibil momentan. Reporniți aplicația sau încercați mai târziu</string>
     <string name="retry_now">Reîncercați acum</string>
-    <string name="retry_connection">Reincercați conexiunea</string>
+    <string name="reload">Reîncarcă</string>
     <string name="retry">Retry</string>
     <string name="permission_required">Permisiune necesară</string>
     <string name="notifications_permission_required">Aplicația are nevoie de permisiune pentru afișarea notificărilor. Pentru cea mai bună experiență, acordați permisiunea din meniul Setări.</string>
@@ -125,4 +125,5 @@
     <string name="open">Deschide</string>
     <string name="news">Noutăți</string>
     <string name="there_is_nothing_here">Nu este nimic aici pentru moment</string>
+    <string name="picture">Imagine</string>
 </resources>

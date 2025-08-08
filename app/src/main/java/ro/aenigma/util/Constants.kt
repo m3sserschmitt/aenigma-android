@@ -28,6 +28,8 @@ class Constants {
 
         const val ARTICLES_INDEX_URL_TEMPLATE = "https://articles.$APP_DOMAIN/index-%s.json"
 
+        const val IMAGES_CACHE_DIR = "images_cache"
+
         const val SHARED_FILES_FEED_WEIGHT = 0.65
 
         const val ARTICLES_FEED_WEIGHT = 0.35
