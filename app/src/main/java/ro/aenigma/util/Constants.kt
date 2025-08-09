@@ -15,6 +15,8 @@ class Constants {
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
         const val NEWS_FEED_SIZE = 150
+        const val SEND_MESSAGES_CHUNK_SIZE = 15
+        const val CONTACTS_LIST_MAX_COUNT = 150
 
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"

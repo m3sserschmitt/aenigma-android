@@ -137,7 +137,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
             val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
             val message = repository.local.getMessageWithAttachments(messageId.takeIf { it > 0 }
-                ?: return Result.failure())
+                ?: return Result.failure()).takeIf { !it?.message?.senderAddress.isNullOrBlank() }
                 ?: return Result.failure()
 
             if (message.message.type != MessageType.FILES) return Result.failure()
@@ -146,7 +146,11 @@ class AttachmentDownloadWorker @AssistedInject constructor(
             setForeground(getForegroundInfo())
 
             val archive = resolveAttachments(message) ?: return Result.retry()
-            val files = zipper.extractZipToFilesDir(applicationContext, archive)
+            val files = zipper.extractZipToFilesDir(
+                applicationContext,
+                archive,
+                message.message.chatId
+            )
             resolveFiles(message.message, files)
 
             archive.delete()

@@ -27,7 +27,7 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId ORDER BY id DESC LIMIT 1")
     fun getLastDeletedFlow(chatId: String): Flow<MessageEntity?>
 
-    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY id DESC LIMIT 1")
+    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId ORDER BY id DESC LIMIT 1")
     suspend fun getLastMessageId(chatId: String): Long?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -39,8 +39,8 @@ interface MessagesDao {
     @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE chatId = :chatId")
     suspend fun clearConversationSoft(chatId: String)
 
-    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE id IN (:ids)")
-    suspend fun removeSoft(ids: List<Long>)
+    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE id = :id")
+    suspend fun removeSoft(id: Long)
 
     @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE refId = :refId")
     suspend fun removeSoft(refId: String?)
@@ -69,6 +69,6 @@ interface MessagesDao {
     suspend fun update(message: MessageEntity)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 LIMIT $NEWS_FEED_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 LIMIT $NEWS_FEED_SIZE")
     fun getLatestSharedFiles(): Flow<List<MessageWithDetails>>
 }

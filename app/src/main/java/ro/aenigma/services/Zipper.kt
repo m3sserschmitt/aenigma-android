@@ -15,12 +15,14 @@ import javax.inject.Inject
 import kotlin.text.toByteArray
 import androidx.core.net.toUri
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
+import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import java.util.UUID
 
 class Zipper @Inject constructor(@param:ApplicationContext val context: Context) {
     fun extractZipToFilesDir(
         context: Context,
         zipFile: File,
+        destinationDir: String
     ): List<File> {
         return try {
             val tempDir = File(context.cacheDir, "${UUID.randomUUID()}")
@@ -30,7 +32,8 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
             zip.extractAll(tempDir.absolutePath)
 
             val finalFiles = mutableListOf<File>()
-            val destDir = context.filesDir
+            val destDir = context.getConversationFilesDir(destinationDir)
+            destDir.mkdirs()
 
             tempDir.walkTopDown()
                 .filter { it.isFile }

@@ -22,9 +22,25 @@ import java.io.File
 import androidx.core.graphics.createBitmap
 
 object ContextExtensions {
-    fun Context.getBitmapFromDrawable(drawableResId: Int, width: Int = 0, height: Int = 0): Bitmap? {
+    fun Context.getConversationFilesDir(destinationDir: String): File {
+        return File(filesDir, destinationDir)
+    }
+
+    fun Context.deleteUri(uri: String): Boolean {
+        return try {
+            contentResolver.delete(uri.toUri(), null, null) > 0
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun Context.getBitmapFromDrawable(
+        drawableResId: Int,
+        width: Int = 0,
+        height: Int = 0
+    ): Bitmap? {
         val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
-        val bitmapWidth = if(width > 0) width else drawable.intrinsicWidth
+        val bitmapWidth = if (width > 0) width else drawable.intrinsicWidth
         val bitmapHeight = if (height > 0) height else drawable.intrinsicHeight
         val bitmap = createBitmap(bitmapWidth, bitmapHeight)
         val canvas = Canvas(bitmap)
@@ -58,21 +74,17 @@ object ContextExtensions {
         limitBytes: Long = ATTACHMENT_BIN_PACKING_SIZE
     ): List<List<String>> {
 
-        /* ---------- 1. Build [Entry] list with sizes ---------- */
         val entries = uriStrings.map { Entry(it, sizeOf(it)) }
 
         if (entries.any { entry -> entry.size < 0 }) {
             return listOf()
         }
 
-        /* ---------- 2. Sort descending by size (FFD) ---------- */
         val sorted = entries.sortedByDescending { it.size }
 
-        /* ---------- 3. Bin‑packing, first‑fit ---------- */
         val bins = mutableListOf<Bin>()
 
         for (e in sorted) {
-            // oversize: isolate so caller can handle/reject later
             if (e.size >= limitBytes) {
                 bins += Bin(mutableListOf(e.str), e.size)
                 continue
@@ -82,7 +94,6 @@ object ContextExtensions {
             if (fit != null) fit.add(e) else bins += Bin(mutableListOf(e.str), e.size)
         }
 
-        /* ---------- 4. Return just the string groups ---------- */
         return bins.map { it.items }
     }
 

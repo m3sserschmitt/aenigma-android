@@ -1,6 +1,8 @@
 package ro.aenigma.data
 
+import android.content.Context
 import dagger.Lazy
+import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgeEntity
@@ -19,10 +21,15 @@ import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
+import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.enums.MessageType
+import ro.aenigma.util.ContextExtensions.deleteUri
+import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
-    private val preferencesDataStore: PreferencesDataStore
+    private val preferencesDataStore: PreferencesDataStore,
+    @param:ApplicationContext private val context: Context
 ) {
     @Inject
     lateinit var contactsDao: Lazy<ContactsDao>
@@ -87,10 +94,6 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get().getWithGroup(address)
     }
 
-    suspend fun getContactsWithGroup(): List<ContactWithGroup> {
-        return contactsDao.get().getWithGroup()
-    }
-
     fun getContactWithGroupFlow(address: String): Flow<ContactWithGroup?> {
         return contactsDao.get().getWithGroupFlow(address)
     }
@@ -112,10 +115,14 @@ class LocalDataSource @Inject constructor(
 
     suspend fun updateContact(contactEntity: ContactEntity) {
         contactsDao.get().update(contactEntity)
+        return updateContactLastMessageId(contactEntity.address)
     }
 
     suspend fun removeContacts(contacts: List<ContactEntity>) {
         contactsDao.get().remove(contacts)
+        for(contact in contacts) {
+            clearConversationSoft(contact.address)
+        }
     }
 
     suspend fun getMessageWithAttachments(id: Long): MessageWithAttachments? {
@@ -140,26 +147,54 @@ class LocalDataSource @Inject constructor(
 
     suspend fun clearConversationSoft(chatId: String) {
         messagesDao.get().clearConversationSoft(chatId)
-        updateContactLastMessageId(chatId)
+        clearConversationFiles(chatId)
+        return updateContactLastMessageId(chatId)
+    }
+
+    private fun clearConversationFiles(chatId: String): Boolean {
+        return try {
+            context.getConversationFilesDir(chatId).deleteRecursively()
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private suspend fun updateContactLastMessageId(chatId: String) {
         val contact = contactsDao.get().get(chatId) ?: return
-        val updatedContact =
-            contact.withLastMessageId(messagesDao.get().getLastMessageId(chatId)) ?: return
+        val lastMessageId = messagesDao.get().getLastMessageId(chatId) ?: messagesDao.get()
+            .insertOrIgnore(
+                MessageEntityFactory.createOutgoing(
+                    chatId = contact.address,
+                    text = null,
+                    type = MessageType.TEXT,
+                    actionFor = null
+                ).copy(deleted = true)
+            )
+        val updatedContact = contact.withLastMessageId(lastMessageId) ?: return
         return contactsDao.get().update(updatedContact)
     }
 
     suspend fun removeMessagesSoft(messages: List<MessageEntity>) {
-        if (messages.map { item -> item.chatId }.toSet().size != 1) return
-        messagesDao.get().removeSoft(messages.map { item -> item.id })
-        val chatId = messages.first().chatId
-        updateContactLastMessageId(chatId)
+        val chatIds = mutableSetOf<String>()
+        for(message in messages) {
+            messagesDao.get().removeSoft(message.id)
+            removeFiles(message)
+            if(chatIds.add(message.chatId)) {
+                updateContactLastMessageId(message.chatId)
+            }
+        }
+    }
+
+    private fun removeFiles(message: MessageEntity) {
+        for(file in message.files ?: listOf()) {
+            context.deleteUri(file)
+        }
     }
 
     suspend fun removeMessageSoft(refId: String) {
         val message = messagesDao.get().getByRefId(refId) ?: return
         messagesDao.get().removeSoft(refId)
+        removeFiles(message)
         updateContactLastMessageId(message.chatId)
     }
 

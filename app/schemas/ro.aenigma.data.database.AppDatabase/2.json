@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 2,
-    "identityHash": "d64e722598fe4154ab967b52437534d6",
+    "identityHash": "34c7a6e5b995e490d4feff5723f67197",
     "entities": [
       {
         "tableName": "Contacts",
@@ -72,14 +72,13 @@
         },
         "indices": [
           {
-            "name": "index_Contacts_hasNewMessage_name",
+            "name": "index_Contacts_lastMessageId",
             "unique": false,
             "columnNames": [
-              "hasNewMessage",
-              "name"
+              "lastMessageId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_Contacts_hasNewMessage_name` ON `${TABLE_NAME}` (`hasNewMessage`, `name`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_Contacts_lastMessageId` ON `${TABLE_NAME}` (`lastMessageId`)"
           }
         ]
       },
@@ -401,7 +400,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd64e722598fe4154ab967b52437534d6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '34c7a6e5b995e490d4feff5723f67197')"
     ]
   }
 }

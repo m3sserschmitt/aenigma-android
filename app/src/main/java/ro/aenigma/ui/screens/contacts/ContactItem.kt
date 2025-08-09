@@ -114,7 +114,7 @@ fun ContactItem(
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                if (contact.lastMessage != null) {
+                if (contact.lastMessage != null && !contact.lastMessage.deleted) {
                     Text(
                         modifier = Modifier.alpha(.75f),
                         text = if (!contact.lastMessage.incoming)

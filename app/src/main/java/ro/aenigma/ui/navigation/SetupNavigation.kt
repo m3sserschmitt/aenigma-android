@@ -1,7 +1,9 @@
 package ro.aenigma.ui.navigation
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -11,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -39,13 +42,17 @@ fun SetupNavigation(
     }
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                modifier = Modifier.height(50.dp),
+                containerColor = MaterialTheme.colorScheme.background
+            ) {
                 NavigationBarItem(
                     selected = backStackEntry.isContactsSelected(),
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_people),
-                            contentDescription = stringResource(id = R.string.contacts)
+                            contentDescription = stringResource(id = R.string.contacts),
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     onClick = {
@@ -59,7 +66,8 @@ fun SetupNavigation(
                     icon = {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_article),
-                            contentDescription = stringResource(id = R.string.news)
+                            contentDescription = stringResource(id = R.string.news),
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     },
                     onClick = {
