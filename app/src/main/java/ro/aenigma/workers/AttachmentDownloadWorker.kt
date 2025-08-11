@@ -46,7 +46,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     companion object {
         private const val UNIQUE_WORK_REQUEST_NAME = "attachment-download-worker"
         private const val MESSAGE_ID_ARG = "message-id"
-        private const val MAX_RETRY_COUNT = 5
+        const val MAX_RETRY_COUNT = 5
         private const val DELAY_BETWEEN_RETRIES: Long = 5
 
         fun createRequest(workManager: WorkManager, messageId: Long) {

@@ -289,7 +289,7 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageWithAttachments =
             (if (!contacts.isEmpty()) resolveAttachments(
                 messageToBeSent,
-                contacts.size
+                contacts.size * AttachmentDownloadWorker.MAX_RETRY_COUNT
             ) else messageToBeSent)
                 ?: return Result.retry()
 
