@@ -18,18 +18,19 @@ import ro.aenigma.util.ContextExtensions.findActivity
 fun SecuredApp(
     dbPassphraseLoaded: StateFlow<Boolean>,
     isDeviceSecured: Boolean,
+    isAuthenticated: Boolean,
+    onAuthSuccess: () -> Unit,
     content: (@Composable () -> Unit)
 ) {
     val context = LocalContext.current.findActivity()
-    var isAuthenticated by remember { mutableStateOf(false) }
-    var authError by remember { mutableStateOf<String>("") }
+    var authError by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(false) }
     val passphraseOk by dbPassphraseLoaded.collectAsState()
 
     if (!isAuthenticated && !error && isDeviceSecured) {
         BiometricAuthenticator(
             context = context,
-            onAuthSuccess = { isAuthenticated = true },
+            onAuthSuccess = onAuthSuccess,
             onAuthError = { errorMessage ->
                 error = true
                 authError = errorMessage

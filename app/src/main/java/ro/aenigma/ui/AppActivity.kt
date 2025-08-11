@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -49,6 +51,8 @@ class AppActivity : FragmentActivity() {
 
     private val dbPassphraseLoaded = MutableStateFlow(false)
 
+    private val isAuthenticated = MutableStateFlow(false)
+
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,8 +61,11 @@ class AppActivity : FragmentActivity() {
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
+                val auth by isAuthenticated.collectAsState()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
+                    isAuthenticated = auth,
+                    onAuthSuccess = { isAuthenticated.value = true },
                     dbPassphraseLoaded = dbPassphraseLoaded,
                 ) {
                     val navController = rememberNavController()
@@ -96,6 +103,7 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        isAuthenticated.value = false
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
