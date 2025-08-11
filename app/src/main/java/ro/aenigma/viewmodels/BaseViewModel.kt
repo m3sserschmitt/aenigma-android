@@ -6,6 +6,7 @@ import ro.aenigma.data.Repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import ro.aenigma.services.SignalrConnectionController
 
@@ -20,7 +21,8 @@ abstract class BaseViewModel(
 
     init {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.name.collect { userName -> _userName.value = userName }
+            repository.local.name.catch { _userName.value = "" }
+                .collect { userName -> _userName.value = userName }
         }
     }
 

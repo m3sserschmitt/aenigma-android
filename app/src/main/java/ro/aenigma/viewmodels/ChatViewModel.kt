@@ -9,6 +9,7 @@ import ro.aenigma.util.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -67,7 +68,8 @@ class ChatViewModel @Inject constructor(
     private val _conversation =
         MutableStateFlow<RequestState<List<MessageWithDetailsDto>>>(RequestState.Idle)
 
-    private val _replyToMessage = MutableStateFlow<RequestState<MessageWithDetailsDto>>(RequestState.Idle)
+    private val _replyToMessage =
+        MutableStateFlow<RequestState<MessageWithDetailsDto>>(RequestState.Idle)
 
     private val _nextPageAvailable = MutableStateFlow(false)
 
@@ -107,9 +109,11 @@ class ChatViewModel @Inject constructor(
 
     fun collectSelectedContact(selectedChatId: String) {
         viewModelScope.launch(ioDispatcher) {
-            try {
-                _selectedContact.value = RequestState.Loading
-                repository.local.getContactWithGroupFlow(selectedChatId).collect { item ->
+            _selectedContact.value = RequestState.Loading
+            repository.local.getContactWithGroupFlow(selectedChatId).catch { ex ->
+                _selectedContact.value = RequestState.Error(ex)
+            }.collect { item ->
+                try {
                     if (item != null) {
                         _selectedContact.value = RequestState.Success(item)
                         when (item.contact.type) {
@@ -132,9 +136,9 @@ class ChatViewModel @Inject constructor(
                         _isMember.value = false
                         _isAdmin.value = false
                     }
+                } catch (ex: Exception) {
+                    _selectedContact.value = RequestState.Error(ex)
                 }
-            } catch (ex: Exception) {
-                _selectedContact.value = RequestState.Error(ex)
             }
         }
     }
@@ -143,12 +147,12 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             repository.local.getLastDeletedMessage(selectedChatId).filter { message ->
                 message?.type == MessageType.DELETE_ALL
-            }.collect { clearConversation() }
+            }.catch { }.collect { clearConversation() }
         }
         viewModelScope.launch(ioDispatcher) {
             repository.local.getLastDeletedMessage(selectedChatId).filter { message ->
                 message?.type == MessageType.DELETE
-            }.collect { message ->
+            }.catch { }.collect { message ->
                 if (message?.actionFor != null) {
                     removeItemFromConversation(message.actionFor)
                 }
@@ -157,12 +161,6 @@ class ChatViewModel @Inject constructor(
     }
 
     fun loadConversation(chatId: String) {
-        if (_conversation.value is RequestState.Success
-            || _conversation.value is RequestState.Loading
-        ) return
-
-        _conversation.value = RequestState.Loading
-
         collectConversation(chatId)
         collectSearches(chatId)
         collectLastDeletedMessage(chatId)
@@ -225,9 +223,12 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun removeItemFromConversation(refId: String) {
-        val itemToBeRemoved = _conversationSortedSet.find { m -> m.message.refId == refId }
-        if (itemToBeRemoved != null) {
-            _conversationSortedSet.remove(itemToBeRemoved)
+        try {
+            val itemToBeRemoved = _conversationSortedSet.find { m -> m.message.refId == refId }
+            if (itemToBeRemoved != null) {
+                _conversationSortedSet.remove(itemToBeRemoved)
+            }
+        } catch (_: Exception) {
         }
     }
 
@@ -255,22 +256,24 @@ class ChatViewModel @Inject constructor(
 
     private fun collectConversation(chatId: String) {
         viewModelScope.launch(ioDispatcher) {
-            try {
-                repository.local.getConversationFlow(chatId)
-                    .map { messages -> messages.map { message -> message.toDto() } }
-                    .collect { messages ->
-                        synchronized(_conversationSortedSet) {
+            _conversation.value = RequestState.Loading
+            repository.local.getConversationFlow(chatId)
+                .map { messages -> messages.map { message -> message.toDto() } }
+                .catch { ex -> _conversation.value = RequestState.Error(ex) }
+                .collect { messages ->
+                    synchronized(_conversationSortedSet) {
+                        try {
                             if (_conversationSortedSet.isEmpty()) {
                                 addItemsToConversation(messages)
                             } else {
                                 addNewItemToConversation(messages)
                             }
                             setConversationReadSuccess()
+                        } catch (ex: Exception) {
+                            _conversation.value = RequestState.Error(ex)
                         }
                     }
-            } catch (ex: Exception) {
-                _conversation.value = RequestState.Error(ex)
-            }
+                }
         }
     }
 
@@ -299,8 +302,11 @@ class ChatViewModel @Inject constructor(
             try {
                 val lastIndex = _conversationSortedSet.last().message.id
                 val nextPage =
-                    repository.local.getConversationPage(chatId, lastIndex, _messageSearchQuery.value)
-                        .map { item -> item.toDto() }
+                    repository.local.getConversationPage(
+                        chatId,
+                        lastIndex,
+                        _messageSearchQuery.value
+                    ).map { item -> item.toDto() }
                 synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
@@ -343,7 +349,7 @@ class ChatViewModel @Inject constructor(
     }
 
     fun setReplyTo(message: MessageWithDetailsDto?) {
-        if(message == null) {
+        if (message == null) {
             _replyToMessage.value = RequestState.Idle
         } else if (message.message.senderAddress != null) {
             viewModelScope.launch(ioDispatcher) {

@@ -16,6 +16,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -126,7 +127,9 @@ class MainViewModel @Inject constructor(
 
     private fun collectNotificationsPreferences() {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.notificationsAllowed.collect { allowed ->
+            repository.local.notificationsAllowed.catch {
+                _notificationsAllowed.value = false
+            }.collect { allowed ->
                 _notificationsAllowed.value = allowed
             }
         }
@@ -134,7 +137,9 @@ class MainViewModel @Inject constructor(
 
     private fun collectUseTor() {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.useTor.collect { useTor ->
+            repository.local.useTor.catch {
+                _useTor.value = false
+            }.collect { useTor ->
                 _useTor.value = useTor
             }
         }
@@ -142,36 +147,40 @@ class MainViewModel @Inject constructor(
 
     private fun collectContacts() {
         viewModelScope.launch(ioDispatcher) {
-            try {
-                repository.local.getContactWithMessagesFlow().collect { contacts ->
-                    val query = _contactsSearchQuery.value
-                    val result = if (query.isNotBlank())
-                        contacts.filter { contact ->
-                            contact.contact.name?.contains(
-                                query,
-                                ignoreCase = true
-                            ) == true
-                        }
-                    else
-                        contacts
+            _allContacts.value = RequestState.Loading
+            repository.local.getContactWithMessagesFlow()
+                .catch { ex -> _allContacts.value = RequestState.Error(ex) }
+                .collect { contacts ->
+                    try {
+                        val query = _contactsSearchQuery.value
+                        val result = if (query.isNotBlank())
+                            contacts.filter { contact ->
+                                contact.contact.name?.contains(
+                                    query,
+                                    ignoreCase = true
+                                ) == true
+                            }
+                        else
+                            contacts
 
-                    _allContacts.value = RequestState.Success(result)
+                        _allContacts.value = RequestState.Success(result)
+                    } catch (ex: Exception) {
+                        _allContacts.value = RequestState.Error(ex)
+                    }
                 }
-            } catch (ex: Exception) {
-                _allContacts.value = RequestState.Error(ex)
-            }
         }
     }
 
     fun collectFeed() {
-        if(_newsFeed.value is RequestState.Success)
-        {
+        if (_newsFeed.value is RequestState.Success) {
             return
         }
         viewModelScope.launch(ioDispatcher) {
             _newsFeed.value = RequestState.Loading
             try {
-                _newsFeed.value = RequestState.Success(feedSamplerLazy.get().getFeed().first())
+                _newsFeed.value = RequestState.Success(feedSamplerLazy.get().getFeed().catch { ex ->
+                    _newsFeed.value = RequestState.Error(ex)
+                }.first())
             } catch (e: Exception) {
                 _newsFeed.value = RequestState.Error(e)
             }
@@ -206,20 +215,18 @@ class MainViewModel @Inject constructor(
     }
 
     fun generateCode(profileId: String) {
-        if (_qrCode.value is RequestState.Loading) return
-        _qrCode.value = RequestState.Loading
         viewModelScope.launch(ioDispatcher) {
-            try {
-                generateQrCodeBitmap(profileId).collect { qrCode ->
-                    if (qrCode != null)
-                        _qrCode.value = RequestState.Success(qrCode)
-                    else
-                        _qrCode.value = RequestState.Error(
-                            Exception("Failed to generate contact QR Code")
-                        )
-                }
-            } catch (ex: Exception) {
+            _qrCode.value = RequestState.Loading
+            generateQrCodeBitmap(profileId).catch { ex ->
                 _qrCode.value = RequestState.Error(ex)
+            }.collect { qrCode ->
+                if (qrCode != null) {
+                    _qrCode.value = RequestState.Success(qrCode)
+                } else {
+                    _qrCode.value = RequestState.Error(
+                        Exception("Failed to generate contact QR Code")
+                    )
+                }
             }
         }
     }
@@ -298,7 +305,7 @@ class MainViewModel @Inject constructor(
             } else {
                 emit(null)
             }
-        }
+        }.catch { emit(null) }
     }
 
     private fun getProfileBitmap(profileId: String): Flow<QrCodeDto?> {
@@ -317,7 +324,7 @@ class MainViewModel @Inject constructor(
             } else {
                 emit(null)
             }
-        }
+        }.catch { emit(null) }
     }
 
     private fun generateQrCodeBitmap(profileId: String): Flow<QrCodeDto?> {
@@ -375,40 +382,44 @@ class MainViewModel @Inject constructor(
     }
 
     fun createContactShareLink() {
-        _sharedDataCreateResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
-            val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
-            if (data != null) {
-                val response = repository.remote.createSharedData(data, null)
-                if (response != null) {
-                    _sharedDataCreateResult.value = RequestState.Success(response)
+            _sharedDataCreateResult.value = RequestState.Loading
+            try {
+                val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
+                if (data != null) {
+                    val response = repository.remote.createSharedData(data, null)
+                    if (response != null) {
+                        _sharedDataCreateResult.value = RequestState.Success(response)
+                    } else {
+                        _sharedDataCreateResult.value = RequestState.Error(
+                            Exception("Something went wrong while trying to create a link.")
+                        )
+                    }
                 } else {
                     _sharedDataCreateResult.value = RequestState.Error(
                         Exception("Something went wrong while trying to create a link.")
                     )
                 }
-            } else {
-                _sharedDataCreateResult.value = RequestState.Error(
-                    Exception("Something went wrong while trying to create a link.")
-                )
+            } catch (ex: Exception) {
+                _sharedDataCreateResult.value = RequestState.Error(ex)
             }
         }
     }
 
     fun openContactSharedData(url: String) {
-        _sharedDataRequestResult.value = RequestState.Loading
         viewModelScope.launch(defaultDispatcher) {
+            _sharedDataRequestResult.value = RequestState.Loading
             try {
-                val response = repository.remote.getSharedDataByUrl(url, null) ?: throw Exception()
+                val response = repository.remote.getSharedDataByUrl(url, null)
+                    ?: throw Exception("Invalid shared data content or link")
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
-                    ?: throw Exception()
+                    ?: throw Exception("Invalid shared data content")
                 _importedContactDetails.value =
-                    content.fromJson<ExportedContactData>() ?: throw Exception()
+                    content.fromJson<ExportedContactData>()
+                        ?: throw Exception("Could not deserialize shared data content")
                 _sharedDataRequestResult.value = RequestState.Success(response)
-            } catch (_: Exception) {
-                _sharedDataRequestResult.value = RequestState.Error(
-                    Exception("Could not process shared data. Invalid content or link.")
-                )
+            } catch (ex: Exception) {
+                _sharedDataRequestResult.value = RequestState.Error(Exception(ex))
             }
         }
     }
