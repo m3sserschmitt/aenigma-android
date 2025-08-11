@@ -26,6 +26,7 @@ import ro.aenigma.models.Neighborhood
 import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
+import ro.aenigma.models.TorCheck
 import ro.aenigma.models.Vertex
 import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
@@ -276,6 +277,20 @@ class RemoteDataSource @Inject constructor(
     suspend fun getStringContent(url: String): String? {
         return try {
             val response = retrofitProvider.getApi(url.getBaseUrl()).getStringContent(url)
+            val body = response.body() ?: return null
+            if (response.code() != 200) {
+                null
+            } else {
+                body
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun checkTor(url: String): TorCheck? {
+        return try {
+            val response = retrofitProvider.getApi(url.getBaseUrl()).checkTor(url)
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null

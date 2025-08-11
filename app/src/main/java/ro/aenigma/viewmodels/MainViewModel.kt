@@ -35,6 +35,7 @@ import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.TorServiceController
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.SerializerExtensions.toJson
@@ -47,6 +48,7 @@ class MainViewModel @Inject constructor(
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
     private val imageFetcherLazy: dagger.Lazy<CachedImageFetcher>,
+    torServiceController: TorServiceController,
     repository: Repository,
     signalrConnectionController: SignalrConnectionController,
 ) : BaseViewModel(repository, signalrConnectionController) {
@@ -94,6 +96,8 @@ class MainViewModel @Inject constructor(
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
     val useTor: StateFlow<Boolean> = _useTor
+
+    val torOk: StateFlow<Boolean> = torServiceController.isTorOk
 
     val newsFeed: StateFlow<RequestState<List<Article>>> = _newsFeed
 

@@ -42,6 +42,7 @@ class Constants {
 
         const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
+        const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 
         const val ATTACHMENTS_METADATA_FILE = "metadata.json"
         const val ENCRYPTION_KEY_SIZE = 32

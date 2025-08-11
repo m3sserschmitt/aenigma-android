@@ -18,6 +18,7 @@ import retrofit2.http.Query
 import retrofit2.http.Streaming
 import retrofit2.http.Url
 import ro.aenigma.models.Article
+import ro.aenigma.models.TorCheck
 
 interface EnigmaApi {
     @GET("/Info")
@@ -57,4 +58,7 @@ interface EnigmaApi {
 
     @GET
     suspend fun getStringContent(@Url url: String): Response<String>
+
+    @GET
+    suspend fun checkTor(@Url url: String): Response<TorCheck>
 }
