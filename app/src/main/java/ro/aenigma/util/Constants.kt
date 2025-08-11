@@ -32,6 +32,10 @@ class Constants {
 
         const val IMAGES_CACHE_DIR = "images_cache"
 
+        const val PRIVATE_KEY_FILE = "private-key.locked"
+
+        const val PUBLIC_KEY_FILE = "public-key.pem"
+
         const val SHARED_FILES_FEED_WEIGHT = 0.65
 
         const val ARTICLES_FEED_WEIGHT = 0.35
@@ -54,6 +58,8 @@ class Constants {
 
         const val SIGNALR_NOTIFICATION_ID = 104
 
-        const val ATTACHMENT_BIN_PACKING_SIZE = 15L * 1024 * 1024
+        const val ATTACHMENTS_CHUNK_PACKING_SIZE = 15L * 1024 * 1024
+
+        const val ATTACHMENTS_MAX_COUNT = 3
     }
 }

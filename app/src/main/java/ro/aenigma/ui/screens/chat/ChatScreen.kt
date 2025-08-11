@@ -42,7 +42,7 @@ fun ChatScreen(
 ) {
     LaunchedEffect(key1 = true)
     {
-        chatViewModel.loadContacts(chatId)
+        chatViewModel.collectSelectedContact(chatId)
         chatViewModel.loadConversation(chatId)
     }
 
@@ -53,7 +53,7 @@ fun ChatScreen(
     val attachments by chatViewModel.attachments.collectAsState()
     val connectionStatus by chatViewModel.clientStatus.collectAsState()
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
-    val allContacts by chatViewModel.allContacts.collectAsState()
+    val contacts by chatViewModel.contacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
     val isAdmin by chatViewModel.isAdmin.collectAsState()
 
@@ -67,21 +67,24 @@ fun ChatScreen(
         contact = selectedContact,
         isMember = isMember,
         isAdmin = isAdmin,
-        allContacts = allContacts,
+        contacts = contacts,
         connectionStatus = connectionStatus,
         replyToMessage = replyToMessage,
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         attachments = attachments,
+        onContactSearchQueryChanged = { searchQuery -> chatViewModel.searchContacts(searchQuery) },
         onRetryConnection = { chatViewModel.retryClientConnection() },
         onInputTextChanged = { newInputTextValue ->
-            chatViewModel.setMessageInputText(newInputTextValue)
+            chatViewModel.setMessageInputText(
+                newInputTextValue
+            )
         },
         onAttachmentsSelected = { attachments -> chatViewModel.setAttachments(attachments) },
-        onNewContactNameChanged = { name -> chatViewModel.validateNewContactName(name) },
+        onNewContactNameChanged = { name -> name.isNotBlank() },
         onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
-        onRenameContactDismissed = {  },
+        onRenameContactDismissed = { },
         onSendClicked = { chatViewModel.sendMessage() },
         onDeleteAll = { chatViewModel.clearConversation(chatId) },
         onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
@@ -101,13 +104,14 @@ fun ChatScreen(
     contact: RequestState<ContactWithGroup>,
     isMember: Boolean,
     isAdmin: Boolean,
-    allContacts: RequestState<List<ContactDto>>,
+    contacts: RequestState<List<ContactDto>>,
     connectionStatus: SignalRStatus,
     messages: RequestState<List<MessageWithDetailsDto>>,
-    replyToMessage: MessageWithDetailsDto?,
+    replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
     messageInputText: String,
     attachments: List<String>,
+    onContactSearchQueryChanged: (String) -> Unit,
     onRetryConnection: () -> Unit,
     onInputTextChanged: (String) -> Unit,
     onAttachmentsSelected: (List<String>) -> Unit,
@@ -131,24 +135,25 @@ fun ChatScreen(
     var deleteMessagesConfirmationVisible by remember { mutableStateOf(false) }
     var addGroupMemberDialogVisible by remember { mutableStateOf(false) }
     var leaveGroupDialogVisible by remember { mutableStateOf(false) }
-    var addGroupMembers by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
+    var groupAction by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<MessageWithDetailsDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
-        action = addGroupMembers,
+        action = groupAction,
         visible = addGroupMemberDialogVisible,
         contactWithGroup = contact,
-        allContacts = allContacts,
+        contacts = contacts,
         onConfirmClicked = { members ->
             addGroupMemberDialogVisible = false
-            onAddGroupMembers(members, addGroupMembers)
+            onAddGroupMembers(members, groupAction)
         },
         onDismissClicked = {
             addGroupMemberDialogVisible = false
-        }
+        },
+        onSearchQueryChanged = onContactSearchQueryChanged
     )
 
     LeaveGroupDialog(
@@ -292,8 +297,9 @@ fun ChatScreen(
                 onGroupActionClicked = { action ->
                     when (action) {
                         MessageType.GROUP_MEMBER_ADD, MessageType.GROUP_MEMBER_REMOVE -> {
-                            addGroupMembers = action
+                            groupAction = action
                             addGroupMemberDialogVisible = true
+                            onContactSearchQueryChanged("")
                         }
 
                         MessageType.GROUP_MEMBER_LEAVE -> {
@@ -318,7 +324,6 @@ fun ChatScreen(
                 isMember = isMember,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
-                allContacts = allContacts,
                 replyToMessage = replyToMessage,
                 messages = messages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
@@ -440,9 +445,9 @@ fun ChatScreenPreview() {
         ),
         isMember = true,
         isAdmin = false,
-        allContacts = RequestState.Success(listOf()),
+        contacts = RequestState.Success(listOf()),
         connectionStatus = SignalRStatus.Authenticated,
-        replyToMessage = null,
+        replyToMessage = RequestState.Idle,
         messages = RequestState.Success(
             listOf(message1, message2, message3)
         ),
@@ -450,6 +455,7 @@ fun ChatScreenPreview() {
         onRetryConnection = {},
         messageInputText = "",
         attachments = listOf(),
+        onContactSearchQueryChanged = { },
         onAttachmentsSelected = { },
         onSendClicked = {},
         onRenameContactConfirmed = {},

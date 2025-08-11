@@ -129,6 +129,9 @@ class GroupUploadWorker @AssistedInject constructor(
         existingGroupData: GroupData,
         memberAddresses: List<String>
     ): GroupData? {
+        if(memberAddresses.contains(signatureService.address)) {
+            return null
+        }
         return existingGroupData.removeMembers(memberAddresses)?.incrementNonce()
     }
 

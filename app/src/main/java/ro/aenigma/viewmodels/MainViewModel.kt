@@ -242,16 +242,6 @@ class MainViewModel @Inject constructor(
         resetContactChanges()
     }
 
-    fun validateNewContactName(name: String): Boolean {
-        return name.isNotBlank() && try {
-            (_allContacts.value as RequestState.Success).data.all { item ->
-                item.contact.name != name
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     fun createGroup(contacts: List<ContactWithLastMessage>, name: String) {
         viewModelScope.launch(ioDispatcher) {
             val memberAddresses = contacts.map { item -> item.contact.address }

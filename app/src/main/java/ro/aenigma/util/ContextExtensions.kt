@@ -16,12 +16,23 @@ import ro.aenigma.ui.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
 import ro.aenigma.R
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_BIN_PACKING_SIZE
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
 import ro.aenigma.util.FileExtensions.lengthSafe
 import java.io.File
 import androidx.core.graphics.createBitmap
+import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
+import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 
 object ContextExtensions {
+
+    fun Context.getPrivateKeyFile(): File {
+        return File(filesDir, PRIVATE_KEY_FILE)
+    }
+
+    fun Context.getPublicKeyFile(): File {
+        return File(filesDir, PUBLIC_KEY_FILE)
+    }
+
     fun Context.getConversationFilesDir(destinationDir: String): File {
         return File(filesDir, destinationDir)
     }
@@ -71,7 +82,7 @@ object ContextExtensions {
 
     fun Context.splitFilesFirstFitDecreasing(
         uriStrings: List<String>,
-        limitBytes: Long = ATTACHMENT_BIN_PACKING_SIZE
+        limitBytes: Long = ATTACHMENTS_CHUNK_PACKING_SIZE
     ): List<List<String>> {
 
         val entries = uriStrings.map { Entry(it, sizeOf(it)) }

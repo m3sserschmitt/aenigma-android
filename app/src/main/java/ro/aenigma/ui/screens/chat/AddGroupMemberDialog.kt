@@ -26,13 +26,61 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
+import ro.aenigma.models.extensions.ExportedContactDataExtensions.toContactDto
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
 import ro.aenigma.util.RequestState
+
+@Composable
+private fun getContactsList(
+    action: MessageType,
+    searchQuery: String,
+    existentMembers: List<ExportedContactData>?,
+    contacts: RequestState<List<ContactDto>>
+): List<ContactWithLastMessage> {
+    val memberAddresses = remember(key1 = action, key2 = existentMembers) {
+        if (action == MessageType.GROUP_MEMBER_ADD) {
+            val existentItemsSet = hashSetOf<String>()
+            existentMembers?.mapNotNullTo(existentItemsSet) { item -> item.address } ?: hashSetOf()
+        } else {
+            hashSetOf()
+        }
+    }
+    return remember(action, existentMembers, contacts, searchQuery) {
+        when (action) {
+            MessageType.GROUP_MEMBER_ADD -> {
+                if (contacts is RequestState.Success) {
+                    contacts.data.filter { contact ->
+                        contact.type == ContactType.CONTACT && !memberAddresses.contains(
+                            contact.address
+                        )
+                    }
+                } else {
+                    listOf()
+                }
+            }
+
+            MessageType.GROUP_MEMBER_REMOVE -> {
+                existentMembers?.mapNotNull { item ->
+                    if (item.name?.contains(searchQuery, ignoreCase = true) == true) {
+                        item.toContactDto()
+                    } else {
+                        null
+                    }
+                } ?: listOf()
+            }
+
+            else -> {
+                listOf()
+            }
+        }.map { item -> ContactWithLastMessage(item.toEntity(), null) }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,92 +88,93 @@ fun AddGroupMemberDialog(
     action: MessageType,
     visible: Boolean,
     contactWithGroup: RequestState<ContactWithGroup>,
-    allContacts: RequestState<List<ContactDto>>,
+    contacts: RequestState<List<ContactDto>>,
+    onSearchQueryChanged: (String) -> Unit,
     onDismissClicked: () -> Unit,
     onConfirmClicked: (List<String>) -> Unit
 ) {
-    if (visible && allContacts is RequestState.Success && contactWithGroup is RequestState.Success) {
-        val add = action == MessageType.GROUP_MEMBER_ADD
-        var searchQuery by remember { mutableStateOf("") }
-        val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
-        val memberAddresses = remember(contactWithGroup.data.group?.groupData?.members) {
-            val items = hashSetOf<String>()
-            contactWithGroup.data.group?.groupData?.members?.mapNotNullTo(items) { item -> item.address }
-                ?: hashSetOf()
-        }
-        val items = remember(allContacts, memberAddresses, add, searchQuery) {
-            allContacts.data.filter { item ->
-                !memberAddresses.contains(item.address) == add
-                        && item.type == ContactType.CONTACT
-                        && (item.name?.contains(searchQuery, ignoreCase = true) == true)
-            }.map { item -> ContactWithLastMessage(item.toEntity(), null) }
-        }
-        val isNotEmpty = remember { items.isNotEmpty() }
-        val context = LocalContext.current
-        val title = remember(add) {
-            when {
-                add && isNotEmpty -> context.getString(R.string.select_contacts_to_add)
-                !add && isNotEmpty -> context.getString(R.string.select_members_to_remove)
-                else -> context.getString(R.string.no_contacts_found)
-            }
-        }
+    if (!visible || contactWithGroup !is RequestState.Success) {
+        return
+    }
 
-        BasicAlertDialog(onDismissRequest = onDismissClicked) {
-            DialogContentTemplate(
-                title = title,
-                body = "",
-                dismissible = true,
-                onNegativeButtonClicked = onDismissClicked,
-                onPositiveButtonClicked = {
-                    onConfirmClicked(selectedItems.map { item -> item.contact.address })
-                },
-                positiveButtonVisible = isNotEmpty,
-                content = {
-                    Column {
-                        if(isNotEmpty) {
-                            TextField(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                value = searchQuery,
-                                onValueChange = { text -> searchQuery = text },
-                                placeholder = {
-                                    Text(
-                                        modifier = Modifier.alpha(0.25f),
-                                        text = stringResource(id = R.string.search),
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                },
-                                singleLine = true,
-                                colors = TextFieldDefaults.colors().copy(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent,
+    val add = action == MessageType.GROUP_MEMBER_ADD
+    var searchQuery by remember { mutableStateOf("") }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
+    val items = getContactsList(
+        action = action,
+        existentMembers = contactWithGroup.data.group?.groupData?.members,
+        contacts = contacts,
+        searchQuery = searchQuery
+    )
+    val isNotEmpty = items.isNotEmpty()
+    val context = LocalContext.current
+    val title = remember(add) {
+        when {
+            add && isNotEmpty -> context.getString(R.string.select_contacts_to_add)
+            !add && isNotEmpty -> context.getString(R.string.select_members_to_remove)
+            else -> context.getString(R.string.no_contacts_found)
+        }
+    }
+
+    BasicAlertDialog(onDismissRequest = onDismissClicked) {
+        DialogContentTemplate(
+            title = title,
+            body = "",
+            dismissible = true,
+            onNegativeButtonClicked = onDismissClicked,
+            onPositiveButtonClicked = {
+                onConfirmClicked(selectedItems.map { item -> item.contact.address })
+            },
+            positiveButtonVisible = isNotEmpty,
+            content = {
+                Column {
+                    if (isNotEmpty) {
+                        TextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            value = searchQuery,
+                            onValueChange = { text ->
+                                searchQuery = text
+                                if(action == MessageType.GROUP_MEMBER_ADD) {
+                                    onSearchQueryChanged(searchQuery)
+                                }
+                            },
+                            placeholder = {
+                                Text(
+                                    modifier = Modifier.alpha(0.25f),
+                                    text = stringResource(id = R.string.search),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
+                            },
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors().copy(
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
                             )
-                            ItemsList(
-                                items = items,
-                                listItem = { _, entity, isSelected ->
-                                    ContactItem(
-                                        onItemSelected = { item ->
-                                            selectedItems.add(item)
-                                        },
-                                        onItemDeselected = { item ->
-                                            selectedItems.remove(item)
-                                        },
-                                        onClick = { },
-                                        contact = entity,
-                                        isSelectionMode = true,
-                                        isSelected = isSelected
-                                    )
-                                },
-                                selectedItems = selectedItems,
-                                itemKeyProvider = { c -> c.contact.address }
-                            )
-                        }
+                        )
+                        ItemsList(
+                            items = items,
+                            listItem = { _, entity, isSelected ->
+                                ContactItem(
+                                    onItemSelected = { item ->
+                                        selectedItems.add(item)
+                                    },
+                                    onItemDeselected = { item ->
+                                        selectedItems.remove(item)
+                                    },
+                                    onClick = { },
+                                    contact = entity,
+                                    isSelectionMode = true,
+                                    isSelected = isSelected
+                                )
+                            },
+                            selectedItems = selectedItems,
+                            itemKeyProvider = { c -> c.contact.address }
+                        )
                     }
                 }
-            )
-        }
+            }
+        )
     }
 }
 
@@ -136,7 +185,7 @@ fun AddGroupMemberDialogPreview() {
         action = MessageType.GROUP_MEMBER_ADD,
         visible = true,
         contactWithGroup = RequestState.Idle,
-        allContacts = RequestState.Success(
+        contacts = RequestState.Success(
             listOf(
                 ContactEntityFactory.createContact(
                     address = "123",
@@ -155,6 +204,7 @@ fun AddGroupMemberDialogPreview() {
             )
         ),
         onConfirmClicked = { },
+        onSearchQueryChanged = { },
         onDismissClicked = { }
     )
 }

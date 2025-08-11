@@ -2,6 +2,8 @@ package ro.aenigma.crypto
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import ro.aenigma.util.ContextExtensions.getPrivateKeyFile
+import ro.aenigma.util.ContextExtensions.getPublicKeyFile
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -14,10 +16,6 @@ class KeysManager @Inject constructor(
 ) {
 
     companion object {
-
-        private const val PRIVATE_KEY_FILE = "private-key.locked"
-
-        private const val PUBLIC_KEY_FILE = "public-key.pem"
 
         @JvmStatic
         private fun writeKey(file: File, data: ByteArray) {
@@ -43,17 +41,9 @@ class KeysManager @Inject constructor(
         generateKeyIfNotExistent()
     }
 
-    private fun getPrivateKeyFile(): File {
-        return File(context.filesDir, PRIVATE_KEY_FILE)
-    }
-
-    private fun getPublicKeyFile(): File {
-        return File(context.filesDir, PUBLIC_KEY_FILE)
-    }
-
     private fun keysExists(): Boolean {
         return try {
-            getPrivateKeyFile().exists() && getPublicKeyFile().exists()
+            context.getPrivateKeyFile().exists() && context.getPublicKeyFile().exists()
         } catch (_: Exception) {
             false
         }
@@ -66,8 +56,8 @@ class KeysManager @Inject constructor(
                 CryptoProvider.masterKeyEncrypt(
                     keyPairDto.privateKey?.toByteArray() ?: return false
                 ) ?: return false
-            writeKey(getPrivateKeyFile(), encryptedPrivateKey)
-            writeKey(getPublicKeyFile(), keyPairDto.publicKey?.toByteArray() ?: return false)
+            writeKey(context.getPrivateKeyFile(), encryptedPrivateKey)
+            writeKey(context.getPublicKeyFile(), keyPairDto.publicKey?.toByteArray() ?: return false)
             true
         } catch (_: Exception) {
             false
@@ -77,7 +67,7 @@ class KeysManager @Inject constructor(
     fun readPrivateKey(): String? {
         return try {
             String(
-                CryptoProvider.masterKeyDecrypt(readKey(getPrivateKeyFile()) ?: return null)
+                CryptoProvider.masterKeyDecrypt(readKey(context.getPrivateKeyFile()) ?: return null)
                     ?: return null
             )
         } catch (_: Exception) {
@@ -87,7 +77,7 @@ class KeysManager @Inject constructor(
 
     fun readPublicKey(): String? {
         return try {
-            String(readKey(getPublicKeyFile()) ?: return null)
+            String(readKey(context.getPublicKeyFile()) ?: return null)
         } catch (_: Exception) {
             null
         }

@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.chat
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,12 +34,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
+import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatInput(
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    replyToMessage: MessageWithDetailsDto?,
+    visible: Boolean = true,
+    replyToMessage: RequestState<MessageWithDetailsDto>,
     messageInputText: String,
     attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
@@ -46,12 +49,16 @@ fun ChatInput(
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
+    if(!visible) {
+        return
+    }
     val context = LocalContext.current
     val multiplePhotoPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         val contentResolver = context.contentResolver
-        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        val takeFlags =
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
         uris.forEach { uri ->
             try {
@@ -59,8 +66,15 @@ fun ChatInput(
             } catch (_: SecurityException) {
             }
         }
-
-        onAttachmentsSelected(uris.map { it.toString() })
+        if (uris.size > ATTACHMENTS_MAX_COUNT) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.attachment_files_limit).format(ATTACHMENTS_MAX_COUNT),
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            onAttachmentsSelected(uris.map { it.toString() })
+        }
     }
 
     Column {
@@ -112,14 +126,12 @@ fun ChatInput(
                     focusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     unfocusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer
                 ),
-                enabled = enabled
             )
             IconButton(
                 modifier = Modifier
                     .size(64.dp)
                     .weight(1f),
                 onClick = onSendClicked,
-                enabled = enabled
             ) {
                 Icon(
                     modifier = Modifier.alpha(.75f),
@@ -173,12 +185,20 @@ fun SelectedAttachments(
 
 @Composable
 fun ReplyToMessage(
-    message: MessageWithDetailsDto?,
+    message: RequestState<MessageWithDetailsDto>,
     onReplyAborted: () -> Unit,
 ) {
-    if(message == null){
+    if (message !is RequestState.Success) {
         return
     }
+    val name = if (message.data.message.incoming && message.data.sender?.name != null) {
+        stringResource(id = R.string.they_said).format(message.data.sender.name)
+    } else if(!message.data.message.incoming) {
+        stringResource(id = R.string.you_said)
+    } else {
+        return
+    }
+    val text = message.data.message.text ?: return
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -189,16 +209,13 @@ fun ReplyToMessage(
             modifier = Modifier.weight(9f)
         ) {
             Text(
-                text = if (message.message.incoming && message.sender != null)
-                    stringResource(id = R.string.they_said).format(message.sender.name)
-                else
-                    stringResource(id = R.string.you_said),
+                text = name,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Text(
                 modifier = Modifier.padding(start = 4.dp),
-                text = message.message.text.toString(),
+                text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f),
                 maxLines = 3,
@@ -227,9 +244,9 @@ fun ChatInputPreview()
 {
     ChatInput(
         modifier = Modifier.fillMaxWidth(),
-        enabled = true,
+        visible = true,
         messageInputText = "Hello, John",
-        replyToMessage = null,
+        replyToMessage = RequestState.Idle,
         onInputTextChanged = {},
         onSendClicked = {},
         onReplyAborted = {},

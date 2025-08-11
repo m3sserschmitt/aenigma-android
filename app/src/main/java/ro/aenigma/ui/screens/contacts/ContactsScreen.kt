@@ -78,7 +78,7 @@ fun ContactsScreen(
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  { newValue -> mainViewModel.validateNewContactName(newValue) },
+        onNewContactNameChanged =  { newValue -> newValue.isNotBlank() },
         onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },

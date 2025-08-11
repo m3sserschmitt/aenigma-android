@@ -43,12 +43,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.work.WorkInfo
 import ro.aenigma.R
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactDto
-import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
@@ -62,7 +59,6 @@ import java.time.ZonedDateTime
 @Composable
 fun MessageItem(
     message: MessageWithDetailsDto,
-    allContacts: List<ContactDto>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onItemSelected: (MessageWithDetailsDto) -> Unit,
@@ -89,7 +85,6 @@ fun MessageItem(
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
     val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
     val isOutgoingFailed = !message.message.incoming && !message.message.sent && deliveryStatus == WorkInfo.State.FAILED
-    val replyToMessage = if (message.message.type == MessageType.REPLY) message.actionFor else null
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
         contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd
@@ -148,8 +143,7 @@ fun MessageItem(
                     )
 
                     ResponseTo(
-                        message = replyToMessage,
-                        allContacts = allContacts,
+                        message = message,
                         contentColor = MaterialTheme.colorScheme.onSecondary,
                         containerColor = MaterialTheme.colorScheme.secondary
                     )
@@ -224,21 +218,29 @@ fun SenderName(
 
 @Composable
 fun ResponseTo(
-    message: MessageDto?,
-    allContacts: List<ContactDto>,
+    message: MessageWithDetailsDto?,
     contentColor: Color,
     containerColor: Color
 ) {
     if (message == null) {
         return
     }
-    val replyToContact =
-        allContacts.firstOrNull { item -> item.address == message.senderAddress }
     val context = LocalContext.current
-    val name = if (message.incoming && replyToContact != null) replyToContact.name + ":"
-    else
+    val actionForSender by message.actionForSender.collectAsState()
+    if(message.message.type != MessageType.REPLY) {
+        return
+    }
+    val name = if (message.actionFor?.incoming == true) {
+        (actionForSender?.name ?: return) + ":"
+    } else {
         context.getString(R.string.you)
-    val text = if (message.deleted) context.getString(R.string.message_deleted) else message.text
+    }
+    val text = if (message.actionFor?.deleted == true) {
+        context.getString(R.string.message_deleted)
+    } else {
+        message.actionFor?.text ?: return
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = containerColor,
@@ -254,7 +256,7 @@ fun ResponseTo(
             )
             Text(
                 modifier = Modifier.padding(start = 4.dp),
-                text = text.toString(),
+                text = text,
                 color = contentColor.copy(alpha = .75f),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -347,15 +349,6 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
                 dateReceivedOnServer = ZonedDateTime.now(),
             ).toDto(), null, null
         ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            ).toDto()
-        ),
         onItemDeselected = {},
         onClick = {},
         onRetryFailed = {},
@@ -381,15 +374,6 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
                 dateReceivedOnServer = ZonedDateTime.now(),
             ).toDto(), null, null
         ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            ).toDto()
-        ),
         onItemDeselected = {},
         onClick = {},
         onRetryFailed = {},
@@ -411,15 +395,6 @@ fun MessagePending() {
                 actionFor = null,
             ).toDto(), null, null
         ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            ).toDto()
-        ),
         onItemDeselected = {},
         onClick = {},
         onRetryFailed = {},
@@ -440,15 +415,6 @@ fun MessageSent() {
                 type = MessageType.TEXT,
                 actionFor = null,
             ).toDto(), null, null
-        ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            ).toDto()
         ),
         onItemDeselected = {},
         onClick = {},

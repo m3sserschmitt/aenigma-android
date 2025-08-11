@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
@@ -39,8 +38,7 @@ fun ChatContent(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageWithDetailsDto>>,
-    allContacts: RequestState<List<ContactDto>>,
-    replyToMessage: MessageWithDetailsDto?,
+    replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageWithDetailsDto>,
     messageInputText: String,
@@ -75,7 +73,6 @@ fun ChatContent(
             isSelectionMode = isSelectionMode,
             isSearchMode = isSearchMode,
             messages = messages,
-            allContacts = allContacts,
             conversationListState = conversationListState,
             nextConversationPageAvailable = nextConversationPageAvailable,
             selectedMessages = selectedMessages,
@@ -87,7 +84,7 @@ fun ChatContent(
 
         ChatInput(
             modifier = Modifier.height(80.dp),
-            enabled = isMember,
+            visible = isMember,
             messageInputText = messageInputText,
             replyToMessage = replyToMessage,
             onInputTextChanged = onInputTextChanged,
@@ -124,7 +121,6 @@ fun DisplayMessages(
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageWithDetailsDto>>,
-    allContacts: RequestState<List<ContactDto>>,
     nextConversationPageAvailable: Boolean,
     selectedMessages: List<MessageWithDetailsDto>,
     conversationListState: LazyListState = rememberLazyListState(),
@@ -133,8 +129,8 @@ fun DisplayMessages(
     onRetryFailed: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
-    when {
-        messages is RequestState.Success && allContacts is RequestState.Success -> {
+    when(messages) {
+        is RequestState.Success -> {
             if (messages.data.isNotEmpty()) {
                 AutoScrollItemsList(
                     modifier = modifier,
@@ -146,7 +142,6 @@ fun DisplayMessages(
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
                             message = messageEntity,
-                            allContacts = allContacts.data,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = {},
@@ -168,11 +163,11 @@ fun DisplayMessages(
             }
         }
 
-        listOf(messages, allContacts).any { obj -> obj is RequestState.Loading } -> LoadingScreen(
+        is RequestState.Loading -> LoadingScreen(
             modifier = modifier
         )
 
-        listOf(messages, allContacts).any { obj -> obj is RequestState.Error } -> GenericErrorScreen(
+        is RequestState.Error -> GenericErrorScreen(
             modifier = modifier
         )
 
@@ -225,7 +220,7 @@ fun ChatContentPreview() {
             listOf(message1, message2)
         ),
         isMember = true,
-        replyToMessage = null,
+        replyToMessage = RequestState.Idle,
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "",
@@ -240,6 +235,5 @@ fun ChatContentPreview() {
         isSearchMode = false,
         loadNextPage = {},
         onRetryFailed = {},
-        allContacts = RequestState.Success(listOf()),
     )
 }

@@ -17,15 +17,14 @@ object GroupDataExtensions {
 
     @JvmStatic
     fun GroupData.removeMember(address: String): GroupData? {
-        var filteredMembers = members?.filter { item -> item.address != address }
+        val filteredMembers = members?.filter { item -> item.address != address }
         return withMembers(filteredMembers)
     }
 
     @JvmStatic
     fun GroupData.removeMembers(addresses: List<String>): GroupData? {
-        var result: GroupData? = this
-        addresses.forEach {  address -> result = removeMember(address) }
-        return result
+        val set = addresses.toSet()
+        return withMembers(members?.filter { member -> !set.contains(member.address) })
     }
 
     @JvmStatic
