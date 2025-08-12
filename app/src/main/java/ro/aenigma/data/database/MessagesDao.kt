@@ -24,7 +24,8 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE m WHERE id = :id")
     suspend fun getWithAttachments(id: Long): MessageWithAttachments?
 
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId ORDER BY id DESC LIMIT 1")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId " +
+            "ORDER BY id DESC LIMIT 1")
     fun getLastDeletedFlow(chatId: String): Flow<MessageEntity?>
 
     @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId ORDER BY id DESC LIMIT 1")
@@ -46,7 +47,8 @@ interface MessagesDao {
     suspend fun removeSoft(refId: String?)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 " +
+            "ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>>
 
     @Transaction
@@ -69,6 +71,7 @@ interface MessagesDao {
     suspend fun update(message: MessageEntity)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 LIMIT $NEWS_FEED_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 " +
+            "ORDER BY Id DESC LIMIT $NEWS_FEED_SIZE")
     fun getLatestSharedFiles(): Flow<List<MessageWithDetails>>
 }

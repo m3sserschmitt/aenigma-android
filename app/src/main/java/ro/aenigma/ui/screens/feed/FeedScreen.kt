@@ -111,6 +111,7 @@ fun FeedScreenContent(
 fun FeedScreenPreview() {
     val articles = List(1) {
         Article(
+            id = 1,
             title = "Article $it",
             description = "A short description for item $it",
             url = "https://picsum.photos/seed/$it/300/300",

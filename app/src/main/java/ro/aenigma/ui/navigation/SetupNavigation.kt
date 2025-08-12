@@ -1,5 +1,6 @@
 package ro.aenigma.ui.navigation
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -41,6 +42,8 @@ fun SetupNavigation(
         Screens(navController = navHostController)
     }
     Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
                 modifier = Modifier.height(50.dp),

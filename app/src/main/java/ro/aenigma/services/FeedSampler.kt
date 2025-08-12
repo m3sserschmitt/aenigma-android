@@ -84,10 +84,13 @@ class FeedSampler @Inject constructor(
             emit(listOf())
         }
         return articlesFlow.combine(latestSharedFilesFlow) { a, b ->
+            var i = 0L
             weightedInterleave(
                 listOf(a, b),
                 listOf(ARTICLES_FEED_WEIGHT, SHARED_FILES_FEED_WEIGHT)
-            )
+            ).map { article -> i++
+                article.copy(id = i)
+            }
         }.catch {
             emit(listOf())
         }

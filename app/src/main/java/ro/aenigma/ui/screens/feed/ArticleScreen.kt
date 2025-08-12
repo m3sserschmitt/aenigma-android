@@ -54,6 +54,7 @@ fun ArticleScreen(
     navigateBack: () -> Unit
 ) {
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StandardAppBar(
                 title = "",

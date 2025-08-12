@@ -127,4 +127,6 @@
     <string name="there_is_nothing_here">Nu este nimic aici pentru moment</string>
     <string name="picture">Imagine</string>
     <string name="attachment_files_limit">Este permis un număr de maximum %s fișiere.</string>
+    <string name="article_title_template">%s a distribuit aceasta cu %s</string>
+    <string name="unknown">Un necunoscut</string>
 </resources>

@@ -1,6 +1,7 @@
 package ro.aenigma.data.database.extensions
 
 import android.content.Context
+import org.ocpsoft.prettytime.PrettyTime
 import ro.aenigma.R
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
@@ -128,8 +129,11 @@ object MessageEntityExtensions {
 
     @JvmStatic
     fun MessageWithDetails.toArticle(context: Context): Article {
+        val date = PrettyTime().format(message.date)
+        val senderName = sender?.name ?: context.getString(R.string.unknown)
         return Article(
-            title = sender?.name,
+            id = message.id,
+            title = context.getString(R.string.article_title_template,  senderName, date),
             description = message.text,
             url = null,
             date = message.date.toString(),

@@ -57,43 +57,47 @@ class MessageSaver @Inject constructor(
 
             when {
                 messageEntity.type == MessageType.DELETE -> {
-                    messageEntity.actionFor?.let { refId ->
-                        repository.local.removeMessageSoft(refId)
-                    }
                     messageEntity.markAsDeleted()?.let { deletedMessage ->
-                        repository.local.insertOrIgnoreMessage(deletedMessage)
+                        repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
+                            messageEntity.actionFor?.let { refId ->
+                                repository.local.removeMessageSoft(refId)
+                            }
+                        }
                     }
                 }
 
                 messageEntity.type == MessageType.DELETE_ALL -> {
-                    repository.local.clearConversationSoft(messageEntity.chatId)
                     messageEntity.markAsDeleted()?.let { deletedMessage ->
-                        repository.local.insertOrIgnoreMessage(deletedMessage)
+                        repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
+                            repository.local.clearConversationSoft(messageEntity.chatId)
+                        }
                     }
                 }
 
                 messageEntity.type == MessageType.GROUP_MEMBER_LEAVE -> {
-                    repository.local.getContactWithGroup(messageEntity.chatId)
-                        ?.let { contactWithGroup ->
-                            if (localAddress != null && contactWithGroup.group?.groupData?.iAmAdmin(
-                                    localAddress
-                                ) == true
-                            ) {
-                                GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                                    workManager,
-                                    groupName = null,
-                                    members = listOf(messageEntity.senderAddress ?: return),
-                                    existingGroupAddress = messageEntity.chatId,
-                                    actionType = MessageType.GROUP_MEMBER_REMOVE
-                                )
-                            } else {
-                                repository.local.insertOrUpdateGroup(
-                                    contactWithGroup.group?.removeMember(
-                                        messageEntity.senderAddress ?: return
-                                    ) ?: return
-                                )
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let {
+                        repository.local.getContactWithGroup(messageEntity.chatId)
+                            ?.let { contactWithGroup ->
+                                if (localAddress != null && contactWithGroup.group?.groupData?.iAmAdmin(
+                                        localAddress
+                                    ) == true
+                                ) {
+                                    GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                                        workManager,
+                                        groupName = null,
+                                        members = listOf(messageEntity.senderAddress ?: return),
+                                        existingGroupAddress = messageEntity.chatId,
+                                        actionType = MessageType.GROUP_MEMBER_REMOVE
+                                    )
+                                } else {
+                                    repository.local.insertOrUpdateGroup(
+                                        contactWithGroup.group?.removeMember(
+                                            messageEntity.senderAddress ?: return
+                                        ) ?: return
+                                    )
+                                }
                             }
-                        }
+                    }
                 }
 
                 messageEntity.isGroupUpdate() -> {
@@ -104,14 +108,15 @@ class MessageSaver @Inject constructor(
                 }
 
                 messageEntity.isText() -> {
-                    repository.local.insertOrIgnoreMessage(messageEntity)
-                    createOrUpdateContact(artifact, signedData.publicKey ?: return)
-                    notify(messageEntity)
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let {
+                        createOrUpdateContact(artifact, signedData.publicKey ?: return)
+                        notify(messageEntity)
+                    }
                 }
 
                 messageEntity.isFile() -> {
-                    createOrUpdateContact(artifact, signedData.publicKey ?: return)
                     repository.local.insertOrIgnoreMessage(messageEntity)?.let { id ->
+                        createOrUpdateContact(artifact, signedData.publicKey ?: return)
                         downloadAttachment(artifact, id)
                         notify(messageEntity)
                     }

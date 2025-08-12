@@ -120,11 +120,6 @@ class MainViewModel @Inject constructor(
         }
 
     fun loadContacts() {
-        if (_allContacts.value is RequestState.Success
-            || _allContacts.value is RequestState.Loading
-        ) return
-
-        _allContacts.value = RequestState.Loading
         collectContacts()
         collectSearches()
     }
@@ -182,9 +177,10 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             _newsFeed.value = RequestState.Loading
             try {
-                _newsFeed.value = RequestState.Success(feedSamplerLazy.get().getFeed().catch { ex ->
+                val feed = feedSamplerLazy.get().getFeed().catch { ex ->
                     _newsFeed.value = RequestState.Error(ex)
-                }.first())
+                }.first()
+                _newsFeed.value = RequestState.Success(feed)
             } catch (e: Exception) {
                 _newsFeed.value = RequestState.Error(e)
             }

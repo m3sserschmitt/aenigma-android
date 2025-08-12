@@ -2,12 +2,16 @@ package ro.aenigma.ui
 
 import android.app.KeyguardManager
 import android.content.Intent
+import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -56,20 +60,24 @@ class AppActivity : FragmentActivity() {
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(TRANSPARENT, TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(TRANSPARENT, TRANSPARENT)
+        )
         loadDbPassphrase()
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
                 val auth by isAuthenticated.collectAsState()
+                val navController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
                     isAuthenticated = auth,
                     onAuthSuccess = { isAuthenticated.value = true },
                     dbPassphraseLoaded = dbPassphraseLoaded,
                 ) {
-                    val navController = rememberNavController()
-
                     LaunchedEffect(key1 = true) {
                         observeTorService()
                         observeClientConnectivity()
