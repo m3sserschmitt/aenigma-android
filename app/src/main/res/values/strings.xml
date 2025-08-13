@@ -129,6 +129,6 @@
     <string name="there_is_nothing_here">There is nothing here right now</string>
     <string name="picture">Picture</string>
     <string name="attachment_files_limit">You are allowed to attach a maximum of %s files</string>
-    <string name="article_title_template">%s shared this %s</string>
+    <string name="article_title_template">%1$s shared this %2$s</string>
     <string name="unknown">Unknown</string>
 </resources>

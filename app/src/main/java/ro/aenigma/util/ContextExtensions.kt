@@ -12,7 +12,7 @@ import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import ro.aenigma.ui.AppActivity
+import ro.aenigma.activities.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
 import ro.aenigma.R

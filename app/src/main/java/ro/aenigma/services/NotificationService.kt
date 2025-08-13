@@ -18,7 +18,7 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
-import ro.aenigma.ui.AppActivity
+import ro.aenigma.activities.AppActivity
 import javax.inject.Inject
 import javax.inject.Singleton
 

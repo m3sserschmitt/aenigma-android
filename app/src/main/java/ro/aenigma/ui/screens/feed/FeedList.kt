@@ -35,7 +35,7 @@ fun FeedList(
     ) {
         items(
             items = articles,
-            key = { article -> article.id!! }
+            key = { article -> article.hashCode() }
         ) { article ->
             ArticleCard(
                 modifier = Modifier.clickable { onArticleClicked(article) },

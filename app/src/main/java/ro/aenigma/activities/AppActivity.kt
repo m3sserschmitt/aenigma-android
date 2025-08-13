@@ -1,8 +1,8 @@
-package ro.aenigma.ui
+package ro.aenigma.activities
 
 import android.app.KeyguardManager
 import android.content.Intent
-import android.graphics.Color.TRANSPARENT
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -63,8 +63,8 @@ class AppActivity : FragmentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.auto(TRANSPARENT, TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.auto(TRANSPARENT, TRANSPARENT)
+            statusBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT)
         )
         loadDbPassphrase()
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
@@ -112,7 +112,7 @@ class AppActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         isAuthenticated.value = false
-        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
+        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.Companion.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
             sync()
@@ -121,11 +121,11 @@ class AppActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        onScreenChanged(Screens.NO_SCREEN)
+        onScreenChanged(Screens.Companion.NO_SCREEN)
     }
 
     private fun sync() {
-        SignalRClientWorker.start(
+        SignalRClientWorker.Companion.start(
             this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
@@ -136,7 +136,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun schedulePeriodicSync() {
-        SignalRClientWorker.schedulePeriodicSync(this)
+        SignalRClientWorker.Companion.schedulePeriodicSync(this)
     }
 
     private fun observeTorService() {
@@ -154,12 +154,12 @@ class AppActivity : FragmentActivity() {
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
 
     private fun onScreenChanged(route: String) {
-        if (NavigationTracker.isChatScreenRoute(route)) {
-            val chatId = Screens.getChatIdFromChatRoute(route) ?: return
+        if (NavigationTracker.Companion.isChatScreenRoute(route)) {
+            val chatId = Screens.Companion.getChatIdFromChatRoute(route) ?: return
 
             disableNotifications(chatId)
             dismissNotifications(chatId)
-        } else if (NavigationTracker.isContactsScreenRoute(route)) {
+        } else if (NavigationTracker.Companion.isContactsScreenRoute(route)) {
             disableNotifications()
         } else {
             enableNotifications()

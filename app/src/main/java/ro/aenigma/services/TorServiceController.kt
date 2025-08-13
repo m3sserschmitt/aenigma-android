@@ -68,22 +68,20 @@ class TorServiceController @Inject constructor(
             ) { useTor, torStatus ->
                 Pair(useTor, torStatus)
             }.distinctUntilChanged().collect { (useTor, torStatus) ->
-                val proxyIsListening = isSocks5Listening(SOCKS5_PROXY_ADDRESS, SOCKS5_PROXY_PORT)
                 when {
-                    useTor && !proxyIsListening && (torStatus is TorStatus.Off || torStatus is TorStatus.Idle) -> {
-                        torServiceManager.start(startForeground = true)
+                    useTor && (torStatus is TorStatus.Off || torStatus is TorStatus.Idle) -> {
+                        if(!isSocks5Listening(SOCKS5_PROXY_ADDRESS, SOCKS5_PROXY_PORT))
+                        {
+                            torServiceManager.start(startForeground = true)
+                        }
                     }
 
-                    !useTor && proxyIsListening && torStatus is TorStatus.On -> {
+                    !useTor && torStatus is TorStatus.On -> {
                         torServiceManager.stop()
                     }
 
-                    useTor && proxyIsListening && torStatus is TorStatus.On -> {
+                    useTor && torStatus is TorStatus.On -> {
                         checkTor()
-                    }
-
-                    else -> {
-                        _isTorOk.value = false
                     }
                 }
             }

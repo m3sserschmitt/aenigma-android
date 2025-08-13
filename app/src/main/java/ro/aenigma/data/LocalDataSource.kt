@@ -14,6 +14,7 @@ import ro.aenigma.data.database.MessagesDao
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import ro.aenigma.data.database.AttachmentEntity
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.ContactWithLastMessage
@@ -21,7 +22,9 @@ import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.Article
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
@@ -70,10 +73,6 @@ class LocalDataSource @Inject constructor(
 
     val lastGraphVersion: Flow<String> = preferencesDataStore.lastGraphVersion
 
-    fun getContactsFlow(): Flow<List<ContactEntity>> {
-        return contactsDao.get().getFlow()
-    }
-
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessage>> {
         return contactsDao.get().getWithMessagesFlow()
     }
@@ -120,7 +119,7 @@ class LocalDataSource @Inject constructor(
 
     suspend fun removeContacts(contacts: List<ContactEntity>) {
         contactsDao.get().remove(contacts)
-        for(contact in contacts) {
+        for (contact in contacts) {
             clearConversationSoft(contact.address)
         }
     }
@@ -133,8 +132,9 @@ class LocalDataSource @Inject constructor(
         return messagesDao.get().getConversationFlow(chatId)
     }
 
-    fun getLatestSharedFiles(): Flow<List<MessageWithDetails>> {
-        return messagesDao.get().getLatestSharedFiles()
+    fun getLatestSharedFiles(): Flow<List<Article>> {
+        return messagesDao.get().getLatestSharedFilesFlow()
+            .map { items -> items.map { m -> m.toArticle(context) } }
     }
 
     suspend fun getConversationPage(
@@ -176,17 +176,17 @@ class LocalDataSource @Inject constructor(
 
     suspend fun removeMessagesSoft(messages: List<MessageEntity>) {
         val chatIds = mutableSetOf<String>()
-        for(message in messages) {
+        for (message in messages) {
             messagesDao.get().removeSoft(message.id)
             removeFiles(message)
-            if(chatIds.add(message.chatId)) {
+            if (chatIds.add(message.chatId)) {
                 updateContactLastMessageId(message.chatId)
             }
         }
     }
 
     private fun removeFiles(message: MessageEntity) {
-        for(file in message.files ?: listOf()) {
+        for (file in message.files ?: listOf()) {
             context.deleteUri(file)
         }
     }

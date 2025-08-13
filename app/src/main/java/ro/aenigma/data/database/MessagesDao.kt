@@ -73,5 +73,5 @@ interface MessagesDao {
     @Transaction
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 " +
             "ORDER BY Id DESC LIMIT $NEWS_FEED_SIZE")
-    fun getLatestSharedFiles(): Flow<List<MessageWithDetails>>
+    fun getLatestSharedFilesFlow(): Flow<List<MessageWithDetails>>
 }

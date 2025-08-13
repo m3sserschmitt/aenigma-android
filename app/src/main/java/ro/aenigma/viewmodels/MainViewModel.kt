@@ -13,6 +13,7 @@ import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -107,6 +108,7 @@ class MainViewModel @Inject constructor(
         loadContacts()
         collectUseTor()
         collectNotificationsPreferences()
+        collectFeed()
     }
 
     val markdownImageTransformer: ImageTransformer
@@ -171,23 +173,20 @@ class MainViewModel @Inject constructor(
     }
 
     fun collectFeed() {
-        if (_newsFeed.value is RequestState.Success) {
-            return
-        }
         viewModelScope.launch(ioDispatcher) {
             _newsFeed.value = RequestState.Loading
             try {
                 val feed = feedSamplerLazy.get().getFeed().catch { ex ->
                     _newsFeed.value = RequestState.Error(ex)
                 }.first()
-                _newsFeed.value = RequestState.Success(feed)
+                _newsFeed.value = RequestState.Success(feed.sortedBy { item -> item.id })
             } catch (e: Exception) {
                 _newsFeed.value = RequestState.Error(e)
             }
         }
     }
 
-    fun resetFeed() {
+    fun reloadFeed() {
         _newsFeed.value = RequestState.Idle
     }
 

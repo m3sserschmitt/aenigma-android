@@ -29,7 +29,10 @@ fun FeedScreen(
     val articles by mainViewModel.newsFeed.collectAsState()
 
     LaunchedEffect(key1 = articles) {
-        mainViewModel.collectFeed()
+        if(articles is RequestState.Idle)
+        {
+            mainViewModel.collectFeed()
+        }
     }
 
     FeedScreen(
@@ -40,7 +43,7 @@ fun FeedScreen(
                 navigateToArticle(article.url)
             }
         },
-        onReloadFeedClicked = { mainViewModel.resetFeed() }
+        onReloadFeedClicked = { mainViewModel.reloadFeed() }
     )
 }
 

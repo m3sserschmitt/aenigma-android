@@ -54,7 +54,7 @@ fun RemoteSecureAsyncImage(
                 .clip(RoundedCornerShape(8.dp))
                 .padding(bottom = 12.dp),
             bitmap = it,
-            contentDescription = stringResource(id = R.string.files),
+            contentDescription = stringResource(id = R.string.picture),
             contentScale = contentScale
         )
     }
@@ -84,7 +84,7 @@ fun SecureAsyncImage(
                 .placeholder(R.drawable.ic_outline_broken_image)
                 .error(R.drawable.ic_outline_broken_image)
                 .build(),
-            contentDescription = stringResource(id = R.string.files),
+            contentDescription = stringResource(id = R.string.picture),
             contentScale = ContentScale.Fit,
         )
     }
