@@ -131,4 +131,7 @@
     <string name="attachment_files_limit">You are allowed to attach a maximum of %s files</string>
     <string name="article_title_template">%1$s shared this %2$s</string>
     <string name="unknown">Unknown</string>
+    <string name="waiting_for_files">Waiting files</string>
+    <string name="click_to_retry">Click to retry</string>
+    <string name="no_files_available">No files available</string>
 </resources>

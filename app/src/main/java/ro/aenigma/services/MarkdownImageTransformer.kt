@@ -15,6 +15,8 @@ import androidx.compose.ui.res.painterResource
 import com.mikepenz.markdown.model.ImageData
 import com.mikepenz.markdown.model.ImageTransformer
 import dagger.hilt.android.scopes.ViewModelScoped
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import javax.inject.Inject
 
@@ -26,7 +28,7 @@ class MarkdownImageTransformer @Inject constructor(
     @Composable
     override fun transform(link: String): ImageData? {
         val bitmapState by produceState<ImageBitmap?>(null, link) {
-            value = runCatching { imageFetcher.fetch(link) }.getOrNull()
+            value = withContext(Dispatchers.IO) { imageFetcher.fetch(link) }
         }
 
         val painter: Painter = when (val bmp = bitmapState) {

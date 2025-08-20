@@ -1,6 +1,7 @@
 package ro.aenigma.viewmodels
 
 import androidx.lifecycle.*
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
@@ -26,9 +27,12 @@ import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotDownloaded
+import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.UriBatcher
+import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import java.util.SortedSet
@@ -182,6 +186,27 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun loadAttachmentDownloadStatus(message: MessageWithDetailsDto) {
+        if(message.message.type == MessageType.FILES && message.message.files.isNullOrEmpty()) {
+            viewModelScope.launch(ioDispatcher) {
+                workManager.getWorkInfosForUniqueWorkFlow(
+                    uniqueWorkName = AttachmentDownloadWorker.getUniqueWorkName(message.message.id)
+                ).collect { workInfos ->
+                    if(workInfos.isNotEmpty()) {
+                        val state = workInfos.last().state
+                        message.message.attachmentDownloadStatus.value = state
+                        if(state == WorkInfo.State.SUCCEEDED) {
+                            val m = repository.local.getMessage(message.message.id)
+                            if(m != null && m.files != null) {
+                                message.message.filesLate.value = m.files
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun loadActionForSender(message: MessageWithDetailsDto) {
         if (message.actionFor?.senderAddress != null) {
             viewModelScope.launch(ioDispatcher) {
@@ -207,14 +232,11 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun messageFilesReady(message: MessageWithDetailsDto?): Boolean {
-        return message != null && (message.message.type != MessageType.FILES || (message.message.files != null && message.message.files.isNotEmpty()))
-    }
-
     private fun addItemsToConversation(messages: List<MessageWithDetailsDto>) {
         messages.forEach { item ->
-            if (searchFilterMatched(item) && messageFilesReady(item)) {
+            if (searchFilterMatched(item)) {
                 loadMessageDeliveryStatus(item)
+                loadAttachmentDownloadStatus(item)
                 loadActionForSender(item)
                 _conversationSortedSet.add(item)
             }
@@ -239,11 +261,9 @@ class ChatViewModel @Inject constructor(
     private fun addNewItemToConversation(messages: List<MessageWithDetailsDto>) {
         val message = messages.firstOrNull()
         message ?: return
-        if (searchFilterMatched(message) && messageFilesReady(message) && _conversationSortedSet.add(
-                message
-            )
-        ) {
+        if (searchFilterMatched(message) && _conversationSortedSet.add(message)) {
             loadMessageDeliveryStatus(message)
+            loadAttachmentDownloadStatus(message)
             loadActionForSender(message)
         }
     }
@@ -375,8 +395,23 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) { postToDatabase() }
     }
 
-    fun onRetryFailedMessage(message: MessageWithDetailsDto) {
+    fun onMessageClicked(message: MessageWithDetailsDto) {
+        if(message.message.isNotSent()) {
+            resendMessage(message)
+        } else if(message.message.attachmentsNotDownloaded()) {
+            retryAttachmentDownload(message)
+        }
+    }
+
+    fun resendMessage(message: MessageWithDetailsDto) {
         MessageSenderWorker.createWorkRequest(
+            workManager = workManager,
+            messageId = message.message.id
+        )
+    }
+
+    fun retryAttachmentDownload(message: MessageWithDetailsDto) {
+        AttachmentDownloadWorker.createRequest(
             workManager = workManager,
             messageId = message.message.id
         )

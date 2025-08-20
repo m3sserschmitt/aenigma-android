@@ -39,4 +39,12 @@ object MessageDtoExtensions {
             MessageType.TEXT, MessageType.REPLY, null -> text.toString()
         }
     }
+
+    fun MessageDto.attachmentsNotDownloaded(): Boolean {
+        return incoming && type == MessageType.FILES && files.isNullOrEmpty()
+    }
+
+    fun MessageDto.isNotSent(): Boolean {
+        return !incoming && !sent
+    }
 }

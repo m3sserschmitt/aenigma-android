@@ -49,7 +49,7 @@ fun ChatContent(
     onReplyAborted: () -> Unit,
     onMessageSelected: (MessageWithDetailsDto) -> Unit,
     onMessageDeselected: (MessageWithDetailsDto) -> Unit,
-    onRetryFailed: (MessageWithDetailsDto) -> Unit,
+    onMessageClicked: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -78,7 +78,7 @@ fun ChatContent(
             selectedMessages = selectedMessages,
             onItemSelected = onMessageSelected,
             onItemDeselected = onMessageDeselected,
-            onRetryFailed = onRetryFailed,
+            onMessageClicked = onMessageClicked,
             loadNextPage = loadNextPage
         )
 
@@ -126,7 +126,7 @@ fun DisplayMessages(
     conversationListState: LazyListState = rememberLazyListState(),
     onItemSelected: (MessageWithDetailsDto) -> Unit,
     onItemDeselected: (MessageWithDetailsDto) -> Unit,
-    onRetryFailed: (MessageWithDetailsDto) -> Unit,
+    onMessageClicked: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
     when(messages) {
@@ -144,8 +144,7 @@ fun DisplayMessages(
                             message = messageEntity,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
-                            onClick = {},
-                            onRetryFailed = onRetryFailed
+                            onClick = onMessageClicked,
                         )
                         MessageDate(next = next, message = messageEntity)
                     },
@@ -234,6 +233,6 @@ fun ChatContentPreview() {
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
-        onRetryFailed = {},
+        onMessageClicked = {}
     )
 }

@@ -64,8 +64,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
                 .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
                 .build()
             workManager.enqueueUniqueWork(
-                "$UNIQUE_WORK_REQUEST_NAME-$messageId", ExistingWorkPolicy.KEEP, workRequest
+                getUniqueWorkName(messageId), ExistingWorkPolicy.KEEP, workRequest
             )
+        }
+
+        fun getUniqueWorkName(messageId: Long): String {
+            return "$UNIQUE_WORK_REQUEST_NAME-$messageId"
         }
     }
 

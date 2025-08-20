@@ -129,4 +129,7 @@
     <string name="attachment_files_limit">Este permis un număr de maximum %s fișiere.</string>
     <string name="article_title_template">%1$s a distribuit aceasta cu %2$s</string>
     <string name="unknown">Un necunoscut</string>
+    <string name="waiting_for_files">Se așteaptă fișierele</string>
+    <string name="click_to_retry">Click pentru a reîncerca</string>
+    <string name="no_files_available">Niciun fișier disponibil</string>
 </resources>

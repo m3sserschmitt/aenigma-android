@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.common
 
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -10,6 +11,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -20,40 +22,44 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import coil3.request.error
 import coil3.request.placeholder
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.util.ContextExtensions.getBitmapFromDrawable
-import ro.aenigma.util.isRemoteUri
+import ro.aenigma.util.UrlExtensions.isRemoteUri
+
+private fun Context.getImagePlaceholder(): ImageBitmap? {
+    return getBitmapFromDrawable(R.drawable.ic_outline_broken_image)?.asImageBitmap()
+}
 
 @Composable
-fun RemoteSecureAsyncImage(
+private fun RemoteSecureAsyncImage(
     uri: String?,
     imageFetcher: ImageFetcher,
     contentScale: ContentScale = ContentScale.Fit
 ) {
     val context = LocalContext.current
-    val placeholder = remember {
-        context.getBitmapFromDrawable(R.drawable.ic_outline_broken_image)?.asImageBitmap()
-    }
-    val bitmap by produceState(initialValue = placeholder, key1 = uri) {
-        value = try {
-            if (uri != null) {
+    val bitmap by produceState<ImageBitmap?>(
+        initialValue = null,
+        key1 = uri
+    ) {
+        value = withContext(Dispatchers.IO) {
+            if (!uri.isNullOrBlank()) {
                 imageFetcher.fetch(uri)
             } else {
-                placeholder
+                context.getImagePlaceholder()
             }
-        } catch (_: Exception) {
-            placeholder
         }
     }
-    bitmap?.let {
+    bitmap?.let { bitmapToShow ->
         Image(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
                 .padding(bottom = 12.dp),
-            bitmap = it,
+            bitmap = bitmapToShow,
             contentDescription = stringResource(id = R.string.picture),
             contentScale = contentScale
         )
@@ -85,7 +91,7 @@ fun SecureAsyncImage(
                 .error(R.drawable.ic_outline_broken_image)
                 .build(),
             contentDescription = stringResource(id = R.string.picture),
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.Fit
         )
     }
 }

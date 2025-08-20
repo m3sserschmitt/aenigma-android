@@ -124,6 +124,10 @@ class LocalDataSource @Inject constructor(
         }
     }
 
+    suspend fun getMessage(id: Long): MessageEntity? {
+        return messagesDao.get().get(id)
+    }
+
     suspend fun getMessageWithAttachments(id: Long): MessageWithAttachments? {
         return messagesDao.get().getWithAttachments(id)
     }

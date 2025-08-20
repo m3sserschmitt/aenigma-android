@@ -50,14 +50,18 @@ object ContextExtensions {
         width: Int = 0,
         height: Int = 0
     ): Bitmap? {
-        val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
-        val bitmapWidth = if (width > 0) width else drawable.intrinsicWidth
-        val bitmapHeight = if (height > 0) height else drawable.intrinsicHeight
-        val bitmap = createBitmap(bitmapWidth, bitmapHeight)
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
+        return try {
+            val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
+            val bitmapWidth = if (width > 0) width else drawable.intrinsicWidth
+            val bitmapHeight = if (height > 0) height else drawable.intrinsicHeight
+            val bitmap = createBitmap(bitmapWidth, bitmapHeight)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            bitmap
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun Context.isImageUri(uri: String): Boolean {

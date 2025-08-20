@@ -14,6 +14,9 @@ import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 @Dao
 interface MessagesDao {
 
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE Id = :id LIMIT 1")
+    suspend fun get(id: Long): MessageEntity?
+
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE serverUUID = :serverUUID")
     suspend fun getByServerUuid(serverUUID: String): MessageEntity?
 

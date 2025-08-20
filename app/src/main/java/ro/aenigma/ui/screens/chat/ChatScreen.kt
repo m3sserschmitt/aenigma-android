@@ -92,7 +92,7 @@ fun ChatScreen(
         onSearch = { searchQuery -> chatViewModel.searchConversation(searchQuery) },
         onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
         onLeaveGroup = { chatViewModel.leaveGroup() },
-        onRetryFailed = { message -> chatViewModel.onRetryFailedMessage(message) },
+        onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
         loadNextPage = { chatViewModel.loadNextPage(chatId) },
         navigateToContactsScreen = navigateToContactsScreen,
         navigateToAddContactsScreen = navigateToAddContactsScreen
@@ -125,7 +125,7 @@ fun ChatScreen(
     onSearch: (String) -> Unit,
     onAddGroupMembers: (List<String>, MessageType) -> Unit,
     onLeaveGroup: () -> Unit,
-    onRetryFailed: (MessageWithDetailsDto) -> Unit,
+    onMessageClicked: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit,
     navigateToContactsScreen: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
@@ -350,7 +350,7 @@ fun ChatScreen(
                 onMessageDeselected = {
                     deselectedMessage -> selectedItems.remove(deselectedMessage)
                 },
-                onRetryFailed = onRetryFailed,
+                onMessageClicked = onMessageClicked,
                 loadNextPage = loadNextPage
             )
         }
@@ -469,7 +469,7 @@ fun ChatScreenPreview() {
         onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },
-        onRetryFailed = {},
+        onMessageClicked = {},
         navigateToContactsScreen = {},
         navigateToAddContactsScreen = {}
     )

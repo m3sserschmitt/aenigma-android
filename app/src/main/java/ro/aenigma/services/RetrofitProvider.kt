@@ -11,7 +11,7 @@ import ro.aenigma.util.Constants.Companion.API_BASE_URL
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
 import ro.aenigma.util.SerializerExtensions.createJsonConverterFactory
-import ro.aenigma.util.getBaseUrl
+import ro.aenigma.util.UrlExtensions.getBaseUrl
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.Objects

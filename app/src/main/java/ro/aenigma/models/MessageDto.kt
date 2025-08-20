@@ -20,7 +20,9 @@ data class MessageDto(
     val date: ZonedDateTime,
     val dateReceivedOnServer: ZonedDateTime?,
     val files: List<String>?,
-    val deliveryStatus: MutableStateFlow<WorkInfo.State?> = MutableStateFlow(null)
+    val deliveryStatus: MutableStateFlow<WorkInfo.State?> = MutableStateFlow(null),
+    val attachmentDownloadStatus: MutableStateFlow<WorkInfo.State?> = MutableStateFlow(null),
+    val filesLate: MutableStateFlow<List<String>> = MutableStateFlow(listOf())
 ) {
     override fun hashCode(): Int {
         return id.hashCode()

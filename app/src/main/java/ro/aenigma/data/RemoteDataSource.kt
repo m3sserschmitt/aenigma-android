@@ -32,8 +32,8 @@ import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.SerializerExtensions.fromJson
-import ro.aenigma.util.getBaseUrl
-import ro.aenigma.util.getTagQueryParameter
+import ro.aenigma.util.UrlExtensions.getBaseUrl
+import ro.aenigma.util.UrlExtensions.getTagQueryParameter
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton

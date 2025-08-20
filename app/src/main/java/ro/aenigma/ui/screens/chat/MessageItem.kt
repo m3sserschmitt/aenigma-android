@@ -1,6 +1,5 @@
 package ro.aenigma.ui.screens.chat
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,7 +7,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -17,9 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,7 +22,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,24 +29,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.work.WorkInfo
 import ro.aenigma.R
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotDownloaded
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
-import ro.aenigma.ui.screens.common.SecureAsyncImage
-import ro.aenigma.util.ContextExtensions.isImageUri
-import ro.aenigma.util.ContextExtensions.openUriInExternalApp
+import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.services.ImageFetcher
+import ro.aenigma.services.NoOpImageFetcherImpl
+import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
+import ro.aenigma.ui.screens.common.FilesList
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
@@ -63,8 +62,7 @@ fun MessageItem(
     isSelected: Boolean,
     onItemSelected: (MessageWithDetailsDto) -> Unit,
     onItemDeselected: (MessageWithDetailsDto) -> Unit,
-    onClick: () -> Unit,
-    onRetryFailed: (MessageWithDetailsDto) -> Unit
+    onClick: (MessageWithDetailsDto) -> Unit,
 ) {
     val context = LocalContext.current
     val text = message.message.getMessageTextByAction(context)
@@ -84,7 +82,8 @@ fun MessageItem(
         else null
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
     val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
-    val isOutgoingFailed = !message.message.incoming && !message.message.sent && deliveryStatus == WorkInfo.State.FAILED
+    val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
+
     Box(
         modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
         contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd
@@ -97,12 +96,7 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = {
-                        if(isOutgoingFailed) {
-                            onRetryFailed(message)
-                        }
-                        onClick()
-                    }
+                    onClick = { onClick(message) }
                 ),
             color = containerColor,
             shape = RoundedCornerShape(12.dp)
@@ -148,8 +142,8 @@ fun MessageItem(
                         containerColor = MaterialTheme.colorScheme.secondary
                     )
 
-                    UriListDisplay(
-                        uris = message.message.files
+                    DisplayFiles(
+                        message = message.message,
                     )
 
                     MessageText(
@@ -169,6 +163,7 @@ fun MessageItem(
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
                         if (isOutgoingSent) {
                             Icon(
                                 modifier = Modifier.size(12.dp).alpha(.5f),
@@ -177,12 +172,7 @@ fun MessageItem(
                                 tint = contentColor
                             )
                         } else if (isOutgoingFailed) {
-                            Icon(
-                                modifier = Modifier.size(16.dp).alpha(.5f),
-                                imageVector = Icons.Outlined.Warning,
-                                contentDescription = stringResource(R.string.message_delivery_status),
-                                tint = Color.Red
-                            )
+                            ClickToRetryMessage()
                         } else if (!message.message.incoming) {
                             Icon(
                                 modifier = Modifier.size(16.dp).alpha(.5f),
@@ -195,6 +185,64 @@ fun MessageItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun ClickToRetryMessage(
+    iconSize: Dp = 16.dp,
+    textStyle: TextStyle = MaterialTheme.typography.bodySmall
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            modifier = Modifier
+                .size(iconSize)
+                .alpha(0.75f),
+            imageVector = Icons.Outlined.Warning,
+            contentDescription = stringResource(R.string.message_delivery_status),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Text(
+            text = stringResource(id = R.string.click_to_retry),
+            style = textStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun DisplayFiles(
+    message: MessageDto,
+    imageFetcher: ImageFetcher = NoOpImageFetcherImpl()
+) {
+    val filesLate by message.filesLate.collectAsState()
+    val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
+    if(message.attachmentsNotDownloaded() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
+        if(filesDownloadState == WorkInfo.State.FAILED) {
+            Row {
+                ClickToRetryMessage(
+                    iconSize = 18.dp,
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+            }
+        } else {
+            IndeterminateCircularIndicator(
+                visible = true,
+                text = stringResource(id = R.string.waiting_for_files),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+        }
+    } else {
+        val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
+        FilesList(
+            uris = files,
+            imageFetcher = imageFetcher
+        )
     }
 }
 
@@ -283,55 +331,6 @@ fun MessageText(
 }
 
 @Composable
-fun UriListDisplay(uris: List<String>?) {
-    val context = LocalContext.current
-    if(uris != null && uris.isNotEmpty())
-    {
-        Column {
-            uris.forEach { uri ->
-                UriItem(uri = uri, context = context)
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun UriItem(uri: String, context: Context) {
-    val isImage = remember(key1 = uri) { context.isImageUri(uri) }
-    val parsedUri = uri.toUri()
-    if (isImage) {
-        SecureAsyncImage(
-            uri = uri
-        )
-    } else {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = parsedUri.lastPathSegment ?: stringResource(id = R.string.unknown_file),
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Button(onClick = { context.openUriInExternalApp(parsedUri) }) {
-                    Text(
-                        text = stringResource(id = R.string.open)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 @Preview
 fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
     MessageItem(
@@ -351,7 +350,6 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
         ),
         onItemDeselected = {},
         onClick = {},
-        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -376,7 +374,6 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
         ),
         onItemDeselected = {},
         onClick = {},
-        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -397,7 +394,6 @@ fun MessagePending() {
         ),
         onItemDeselected = {},
         onClick = {},
-        onRetryFailed = {},
         onItemSelected = {}
     )
 }
@@ -418,7 +414,6 @@ fun MessageSent() {
         ),
         onItemDeselected = {},
         onClick = {},
-        onRetryFailed = {},
         onItemSelected = {}
     )
 }

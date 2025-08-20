@@ -12,7 +12,6 @@ import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
-import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.SerializerExtensions.deepCopy
 
 object MessageEntityExtensions {
@@ -137,7 +136,7 @@ object MessageEntityExtensions {
             description = message.text,
             url = null,
             date = message.date.toString(),
-            imageUrls = message.files?.filter { file -> context.isImageUri(file) }
+            imageUrls = message.files
         )
     }
 }
