@@ -107,7 +107,7 @@
     <string name="cannot_share_channels">Nu puteți distribui canale</string>
     <string name="cannot_select_channels_to_create_channel">Nu poteți selecta canale pentru a crea un nou canal.</string>
     <string name="tor">TOR</string>
-    <string name="access_database">Accesați baza de date</string>
+    <string name="access_aenigma">Accesați Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Autentificați-vă folosind datele biometrice sau codul PIN</string>
     <string name="authentication_failed">Autentificarea a eșuat</string>
     <string name="guard_syncing">Se sincronizează</string>
@@ -135,4 +135,5 @@
     <string name="text_message_received">Cineva ți-a trimis un mesaj</string>
     <string name="files_received">Cineva ți-a trimis niște fișiere</string>
     <string name="new_message">Mesaj nou</string>
+    <string name="restart_app_to_retry">Reporniți aplicația pentru a reîncerca</string>
 </resources>

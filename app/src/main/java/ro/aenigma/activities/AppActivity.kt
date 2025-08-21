@@ -57,6 +57,8 @@ class AppActivity : FragmentActivity() {
 
     private val isAuthenticated = MutableStateFlow(false)
 
+    private val isAuthError = MutableStateFlow(false)
+
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,12 +73,16 @@ class AppActivity : FragmentActivity() {
         setContent {
             ApplicationComposeTheme {
                 val auth by isAuthenticated.collectAsState()
+                val authError by isAuthError.collectAsState()
+                val passphraseLoaded by dbPassphraseLoaded.collectAsState()
                 val navController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
                     isAuthenticated = auth,
+                    isAuthError = authError,
+                    dbPassphraseLoaded = passphraseLoaded,
                     onAuthSuccess = { isAuthenticated.value = true },
-                    dbPassphraseLoaded = dbPassphraseLoaded,
+                    onAuthFailed = { isAuthError.value = true }
                 ) {
                     LaunchedEffect(key1 = true) {
                         observeTorService()
@@ -112,6 +118,7 @@ class AppActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         isAuthenticated.value = false
+        isAuthError.value = false
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.Companion.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
