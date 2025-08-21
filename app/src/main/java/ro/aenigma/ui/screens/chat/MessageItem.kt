@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -91,7 +93,7 @@ fun MessageItem(
             .padding(paddingStart, 8.dp, paddingEnd, 0.dp),
         contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
-        Surface(
+        Card(
             modifier = Modifier
                 .selectable(
                     item = message,
@@ -101,7 +103,10 @@ fun MessageItem(
                     onItemDeselected = onItemDeselected,
                     onClick = { onClick(message) }
                 ),
-            color = containerColor,
+            colors = CardDefaults.cardColors().copy(
+                containerColor = containerColor,
+                contentColor = contentColor
+            ),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
