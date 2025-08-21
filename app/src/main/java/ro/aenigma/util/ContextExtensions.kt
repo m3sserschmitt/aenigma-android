@@ -6,11 +6,12 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.net.Uri
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
 import ro.aenigma.activities.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
@@ -24,6 +25,26 @@ import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 
 object ContextExtensions {
+
+    fun Context.getFileTypeIcon(uri: String): Int {
+        return try {
+            val mime = contentResolver.getType(uri.toUri())
+            when {
+                mime == null -> R.drawable.ic_unknown_document
+                mime.startsWith("image/") -> R.drawable.ic_photo
+                mime.startsWith("video/") -> R.drawable.ic_video_file
+                mime.startsWith("audio/") -> R.drawable.ic_audio_file
+                mime == "application/pdf" -> R.drawable.ic_pdf
+                mime == "application/vnd.android.package-archive" -> R.drawable.ic_apk_file
+                mime.contains("zip") || mime.contains("rar") ||
+                        mime.contains("7z") || mime.contains("tar") ||
+                        mime.contains("gz") -> R.drawable.ic_zip
+                else -> R.drawable.ic_docs_file
+            }
+        } catch (_: Exception) {
+            R.drawable.ic_unknown_document
+        }
+    }
 
     fun Context.getPrivateKeyFile(): File {
         return File(filesDir, PRIVATE_KEY_FILE)
@@ -49,7 +70,7 @@ object ContextExtensions {
         drawableResId: Int,
         width: Int = 0,
         height: Int = 0
-    ): Bitmap? {
+    ): ImageBitmap? {
         return try {
             val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
             val bitmapWidth = if (width > 0) width else drawable.intrinsicWidth
@@ -58,7 +79,7 @@ object ContextExtensions {
             val canvas = Canvas(bitmap)
             drawable.setBounds(0, 0, canvas.width, canvas.height)
             drawable.draw(canvas)
-            bitmap
+            bitmap.asImageBitmap()
         } catch (_: Exception) {
             null
         }

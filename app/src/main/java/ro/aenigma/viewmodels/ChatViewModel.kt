@@ -27,7 +27,7 @@ import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotDownloaded
+import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.services.SignalrConnectionController
@@ -398,7 +398,7 @@ class ChatViewModel @Inject constructor(
     fun onMessageClicked(message: MessageWithDetailsDto) {
         if(message.message.isNotSent()) {
             resendMessage(message)
-        } else if(message.message.attachmentsNotDownloaded()) {
+        } else if(message.message.attachmentsNotAvailable()) {
             retryAttachmentDownload(message)
         }
     }

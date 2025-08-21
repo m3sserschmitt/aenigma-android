@@ -95,7 +95,7 @@
     <string name="message_deleted">Message deleted</string>
     <string name="conversation_deleted">Conversation deleted</string>
     <string name="created_channel">Created the channel</string>
-    <string name="added_channel_members">Added channel new members</string>
+    <string name="added_channel_members">Added new channel members</string>
     <string name="removed_channel_members">Removed channel members</string>
     <string name="channel_member_left">Left the channel</string>
     <string name="channel_renamed">Renamed the channel</string>
@@ -134,4 +134,7 @@
     <string name="waiting_for_files">Waiting files</string>
     <string name="click_to_retry">Click to retry</string>
     <string name="no_files_available">No files available</string>
+    <string name="text_message_received">Someone sent you a message</string>
+    <string name="files_received">Someone sent you some files</string>
+    <string name="new_message">New message</string>
 </resources>

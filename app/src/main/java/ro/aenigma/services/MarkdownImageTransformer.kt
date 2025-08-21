@@ -32,7 +32,7 @@ class MarkdownImageTransformer @Inject constructor(
         }
 
         val painter: Painter = when (val bmp = bitmapState) {
-            null -> painterResource(R.drawable.ic_outline_broken_image)
+            null -> painterResource(R.drawable.ic_broken_image)
             else -> remember(bmp) { BitmapPainter(bmp) }
         }
 

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,13 +44,12 @@ import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotDownloaded
+import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
-import ro.aenigma.services.ImageFetcher
-import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
@@ -65,7 +63,11 @@ fun MessageItem(
     onClick: (MessageWithDetailsDto) -> Unit,
 ) {
     val context = LocalContext.current
-    val text = message.message.getMessageTextByAction(context)
+    val text = if(message.message.text.isNullOrBlank()) {
+        null
+    } else {
+        message.message.getMessageTextByAction(context)
+    }
     val paddingStart = if (message.message.incoming) 0.dp else 50.dp
     val paddingEnd = if (message.message.incoming) 50.dp else 0.dp
     val contentColor = if (message.message.incoming)
@@ -85,8 +87,9 @@ fun MessageItem(
     val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
 
     Box(
-        modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
-        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd
+        modifier = Modifier.fillMaxWidth()
+            .padding(paddingStart, 8.dp, paddingEnd, 0.dp),
+        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
         Surface(
             modifier = Modifier
@@ -129,7 +132,8 @@ fun MessageItem(
                         } else {
                             width(IntrinsicSize.Max)
                         }
-                    }
+                    },
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     SenderName(
                         contact = sender,
@@ -144,6 +148,7 @@ fun MessageItem(
 
                     DisplayFiles(
                         message = message.message,
+                        textColor = contentColor
                     )
 
                     MessageText(
@@ -153,17 +158,9 @@ fun MessageItem(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            modifier = Modifier.alpha(0.5f),
-                            textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.formatTime(message.message.date),
-                            color = contentColor,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
                         if (isOutgoingSent) {
                             Icon(
                                 modifier = Modifier.size(12.dp).alpha(.5f),
@@ -172,7 +169,11 @@ fun MessageItem(
                                 tint = contentColor
                             )
                         } else if (isOutgoingFailed) {
-                            ClickToRetryMessage()
+                            ClickToRetryMessage(
+                                iconSize = 16.dp,
+                                textColor = contentColor,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
                         } else if (!message.message.incoming) {
                             Icon(
                                 modifier = Modifier.size(16.dp).alpha(.5f),
@@ -181,6 +182,13 @@ fun MessageItem(
                                 tint = contentColor
                             )
                         }
+                        Text(
+                            modifier = Modifier.alpha(0.5f),
+                            textAlign = TextAlign.End,
+                            text = PrettyDateFormatter.formatTime(message.message.date),
+                            color = contentColor,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
                 }
             }
@@ -191,10 +199,12 @@ fun MessageItem(
 @Composable
 fun ClickToRetryMessage(
     iconSize: Dp = 16.dp,
+    textColor: Color = Color.Unspecified,
     textStyle: TextStyle = MaterialTheme.typography.bodySmall
 ) {
     Row(
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Icon(
             modifier = Modifier
@@ -208,7 +218,8 @@ fun ClickToRetryMessage(
             text = stringResource(id = R.string.click_to_retry),
             style = textStyle,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            color = textColor
         )
     }
 }
@@ -216,18 +227,16 @@ fun ClickToRetryMessage(
 @Composable
 fun DisplayFiles(
     message: MessageDto,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl()
+    textColor: Color = Color.Unspecified
 ) {
-    val filesLate by message.filesLate.collectAsState()
     val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
-    if(message.attachmentsNotDownloaded() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
+    if(message.attachmentsNotAvailable() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
         if(filesDownloadState == WorkInfo.State.FAILED) {
-            Row {
-                ClickToRetryMessage(
-                    iconSize = 18.dp,
-                    textStyle = MaterialTheme.typography.bodyMedium
-                )
-            }
+            ClickToRetryMessage(
+                iconSize = 18.dp,
+                textColor = textColor,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
         } else {
             IndeterminateCircularIndicator(
                 visible = true,
@@ -237,11 +246,13 @@ fun DisplayFiles(
                 textStyle = MaterialTheme.typography.bodyMedium
             )
         }
-    } else {
+    } else if(message.type == MessageType.FILES) {
+        val filesLate by message.filesLate.collectAsState()
         val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
+            .filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
         FilesList(
             uris = files,
-            imageFetcher = imageFetcher
+            textColor = textColor
         )
     }
 }
@@ -303,7 +314,6 @@ fun ResponseTo(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                modifier = Modifier.padding(start = 4.dp),
                 text = text,
                 color = contentColor.copy(alpha = .75f),
                 style = MaterialTheme.typography.bodySmall
@@ -314,10 +324,10 @@ fun ResponseTo(
 
 @Composable
 fun MessageText(
-    text: String,
+    text: String?,
     contentColor: Color
 ) {
-    if(text.isBlank())
+    if(text.isNullOrBlank())
     {
         return
     }

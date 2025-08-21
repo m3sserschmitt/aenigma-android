@@ -238,6 +238,6 @@ class MessageSaver @Inject constructor(
 
     private suspend fun notify(message: MessageEntity) {
         val contact = repository.local.getContact(message.chatId) ?: return
-        notificationService.notify(contact, message)
+        notificationService.notifyNewMessage(contact, message)
     }
 }

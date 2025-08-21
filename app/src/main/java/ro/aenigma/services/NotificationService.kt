@@ -17,8 +17,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
 import ro.aenigma.activities.AppActivity
+import ro.aenigma.models.enums.MessageType
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -121,7 +121,7 @@ class NotificationService @Inject constructor(
         notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
     }
 
-    fun notify(contact: ContactEntity, messageEntity: MessageEntity) {
+    fun notifyNewMessage(contact: ContactEntity, messageEntity: MessageEntity) {
         if (listOf(NOTIFICATIONS_DISABLE_ALL, contact.address)
                 .contains(blockedNotificationsSource.value)
         ) {
@@ -135,10 +135,15 @@ class NotificationService @Inject constructor(
             NotificationManager.IMPORTANCE_MAX
         )
         val intent = createChatNavigationIntent()
-        val text = messageEntity.getMessageTextByAction(context)
+        val text = if(messageEntity.type == MessageType.FILES) {
+            context.getString(R.string.text_message_received)
+        } else {
+            context.getString(R.string.files_received)
+        }
+        val title = context.getString(R.string.new_message)
         val notification = NotificationCompat.Builder(context, NEW_MESSAGE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_message)
-            .setContentTitle(contact.name.toString())
+            .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_MAX)

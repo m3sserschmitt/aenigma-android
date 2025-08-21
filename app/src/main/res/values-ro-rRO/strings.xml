@@ -132,4 +132,7 @@
     <string name="waiting_for_files">Se așteaptă fișierele</string>
     <string name="click_to_retry">Click pentru a reîncerca</string>
     <string name="no_files_available">Niciun fișier disponibil</string>
+    <string name="text_message_received">Cineva ți-a trimis un mesaj</string>
+    <string name="files_received">Cineva ți-a trimis niște fișiere</string>
+    <string name="new_message">Mesaj nou</string>
 </resources>

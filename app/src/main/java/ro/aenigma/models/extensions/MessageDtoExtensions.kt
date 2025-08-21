@@ -40,7 +40,7 @@ object MessageDtoExtensions {
         }
     }
 
-    fun MessageDto.attachmentsNotDownloaded(): Boolean {
+    fun MessageDto.attachmentsNotAvailable(): Boolean {
         return incoming && type == MessageType.FILES && files.isNullOrEmpty()
     }
 

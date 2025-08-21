@@ -86,14 +86,19 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
             }
             return zipFile
         } finally {
-            tempFiles.forEach { file -> file.delete() }
+            tempFiles.forEach { file ->
+                try {
+                    file.delete()
+                } catch (_: Exception) {
+                }
+            }
         }
     }
 
     private fun copyUriToCache(uri: String): File? {
         val parsedUri = uri.toUri()
         val inputStream = context.contentResolver.openInputStream(parsedUri) ?: return null
-        val file = File.createTempFile("file_", ".${getFileExtension(parsedUri)}", context.cacheDir)
+        val file = File.createTempFile("", ".${getFileExtension(parsedUri)}", context.cacheDir)
         file.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
         return file
     }

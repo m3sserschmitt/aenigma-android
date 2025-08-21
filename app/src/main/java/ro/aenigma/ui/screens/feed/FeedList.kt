@@ -3,37 +3,27 @@ package ro.aenigma.ui.screens.feed
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import ro.aenigma.R
 import ro.aenigma.models.Article
 import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.ui.screens.common.FilesList
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 
 @Composable
 fun FeedList(
@@ -68,18 +58,20 @@ fun ArticleCard(
         modifier
             .fillMaxWidth()
             .padding(
-                horizontal = 16.dp,
-                vertical = 8.dp
+                horizontal = 8.dp,
+                vertical = 4.dp
             ),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
-            Modifier.padding(16.dp)
-                .background(color = MaterialTheme.colorScheme.secondaryContainer)
+            Modifier.background(color = MaterialTheme.colorScheme.secondaryContainer)
+                .fillMaxSize()
+                .padding(8.dp)
         ) {
             if (!article.title.isNullOrBlank()) {
                 Text(
@@ -91,15 +83,13 @@ fun ArticleCard(
                     modifier = Modifier.height(4.dp)
                 )
             }
-            if (!article.imageUrls.isNullOrEmpty()) {
-                FilesList(
-                    uris = article.imageUrls.mapNotNull { uri -> uri },
-                    imageFetcher = imageFetcher
-                )
-
-            } else {
-                NoFileWarning()
-            }
+            FilesList(
+                uris = article.imageUrls?.mapNotNull { uri -> uri }
+                    ?.filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
+                    ?: listOf(),
+                textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                imageFetcher = imageFetcher
+            )
             Spacer(
                 modifier = Modifier.height(4.dp)
             )
@@ -111,28 +101,6 @@ fun ArticleCard(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun NoFileWarning() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            modifier = Modifier
-                .size(18.dp)
-                .alpha(0.75f),
-            imageVector = Icons.Outlined.Warning,
-            contentDescription = stringResource(R.string.no_files_available),
-            tint = MaterialTheme.colorScheme.error
-        )
-        Text(
-            text = stringResource(id = R.string.no_files_available),
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 

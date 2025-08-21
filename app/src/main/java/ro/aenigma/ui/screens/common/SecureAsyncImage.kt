@@ -1,18 +1,17 @@
 package ro.aenigma.ui.screens.common
 
-import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -30,8 +29,24 @@ import ro.aenigma.services.NoOpImageFetcherImpl
 import ro.aenigma.util.ContextExtensions.getBitmapFromDrawable
 import ro.aenigma.util.UrlExtensions.isRemoteUri
 
-private fun Context.getImagePlaceholder(): ImageBitmap? {
-    return getBitmapFromDrawable(R.drawable.ic_outline_broken_image)?.asImageBitmap()
+@Composable
+fun produceImageBitmap(
+    uri: String?,
+    imageFetcher: ImageFetcher
+): State<ImageBitmap?> {
+    val context = LocalContext.current
+    return produceState(
+        initialValue = null,
+        key1 = uri
+    ) {
+        value = withContext(Dispatchers.IO) {
+            if (!uri.isNullOrBlank()) {
+                imageFetcher.fetch(uri) ?: context.getBitmapFromDrawable(R.drawable.ic_broken_image)
+            } else {
+                context.getBitmapFromDrawable(R.drawable.ic_image)
+            }
+        }
+    }
 }
 
 @Composable
@@ -40,19 +55,10 @@ private fun RemoteSecureAsyncImage(
     imageFetcher: ImageFetcher,
     contentScale: ContentScale = ContentScale.Fit
 ) {
-    val context = LocalContext.current
-    val bitmap by produceState<ImageBitmap?>(
-        initialValue = null,
-        key1 = uri
-    ) {
-        value = withContext(Dispatchers.IO) {
-            if (!uri.isNullOrBlank()) {
-                imageFetcher.fetch(uri)
-            } else {
-                context.getImagePlaceholder()
-            }
-        }
-    }
+    val bitmap by produceImageBitmap(
+        uri = uri,
+        imageFetcher = imageFetcher
+    )
     bitmap?.let { bitmapToShow ->
         Image(
             modifier = Modifier
@@ -87,8 +93,8 @@ fun SecureAsyncImage(
             model = ImageRequest.Builder(context)
                 .data(uri)
                 .crossfade(true)
-                .placeholder(R.drawable.ic_outline_broken_image)
-                .error(R.drawable.ic_outline_broken_image)
+                .placeholder(R.drawable.ic_image)
+                .error(R.drawable.ic_broken_image)
                 .build(),
             contentDescription = stringResource(id = R.string.picture),
             contentScale = ContentScale.Fit
