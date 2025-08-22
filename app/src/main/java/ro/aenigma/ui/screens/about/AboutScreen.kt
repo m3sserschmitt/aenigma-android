@@ -40,6 +40,7 @@ fun AboutScreen(
     navigateToLicensesScreen: () -> Unit,
 ) {
     var appLicenseVisible by remember { mutableStateOf(false) }
+    var apacheLicenseVisible by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
@@ -50,6 +51,16 @@ fun AboutScreen(
         text = readRawTextResource(context, R.raw.gnu_gpl_v3_0_license),
         onCloseButtonClicked = {
             appLicenseVisible = false
+        }
+    )
+
+    LicenseDialog(
+        visible = apacheLicenseVisible,
+        title = stringResource(id = R.string.apache_v2_0_license_title),
+        subtitle = "",
+        text = readRawTextResource(context, R.raw.apache_v2_0_license),
+        onCloseButtonClicked = {
+            apacheLicenseVisible = false
         }
     )
 
@@ -78,18 +89,21 @@ fun AboutScreen(
                     id = R.string.app_name_and_version
                 ).format(BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
                 text = stringResource(R.string.copyright_notices),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = 16.dp),
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Text(
                 text = stringResource(R.string.gpl_license_info),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Link(
@@ -103,6 +117,7 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.source_code_available_at),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Link(
@@ -113,12 +128,27 @@ fun AboutScreen(
             Text(
                 text = stringResource(R.string.disclaimer),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Link(
                 context = context,
                 url = stringResource(id = R.string.open_source_libraries),
-                action = navigateToLicensesScreen
+                action = navigateToLicensesScreen,
+            )
+
+            Text(
+                text = stringResource(R.string.backed_by_openssl),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.apache_v2_0_license),
+                action = {
+                    apacheLicenseVisible = true
+                }
             )
         }
     }

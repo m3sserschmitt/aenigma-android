@@ -136,4 +136,5 @@
     <string name="files_received">Cineva ți-a trimis niște fișiere</string>
     <string name="new_message">Mesaj nou</string>
     <string name="restart_app_to_retry">Reporniți aplicația pentru a reîncerca</string>
+    <string name="backed_by_openssl">OpenSSL 3.0, licențiată sub:</string>
 </resources>
