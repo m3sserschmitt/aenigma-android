@@ -80,7 +80,6 @@
     <string name="about_app">About App</string>
     <string name="open_source_libraries">Open Source Libraries</string>
     <string name="you">You:</string>
-    <string name="my_code">My code</string>
     <string name="saved">Saved</string>
     <string name="no_item_selected">No item selected</string>
     <string name="one_item_selected">1 item selected</string>
@@ -111,7 +110,6 @@
     <string name="tor">TOR</string>
     <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
-    <string name="authentication_failed">Authentication failed</string>
     <string name="guard_syncing">Syncing</string>
     <string name="downloading_channel_info">Downloading channel info</string>
     <string name="uploading_channel_info">Uploading channel info</string>

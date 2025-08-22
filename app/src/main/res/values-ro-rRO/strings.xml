@@ -80,7 +80,6 @@
     <string name="about_app">Despre Aplicație</string>
     <string name="open_source_libraries">Biblioteci Open Source</string>
     <string name="you">Dvs:</string>
-    <string name="my_code">Codul meu</string>
     <string name="saved">Salvat</string>
     <string name="no_item_selected">Niciun obiect selectat</string>
     <string name="one_item_selected">1 obiect selectat</string>
@@ -109,7 +108,6 @@
     <string name="tor">TOR</string>
     <string name="access_aenigma">Accesați Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Autentificați-vă folosind datele biometrice sau codul PIN</string>
-    <string name="authentication_failed">Autentificarea a eșuat</string>
     <string name="guard_syncing">Se sincronizează</string>
     <string name="downloading_channel_info">Se preiau informațiile canalului</string>
     <string name="uploading_channel_info">Se distribuie informațiile canalului</string>
