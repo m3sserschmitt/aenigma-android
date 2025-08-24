@@ -30,10 +30,9 @@ import ro.aenigma.models.Article
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.services.CachedImageFetcher
 import ro.aenigma.services.FeedSampler
-import ro.aenigma.services.ImageFetcher
 import ro.aenigma.services.MarkdownImageTransformer
+import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.TorServiceController
 import ro.aenigma.util.SerializerExtensions.fromJson
@@ -47,11 +46,11 @@ class MainViewModel @Inject constructor(
     private val feedSamplerLazy: dagger.Lazy<FeedSampler>,
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
-    private val imageFetcherLazy: dagger.Lazy<CachedImageFetcher>,
+    okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     torServiceController: TorServiceController,
     repository: Repository,
     signalrConnectionController: SignalrConnectionController,
-) : BaseViewModel(repository, signalrConnectionController) {
+) : BaseViewModel(repository, signalrConnectionController, okHttpClientProviderLazy) {
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
@@ -113,11 +112,6 @@ class MainViewModel @Inject constructor(
     val markdownImageTransformer: ImageTransformer
         get() {
             return markdownImageTransformerLazy.get()
-        }
-
-    val imageFetcher: ImageFetcher
-        get() {
-            return imageFetcherLazy.get()
         }
 
     fun loadContacts() {

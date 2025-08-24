@@ -32,6 +32,8 @@ class Constants {
 
         const val IMAGES_CACHE_DIR = "images_cache"
 
+        const val COIL_MEMORY_CACHE_PERCENTAGE = .25
+
         const val PRIVATE_KEY_FILE = "private-key.locked"
 
         const val PUBLIC_KEY_FILE = "public-key.pem"

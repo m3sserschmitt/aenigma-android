@@ -28,6 +28,8 @@ import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
@@ -65,6 +67,7 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
+        okHttpClientProvider = chatViewModel.okHttpClientProvider,
         isMember = isMember,
         isAdmin = isAdmin,
         contacts = contacts,
@@ -102,6 +105,7 @@ fun ChatScreen(
 @Composable
 fun ChatScreen(
     contact: RequestState<ContactWithGroup>,
+    okHttpClientProvider: IOkHttpClientProvider,
     isMember: Boolean,
     isAdmin: Boolean,
     contacts: RequestState<List<ContactDto>>,
@@ -321,6 +325,7 @@ fun ChatScreen(
                     start = 4.dp,
                     end = 4.dp
                 ),
+                okHttpClientProvider = okHttpClientProvider,
                 isMember = isMember,
                 isSelectionMode = isSelectionMode,
                 isSearchMode = isSearchMode,
@@ -443,6 +448,7 @@ fun ChatScreenPreview() {
                 ), null
             )
         ),
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isMember = true,
         isAdmin = false,
         contacts = RequestState.Success(listOf()),

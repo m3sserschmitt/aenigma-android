@@ -32,8 +32,7 @@ import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ro.aenigma.R
-import ro.aenigma.services.ImageFetcher
-import ro.aenigma.services.NoOpImageFetcherImpl
+import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
 import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
@@ -43,7 +42,7 @@ import ro.aenigma.util.UrlExtensions.isImageUrlByExtension
 fun FilesList(
     uris: List<String>,
     textColor: Color = Color.Unspecified,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl()
+    okHttpClientProvider: IOkHttpClientProvider
 ) {
     if(uris.isNotEmpty()) {
         Column(
@@ -52,7 +51,7 @@ fun FilesList(
             uris.forEach { uri ->
                 FileItem(
                     uri = uri,
-                    imageFetcher = imageFetcher
+                    okHttpClientProvider = okHttpClientProvider
                 )
             }
         }
@@ -102,13 +101,13 @@ fun rememberIsImage(uri: String): State<Boolean?> {
 @Composable
 fun FileItem(
     uri: String,
-    imageFetcher: ImageFetcher
+    okHttpClientProvider: IOkHttpClientProvider
 ) {
     val isImage by rememberIsImage(uri)
     if (isImage == true) {
-        SecureAsyncImage(
+        AsyncImage(
             uri = uri,
-            imageFetcher = imageFetcher
+            okHttpClientProvider = okHttpClientProvider
         )
     } else {
         Card(

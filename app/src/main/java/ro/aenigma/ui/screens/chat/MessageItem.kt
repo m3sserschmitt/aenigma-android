@@ -49,6 +49,8 @@ import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
@@ -58,6 +60,7 @@ import java.time.ZonedDateTime
 @Composable
 fun MessageItem(
     message: MessageWithDetailsDto,
+    okHttpClientProvider: IOkHttpClientProvider,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onItemSelected: (MessageWithDetailsDto) -> Unit,
@@ -153,7 +156,8 @@ fun MessageItem(
 
                     DisplayFiles(
                         message = message.message,
-                        textColor = contentColor
+                        textColor = contentColor,
+                        okHttpClientProvider = okHttpClientProvider
                     )
 
                     MessageText(
@@ -232,6 +236,7 @@ fun ClickToRetryMessage(
 @Composable
 fun DisplayFiles(
     message: MessageDto,
+    okHttpClientProvider: IOkHttpClientProvider,
     textColor: Color = Color.Unspecified
 ) {
     val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
@@ -257,7 +262,8 @@ fun DisplayFiles(
             .filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
         FilesList(
             uris = files,
-            textColor = textColor
+            textColor = textColor,
+            okHttpClientProvider = okHttpClientProvider
         )
     }
 }
@@ -349,6 +355,7 @@ fun MessageText(
 @Preview
 fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = false,
         message = MessageWithDetailsDto(
@@ -373,6 +380,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
 @Preview
 fun GroupSelectionModeIncomingMessageSelectedPreview() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = true,
         message = MessageWithDetailsDto(
@@ -397,6 +405,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
 @Preview
 fun MessagePending() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
         message = MessageWithDetailsDto(
@@ -417,6 +426,7 @@ fun MessagePending() {
 @Preview
 fun MessageSent() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
         message = MessageWithDetailsDto(

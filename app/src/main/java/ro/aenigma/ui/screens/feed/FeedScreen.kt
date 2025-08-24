@@ -12,8 +12,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.Article
-import ro.aenigma.services.ImageFetcher
-import ro.aenigma.services.NoOpImageFetcherImpl
+import ro.aenigma.services.OkHttpClientProviderDefault
+import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
@@ -37,7 +37,7 @@ fun FeedScreen(
 
     FeedScreen(
         articles = articles,
-        imageFetcher = mainViewModel.imageFetcher,
+        okHttpClientProvider = mainViewModel.okHttpClientProvider,
         onArticleClicked = { article ->
             if (article.url?.isNotBlank() == true) {
                 navigateToArticle(article.url)
@@ -50,7 +50,7 @@ fun FeedScreen(
 @Composable
 fun FeedScreen(
     articles: RequestState<List<Article>>,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
+    okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (Article) -> Unit,
     onReloadFeedClicked: () -> Unit
 ) {
@@ -73,7 +73,7 @@ fun FeedScreen(
                 top = padding.calculateTopPadding()
             ).fillMaxSize(),
             articles = articles,
-            imageFetcher = imageFetcher,
+            okHttpClientProvider = okHttpClientProvider,
             onArticleClicked = onArticleClicked
         )
     }
@@ -83,7 +83,7 @@ fun FeedScreen(
 fun FeedScreenContent(
     modifier: Modifier,
     articles: RequestState<List<Article>>,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
+    okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (Article) -> Unit
 ) {
     when (articles) {
@@ -92,7 +92,7 @@ fun FeedScreenContent(
                 FeedList(
                     modifier = modifier,
                     articles = articles.data,
-                    imageFetcher = imageFetcher,
+                    okHttpClientProvider = okHttpClientProvider,
                     onArticleClicked = onArticleClicked
                 )
             } else {
@@ -124,6 +124,7 @@ fun FeedScreenPreview() {
     }
     FeedScreen(
         articles = RequestState.Success(articles),
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = {},
         onReloadFeedClicked = {}
     )

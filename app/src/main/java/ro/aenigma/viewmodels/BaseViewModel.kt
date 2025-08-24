@@ -8,11 +8,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrConnectionController
 
 abstract class BaseViewModel(
     protected val repository: Repository,
     private val signalrConnectionController: SignalrConnectionController,
+    private val okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>
 ): ViewModel() {
 
     protected var ioDispatcher = Dispatchers.IO
@@ -25,6 +27,11 @@ abstract class BaseViewModel(
                 .collect { userName -> _userName.value = userName }
         }
     }
+
+    val okHttpClientProvider: OkHttpClientProvider
+        get() {
+            return okHttpClientProviderLazy.get()
+        }
 
     protected var defaultDispatcher = Dispatchers.Default
 

@@ -20,8 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.models.Article
-import ro.aenigma.services.ImageFetcher
-import ro.aenigma.services.NoOpImageFetcherImpl
+import ro.aenigma.services.OkHttpClientProviderDefault
+import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.ui.screens.common.FilesList
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 
@@ -29,7 +29,7 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 fun FeedList(
     modifier: Modifier = Modifier,
     articles: List<Article>,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl(),
+    okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (Article) -> Unit = {}
 ) {
     LazyColumn(
@@ -42,7 +42,7 @@ fun FeedList(
             ArticleCard(
                 modifier = Modifier.clickable { onArticleClicked(article) },
                 article = article,
-                imageFetcher = imageFetcher
+                okHttpClientProvider = okHttpClientProvider
             )
         }
     }
@@ -52,7 +52,7 @@ fun FeedList(
 fun ArticleCard(
     modifier: Modifier = Modifier,
     article: Article,
-    imageFetcher: ImageFetcher = NoOpImageFetcherImpl()
+    okHttpClientProvider: IOkHttpClientProvider
 ) {
     Card(
         modifier
@@ -88,7 +88,7 @@ fun ArticleCard(
                     ?.filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
                     ?: listOf(),
                 textColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                imageFetcher = imageFetcher
+                okHttpClientProvider = okHttpClientProvider
             )
             Spacer(
                 modifier = Modifier.height(4.dp)
@@ -119,6 +119,7 @@ fun FeedListPreview() {
     }
     FeedList(
         articles = articles,
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = { }
     )
 }

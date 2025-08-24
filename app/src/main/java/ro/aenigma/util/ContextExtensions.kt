@@ -8,6 +8,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Canvas
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.ui.graphics.ImageBitmap
@@ -21,10 +22,44 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
 import ro.aenigma.util.FileExtensions.lengthSafe
 import java.io.File
 import androidx.core.graphics.createBitmap
+import coil3.ImageLoader
+import coil3.disk.DiskCache
+import coil3.disk.directory
+import coil3.gif.AnimatedImageDecoder
+import coil3.gif.GifDecoder
+import coil3.memory.MemoryCache
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import okhttp3.OkHttpClient
+import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
+import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 
 object ContextExtensions {
+
+    fun Context.createImageLoader(client: OkHttpClient): ImageLoader {
+        return ImageLoader.Builder(this).memoryCache {
+            MemoryCache.Builder()
+                .maxSizePercent(this, COIL_MEMORY_CACHE_PERCENTAGE)
+                .build()
+        }.diskCache {
+            DiskCache.Builder()
+                .directory(getImagesCacheDir())
+                .build()
+        }.components {
+            add(
+                OkHttpNetworkFetcherFactory(
+                    callFactory = {
+                        client
+                    }
+                ))
+            if (Build.VERSION.SDK_INT >= 28) {
+                add(AnimatedImageDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }.build()
+    }
 
     fun Context.getFileTypeIcon(uri: String): Int {
         return try {
@@ -56,6 +91,10 @@ object ContextExtensions {
 
     fun Context.getConversationFilesDir(destinationDir: String): File {
         return File(filesDir, destinationDir)
+    }
+
+    fun Context.getImagesCacheDir(): File {
+        return File(cacheDir, IMAGES_CACHE_DIR)
     }
 
     fun Context.deleteUri(uri: String): Boolean {

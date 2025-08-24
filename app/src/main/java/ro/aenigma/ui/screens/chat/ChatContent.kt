@@ -26,6 +26,8 @@ import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
@@ -34,6 +36,7 @@ import java.time.ZonedDateTime
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
+    okHttpClientProvider: IOkHttpClientProvider,
     isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
@@ -70,6 +73,7 @@ fun ChatContent(
     ) {
         DisplayMessages(
             modifier = Modifier.weight(1f),
+            okHttpClientProvider = okHttpClientProvider,
             isSelectionMode = isSelectionMode,
             isSearchMode = isSearchMode,
             messages = messages,
@@ -118,6 +122,7 @@ fun MessageDate(next: MessageWithDetailsDto?, message: MessageWithDetailsDto) {
 @Composable
 fun DisplayMessages(
     modifier: Modifier = Modifier,
+    okHttpClientProvider: IOkHttpClientProvider,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     messages: RequestState<List<MessageWithDetailsDto>>,
@@ -139,6 +144,7 @@ fun DisplayMessages(
                     selectedItems = selectedMessages,
                     listItem = { next, messageEntity, isSelected ->
                         MessageItem(
+                            okHttpClientProvider = okHttpClientProvider,
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
                             message = messageEntity,
@@ -218,6 +224,7 @@ fun ChatContentPreview() {
         messages = RequestState.Success(
             listOf(message1, message2)
         ),
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isMember = true,
         replyToMessage = RequestState.Idle,
         nextConversationPageAvailable = true,
