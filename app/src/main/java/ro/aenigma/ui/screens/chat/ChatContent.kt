@@ -20,13 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithDetails
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZoneId
@@ -35,20 +36,23 @@ import java.time.ZonedDateTime
 @Composable
 fun ChatContent(
     modifier: Modifier = Modifier,
+    okHttpClientProvider: IOkHttpClientProvider,
     isMember: Boolean,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageWithDetails>>,
-    allContacts: RequestState<List<ContactEntity>>,
-    replyToMessage: MessageWithDetails?,
+    messages: RequestState<List<MessageWithDetailsDto>>,
+    replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetails>,
+    selectedMessages: List<MessageWithDetailsDto>,
     messageInputText: String,
+    attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
+    onAttachmentsSelected: (List<String>) -> Unit,
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit,
-    onMessageSelected: (MessageWithDetails) -> Unit,
-    onMessageDeselected: (MessageWithDetails) -> Unit,
+    onMessageSelected: (MessageWithDetailsDto) -> Unit,
+    onMessageDeselected: (MessageWithDetailsDto) -> Unit,
+    onMessageClicked: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -69,24 +73,27 @@ fun ChatContent(
     ) {
         DisplayMessages(
             modifier = Modifier.weight(1f),
+            okHttpClientProvider = okHttpClientProvider,
             isSelectionMode = isSelectionMode,
             isSearchMode = isSearchMode,
             messages = messages,
-            allContacts = allContacts,
             conversationListState = conversationListState,
             nextConversationPageAvailable = nextConversationPageAvailable,
             selectedMessages = selectedMessages,
             onItemSelected = onMessageSelected,
             onItemDeselected = onMessageDeselected,
+            onMessageClicked = onMessageClicked,
             loadNextPage = loadNextPage
         )
 
         ChatInput(
             modifier = Modifier.height(80.dp),
-            enabled = isMember,
+            visible = isMember,
             messageInputText = messageInputText,
             replyToMessage = replyToMessage,
             onInputTextChanged = onInputTextChanged,
+            attachments = attachments,
+            onAttachmentsSelected = onAttachmentsSelected,
             onSendClicked = {
                 onSendClicked()
                 messageSent = true
@@ -97,7 +104,7 @@ fun ChatContent(
 }
 
 @Composable
-fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
+fun MessageDate(next: MessageWithDetailsDto?, message: MessageWithDetailsDto) {
     val localDate1 = next?.message?.date?.withZoneSameInstant(ZoneId.systemDefault())?.toLocalDate()
     val localDate2 = message.message.date.withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
 
@@ -115,19 +122,20 @@ fun MessageDate(next: MessageWithDetails?, message: MessageWithDetails) {
 @Composable
 fun DisplayMessages(
     modifier: Modifier = Modifier,
+    okHttpClientProvider: IOkHttpClientProvider,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
-    messages: RequestState<List<MessageWithDetails>>,
-    allContacts: RequestState<List<ContactEntity>>,
+    messages: RequestState<List<MessageWithDetailsDto>>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetails>,
+    selectedMessages: List<MessageWithDetailsDto>,
     conversationListState: LazyListState = rememberLazyListState(),
-    onItemSelected: (MessageWithDetails) -> Unit,
-    onItemDeselected: (MessageWithDetails) -> Unit,
+    onItemSelected: (MessageWithDetailsDto) -> Unit,
+    onItemDeselected: (MessageWithDetailsDto) -> Unit,
+    onMessageClicked: (MessageWithDetailsDto) -> Unit,
     loadNextPage: () -> Unit
 ) {
-    when {
-        messages is RequestState.Success && allContacts is RequestState.Success -> {
+    when(messages) {
+        is RequestState.Success -> {
             if (messages.data.isNotEmpty()) {
                 AutoScrollItemsList(
                     modifier = modifier,
@@ -136,13 +144,13 @@ fun DisplayMessages(
                     selectedItems = selectedMessages,
                     listItem = { next, messageEntity, isSelected ->
                         MessageItem(
+                            okHttpClientProvider = okHttpClientProvider,
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected,
                             message = messageEntity,
-                            allContacts = allContacts.data,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
-                            onClick = {}
+                            onClick = onMessageClicked,
                         )
                         MessageDate(next = next, message = messageEntity)
                     },
@@ -160,11 +168,11 @@ fun DisplayMessages(
             }
         }
 
-        listOf(messages, allContacts).any { obj -> obj is RequestState.Loading } -> LoadingScreen(
+        is RequestState.Loading -> LoadingScreen(
             modifier = modifier
         )
 
-        listOf(messages, allContacts).any { obj -> obj is RequestState.Error } -> GenericErrorScreen(
+        is RequestState.Error -> GenericErrorScreen(
             modifier = modifier
         )
 
@@ -175,8 +183,8 @@ fun DisplayMessages(
 @Preview
 @Composable
 fun ChatContentPreview() {
-    val message1 = MessageWithDetails(
-        MessageEntity(
+    val message1 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             senderAddress = "123",
             text = "Hey",
@@ -189,11 +197,12 @@ fun ChatContentPreview() {
             incoming = true,
             sent = true,
             deleted = false,
-            date = ZonedDateTime.now()
+            date = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
-    val message2= MessageWithDetails(
-        MessageEntity(
+    val message2 = MessageWithDetailsDto(
+        MessageDto(
             chatId = "123",
             text = "Please don't forget my green T-shirt...",
             type = MessageType.TEXT,
@@ -207,6 +216,7 @@ fun ChatContentPreview() {
             deleted = false,
             date = ZonedDateTime.now(),
             dateReceivedOnServer = ZonedDateTime.now(),
+            files = listOf()
         ), null, null
     )
 
@@ -214,11 +224,14 @@ fun ChatContentPreview() {
         messages = RequestState.Success(
             listOf(message1, message2)
         ),
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isMember = true,
-        replyToMessage = null,
+        replyToMessage = RequestState.Idle,
         nextConversationPageAvailable = true,
         isSelectionMode = false,
         messageInputText = "",
+        attachments = listOf(),
+        onAttachmentsSelected = { },
         onSendClicked = {},
         onReplyAborted = {},
         onInputTextChanged = {},
@@ -227,6 +240,6 @@ fun ChatContentPreview() {
         onMessageSelected = { },
         isSearchMode = false,
         loadNextPage = {},
-        allContacts = RequestState.Success(listOf()),
+        onMessageClicked = {}
     )
 }

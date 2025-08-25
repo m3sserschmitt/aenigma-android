@@ -39,8 +39,8 @@ import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.RequestState
-import ro.aenigma.util.openApplicationDetails
 import ro.aenigma.viewmodels.MainViewModel
 import java.time.ZonedDateTime
 
@@ -57,6 +57,7 @@ fun ContactsScreen(
     val userName by mainViewModel.userName.collectAsState()
     val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
+    val torOk by mainViewModel.torOk.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
@@ -65,6 +66,7 @@ fun ContactsScreen(
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
         useTor = useTor,
+        torOk = torOk,
         useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
         onNotificationsPreferenceChanged = {
             allowed -> mainViewModel.saveNotificationsPreference(allowed)
@@ -78,7 +80,7 @@ fun ContactsScreen(
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  { newValue -> mainViewModel.validateNewContactName(newValue) },
+        onNewContactNameChanged =  { newValue -> newValue.isNotBlank() },
         onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
@@ -95,6 +97,7 @@ fun ContactsScreen(
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     useTor: Boolean,
+    torOk: Boolean,
     useTorChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
@@ -274,6 +277,7 @@ fun ContactsScreen(
                 connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
                 useTor = useTor,
+                torOk = torOk,
                 useTorChanged = useTorChanged,
                 onSearchTriggered = {
                     isSearchMode = true
@@ -382,6 +386,7 @@ fun ContactsScreenPreview() {
         notificationsAllowed = true,
         nameDialogVisible = false,
         useTor = true,
+        torOk = true,
         useTorChanged = { _ -> },
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},

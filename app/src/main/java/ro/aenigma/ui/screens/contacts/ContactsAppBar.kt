@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,7 @@ import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
-import ro.aenigma.ui.screens.common.RetryConnectionAppBarAction
+import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
@@ -45,6 +46,7 @@ fun ContactsAppBar(
     isSearchMode: Boolean,
     selectedItemsCount: Int,
     useTor: Boolean,
+    torOk: Boolean,
     useTorChanged: (Boolean) -> Unit,
     onSearchTriggered: () -> Unit,
     onRetryConnection: () -> Unit,
@@ -113,9 +115,9 @@ fun ContactsAppBar(
                 ConnectionStatusAppBarAction(
                     connectionStatus = connectionStatus
                 )
-                RetryConnectionAppBarAction(
+                ReloadAppBarAction(
                     visible = connectionStatus is SignalRStatus.Error.Aborted,
-                    onRetryConnection = onRetryConnection
+                    onClick = onRetryConnection
                 )
                 ActivateSearchAppBarAction(
                     onSearchModeTriggered = onSearchTriggered
@@ -124,6 +126,7 @@ fun ContactsAppBar(
                     navigateToAboutScreen = navigateToAboutScreen,
                     onResetUsernameClicked = onResetUsernameClicked,
                     useTor = useTor,
+                    torOk = torOk,
                     useTorChanged = useTorChanged
                 )
             }
@@ -134,6 +137,7 @@ fun ContactsAppBar(
 @Composable
 fun MoreActions(
     useTor: Boolean,
+    torOk: Boolean,
     useTorChanged: (Boolean) -> Unit,
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
@@ -147,6 +151,7 @@ fun MoreActions(
     ) {
         TorSwitch(
             useTor = useTor,
+            torOk = torOk,
             useTorChanged = useTorChanged
         )
         BasicDropDownMenuItem(
@@ -173,6 +178,7 @@ fun MoreActions(
 @Composable
 fun TorSwitch(
     useTor: Boolean,
+    torOk: Boolean,
     useTorChanged: (Boolean) -> Unit
 ) {
     DropdownMenuItem(
@@ -194,7 +200,7 @@ fun TorSwitch(
                     checked = useTor,
                     onCheckedChange = useTorChanged,
                     colors = SwitchDefaults.colors().copy(
-                        checkedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        checkedBorderColor = if (torOk) Color.Green else MaterialTheme.colorScheme.onPrimaryContainer,
                         uncheckedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         uncheckedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         checkedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,

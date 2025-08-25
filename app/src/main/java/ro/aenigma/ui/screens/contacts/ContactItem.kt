@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -26,11 +27,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
 
@@ -43,7 +45,6 @@ fun ContactItem(
     isSelectionMode: Boolean,
     isSelected: Boolean
 ) {
-    val context = LocalContext.current
     Surface(
         modifier = Modifier
             .selectable(
@@ -114,21 +115,9 @@ fun ContactItem(
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
-                if (contact.lastMessage != null) {
-                    Text(
-                        modifier = Modifier.alpha(.75f),
-                        text = if (!contact.lastMessage.incoming)
-                            stringResource(R.string.you) + " " + contact.lastMessage.getMessageTextByAction(
-                                context
-                            )
-                        else
-                            contact.lastMessage.getMessageTextByAction(context),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+                ConversationPreview(
+                    contact = contact
+                )
             }
 
             if (contact.contact.hasNewMessage) {
@@ -140,6 +129,31 @@ fun ContactItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ConversationPreview(
+    contact: ContactWithLastMessage
+) {
+    if (contact.lastMessage != null && !contact.lastMessage.deleted) {
+        val context = LocalContext.current
+        val messagePreview = remember(key1 = contact.lastMessage) {
+            if (!contact.lastMessage.incoming) {
+                context.getString(R.string.you) + " " +
+                        contact.lastMessage.toDto().getMessageTextByAction(context)
+            } else {
+                contact.lastMessage.toDto().getMessageTextByAction(context)
+            }
+        }
+        Text(
+            modifier = Modifier.alpha(.75f),
+            text = messagePreview,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 

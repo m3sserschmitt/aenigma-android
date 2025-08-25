@@ -1,0 +1,4 @@
+* Added file sharing
+* Implemented news feed with markdown support for posts
+* Images and GIFs support
+* Multiple UI improvements

@@ -1,6 +1,7 @@
 package ro.aenigma.data.database.extensions
 
 import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.util.SerializerExtensions.deepCopy
@@ -36,6 +37,22 @@ object ContactEntityExtensions {
             publicKey = publicKey,
             guardAddress = guardAddress,
             guardHostname = guardHostname
+        )
+    }
+
+    @JvmStatic
+    fun ContactEntity.toDto(): ContactDto {
+        return ContactDto(
+            address = address,
+            name = name,
+            publicKey = publicKey,
+            guardHostname = guardHostname,
+            guardAddress = guardAddress,
+            lastMessageId = lastMessageId,
+            hasNewMessage = hasNewMessage,
+            type = type,
+            dateCreated = dateCreated,
+            dateUpdated = dateUpdated
         )
     }
 }

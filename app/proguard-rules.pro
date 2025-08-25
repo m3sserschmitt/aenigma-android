@@ -116,3 +116,8 @@
 -keep class net.sqlcipher.** { *; }
 
 -keep class org.torproject.** { *; }
+
+# Keep Kotlin default constructors and synthetic classes
+-keepclassmembers class ** {
+    public <init>(...);
+}

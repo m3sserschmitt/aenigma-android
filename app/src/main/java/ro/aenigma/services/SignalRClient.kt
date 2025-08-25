@@ -27,6 +27,7 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.models.hubInvocation.VertexBroadcastResult
+import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
 import ro.aenigma.util.SerializerExtensions.toJson
@@ -100,7 +101,7 @@ class SignalRClient @Inject constructor(
 
     private val _hubConnection = MutableStateFlow<HubConnection?>(null)
 
-    private val _guardAddress = MutableStateFlow<String>("")
+    private val _guardAddress = MutableStateFlow("")
 
     private var _status: MutableStateFlow<SignalRStatus> =
         MutableStateFlow(SignalRStatus.NotConnected)
@@ -185,7 +186,6 @@ class SignalRClient @Inject constructor(
         synchronized(_lock) {
             return _hubConnection.value?.connectionState == HubConnectionState.CONNECTED
         }
-        return false
     }
 
     private fun start() {
@@ -418,7 +418,7 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    fun sendMessages(messages: List<String>): Boolean {
+    private fun sendMessages(messages: List<String>): Boolean {
         var r = false
         if (isConnected()) {
             synchronized(_lock) {
@@ -432,5 +432,11 @@ class SignalRClient @Inject constructor(
             }
         }
         return r
+    }
+
+    fun sendChunkedMessages(messages: List<String>): Boolean {
+        return messages.chunked(SEND_MESSAGES_CHUNK_SIZE) { chunk ->
+            sendMessages(chunk)
+        }.all { result -> result }
     }
 }

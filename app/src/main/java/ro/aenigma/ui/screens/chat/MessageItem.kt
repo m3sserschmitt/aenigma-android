@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,34 +30,49 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.work.WorkInfo
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithDetails
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.getMessageTextByAction
-import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
+import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.OkHttpClientProviderDefault
+import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
+import ro.aenigma.ui.screens.common.FilesList
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
 @Composable
 fun MessageItem(
-    message: MessageWithDetails,
-    allContacts: List<ContactEntity>,
+    message: MessageWithDetailsDto,
+    okHttpClientProvider: IOkHttpClientProvider,
     isSelectionMode: Boolean,
     isSelected: Boolean,
-    onItemSelected: (MessageWithDetails) -> Unit,
-    onItemDeselected: (MessageWithDetails) -> Unit,
-    onClick: () -> Unit
+    onItemSelected: (MessageWithDetailsDto) -> Unit,
+    onItemDeselected: (MessageWithDetailsDto) -> Unit,
+    onClick: (MessageWithDetailsDto) -> Unit,
 ) {
     val context = LocalContext.current
-    val text = message.message.getMessageTextByAction(context)
+    val text = if(message.message.text.isNullOrBlank()) {
+        null
+    } else {
+        message.message.getMessageTextByAction(context)
+    }
     val paddingStart = if (message.message.incoming) 0.dp else 50.dp
     val paddingEnd = if (message.message.incoming) 50.dp else 0.dp
     val contentColor = if (message.message.incoming)
@@ -70,13 +88,15 @@ fun MessageItem(
             message.sender
         else null
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isSent = message.message.sent || deliveryStatus
-    val replyToMessage = if (message.message.type == MessageType.REPLY) message.actionFor else null
+    val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
+    val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
+
     Box(
-        modifier = Modifier.fillMaxWidth().padding(paddingStart, 8.dp, paddingEnd, 0.dp),
-        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd
+        modifier = Modifier.fillMaxWidth()
+            .padding(paddingStart, 8.dp, paddingEnd, 0.dp),
+        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
-        Surface(
+        Card(
             modifier = Modifier
                 .selectable(
                     item = message,
@@ -84,9 +104,12 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = onClick
+                    onClick = { onClick(message) }
                 ),
-            color = containerColor,
+            colors = CardDefaults.cardColors().copy(
+                containerColor = containerColor,
+                contentColor = contentColor
+            ),
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
@@ -111,7 +134,14 @@ fun MessageItem(
                 }
 
                 Column(
-                    modifier = Modifier.padding(8.dp).width(IntrinsicSize.Max)
+                    modifier = Modifier.padding(8.dp).run {
+                        if(message.message.type == MessageType.FILES) {
+                            fillMaxWidth()
+                        } else {
+                            width(IntrinsicSize.Max)
+                        }
+                    },
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     SenderName(
                         contact = sender,
@@ -119,25 +149,48 @@ fun MessageItem(
                     )
 
                     ResponseTo(
-                        message = replyToMessage,
-                        allContacts = allContacts,
+                        message = message,
                         contentColor = MaterialTheme.colorScheme.onSecondary,
                         containerColor = MaterialTheme.colorScheme.secondary
                     )
 
-                    Text(
-                        modifier = Modifier.fillMaxWidth(),
+                    DisplayFiles(
+                        message = message.message,
+                        textColor = contentColor,
+                        okHttpClientProvider = okHttpClientProvider
+                    )
+
+                    MessageText(
                         text = text,
-                        textAlign = TextAlign.Start,
-                        color = contentColor,
-                        style = MaterialTheme.typography.bodyMedium
+                        contentColor = contentColor
                     )
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (isOutgoingSent) {
+                            Icon(
+                                modifier = Modifier.size(12.dp).alpha(.5f),
+                                imageVector = Icons.Outlined.Done,
+                                contentDescription = stringResource(R.string.message_delivery_status),
+                                tint = contentColor
+                            )
+                        } else if (isOutgoingFailed) {
+                            ClickToRetryMessage(
+                                iconSize = 16.dp,
+                                textColor = contentColor,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                        } else if (!message.message.incoming) {
+                            Icon(
+                                modifier = Modifier.size(16.dp).alpha(.5f),
+                                painter = painterResource(R.drawable.ic_timer),
+                                contentDescription = stringResource(R.string.message_delivery_status),
+                                tint = contentColor
+                            )
+                        }
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
@@ -145,21 +198,6 @@ fun MessageItem(
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )
-                        if (!message.message.incoming && isSent) {
-                            Icon(
-                                modifier = Modifier.size(12.dp).alpha(.5f),
-                                imageVector = Icons.Outlined.Done,
-                                contentDescription = stringResource(R.string.message_sent),
-                                tint = contentColor
-                            )
-                        } else if (!message.message.incoming) {
-                            Icon(
-                                modifier = Modifier.size(16.dp).alpha(.5f),
-                                painter = painterResource(R.drawable.ic_timer),
-                                contentDescription = stringResource(R.string.message_sent),
-                                tint = contentColor
-                            )
-                        }
                     }
                 }
             }
@@ -168,8 +206,71 @@ fun MessageItem(
 }
 
 @Composable
+fun ClickToRetryMessage(
+    iconSize: Dp = 16.dp,
+    textColor: Color = Color.Unspecified,
+    textStyle: TextStyle = MaterialTheme.typography.bodySmall
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Icon(
+            modifier = Modifier
+                .size(iconSize)
+                .alpha(0.75f),
+            imageVector = Icons.Outlined.Warning,
+            contentDescription = stringResource(R.string.message_delivery_status),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Text(
+            text = stringResource(id = R.string.click_to_retry),
+            style = textStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+fun DisplayFiles(
+    message: MessageDto,
+    okHttpClientProvider: IOkHttpClientProvider,
+    textColor: Color = Color.Unspecified
+) {
+    val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
+    if(message.attachmentsNotAvailable() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
+        if(filesDownloadState == WorkInfo.State.FAILED) {
+            ClickToRetryMessage(
+                iconSize = 18.dp,
+                textColor = textColor,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+        } else {
+            IndeterminateCircularIndicator(
+                visible = true,
+                text = stringResource(id = R.string.waiting_for_files),
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+        }
+    } else if(message.type == MessageType.FILES) {
+        val filesLate by message.filesLate.collectAsState()
+        val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
+            .filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
+        FilesList(
+            uris = files,
+            textColor = textColor,
+            okHttpClientProvider = okHttpClientProvider
+        )
+    }
+}
+
+@Composable
 fun SenderName(
-    contact: ContactEntity?,
+    contact: ContactDto?,
     color: Color
 ) {
     if(contact == null)
@@ -187,21 +288,29 @@ fun SenderName(
 
 @Composable
 fun ResponseTo(
-    message: MessageEntity?,
-    allContacts: List<ContactEntity>,
+    message: MessageWithDetailsDto?,
     contentColor: Color,
     containerColor: Color
 ) {
     if (message == null) {
         return
     }
-    val replyToContact =
-        allContacts.firstOrNull { item -> item.address == message.senderAddress }
     val context = LocalContext.current
-    val name = if (message.incoming && replyToContact != null) replyToContact.name + ":"
-    else
+    val actionForSender by message.actionForSender.collectAsState()
+    if(message.message.type != MessageType.REPLY) {
+        return
+    }
+    val name = if (message.actionFor?.incoming == true) {
+        (actionForSender?.name ?: return) + ":"
+    } else {
         context.getString(R.string.you)
-    val text = if (message.deleted) context.getString(R.string.message_deleted) else message.text
+    }
+    val text = if (message.actionFor?.deleted == true) {
+        context.getString(R.string.message_deleted)
+    } else {
+        message.actionFor?.text ?: return
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = containerColor,
@@ -216,8 +325,7 @@ fun ResponseTo(
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                modifier = Modifier.padding(start = 4.dp),
-                text = text.toString(),
+                text = text,
                 color = contentColor.copy(alpha = .75f),
                 style = MaterialTheme.typography.bodySmall
             )
@@ -226,12 +334,31 @@ fun ResponseTo(
 }
 
 @Composable
+fun MessageText(
+    text: String?,
+    contentColor: Color
+) {
+    if(text.isNullOrBlank())
+    {
+        return
+    }
+    Text(
+        modifier = Modifier.fillMaxWidth(),
+        text = text,
+        textAlign = TextAlign.Start,
+        color = contentColor,
+        style = MaterialTheme.typography.bodyMedium
+    )
+}
+
+@Composable
 @Preview
 fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
@@ -241,16 +368,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ), null, null
-        ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            )
+            ).toDto(), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -262,9 +380,10 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
 @Preview
 fun GroupSelectionModeIncomingMessageSelectedPreview() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = true,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
@@ -274,16 +393,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ), null, null
-        ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            )
+            ).toDto(), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -295,24 +405,16 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
 @Preview
 fun MessagePending() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ), null, null
-        ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            )
+            ).toDto(), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -324,24 +426,16 @@ fun MessagePending() {
 @Preview
 fun MessageSent() {
     MessageItem(
+        okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
-        message = MessageWithDetails(
+        message = MessageWithDetailsDto(
             MessageEntityFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ), null, null
-        ),
-        allContacts = listOf(
-            ContactEntityFactory.createContact(
-                address = "123-123-123-123",
-                name = "John",
-                publicKey = "pkey",
-                guardHostname = "hostname",
-                guardAddress = "address",
-            )
+            ).toDto(), null, null
         ),
         onItemDeselected = {},
         onClick = {},

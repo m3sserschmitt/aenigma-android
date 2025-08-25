@@ -1,20 +1,21 @@
 package ro.aenigma.viewmodels
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import ro.aenigma.data.Repository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrConnectionController
 
 abstract class BaseViewModel(
     protected val repository: Repository,
     private val signalrConnectionController: SignalrConnectionController,
-    application: Application,
-): AndroidViewModel(application) {
+    private val okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>
+): ViewModel() {
 
     protected var ioDispatcher = Dispatchers.IO
 
@@ -22,9 +23,15 @@ abstract class BaseViewModel(
 
     init {
         viewModelScope.launch(ioDispatcher) {
-            repository.local.name.collect { userName -> _userName.value = userName }
+            repository.local.name.catch { _userName.value = "" }
+                .collect { userName -> _userName.value = userName }
         }
     }
+
+    val okHttpClientProvider: OkHttpClientProvider
+        get() {
+            return okHttpClientProviderLazy.get()
+        }
 
     protected var defaultDispatcher = Dispatchers.Default
 

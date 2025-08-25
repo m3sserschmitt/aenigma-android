@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -21,6 +23,7 @@ import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.util.Constants.Companion.SIGNALR_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -33,7 +36,6 @@ class SignalRClientWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 104
         private const val ACTION_ARG = "Action"
         private const val UNIQUE_ONE_TIME_REQUEST = "SIGNALR_ONE_TIME_REQUEST"
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
@@ -125,9 +127,11 @@ class SignalRClientWorker @AssistedInject constructor(
             signalrController.pull()
         }
 
+        /*
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Broadcast()) {
             signalrController.broadcast()
         }
+        */
 
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
             signalrController.cleanup()
@@ -137,9 +141,14 @@ class SignalRClientWorker @AssistedInject constructor(
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.connecting_server))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
+            SIGNALR_NOTIFICATION_ID,
+            notificationService.createWorkerNotification(applicationContext.getString(R.string.connecting_server)),
+            FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        ) else
+            ForegroundInfo(
+                SIGNALR_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.connecting_server))
+            )
     }
 }

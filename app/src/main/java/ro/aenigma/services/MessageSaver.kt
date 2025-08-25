@@ -8,25 +8,28 @@ import ro.aenigma.models.Artifact
 import ro.aenigma.models.PendingMessage
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.crypto.extensions.SignatureExtensions.verify
+import ro.aenigma.crypto.extensions.SignatureExtensions.jsonVerify
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
+import ro.aenigma.data.database.AttachmentEntity
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
 import ro.aenigma.data.database.extensions.GroupEntityExtensions.removeMember
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFile
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isGroupUpdate
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isText
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
+import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.SignedData
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ArtifactExtensions.toMessage
 import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
 import ro.aenigma.util.SerializerExtensions.fromJson
-import ro.aenigma.util.getTagQueryParameter
+import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
@@ -54,56 +57,69 @@ class MessageSaver @Inject constructor(
 
             when {
                 messageEntity.type == MessageType.DELETE -> {
-                    messageEntity.actionFor?.let { refId ->
-                        repository.local.removeMessageSoft(refId)
-                    }
                     messageEntity.markAsDeleted()?.let { deletedMessage ->
-                        repository.local.insertOrIgnoreMessage(deletedMessage)
+                        repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
+                            messageEntity.actionFor?.let { refId ->
+                                repository.local.removeMessageSoft(refId)
+                            }
+                        }
                     }
                 }
 
                 messageEntity.type == MessageType.DELETE_ALL -> {
-                    repository.local.clearConversationSoft(messageEntity.chatId)
                     messageEntity.markAsDeleted()?.let { deletedMessage ->
-                        repository.local.insertOrIgnoreMessage(deletedMessage)
+                        repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
+                            repository.local.clearConversationSoft(messageEntity.chatId)
+                        }
                     }
                 }
 
                 messageEntity.type == MessageType.GROUP_MEMBER_LEAVE -> {
-                    repository.local.getContactWithGroup(messageEntity.chatId)
-                        ?.let { contactWithGroup ->
-                            if (localAddress != null && contactWithGroup.group?.groupData?.iAmAdmin(
-                                    localAddress
-                                ) == true
-                            ) {
-                                GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                                    workManager,
-                                    groupName = null,
-                                    members = listOf(messageEntity.senderAddress ?: return),
-                                    existingGroupAddress = messageEntity.chatId,
-                                    actionType = MessageType.GROUP_MEMBER_REMOVE
-                                )
-                            } else {
-                                repository.local.insertOrUpdateGroup(
-                                    contactWithGroup.group?.removeMember(
-                                        messageEntity.senderAddress ?: return
-                                    ) ?: return
-                                )
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let {
+                        repository.local.getContactWithGroup(messageEntity.chatId)
+                            ?.let { contactWithGroup ->
+                                if (localAddress != null && contactWithGroup.group?.groupData?.iAmAdmin(
+                                        localAddress
+                                    ) == true
+                                ) {
+                                    GroupUploadWorker.createOrUpdateGroupWorkRequest(
+                                        workManager,
+                                        groupName = null,
+                                        members = listOf(messageEntity.senderAddress ?: return),
+                                        existingGroupAddress = messageEntity.chatId,
+                                        actionType = MessageType.GROUP_MEMBER_REMOVE
+                                    )
+                                } else {
+                                    repository.local.insertOrUpdateGroup(
+                                        contactWithGroup.group?.removeMember(
+                                            messageEntity.senderAddress ?: return
+                                        ) ?: return
+                                    )
+                                }
                             }
-                        }
+                    }
                 }
 
                 messageEntity.isGroupUpdate() -> {
                     repository.local.insertOrIgnoreMessage(messageEntity)?.let { id ->
-                        createOrUpdateGroup(artifact, id)
+                        downloadGroupData(artifact, id)
                         notify(messageEntity)
                     }
                 }
 
                 messageEntity.isText() -> {
-                    repository.local.insertOrIgnoreMessage(messageEntity)
-                    createOrUpdateContact(artifact, signedData.publicKey ?: return)
-                    notify(messageEntity)
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let {
+                        createOrUpdateContact(artifact, signedData.publicKey ?: return)
+                        notify(messageEntity)
+                    }
+                }
+
+                messageEntity.isFile() -> {
+                    repository.local.insertOrIgnoreMessage(messageEntity)?.let { id ->
+                        createOrUpdateContact(artifact, signedData.publicKey ?: return)
+                        downloadAttachment(artifact, id)
+                        notify(messageEntity)
+                    }
                 }
             }
         } catch (_: Exception) {
@@ -114,7 +130,7 @@ class MessageSaver @Inject constructor(
     private fun parseArtifact(message: ParsedMessageDto): Triple<SignedData, Artifact, MessageEntity>? {
         return try {
             val signedData = message.content.fromJson<SignedData>() ?: return null
-            val artifact = signedData.verify<Artifact>() ?: return null
+            val artifact = signedData.jsonVerify<Artifact>() ?: return null
             val message =
                 artifact.toMessage(message.uuid ?: return null, message.dateReceivedOnServer)
                     ?: return null
@@ -139,7 +155,8 @@ class MessageSaver @Inject constructor(
 
     suspend fun saveOutgoingMessage(
         message: MessageEntity,
-        additionalDestinations: Set<String> = hashSetOf()
+        additionalDestinations: Set<String> = hashSetOf(),
+        attachment: AttachmentEntity? = null
     ): Boolean {
         try {
             val entity = message.withSenderAddress(localAddress)?.run {
@@ -151,6 +168,9 @@ class MessageSaver @Inject constructor(
             } ?: return false
             val messageId = repository.local.insertOrIgnoreMessage(entity)
             if (messageId != null) {
+                if (attachment != null) {
+                    repository.local.insertOrUpdateAttachment(attachment.copy(messageId = messageId))
+                }
                 MessageSenderWorker.createWorkRequest(
                     workManager,
                     messageId,
@@ -162,6 +182,10 @@ class MessageSaver @Inject constructor(
         } catch (_: Exception) {
             return false
         }
+    }
+
+    suspend fun saveOutgoingMessages(messages: List<MessageEntity>): Boolean {
+        return messages.map { message -> saveOutgoingMessage(message) }.all { it }
     }
 
     private suspend fun createOrUpdateContact(artifact: Artifact, publicKey: String) {
@@ -187,13 +211,25 @@ class MessageSaver @Inject constructor(
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
-    private suspend fun createOrUpdateGroup(artifact: Artifact, messageId: Long) {
-        val tag = artifact.resourceUrl?.getTagQueryParameter() ?: return
-        val entity = repository.local.getContactWithGroup(artifact.chatId ?: return)
-        if (entity?.group?.resourceUrl?.getTagQueryParameter() == tag) {
-            return
-        }
-        GroupDownloadWorker.createWorkRequest(workManager, artifact.resourceUrl, messageId)
+    private suspend fun createAttachmentEntity(artifact: Artifact, messageId: Long) {
+        repository.local.insertOrUpdateAttachment(
+            AttachmentEntityFactory.create(
+                id = messageId,
+                path = null,
+                url = artifact.resourceUrl,
+                passphrase = artifact.passphrase
+            )
+        )
+    }
+
+    private suspend fun downloadGroupData(artifact: Artifact, messageId: Long) {
+        createAttachmentEntity(artifact, messageId)
+        GroupDownloadWorker.createWorkRequest(workManager, messageId)
+    }
+
+    private suspend fun downloadAttachment(artifact: Artifact, messageId: Long) {
+        createAttachmentEntity(artifact, messageId)
+        AttachmentDownloadWorker.createRequest(workManager, messageId)
     }
 
     private suspend fun saveIncomingMessages(messages: List<Triple<SignedData, Artifact, MessageEntity>>) {
@@ -202,6 +238,6 @@ class MessageSaver @Inject constructor(
 
     private suspend fun notify(message: MessageEntity) {
         val contact = repository.local.getContact(message.chatId) ?: return
-        notificationService.notify(contact, message)
+        notificationService.notifyNewMessage(contact, message)
     }
 }

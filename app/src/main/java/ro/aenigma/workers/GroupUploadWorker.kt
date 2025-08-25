@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -22,6 +24,7 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
+import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
@@ -36,6 +39,8 @@ import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.NotificationService
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.GROUP_UPLOAD_NOTIFICATION_ID
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.util.concurrent.TimeUnit
 
@@ -50,7 +55,7 @@ class GroupUploadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 102
+
         private const val UNIQUE_WORK_NAME = "UploadGroupWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
         private const val MAX_ATTEMPTS_COUNT = 5
@@ -110,8 +115,8 @@ class GroupUploadWorker @AssistedInject constructor(
         } + ExportedContactDataFactory.create(
             name = userName,
             publicKey = signatureService.publicKey.toString(),
-            guardHostname = guard.hostname.toString(),
-            guardAddress = guard.address.toString()
+            guardHostname = guard.hostname,
+            guardAddress = guard.address
         )
         return GroupDataFactory.create(name = groupName, members = members, admins = admins)
     }
@@ -124,6 +129,9 @@ class GroupUploadWorker @AssistedInject constructor(
         existingGroupData: GroupData,
         memberAddresses: List<String>
     ): GroupData? {
+        if(memberAddresses.contains(signatureService.address)) {
+            return null
+        }
         return existingGroupData.removeMembers(memberAddresses)?.incrementNonce()
     }
 
@@ -205,19 +213,27 @@ class GroupUploadWorker @AssistedInject constructor(
     private suspend fun sendGroupUpdate(
         groupData: GroupData,
         key: ByteArray,
+        resourceUrl: String,
         actionType: MessageType,
         additionalDestinations: Set<String> = hashSetOf()
     ): Boolean {
         groupData.address ?: return false
-        val message = MessageEntityFactory.createOutgoing(
-            chatId = groupData.address,
-            text = CryptoProvider.masterKeyEncryptEx(key),
-            type = actionType,
-            actionFor = null
-        )
+        val encodedKey = CryptoProvider.base64Encode(key)
         return messageSaver.saveOutgoingMessage(
-            message,
-            additionalDestinations = additionalDestinations
+            MessageEntityFactory.createOutgoing(
+                chatId = groupData.address,
+                text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
+                // to null in the future;
+                type = actionType,
+                actionFor = null
+            ),
+            additionalDestinations = additionalDestinations,
+            AttachmentEntityFactory.create(
+                id = 0,
+                path = null,
+                passphrase = encodedKey,
+                url = resourceUrl
+            )
         )
     }
 
@@ -248,24 +264,30 @@ class GroupUploadWorker @AssistedInject constructor(
         groupData.members ?: return Result.failure()
         val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
             ?: return Result.failure()
-        val encryptionDto = CryptoProvider.encrypt(serializedGroupData) ?: return Result.failure()
         val destinations = groupData.members.mapNotNull { item -> item.address }.toHashSet()
             .union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: hashSetOf())
         val accessCount = (destinations.count() - 1) * GroupDownloadWorker.MAX_RETRY_COUNT
-        val response = repository.remote.createSharedData(encryptionDto.encryptedData, accessCount)
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val response = repository.remote.createSharedData(serializedGroupData, key, accessCount)
             ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 
         saveGroupEntity(groupData, response.resourceUrl)
-        sendGroupUpdate(groupData, encryptionDto.key, actionType, destinations)
+        sendGroupUpdate(groupData, key, response.resourceUrl, actionType, destinations)
 
         return Result.success()
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            ForegroundInfo(
+                GROUP_UPLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info)),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            ) else
+            ForegroundInfo(
+                GROUP_UPLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
+            )
     }
 }

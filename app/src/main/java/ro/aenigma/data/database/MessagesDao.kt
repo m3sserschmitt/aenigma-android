@@ -9,10 +9,12 @@ import androidx.room.Update
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
+import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 
 @Dao
 interface MessagesDao {
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE id = :id")
+
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE Id = :id LIMIT 1")
     suspend fun get(id: Long): MessageEntity?
 
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE serverUUID = :serverUUID")
@@ -21,26 +23,35 @@ interface MessagesDao {
     @Query("SELECT * FROM $MESSAGES_TABLE WHERE refId = :refId")
     suspend fun getByRefId(refId: String): MessageEntity?
 
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId ORDER BY id DESC LIMIT 1")
+    @Transaction
+    @Query("SELECT * FROM $MESSAGES_TABLE m WHERE id = :id")
+    suspend fun getWithAttachments(id: Long): MessageWithAttachments?
+
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE deleted = 1 AND chatId = :chatId " +
+            "ORDER BY id DESC LIMIT 1")
     fun getLastDeletedFlow(chatId: String): Flow<MessageEntity?>
 
-    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY id DESC LIMIT 1")
+    @Query("SELECT id FROM $MESSAGES_TABLE WHERE chatId = :chatId ORDER BY id DESC LIMIT 1")
     suspend fun getLastMessageId(chatId: String): Long?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOrIgnore(message: MessageEntity): Long?
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrUpdateAttachment(attachment: AttachmentEntity)
+
     @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE chatId = :chatId")
     suspend fun clearConversationSoft(chatId: String)
 
-    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE id IN (:ids)")
-    suspend fun removeSoft(ids: List<Long>)
+    @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE id = :id")
+    suspend fun removeSoft(id: Long)
 
     @Query("UPDATE $MESSAGES_TABLE SET deleted = 1, text = null WHERE refId = :refId")
     suspend fun removeSoft(refId: String?)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE chatId = :chatId AND deleted = 0 " +
+            "ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
     fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>>
 
     @Transaction
@@ -62,6 +73,8 @@ interface MessagesDao {
     @Update
     suspend fun update(message: MessageEntity)
 
-    @Query("DELETE FROM $MESSAGES_TABLE WHERE deleted = 1")
-    suspend fun removeHard()
+    @Transaction
+    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 " +
+            "ORDER BY Id DESC LIMIT $NEWS_FEED_SIZE")
+    fun getLatestSharedFilesFlow(): Flow<List<MessageWithDetails>>
 }

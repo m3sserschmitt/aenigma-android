@@ -6,21 +6,17 @@ import androidx.navigation.compose.composable
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.about.AboutScreen
 import ro.aenigma.services.NavigationTracker
-import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.aboutComposable (
     navigationTracker: NavigationTracker,
-    mainViewModel: MainViewModel,
     navigateToContactsScreen: () -> Unit,
     navigateToLicensesScreen: () -> Unit
 ) {
     composable(
         route = Screens.ABOUT_SCREEN_ROUTE_FULL
     ) {
-        LaunchedEffect(key1 = true)
-        {
+        LaunchedEffect(key1 = true) {
             navigationTracker.postCurrentRoute(Screens.ABOUT_SCREEN_ROUTE_FULL)
-            mainViewModel.init()
         }
 
         AboutScreen(

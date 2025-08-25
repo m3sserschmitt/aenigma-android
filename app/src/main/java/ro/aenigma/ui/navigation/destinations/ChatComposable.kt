@@ -10,7 +10,7 @@ import androidx.navigation.navArgument
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.chat.ChatScreen
 import ro.aenigma.services.NavigationTracker
-import ro.aenigma.util.findActivity
+import ro.aenigma.util.ContextExtensions.findActivity
 import ro.aenigma.viewmodels.ChatViewModel
 
 fun NavGraphBuilder.chatComposable(
@@ -20,12 +20,12 @@ fun NavGraphBuilder.chatComposable(
 ) {
     composable(
         route = Screens.CHAT_SCREEN_ROUTE_FULL,
-        arguments = listOf(navArgument(Screens.CHAT_SCREEN_CHAT_ID_ARG)
-        {
-            type = NavType.StringType
-        })
-    ) {
-        navBackStackEntry ->
+        arguments = listOf(
+            navArgument(Screens.CHAT_SCREEN_CHAT_ID_ARG)
+            {
+                type = NavType.StringType
+            })
+    ) { navBackStackEntry ->
 
         val chatId = navBackStackEntry.arguments!!.getString(Screens.CHAT_SCREEN_CHAT_ID_ARG)
         val chatViewModel: ChatViewModel = hiltViewModel(
@@ -36,7 +36,7 @@ fun NavGraphBuilder.chatComposable(
         LaunchedEffect(key1 = true)
         {
             chatViewModel.init()
-            if (chatId != null) {
+            if (!chatId.isNullOrBlank()) {
                 navigationTracker.postCurrentRoute(Screens.getChatScreenRoute(chatId))
             }
         }

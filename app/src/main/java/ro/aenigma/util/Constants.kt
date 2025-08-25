@@ -14,17 +14,55 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
+        const val NEWS_FEED_SIZE = 150
+        const val SEND_MESSAGES_CHUNK_SIZE = 15
+        const val CONTACTS_LIST_MAX_COUNT = 150
+
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
-        const val GRAPH_VERSIONS_TABLE = "GraphVersions"
         const val GROUPS_TABLE = "Groups"
+        const val ATTACHMENTS_TABLE = "Attachments"
 
         const val APP_DOMAIN = "aenigma.ro"
 
-        const val SERVER_URL = "https://$APP_DOMAIN"
+        const val API_BASE_URL = "https://$APP_DOMAIN/"
+
+        const val ARTICLES_INDEX_URL_TEMPLATE = "https://articles.$APP_DOMAIN/index-%s.json"
+
+        const val IMAGES_CACHE_DIR = "images_cache"
+
+        const val COIL_MEMORY_CACHE_PERCENTAGE = .25
+
+        const val PRIVATE_KEY_FILE = "private-key.locked"
+
+        const val PUBLIC_KEY_FILE = "public-key.pem"
+
+        const val SHARED_FILES_FEED_WEIGHT = 0.65
+
+        const val ARTICLES_FEED_WEIGHT = 0.35
 
         const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
+        const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
+
+        const val ATTACHMENTS_METADATA_FILE = "metadata.json"
+        const val ENCRYPTION_KEY_SIZE = 32
+
+        const val ATTACHMENT_DOWNLOAD_NOTIFICATION_ID = 105
+
+        const val GRAPH_READER_NOTIFICATION_ID = 100
+
+        const val GROUP_DOWNLOAD_NOTIFICATION_ID = 101
+
+        const val GROUP_UPLOAD_NOTIFICATION_ID = 102
+
+        const val MESSAGE_SENDER_NOTIFICATION_ID = 103
+
+        const val SIGNALR_NOTIFICATION_ID = 104
+
+        const val ATTACHMENTS_CHUNK_PACKING_SIZE = 15L * 1024 * 1024
+
+        const val ATTACHMENTS_MAX_COUNT = 3
     }
 }

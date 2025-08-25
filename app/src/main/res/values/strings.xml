@@ -41,7 +41,7 @@
     <string name="connection_failed">Connection failed</string>
     <string name="connection_failed_reason">The service might be temporarily unavailable. You might try to restart the app or try again later</string>
     <string name="retry_now">Retry now</string>
-    <string name="retry_connection">Retry connection</string>
+    <string name="reload">Reload</string>
     <string name="retry">Retry</string>
     <string name="permission_required">Permission required</string>
     <string name="notifications_permission_required">This app needs permission to show notifications. For the best experience, please grant the required permission from settings.</string>
@@ -69,7 +69,7 @@
     <string name="request_completed_with_errors">Request completed with errors</string>
     <string name="camera_permission_required_to_scan">Please provide Camera permission from Settings to scan QR Codes.</string>
     <string name="message_selection">Message selection status</string>
-    <string name="message_sent">Message sent status</string>
+    <string name="message_delivery_status">Message delivery status</string>
     <string name="please_wait">Please wait</string>
     <string name="app_name_and_version">Aenigma\nVersion: %s</string>
     <string name="copyright_notices">Developed and maintained by Romulus-Emanuel Ruja.\n© 2025 Romulus-Emanuel Ruja. All rights reserved.</string>
@@ -80,7 +80,6 @@
     <string name="about_app">About App</string>
     <string name="open_source_libraries">Open Source Libraries</string>
     <string name="you">You:</string>
-    <string name="my_code">My code</string>
     <string name="saved">Saved</string>
     <string name="no_item_selected">No item selected</string>
     <string name="one_item_selected">1 item selected</string>
@@ -95,7 +94,7 @@
     <string name="message_deleted">Message deleted</string>
     <string name="conversation_deleted">Conversation deleted</string>
     <string name="created_channel">Created the channel</string>
-    <string name="added_channel_members">Added channel new members</string>
+    <string name="added_channel_members">Added new channel members</string>
     <string name="removed_channel_members">Removed channel members</string>
     <string name="channel_member_left">Left the channel</string>
     <string name="channel_renamed">Renamed the channel</string>
@@ -109,12 +108,35 @@
     <string name="cannot_share_channels">channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
     <string name="tor">TOR</string>
-    <string name="access_database">Access Database</string>
+    <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
-    <string name="authentication_failed">Authentication failed</string>
-    <string name="guard_syncing">Guard syncing in progress</string>
+    <string name="guard_syncing">Syncing</string>
     <string name="downloading_channel_info">Downloading channel info</string>
     <string name="uploading_channel_info">Uploading channel info</string>
     <string name="sending_message">Sending message</string>
     <string name="connecting_server">Connecting server</string>
+    <string name="send_file">Send an attachment</string>
+    <string name="one_attachment_selected">1 attachment selected</string>
+    <string name="n_attachments_selected">%s attachments selected</string>
+    <string name="downloading_file">Downloading file</string>
+    <string name="files">Files</string>
+    <string name="unknown_file">Unknown file</string>
+    <string name="no_app_to_open">No app found to open this file</string>
+    <string name="open">Open</string>
+    <string name="news">News</string>
+    <string name="there_is_nothing_here">There is nothing here right now</string>
+    <string name="picture">Picture</string>
+    <string name="attachment_files_limit">You are allowed to attach a maximum of %s files</string>
+    <string name="article_title_template">%1$s shared this %2$s</string>
+    <string name="unknown">Unknown</string>
+    <string name="waiting_for_files">Waiting files</string>
+    <string name="click_to_retry">Click to retry</string>
+    <string name="no_files_available">No files available</string>
+    <string name="text_message_received">Someone sent you a message</string>
+    <string name="files_received">Someone sent you some files</string>
+    <string name="new_message">New message</string>
+    <string name="restart_app_to_retry">Restart the app to retry</string>
+    <string name="backed_by_openssl">Backed by OpenSSL 3.0 cryptography, licensed under:</string>
+    <string name="apache_v2_0_license" translatable="false">Apache License Version 2.0</string>
+    <string name="apache_v2_0_license_title" translatable="false">Apache License Version 2.0, January 2004</string>
 </resources>

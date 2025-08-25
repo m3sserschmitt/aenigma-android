@@ -36,7 +36,7 @@ object SignatureExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> T.sign(signatureService: SignatureService): SignedData? {
+    inline fun <reified T> T.jsonSign(signatureService: SignatureService): SignedData? {
         return try {
             val serializedArtifact = this.toCanonicalJson() ?: return null
             val signature = signatureService.sign(serializedArtifact.toByteArray())
@@ -47,7 +47,7 @@ object SignatureExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> SignedData.verify(): T? {
+    inline fun <reified T> SignedData.jsonVerify(): T? {
         try {
             if (!CryptoProvider.verifyEx(
                     this.publicKey ?: return null,

@@ -3,7 +3,6 @@ package ro.aenigma.services
 import android.content.Context
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ro.aenigma.data.Repository
-import ro.aenigma.workers.CleanupWorker
 import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
@@ -24,7 +22,7 @@ import javax.inject.Singleton
 
 @Singleton
 class SignalrConnectionController @Inject constructor(
-    @ApplicationContext private val applicationContext: Context,
+    @param:ApplicationContext private val applicationContext: Context,
     private val torServiceManager: TorServiceManager,
     private val signalRClient: SignalRClient,
     private val repository: Repository
@@ -39,11 +37,6 @@ class SignalrConnectionController @Inject constructor(
         WorkManager.getInstance(applicationContext).beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
             .enqueue()
-    }
-
-    private fun enqueueCleanupWorkRequest() {
-        val cleanupRequest = OneTimeWorkRequestBuilder<CleanupWorker>().build()
-        WorkManager.getInstance(applicationContext).enqueue(cleanupRequest)
     }
 
     private suspend fun performClientAction(clientStatus: SignalRStatus) {
@@ -61,9 +54,7 @@ class SignalrConnectionController @Inject constructor(
                 )
             }
 
-            is SignalRStatus.Synchronized -> {
-                enqueueCleanupWorkRequest()
-            }
+            is SignalRStatus.Synchronized -> { }
 
             is SignalRStatus.NotConnected -> {
                 start()
@@ -113,7 +104,7 @@ class SignalrConnectionController @Inject constructor(
     }
 
     fun sendMessages(messages: List<String>): Boolean {
-        return signalRClient.sendMessages(messages)
+        return signalRClient.sendChunkedMessages(messages)
     }
 
     fun isConnected(): Boolean {

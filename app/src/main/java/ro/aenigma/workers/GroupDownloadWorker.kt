@@ -1,6 +1,8 @@
 package ro.aenigma.workers
 
 import android.content.Context
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
@@ -26,7 +28,7 @@ import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.models.GroupData
 import ro.aenigma.services.NotificationService
-import ro.aenigma.util.getTagQueryParameter
+import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -39,17 +41,14 @@ class GroupDownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val WORKER_NOTIFICATION_ID = 101
         private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
         private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val GROUP_RESOURCE_URL_ARG = "GroupResourceUrl"
         private const val MESSAGE_ID_ARG = "MessageId"
         const val MAX_RETRY_COUNT = 5
 
         @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, resourceUrl: String, messageId: Long) {
+        fun createWorkRequest(workManager: WorkManager, messageId: Long) {
             val parameters = Data.Builder()
-                .putString(GROUP_RESOURCE_URL_ARG, resourceUrl)
                 .putLong(MESSAGE_ID_ARG, messageId)
                 .build()
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
@@ -60,9 +59,8 @@ class GroupDownloadWorker @AssistedInject constructor(
                 .setInputData(parameters)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
                 .build()
-            val tag = resourceUrl.getTagQueryParameter()
             workManager.enqueueUniqueWork(
-                "$UNIQUE_WORK_REQUEST_NAME-$tag", ExistingWorkPolicy.KEEP, workRequest
+                "$UNIQUE_WORK_REQUEST_NAME-$messageId", ExistingWorkPolicy.KEEP, workRequest
             )
         }
     }
@@ -105,27 +103,40 @@ class GroupDownloadWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val resourceUrl = inputData.getString(GROUP_RESOURCE_URL_ARG) ?: return Result.failure()
         val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
         if (messageId < 0) {
             return Result.failure()
         }
-        val message = repository.local.getMessage(messageId) ?: return Result.failure()
-        val key = CryptoProvider.masterKeyDecryptEx(message.text ?: return Result.failure())
-            ?: return Result.failure()
-        val existentGroup =
-            repository.local.getContactsWithGroup()
-                .firstOrNull { item -> item.group?.groupData?.address == message.chatId }?.group?.groupData
-        val groupData = repository.remote.getGroupDataByUrl(resourceUrl, existentGroup, key)
-            ?: return Result.retry()
-        createContactEntities(groupData, resourceUrl)
+        val message = if (messageId > 0)
+            repository.local.getMessageWithAttachments(messageId)
+        else return Result.failure()
+        message?.attachment?.url ?: return Result.failure()
+        val passphrase =
+            (message.attachment.passphrase ?: message.message.text) ?: return Result.failure()
+        message.message.senderAddress ?: return Result.failure()
+
+        val existentGroup = repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
+        val groupData = repository.remote.getGroupDataByUrl(
+            url = message.attachment.url,
+            existentGroup = existentGroup,
+            passphrase = CryptoProvider.base64Decode(passphrase)
+                ?: return Result.failure(),
+            expectedPublisherAddress = message.message.senderAddress
+        ) ?: return Result.retry()
+        createContactEntities(groupData, message.attachment.url)
         return Result.success()
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
-        return ForegroundInfo(
-            WORKER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
-        )
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            ForegroundInfo(
+                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info)),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            ) else
+            ForegroundInfo(
+                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
+            )
     }
 }

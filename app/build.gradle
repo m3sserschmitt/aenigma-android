@@ -6,44 +6,41 @@ plugins
     id('com.google.dagger.hilt.android')
     id('dagger.hilt.android.plugin')
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.10"
     id('com.mikepenz.aboutlibraries.plugin')
 }
 
 
 android {
-    compileSdk 35
+    compileSdk = 36
     defaultConfig {
-        applicationId "ro.aenigma"
-        minSdk 26
-        targetSdk 35
-        versionCode 4
-        versionName "1.0.1"
+        applicationId = "ro.aenigma"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 5
+        versionName = "1.1.0"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
+                arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
         }
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
     }
 
     buildFeatures {
-        buildConfig true
-        compose true
+        buildConfig = true
+        compose = true
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-    kotlinOptions {
-        jvmTarget = '17'
+    kotlin {
+        jvmToolchain(21)
     }
 
     externalNativeBuild {
@@ -54,25 +51,32 @@ android {
 
     buildTypes {
         release {
-            shrinkResources true
-            minifyEnabled true
-            debuggable false
+            shrinkResources = true
+            minifyEnabled = true
+            debuggable = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                     'proguard-rules.pro'
         }
         debug {
-            debuggable true
+            debuggable = true
         }
     }
 
     packagingOptions {
-        pickFirst "**/libsqlcipher.so"
+        jniLibs {
+            pickFirsts += ['**/libsqlcipher.so']
+        }
     }
 
-    namespace 'ro.aenigma'
+    namespace = 'ro.aenigma'
 }
 
 dependencies {
+
+    // Coil
+    implementation "io.coil-kt.coil3:coil-compose:3.3.0"
+    implementation "io.coil-kt.coil3:coil-network-okhttp:3.3.0"
+    implementation "io.coil-kt.coil3:coil-gif:3.3.0"
 
     // Room
     implementation "androidx.room:room-runtime:2.7.2"
@@ -80,39 +84,40 @@ dependencies {
     implementation "androidx.room:room-ktx:2.7.2"
 
     // SQLCipher
-    implementation 'net.zetetic:sqlcipher-android:4.9.0@aar'
+    implementation 'net.zetetic:sqlcipher-android:4.10.0@aar'
     implementation 'androidx.sqlite:sqlite-ktx:2.5.2'
 
     // AndroidX Biometric
     implementation "androidx.biometric:biometric:1.4.0-alpha04"
 
     // Hilt
-    implementation "com.google.dagger:hilt-android:2.51.1"
+    implementation "com.google.dagger:hilt-android:2.57.1"
     implementation 'androidx.hilt:hilt-work:1.2.0'
-    ksp "com.google.dagger:hilt-android-compiler:2.51.1"
+    ksp "com.google.dagger:hilt-android-compiler:2.57.1"
     implementation 'androidx.hilt:hilt-navigation-compose:1.2.0'
     ksp "androidx.hilt:hilt-compiler:1.2.0"
 
     // Lifecycle
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.1'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.1'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.2'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.2'
 
     // SignalR
-    implementation 'com.microsoft.signalr:signalr:8.0.0'
+    implementation 'com.microsoft.signalr:signalr:9.0.7'
 
     // Retrofit
-    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
-    implementation 'com.squareup.retrofit2:converter-jackson:2.11.0'
-    implementation 'com.squareup.retrofit2:adapter-rxjava2:2.9.0'
+    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
+    implementation 'com.squareup.retrofit2:converter-jackson:3.0.0'
+    implementation 'com.squareup.retrofit2:adapter-rxjava2:3.0.0'
+    implementation("com.squareup.retrofit2:converter-scalars:3.0.0")
 
     // WorkManager
-    implementation "androidx.work:work-runtime-ktx:2.10.2"
+    implementation "androidx.work:work-runtime-ktx:2.10.3"
 
     // QR Codes
     implementation 'me.dm7.barcodescanner:zxing:1.9.8'
-    implementation 'com.google.zxing:core:3.4.1'
+    implementation 'com.google.zxing:core:3.5.3'
 
     // camera x
     implementation "androidx.camera:camera-camera2:1.4.2"
@@ -120,13 +125,22 @@ dependencies {
     implementation "androidx.camera:camera-view:1.4.2"
 
     // Serializer
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.0"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2"
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 
     // Bouncy Castle - Crypto
-    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.70'
-    implementation 'org.bouncycastle:bcprov-jdk15to18:1.70'
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.81'
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.81'
+
+    // Feed sampling
+    implementation("org.apache.commons:commons-rng-sampling:1.6")
+    implementation("org.apache.commons:commons-rng-simple:1.6")
+
+    // Mardown renderer
+    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.35.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.35.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.35.0"
 
     // JGraph
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
@@ -140,38 +154,41 @@ dependencies {
     implementation 'androidx.compose.material3:material3-android:1.3.2'
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.8.3"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.8.3"
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.8.3'
+    implementation "androidx.compose.ui:ui:1.9.0"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.9.0"
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.9.0'
     implementation 'androidx.activity:activity-compose:1.10.1'
-    implementation 'androidx.compose.runtime:runtime-livedata:1.8.3'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.9.0'
 
     // Compose Navigation
-    implementation "androidx.navigation:navigation-compose:2.9.0"
+    implementation "androidx.navigation:navigation-compose:2.9.3"
 
     // Pretty Time
     implementation 'org.ocpsoft.prettytime:prettytime:5.0.4.Final'
 
     // Kotlin
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
-    implementation 'androidx.core:core-ktx:1.16.0'
+    implementation 'androidx.core:core-ktx:1.17.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
 
     // JUnit
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestImplementation 'androidx.test:runner:1.6.2'
-    androidTestImplementation 'androidx.test:rules:1.6.1'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.7.0'
+    androidTestImplementation 'androidx.test:rules:1.7.0'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.8.3"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:1.8.3"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.9.0"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:1.9.0"
 
     // open source libraries page
-    implementation "com.mikepenz:aboutlibraries:12.2.3"
-    implementation "com.mikepenz:aboutlibraries-compose-m3:12.2.3"
+    implementation "com.mikepenz:aboutlibraries:12.2.4"
+    implementation "com.mikepenz:aboutlibraries-compose-m3:12.2.4"
 
     // TOR
-    implementation 'info.guardianproject:tor-android:0.4.7.14'
+    implementation 'info.guardianproject:tor-android:0.4.8.17.2'
     implementation 'info.guardianproject:jtorctl:0.4.5.7'
+
+    // Zip
+    implementation 'net.lingala.zip4j:zip4j:2.11.5'
 }

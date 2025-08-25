@@ -10,7 +10,7 @@ import java.time.ZonedDateTime
 @Entity(
     tableName = CONTACTS_TABLE,
     indices = [
-        Index(value = ["hasNewMessage", "name"])
+        Index(value = ["lastMessageId"])
     ]
 )
 data class ContactEntity(

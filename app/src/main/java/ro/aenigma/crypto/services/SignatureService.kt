@@ -3,7 +3,7 @@ package ro.aenigma.crypto.services
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
-import ro.aenigma.crypto.extensions.SignatureExtensions.sign
+import ro.aenigma.crypto.extensions.SignatureExtensions.jsonSign
 import ro.aenigma.models.SignatureDto
 import ro.aenigma.models.SignedData
 import javax.inject.Inject
@@ -54,7 +54,7 @@ class SignatureService @Inject constructor(keysManager: KeysManager) {
         }
     }
 
-    inline fun <reified T> sign(data: T): SignedData? {
-        return data.sign(this)
+    inline fun <reified T> jsonSign(data: T): SignedData? {
+        return data.jsonSign(this)
     }
 }

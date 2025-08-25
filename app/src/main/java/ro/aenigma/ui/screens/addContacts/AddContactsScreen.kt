@@ -75,7 +75,7 @@ fun AddContactsScreen(
             scannerState = QrCodeScannerState.SHARE_CODE
         },
         onNewContactNameChanged = {
-            newContactName -> mainViewModel.validateNewContactName(newContactName)
+            newContactName -> newContactName.isNotBlank()
         },
         onCreateLinkClicked = { mainViewModel.createContactShareLink() },
         onGetLink = { url -> mainViewModel.openContactSharedData(url) },

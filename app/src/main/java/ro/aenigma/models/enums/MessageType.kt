@@ -3,6 +3,7 @@ package ro.aenigma.models.enums
 enum class MessageType {
     TEXT,
     REPLY,
+    FILES,
     DELETE,
     DELETE_ALL,
     GROUP_CREATE,

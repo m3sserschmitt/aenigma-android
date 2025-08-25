@@ -1,11 +1,17 @@
-package ro.aenigma.ui
+package ro.aenigma.activities
 
 import android.app.KeyguardManager
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
@@ -49,20 +55,35 @@ class AppActivity : FragmentActivity() {
 
     private val dbPassphraseLoaded = MutableStateFlow(false)
 
+    private val isAuthenticated = MutableStateFlow(false)
+
+    private val isAuthError = MutableStateFlow(false)
+
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+        )
         loadDbPassphrase()
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
+                val auth by isAuthenticated.collectAsState()
+                val authError by isAuthError.collectAsState()
+                val passphraseLoaded by dbPassphraseLoaded.collectAsState()
+                val navController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
-                    dbPassphraseLoaded = dbPassphraseLoaded,
+                    isAuthenticated = auth,
+                    isAuthError = authError,
+                    dbPassphraseLoaded = passphraseLoaded,
+                    onAuthSuccess = { isAuthenticated.value = true },
+                    onAuthFailed = { isAuthError.value = true }
                 ) {
-                    val navController = rememberNavController()
-
                     LaunchedEffect(key1 = true) {
                         observeTorService()
                         observeClientConnectivity()
@@ -96,7 +117,9 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
+        isAuthenticated.value = false
+        isAuthError.value = false
+        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.Companion.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
             sync()
@@ -105,11 +128,11 @@ class AppActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        onScreenChanged(Screens.NO_SCREEN)
+        onScreenChanged(Screens.Companion.NO_SCREEN)
     }
 
     private fun sync() {
-        SignalRClientWorker.start(
+        SignalRClientWorker.Companion.start(
             this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
@@ -120,7 +143,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun schedulePeriodicSync() {
-        SignalRClientWorker.schedulePeriodicSync(this)
+        SignalRClientWorker.Companion.schedulePeriodicSync(this)
     }
 
     private fun observeTorService() {
@@ -138,12 +161,12 @@ class AppActivity : FragmentActivity() {
     private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
 
     private fun onScreenChanged(route: String) {
-        if (NavigationTracker.isChatScreenRoute(route)) {
-            val chatId = Screens.getChatIdFromChatRoute(route) ?: return
+        if (NavigationTracker.Companion.isChatScreenRoute(route)) {
+            val chatId = Screens.Companion.getChatIdFromChatRoute(route) ?: return
 
             disableNotifications(chatId)
             dismissNotifications(chatId)
-        } else if (NavigationTracker.isContactsScreenRoute(route)) {
+        } else if (NavigationTracker.Companion.isContactsScreenRoute(route)) {
             disableNotifications()
         } else {
             enableNotifications()
