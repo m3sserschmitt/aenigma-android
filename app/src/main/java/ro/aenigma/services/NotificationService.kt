@@ -136,9 +136,9 @@ class NotificationService @Inject constructor(
         )
         val intent = createChatNavigationIntent()
         val text = if(messageEntity.type == MessageType.FILES) {
-            context.getString(R.string.text_message_received)
-        } else {
             context.getString(R.string.files_received)
+        } else {
+            context.getString(R.string.text_message_received)
         }
         val title = context.getString(R.string.new_message)
         val notification = NotificationCompat.Builder(context, NEW_MESSAGE_CHANNEL_ID)

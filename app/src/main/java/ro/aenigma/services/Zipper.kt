@@ -56,19 +56,11 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
         files: List<String>,
         metadata: AttachmentsMetadata? = null
     ): File? {
-        val zipParameters = ZipParameters().apply {
-            compressionLevel = CompressionLevel.ULTRA
-        }
-
-        val tempFiles = files.mapNotNull { uri ->
-            try {
-                copyUriToCache(uri)
-            } catch (_: Exception) {
-                null
-            }
-        }
-
+        val tempFiles = files.mapNotNull { uri -> copyUriToCache(uri) }
         try {
+            val zipParameters = ZipParameters().apply {
+                compressionLevel = CompressionLevel.ULTRA
+            }
             if (tempFiles.isEmpty()) return null
             val zipFile = File.createTempFile("archive_", ".zip", context.cacheDir)
             val archive = ZipFile(zipFile)
@@ -85,6 +77,8 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
                 }
             }
             return zipFile
+        } catch (_: Exception) {
+            return null
         } finally {
             tempFiles.forEach { file ->
                 try {
@@ -96,11 +90,16 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
     }
 
     private fun copyUriToCache(uri: String): File? {
-        val parsedUri = uri.toUri()
-        val inputStream = context.contentResolver.openInputStream(parsedUri) ?: return null
-        val file = File.createTempFile("", ".${getFileExtension(parsedUri)}", context.cacheDir)
-        file.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
-        return file
+        return try {
+            val parsedUri = uri.toUri()
+            val inputStream = context.contentResolver.openInputStream(parsedUri) ?: return null
+            val file =
+                File.createTempFile("file_", ".${getFileExtension(parsedUri)}", context.cacheDir)
+            file.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
+            return file
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun getFileExtension(uri: Uri): String {
