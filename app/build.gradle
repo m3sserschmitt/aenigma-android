@@ -17,8 +17,8 @@ android {
         applicationId = "ro.aenigma"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.1"
+        versionCode = 5
+        versionName = "1.1.0"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
@@ -74,7 +74,9 @@ android {
 dependencies {
 
     // Coil
-    implementation 'io.coil-kt.coil3:coil-compose:3.3.0'
+    implementation "io.coil-kt.coil3:coil-compose:3.3.0"
+    implementation "io.coil-kt.coil3:coil-network-okhttp:3.3.0"
+    implementation "io.coil-kt.coil3:coil-gif:3.3.0"
 
     // Room
     implementation "androidx.room:room-runtime:2.7.2"
@@ -134,8 +136,11 @@ dependencies {
     // Feed sampling
     implementation("org.apache.commons:commons-rng-sampling:1.6")
     implementation("org.apache.commons:commons-rng-simple:1.6")
-    implementation("com.mikepenz:multiplatform-markdown-renderer:0.35.0")
-    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.35.0")
+
+    // Mardown renderer
+    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.35.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.35.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.35.0"
 
     // JGraph
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
