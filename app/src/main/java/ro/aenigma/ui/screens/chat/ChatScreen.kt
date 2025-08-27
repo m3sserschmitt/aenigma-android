@@ -401,7 +401,7 @@ fun ChatScreenPreview() {
     val message2 = MessageWithDetailsDto(
         MessageDto(
             chatId = "123",
-            text = "The green deal is secured =)",
+            text = "See you tomorrow at 3 p.m",
             type = MessageType.TEXT,
             actionFor = null,
             id = 2,

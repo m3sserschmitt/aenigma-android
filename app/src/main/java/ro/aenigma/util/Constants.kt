@@ -30,6 +30,10 @@ class Constants {
 
         const val ARTICLES_INDEX_URL_TEMPLATE = "https://articles.$APP_DOMAIN/index-%s.json"
 
+        const val PRIVACY_POLICY_URL = "https://articles.aenigma.ro/privacy-policy-%s.md"
+
+        const val DEFAULT_LANGUAGE_CODE = "en"
+
         const val IMAGES_CACHE_DIR = "images_cache"
 
         const val COIL_MEMORY_CACHE_PERCENTAGE = .25

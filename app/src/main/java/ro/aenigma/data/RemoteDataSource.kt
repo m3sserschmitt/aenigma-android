@@ -30,6 +30,8 @@ import ro.aenigma.models.TorCheck
 import ro.aenigma.models.Vertex
 import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
+import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
+import ro.aenigma.util.Constants.Companion.DEFAULT_LANGUAGE_CODE
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.UrlExtensions.getBaseUrl
@@ -246,7 +248,7 @@ class RemoteDataSource @Inject constructor(
         return try {
             val response = retrofitProvider.getApi(url.getBaseUrl()).getFileByUrl(url)
             val body = response.body()
-            if(response.code() != 200 || body == null) {
+            if (response.code() != 200 || body == null) {
                 null
             } else {
                 response.body()?.byteStream().use { stream ->
@@ -258,18 +260,30 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    fun getArticles(url: String): Flow<List<Article>> {
+    private suspend fun requestArticles(url: String): List<Article> {
+        return try {
+            val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(url)
+            val body = response.body()
+            if (response.code() != 200 || body == null) {
+                listOf()
+            } else {
+                body
+            }
+        } catch (_: Exception) {
+            listOf()
+        }
+    }
+
+    fun getArticles(
+        url: String,
+        fallback: String = String.format(ARTICLES_INDEX_URL_TEMPLATE, DEFAULT_LANGUAGE_CODE)
+    ): Flow<List<Article>> {
         return flow {
-            try {
-                val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(url)
-                val body = response.body()
-                if (response.code() != 200 || body == null) {
-                    emit(listOf())
-                } else {
-                    emit(body)
-                }
-            } catch (_: Exception) {
-                emit(listOf())
+            val response = requestArticles(url)
+            if (response.isEmpty()) {
+                emit(requestArticles(fallback))
+            } else {
+                emit(response)
             }
         }
     }

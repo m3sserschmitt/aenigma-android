@@ -139,4 +139,5 @@
     <string name="backed_by_openssl">Backed by OpenSSL 3.0 cryptography, licensed under:</string>
     <string name="apache_v2_0_license" translatable="false">Apache License Version 2.0</string>
     <string name="apache_v2_0_license_title" translatable="false">Apache License Version 2.0, January 2004</string>
+    <string name="privacy_policy">Privacy policy</string>
 </resources>
