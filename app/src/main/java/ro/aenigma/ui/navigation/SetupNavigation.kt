@@ -107,7 +107,8 @@ fun SetupNavigation(
             aboutComposable(
                 navigationTracker = navigationTracker,
                 navigateToContactsScreen = screen.contacts,
-                navigateToLicensesScreen = screen.licenses
+                navigateToLicensesScreen = screen.licenses,
+                navigateToPrivacyPolicy = screen.privacyPolicy
             )
             licensesComposable(
                 navigationTracker = navigationTracker,

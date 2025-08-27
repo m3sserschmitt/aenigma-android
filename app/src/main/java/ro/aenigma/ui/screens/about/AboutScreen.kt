@@ -38,6 +38,7 @@ import androidx.core.net.toUri
 fun AboutScreen(
     navigateBack: () -> Unit,
     navigateToLicensesScreen: () -> Unit,
+    navigateToPrivacyPolicy: () -> Unit
 ) {
     var appLicenseVisible by remember { mutableStateOf(false) }
     var apacheLicenseVisible by remember { mutableStateOf(false) }
@@ -150,6 +151,12 @@ fun AboutScreen(
                     apacheLicenseVisible = true
                 }
             )
+
+            Link(
+                context = context,
+                url = stringResource(id = R.string.privacy_policy),
+                action = navigateToPrivacyPolicy
+            )
         }
     }
 }
@@ -233,7 +240,8 @@ fun AboutScreenPreview()
 {
     AboutScreen(
         navigateBack = { },
-        navigateToLicensesScreen = { }
+        navigateToLicensesScreen = { },
+        navigateToPrivacyPolicy = { }
     )
 }
 

@@ -10,7 +10,8 @@ import ro.aenigma.services.NavigationTracker
 fun NavGraphBuilder.aboutComposable (
     navigationTracker: NavigationTracker,
     navigateToContactsScreen: () -> Unit,
-    navigateToLicensesScreen: () -> Unit
+    navigateToLicensesScreen: () -> Unit,
+    navigateToPrivacyPolicy: () -> Unit
 ) {
     composable(
         route = Screens.ABOUT_SCREEN_ROUTE_FULL
@@ -21,7 +22,8 @@ fun NavGraphBuilder.aboutComposable (
 
         AboutScreen(
             navigateBack = navigateToContactsScreen,
-            navigateToLicensesScreen = navigateToLicensesScreen
+            navigateToLicensesScreen = navigateToLicensesScreen,
+            navigateToPrivacyPolicy = navigateToPrivacyPolicy
         )
     }
 }
