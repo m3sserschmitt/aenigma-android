@@ -26,7 +26,12 @@ object SerializerExtensions {
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
             .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
-            .serializationInclusion(JsonInclude.Include.NON_NULL)
+            .defaultPropertyInclusion(
+                JsonInclude.Value.construct(
+                    JsonInclude.Include.NON_NULL,
+                    JsonInclude.Include.ALWAYS
+                )
+            )
             .propertyNamingStrategy(PropertyNamingStrategies.UPPER_CAMEL_CASE)
             .addModule(JavaTimeModule())
             .addModule(SimpleModule().apply {

@@ -69,6 +69,7 @@ android {
     }
 
     namespace = 'ro.aenigma'
+    ndkVersion = "29.0.13846066"
 }
 
 dependencies {
@@ -99,9 +100,9 @@ dependencies {
 
     // Lifecycle
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.2'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.2'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.3'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.3'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.9.3'
 
     // SignalR
     implementation 'com.microsoft.signalr:signalr:9.0.7'
@@ -125,8 +126,8 @@ dependencies {
     implementation "androidx.camera:camera-view:1.4.2"
 
     // Serializer
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.19.2"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.19.2"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.20.0"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0"
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 
     // Bouncy Castle - Crypto
@@ -137,7 +138,7 @@ dependencies {
     implementation("org.apache.commons:commons-rng-sampling:1.6")
     implementation("org.apache.commons:commons-rng-simple:1.6")
 
-    // Mardown renderer
+    // Markdown renderer
     implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.35.0"
     implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.35.0"
     implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.35.0"
