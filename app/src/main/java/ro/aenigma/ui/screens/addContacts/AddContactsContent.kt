@@ -1,12 +1,16 @@
 package ro.aenigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,7 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
@@ -157,58 +166,166 @@ fun DisplayQrCode(
 ) {
     when (qrCode) {
         is RequestState.Success -> {
-            Column(
-                modifier = modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceEvenly
-            ) {
-                QrCode(
-                    qrCode = qrCode.data
+            val cfg = LocalConfiguration.current
+            val isPortrait = cfg.orientation == Configuration.ORIENTATION_PORTRAIT
+            if (isPortrait) {
+                DisplayPortraitQrCode(
+                    modifier = modifier,
+                    qrCode = qrCode.data,
+                    onCreateLinkClicked = onCreateLinkClicked,
+                    onUseLinkClicked = onUseLinkClicked
                 )
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.background,
-                    thickness = 12.dp
+            } else {
+                DisplayLandscapeQrCode(
+                    modifier = modifier,
+                    qrCode = qrCode.data,
+                    onCreateLinkClicked = onCreateLinkClicked,
+                    onUseLinkClicked = onUseLinkClicked
                 )
-                Surface(
-                    modifier = Modifier.fillMaxWidth(.5f),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        TextButton(
-                            onClick = onCreateLinkClicked
-                        ) {
-                            Text(
-                                text = stringResource(
-                                    id = R.string.share_link
-                                ),
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        if(qrCode.data.isOwnCode) {
-                            TextButton(
-                                onClick = onUseLinkClicked,
-                            ) {
-                                Text(
-                                    text = stringResource(
-                                        id = R.string.use_link
-                                    ),
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        }
-                    }
-                }
             }
         }
 
-        is RequestState.Error -> CodeNotAvailableError()
-        is RequestState.Loading -> LoadingScreen()
+        is RequestState.Error -> CodeNotAvailableError(modifier)
+        is RequestState.Loading -> LoadingScreen(modifier)
         is RequestState.Idle -> {}
+    }
+}
+
+@Composable
+fun ShareActionButtons(
+    isOwnCode: Boolean,
+    onCreateLinkClicked: () -> Unit,
+    onUseLinkClicked: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(.5f),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            TextButton(
+                onClick = onCreateLinkClicked
+            ) {
+                Text(
+                    text = stringResource(
+                        id = R.string.share_link
+                    ),
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            if(isOwnCode) {
+                TextButton(
+                    onClick = onUseLinkClicked,
+                ) {
+                    Text(
+                        text = stringResource(
+                            id = R.string.use_link
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DisplayPortraitQrCode(
+    modifier: Modifier = Modifier,
+    qrCode: QrCodeDto,
+    onCreateLinkClicked: () -> Unit,
+    onUseLinkClicked: () -> Unit
+) {
+    Column(
+        modifier = modifier.background(
+            color = MaterialTheme.colorScheme.background
+        ).fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Text(
+            modifier = Modifier
+                .padding(horizontal = 28.dp),
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground,
+            style = MaterialTheme.typography.bodyLarge,
+            text = stringResource(
+                id = R.string.qr_code_caption
+            )
+        )
+        PortraitQrCode(
+            qrCode = qrCode
+        )
+        Text(
+            modifier = Modifier.alpha(.75f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            text = qrCode.label,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            fontWeight = FontWeight.Bold
+        )
+        ShareActionButtons(
+            isOwnCode = qrCode.isOwnCode,
+            onCreateLinkClicked = onCreateLinkClicked,
+            onUseLinkClicked = onUseLinkClicked
+        )
+    }
+}
+
+@Composable
+fun DisplayLandscapeQrCode(
+    modifier: Modifier = Modifier,
+    qrCode: QrCodeDto,
+    onCreateLinkClicked: () -> Unit,
+    onUseLinkClicked: () -> Unit
+) {
+    Row(
+        modifier = modifier.background(
+            color = MaterialTheme.colorScheme.background
+        ).fillMaxSize(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LandscapeQrCode(
+            qrCode = qrCode
+        )
+        Column(
+            modifier = Modifier.fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Text(
+                modifier = Modifier
+                    .padding(horizontal = 28.dp),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.bodyLarge,
+                text = stringResource(
+                    id = R.string.qr_code_caption
+                )
+            )
+            ShareActionButtons(
+                isOwnCode = qrCode.isOwnCode,
+                onCreateLinkClicked = onCreateLinkClicked,
+                onUseLinkClicked = onUseLinkClicked
+            )
+            Text(
+                modifier = Modifier.alpha(.75f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                text = qrCode.label,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 

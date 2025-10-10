@@ -96,7 +96,7 @@ fun FeedScreenContent(
                     onArticleClicked = onArticleClicked
                 )
             } else {
-                EmptyFeedScreen()
+                EmptyFeedScreen(modifier = modifier)
             }
         }
 

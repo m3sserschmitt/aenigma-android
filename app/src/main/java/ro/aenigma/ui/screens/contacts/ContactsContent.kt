@@ -48,17 +48,15 @@ fun ContactsContent(
             } else {
                 if(isSearchMode)
                 {
-                    EmptySearchResult(modifier)
+                    EmptySearchResult(modifier = modifier)
                 } else
                 {
-                    EmptyContactsScreen(
-                        modifier = modifier
-                    )
+                    EmptyContactsScreen(modifier = modifier)
                 }
             }
         }
-        is RequestState.Error -> GenericErrorScreen(modifier)
-        is RequestState.Loading -> LoadingScreen(modifier)
+        is RequestState.Error -> GenericErrorScreen(modifier = modifier)
+        is RequestState.Loading -> LoadingScreen(modifier = modifier)
         is RequestState.Idle -> { }
     }
 }
