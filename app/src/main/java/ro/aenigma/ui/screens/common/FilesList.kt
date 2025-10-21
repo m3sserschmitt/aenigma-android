@@ -37,6 +37,7 @@ import ro.aenigma.util.ContextExtensions.getFileTypeIcon
 import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.UrlExtensions.isImageUrlByExtension
+import ro.aenigma.util.UrlExtensions.isRemoteUri
 
 @Composable
 fun FilesList(
@@ -99,6 +100,16 @@ fun rememberIsImage(uri: String): State<Boolean?> {
 }
 
 @Composable
+fun getUriTitle(uri: String): String {
+    val parsedUri = uri.toUri()
+    return if (uri.isRemoteUri()) {
+        parsedUri.host
+    } else {
+        parsedUri.lastPathSegment
+    } ?: stringResource(id = R.string.unknown_file)
+}
+
+@Composable
 fun FileItem(
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider
@@ -123,7 +134,6 @@ fun FileItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val parsedUri = uri.toUri()
                 val context = LocalContext.current
                 Icon(
                     modifier = Modifier.alpha(.75f).size(36.dp),
@@ -132,7 +142,7 @@ fun FileItem(
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
                 Text(
-                    text = parsedUri.lastPathSegment ?: stringResource(id = R.string.unknown_file),
+                    text = getUriTitle(uri),
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -141,7 +151,7 @@ fun FileItem(
                 )
 
                 IconButton(
-                    onClick = { context.openUriInExternalApp(parsedUri) },
+                    onClick = { context.openUriInExternalApp(uri.toUri()) },
                 ) {
                     Icon(
                         modifier = Modifier.alpha(.75f).size(24.dp),

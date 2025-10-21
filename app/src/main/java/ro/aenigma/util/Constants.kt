@@ -26,11 +26,17 @@ class Constants {
 
         const val APP_DOMAIN = "aenigma.ro"
 
+        const val ARTICLES_DOMAIN = "articles.$APP_DOMAIN"
+
+        const val WEB_DOMAIN = "web.$APP_DOMAIN"
+
         const val API_BASE_URL = "https://$APP_DOMAIN/"
 
-        const val ARTICLES_INDEX_URL_TEMPLATE = "https://articles.$APP_DOMAIN/index-%s.json"
+        const val ARTICLES_INDEX_URL_TEMPLATE = "https://$ARTICLES_DOMAIN/index-%s.json"
 
-        const val PRIVACY_POLICY_URL = "https://articles.aenigma.ro/privacy-policy-%s.md"
+        const val PRIVACY_POLICY_URL_TEMPLATE = "https://$ARTICLES_DOMAIN/privacy-policy-%s.md"
+
+        const val WEB_ARTICLE_URL_TEMPLATE = "https://$WEB_DOMAIN/#/blog/article?url=%s"
 
         const val DEFAULT_LANGUAGE_CODE = "en"
 

@@ -1,7 +1,8 @@
 package ro.aenigma.util
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
@@ -34,6 +35,7 @@ import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
+import ro.aenigma.util.UrlExtensions.isRemoteUri
 
 object ContextExtensions {
 
@@ -65,6 +67,7 @@ object ContextExtensions {
         return try {
             val mime = contentResolver.getType(uri.toUri())
             when {
+                uri.isRemoteUri() -> R.drawable.ic_link
                 mime == null -> R.drawable.ic_unknown_document
                 mime.startsWith("image/") -> R.drawable.ic_photo
                 mime.startsWith("video/") -> R.drawable.ic_video_file
@@ -203,14 +206,59 @@ object ContextExtensions {
     }
 
     fun Context.openUriInExternalApp(uri: Uri) {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, contentResolver.getType(uri) ?: "*/*")
-            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-        }
         try {
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                data = uri
+                addCategory(Intent.CATEGORY_BROWSABLE)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (uri.scheme == "content") {
+                    setDataAndType(uri, contentResolver.getType(uri) ?: "*/*")
+                }
+            }
             startActivity(intent)
-        } catch (_: ActivityNotFoundException) {
-            Toast.makeText(this, getString(R.string.no_app_to_open), Toast.LENGTH_SHORT).show()
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                getString(R.string.no_app_to_open),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    fun Context.shareText(text: String) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND)
+            intent.type = "text/plain"
+            intent.putExtra(Intent.EXTRA_TEXT, text)
+            this.startActivity(
+                Intent.createChooser(
+                    intent,
+                    this.getString(R.string.share_via)
+                )
+            )
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                this.getString(R.string.failed_to_share),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    fun Context.copyToClipboard(text: String) {
+        try {
+            val clipboard = this.getSystemService(
+                Context.CLIPBOARD_SERVICE
+            ) as ClipboardManager
+            val data = ClipData.newPlainText("", text)
+            clipboard.setPrimaryClip(data)
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                this.getString(R.string.failed_to_copy_to_clipboard),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 }

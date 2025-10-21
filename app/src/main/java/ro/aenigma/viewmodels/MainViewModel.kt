@@ -9,7 +9,6 @@ import ro.aenigma.data.Repository
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactData
-import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,15 +67,13 @@ class MainViewModel @Inject constructor(
 
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
-    private val _importedContactDetails = MutableStateFlow<ExportedContactData?>(null)
+    private val _importedContactDetails =
+        MutableStateFlow<RequestState<ExportedContactData>>(RequestState.Idle)
 
     private val _exportedContactDetails = MutableStateFlow<ExportedContactData?>(null)
 
     private val _sharedDataCreateResult =
         MutableStateFlow<RequestState<CreatedSharedData>>(RequestState.Idle)
-
-    private val _sharedDataRequestResult =
-        MutableStateFlow<RequestState<SharedData>>(RequestState.Idle)
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
@@ -88,9 +85,7 @@ class MainViewModel @Inject constructor(
 
     val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> = _sharedDataCreateResult
 
-    val sharedDataRequest: StateFlow<RequestState<SharedData>> = _sharedDataRequestResult
-
-    val importedContactDetails: StateFlow<ExportedContactData?> = _importedContactDetails
+    val importedContactDetails: StateFlow<RequestState<ExportedContactData>> = _importedContactDetails
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
@@ -224,15 +219,19 @@ class MainViewModel @Inject constructor(
     }
 
     fun saveNewContact(name: String) {
+        val importedContactDetails = _importedContactDetails.value
+        if(importedContactDetails !is RequestState.Success) {
+            return
+        }
         val contactAddress =
-            _importedContactDetails.value?.publicKey.getAddressFromPublicKey() ?: return
-        val publicKey = _importedContactDetails.value?.publicKey ?: return
-        val guardAddress = _importedContactDetails.value?.guardAddress ?: return
+            importedContactDetails.data.publicKey.getAddressFromPublicKey() ?: return
+        val publicKey = importedContactDetails.data.publicKey ?: return
+        val guardAddress = importedContactDetails.data.guardAddress ?: return
         val newContact = ContactEntityFactory.createContact(
             address = contactAddress,
             name = name,
             publicKey = publicKey,
-            guardHostname = _importedContactDetails.value?.guardHostname,
+            guardHostname = importedContactDetails.data.guardHostname,
             guardAddress = guardAddress,
         )
         viewModelScope.launch(ioDispatcher) {
@@ -370,7 +369,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun setScannedContactDetails(scannedDetails: ExportedContactData) {
-        _importedContactDetails.value = scannedDetails
+        _importedContactDetails.value = RequestState.Success(scannedDetails)
     }
 
     fun createContactShareLink() {
@@ -400,18 +399,17 @@ class MainViewModel @Inject constructor(
 
     fun openContactSharedData(url: String) {
         viewModelScope.launch(defaultDispatcher) {
-            _sharedDataRequestResult.value = RequestState.Loading
+            _importedContactDetails.value = RequestState.Loading
             try {
                 val response = repository.remote.getSharedDataByUrl(url, null)
                     ?: throw Exception("Invalid shared data content or link")
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception("Invalid shared data content")
                 _importedContactDetails.value =
-                    content.fromJson<ExportedContactData>()
-                        ?: throw Exception("Could not deserialize shared data content")
-                _sharedDataRequestResult.value = RequestState.Success(response)
+                    RequestState.Success(content.fromJson<ExportedContactData>()
+                        ?: throw Exception("Could not deserialize shared data content"))
             } catch (ex: Exception) {
-                _sharedDataRequestResult.value = RequestState.Error(Exception(ex))
+                _importedContactDetails.value = RequestState.Error(Exception(ex))
             }
         }
     }
@@ -441,11 +439,11 @@ class MainViewModel @Inject constructor(
     }
 
     private fun resetSharedDataRequestResult() {
-        _sharedDataRequestResult.value = RequestState.Idle
+        _importedContactDetails.value = RequestState.Idle
     }
 
     private fun resetScannedContactDetails() {
-        _importedContactDetails.value = null
+        _importedContactDetails.value = RequestState.Idle
     }
 
     fun resetContactChanges() {

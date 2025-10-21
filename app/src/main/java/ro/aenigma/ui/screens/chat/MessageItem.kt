@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.chat
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -165,6 +167,12 @@ fun MessageItem(
                         contentColor = contentColor
                     )
 
+                    DisplayLinks(
+                        text = text,
+                        textColor = contentColor,
+                        okHttpClientProvider = okHttpClientProvider
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
@@ -203,6 +211,41 @@ fun MessageItem(
             }
         }
     }
+}
+
+@Composable
+fun rememberMatchedLinks(text: String): List<String> {
+    return remember(key1 = text) {
+        val matcher = Patterns.WEB_URL.matcher(text)
+        val links = mutableListOf<String>()
+        while (matcher.find()) {
+            links.add(matcher.group())
+        }
+        links
+    }
+}
+
+@Composable
+fun DisplayLinks(
+    text: String?,
+    textColor: Color = Color.Unspecified,
+    okHttpClientProvider: IOkHttpClientProvider
+) {
+    if(text.isNullOrBlank()) {
+        return
+    }
+
+    val links = rememberMatchedLinks(text = text)
+
+    if(links.isEmpty()) {
+        return
+    }
+
+    FilesList(
+        uris = links,
+        textColor = textColor,
+        okHttpClientProvider = okHttpClientProvider
+    )
 }
 
 @Composable

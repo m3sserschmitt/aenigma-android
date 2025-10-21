@@ -59,7 +59,6 @@
             tools:ignore="DiscouragedApi,LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
@@ -68,10 +67,10 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" />
                 <data android:host="aenigma.ro" />
-                <data android:pathPattern="/Share" />
-                <data android:pathPattern="/share" />
+                <data android:host="articles.aenigma.ro" />
+                <data android:host="web.aenigma.ro" />
+                <data android:pathPattern=".*" />
             </intent-filter>
         </activity>
     </application>
-
 </manifest>

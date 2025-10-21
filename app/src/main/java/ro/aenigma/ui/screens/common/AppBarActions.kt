@@ -190,11 +190,11 @@ fun EditTopAppBarAction(
 @Composable
 fun ShareTopAppBarAction(
     visible: Boolean,
-    onShareContactClick: () -> Unit
+    onClick: () -> Unit
 ) {
     if(visible) {
         IconButton(
-            onClick = onShareContactClick
+            onClick = onClick
         ) {
             Icon(
                 imageVector = Icons.Filled.Share,

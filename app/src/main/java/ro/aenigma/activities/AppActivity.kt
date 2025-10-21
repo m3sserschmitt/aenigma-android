@@ -3,6 +3,7 @@ package ro.aenigma.activities
 import android.app.KeyguardManager
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -30,10 +32,14 @@ import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
+import ro.aenigma.util.Constants.Companion.APP_DOMAIN
+import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
+import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 @AndroidEntryPoint
 class AppActivity : FragmentActivity() {
@@ -61,6 +67,8 @@ class AppActivity : FragmentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
 
+    private lateinit var navHostController: NavHostController
+
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
@@ -75,7 +83,7 @@ class AppActivity : FragmentActivity() {
                 val auth by isAuthenticated.collectAsState()
                 val authError by isAuthError.collectAsState()
                 val passphraseLoaded by dbPassphraseLoaded.collectAsState()
-                val navController = rememberNavController()
+                navHostController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
                     isAuthenticated = auth,
@@ -94,7 +102,7 @@ class AppActivity : FragmentActivity() {
 
                     SetupNavigation(
                         navigationTracker = navigationTracker,
-                        navHostController = navController,
+                        navHostController = navHostController,
                         mainViewModel = mainViewModel
                     )
                 }
@@ -190,14 +198,38 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun handleAppLink() {
-        val appLinkIntent = intent
-        val appLinkAction = appLinkIntent.action ?: return
-        val appLinkData = appLinkIntent.data ?: return
-        val path = appLinkData.path ?: return
-        if (appLinkAction != Intent.ACTION_VIEW || path.lowercase() != "/share") {
+        val appLinkData = intent.data ?: return
+        val domain = appLinkData.host?.lowercase() ?: return
+        if (intent.action != Intent.ACTION_VIEW) {
             return
         }
+        when(domain) {
+            APP_DOMAIN -> handleAppDomain(appLinkData)
+            ARTICLES_DOMAIN -> handleArticlesDomain(appLinkData)
+            WEB_DOMAIN -> handleWebLink(appLinkData)
+        }
+    }
 
-        mainViewModel.openContactSharedData(appLinkData.toString())
+    private fun handleAppDomain(uri: Uri) {
+        if(uri.path?.lowercase() == "/share") {
+            mainViewModel.openContactSharedData(uri.toString())
+        }
+    }
+
+    private fun handleArticlesDomain(uri: Uri) {
+        val stringUri = uri.toString()
+        if(stringUri.lowercase().endsWith(".md")) {
+            val screens = Screens(navHostController)
+            screens.article(stringUri)
+        }
+    }
+
+    private fun handleWebLink(uri: Uri) {
+        val regex = Regex("[?&]url=([^&#]+)")
+        val match = regex.find(uri.toString().lowercase())
+        val encodedValue = match?.groups?.get(1)?.value
+        val decodedValue = encodedValue?.let { Uri.decode(it) }
+        val finalUri = decodedValue?.toUri() ?: return
+        handleArticlesDomain(finalUri)
     }
 }

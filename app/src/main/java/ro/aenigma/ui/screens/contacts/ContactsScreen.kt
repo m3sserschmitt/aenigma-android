@@ -27,8 +27,8 @@ import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ExportedContactData
 import ro.aenigma.services.SignalRStatus
-import ro.aenigma.models.SharedData
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
@@ -55,14 +55,14 @@ fun ContactsScreen(
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
-    val sharedDataRequest by mainViewModel.sharedDataRequest.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
     val torOk by mainViewModel.torOk.collectAsState()
+    val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
-        sharedDataRequest = sharedDataRequest,
+        importedContactDetails = importedContactDetails,
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
         useTor = useTor,
@@ -93,7 +93,7 @@ fun ContactsScreen(
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
     contacts: RequestState<List<ContactWithLastMessage>>,
-    sharedDataRequest: RequestState<SharedData>,
+    importedContactDetails: RequestState<ExportedContactData>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     useTor: Boolean,
@@ -139,8 +139,8 @@ fun ContactsScreen(
         }
     }
 
-    LaunchedEffect(key1 = sharedDataRequest) {
-        if (sharedDataRequest is RequestState.Error) {
+    LaunchedEffect(key1 = importedContactDetails) {
+        if (importedContactDetails is RequestState.Error) {
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -195,9 +195,9 @@ fun ContactsScreen(
 
     LoadingDialog(
         visible = getContactDataLoadingDialogVisible,
-        state = sharedDataRequest,
+        state = importedContactDetails,
         onConfirmButtonClicked = {
-            if (sharedDataRequest is RequestState.Error) {
+            if (importedContactDetails is RequestState.Error) {
                 onContactSaveDismissed()
             } else {
                 saveContactDialogVisible = true
@@ -206,8 +206,11 @@ fun ContactsScreen(
         }
     )
 
+    val requestSuccessful = importedContactDetails is RequestState.Success
+    val initialName = if(requestSuccessful) importedContactDetails.data.name ?: "" else ""
     SaveNewContactDialog(
-        visible = sharedDataRequest is RequestState.Success && saveContactDialogVisible,
+        visible = requestSuccessful && saveContactDialogVisible,
+        initialName = initialName,
         onContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
             onContactSaved(name)
@@ -436,7 +439,7 @@ fun ContactsScreenPreview() {
         navigateToAddContactScreen = {},
         onContactSaved = {},
         onContactSaveDismissed = {},
-        sharedDataRequest = RequestState.Idle,
+        importedContactDetails = RequestState.Idle,
         navigateToAboutScreen = { },
         onNameConfirmed = {}
     )

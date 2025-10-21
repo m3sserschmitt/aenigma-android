@@ -2,7 +2,7 @@ package ro.aenigma.ui.navigation
 
 import android.net.Uri
 import androidx.navigation.NavController
-import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL
+import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import java.util.Locale
 
 class Screens(navController: NavController) {
@@ -64,7 +64,7 @@ class Screens(navController: NavController) {
 
         @JvmStatic
         fun getPrivacyPolicyScreenRoute(): String {
-            val url = String.format(PRIVACY_POLICY_URL, Locale.getDefault().language)
+            val url = String.format(PRIVACY_POLICY_URL_TEMPLATE, Locale.getDefault().language)
             return getArticleScreenRoute(url)
         }
 
