@@ -190,7 +190,8 @@ fun EditTopAppBarAction(
 @Composable
 fun ShareTopAppBarAction(
     visible: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     if(visible) {
         IconButton(
@@ -201,7 +202,7 @@ fun ShareTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.share
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }

@@ -78,7 +78,8 @@ fun ArticleScreen(
                 actions = {
                     ShareTopAppBarAction(
                         visible = true,
-                        onClick = onShareArticle
+                        onClick = onShareArticle,
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                 }
             )
