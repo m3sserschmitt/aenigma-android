@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 
 @Composable
@@ -20,6 +21,7 @@ fun LoadingScreen(
             IndeterminateCircularIndicator(
                 visible = true,
                 text = "",
+                size = 60.dp,
                 color = MaterialTheme.colorScheme.onBackground,
                 textStyle = MaterialTheme.typography.bodySmall,
                 textColor = MaterialTheme.colorScheme.onBackground

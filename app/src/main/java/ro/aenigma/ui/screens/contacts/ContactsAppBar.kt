@@ -97,7 +97,7 @@ fun ContactsAppBar(
                 )
                 ShareTopAppBarAction(
                     visible = selectedItemsCount == 1,
-                    onShareContactClick = onShareSelectedItemsClicked
+                    onClick = onShareSelectedItemsClicked
                 )
                 CreateGroupTopAppBarAction(
                     visible = selectedItemsCount > 0,

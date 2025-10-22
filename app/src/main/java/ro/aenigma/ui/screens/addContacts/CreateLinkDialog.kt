@@ -1,10 +1,5 @@
 package ro.aenigma.ui.screens.addContacts
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +28,8 @@ import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
+import ro.aenigma.util.ContextExtensions.copyToClipboard
+import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 
@@ -116,23 +113,7 @@ fun CreateLinkDialog(
                                         Row {
                                             IconButton(
                                                 onClick = {
-                                                    try {
-                                                        val intent = Intent(Intent.ACTION_SEND)
-                                                        intent.type = "text/plain"
-                                                        intent.putExtra(Intent.EXTRA_TEXT, link)
-                                                        context.startActivity(
-                                                            Intent.createChooser(
-                                                                intent,
-                                                                context.getString(R.string.share_via)
-                                                            )
-                                                        )
-                                                    } catch (_: Exception) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.failed_to_share),
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
+                                                    context.shareText(link)
                                                 }
                                             ) {
                                                 Icon(
@@ -145,19 +126,7 @@ fun CreateLinkDialog(
                                             }
                                             IconButton(
                                                 onClick = {
-                                                    try {
-                                                        val clipboard = context.getSystemService(
-                                                            Context.CLIPBOARD_SERVICE
-                                                        ) as ClipboardManager
-                                                        val data = ClipData.newPlainText("", link)
-                                                        clipboard.setPrimaryClip(data)
-                                                    } catch (_: Exception) {
-                                                        Toast.makeText(
-                                                            context,
-                                                            context.getString(R.string.failed_to_copy_to_clipboard),
-                                                            Toast.LENGTH_SHORT
-                                                        ).show()
-                                                    }
+                                                    context.copyToClipboard(link)
                                                 }
                                             ) {
                                                 Icon(

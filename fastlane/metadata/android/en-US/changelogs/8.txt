@@ -1,0 +1,2 @@
+* Added support for landscape screen orientation
+* Added app links support for articles

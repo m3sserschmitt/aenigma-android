@@ -190,18 +190,19 @@ fun EditTopAppBarAction(
 @Composable
 fun ShareTopAppBarAction(
     visible: Boolean,
-    onShareContactClick: () -> Unit
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
 ) {
     if(visible) {
         IconButton(
-            onClick = onShareContactClick
+            onClick = onClick
         ) {
             Icon(
                 imageVector = Icons.Filled.Share,
                 contentDescription = stringResource(
                     id = R.string.share
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }

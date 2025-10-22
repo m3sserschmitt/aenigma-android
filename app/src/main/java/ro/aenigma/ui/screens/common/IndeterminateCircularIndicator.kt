@@ -33,12 +33,14 @@ fun IndeterminateCircularIndicator(
                 color = color,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
-            Text(
-                modifier = Modifier.padding(horizontal = 4.dp),
-                text = text,
-                color = textColor,
-                style = textStyle
-            )
+            if(!text.isBlank()) {
+                Text(
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                    text = text,
+                    color = textColor,
+                    style = textStyle
+                )
+            }
         }
     }
 }

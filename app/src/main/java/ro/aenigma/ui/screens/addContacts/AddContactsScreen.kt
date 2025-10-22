@@ -21,7 +21,6 @@ import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.models.ExportedContactData
 import ro.aenigma.models.QrCodeDto
-import ro.aenigma.models.SharedData
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
@@ -39,7 +38,6 @@ fun AddContactsScreen(
     var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
     val qrCode by mainViewModel.qrCode.collectAsState()
     val sharedDataCreate by mainViewModel.sharedDataCreateResult.collectAsState()
-    val sharedDataGet by mainViewModel.sharedDataRequest.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
     val context = LocalContext.current
@@ -53,7 +51,6 @@ fun AddContactsScreen(
         scannerState = scannerState,
         qrCode = qrCode,
         sharedDataCreate = sharedDataCreate,
-        sharedDataGet = sharedDataGet,
         importedContactDetails = importedContactDetails,
         floatingButtonVisible = floatingButtonVisible,
         onScannerStateChanged = {
@@ -89,8 +86,7 @@ fun AddContactsScreen(
     scannerState: QrCodeScannerState,
     qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedData>,
-    sharedDataGet: RequestState<SharedData>,
-    importedContactDetails: ExportedContactData?,
+    importedContactDetails: RequestState<ExportedContactData>,
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     onQrCodeFound: (ExportedContactData) -> Unit,
@@ -123,7 +119,6 @@ fun AddContactsScreen(
                 scannerState = scannerState,
                 qrCode = qrCode,
                 sharedDataCreate = sharedDataCreate,
-                sharedDataGet = sharedDataGet,
                 importedContactDetails = importedContactDetails,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
@@ -187,13 +182,7 @@ fun AddContactsScreenPreview() {
             )
         ),
         sharedDataCreate = RequestState.Idle,
-        sharedDataGet = RequestState.Idle,
-        importedContactDetails = ExportedContactData(
-            publicKey = "",
-            guardHostname = "",
-            guardAddress = "",
-            name = ""
-        ),
+        importedContactDetails = RequestState.Idle,
         floatingButtonVisible = true,
         onNewContactNameChanged = { true },
         onQrCodeFound = { },
