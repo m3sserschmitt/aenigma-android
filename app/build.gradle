@@ -10,7 +10,6 @@ plugins
     id('com.mikepenz.aboutlibraries.plugin')
 }
 
-
 android {
     compileSdk = 36
     defaultConfig {
@@ -196,4 +195,7 @@ dependencies {
 
     // Full screen image viewer
     implementation "com.github.stfalcon-studio:StfalconImageViewer:1.0.1"
+
+    // Image compressor
+    implementation 'id.zelory:compressor:3.0.1'
 }

@@ -15,7 +15,9 @@ import javax.inject.Inject
 import kotlin.text.toByteArray
 import androidx.core.net.toUri
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
+import ro.aenigma.util.ContextExtensions.compressImage
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
+import ro.aenigma.util.ContextExtensions.isImageUri
 import java.util.UUID
 
 class Zipper @Inject constructor(@param:ApplicationContext val context: Context) {
@@ -52,7 +54,7 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
         }
     }
 
-    fun createZip(
+    suspend fun createZip(
         files: List<String>,
         metadata: AttachmentsMetadata? = null
     ): File? {
@@ -89,13 +91,19 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
         }
     }
 
-    private fun copyUriToCache(uri: String): File? {
+    private suspend fun copyUriToCache(uri: String): File? {
         return try {
             val parsedUri = uri.toUri()
             val inputStream = context.contentResolver.openInputStream(parsedUri) ?: return null
             val file =
                 File.createTempFile("file_", ".${getFileExtension(parsedUri)}", context.cacheDir)
             file.outputStream().use { outputStream -> inputStream.copyTo(outputStream) }
+            if(context.isImageUri(uri))
+            {
+                val compressedFile = context.compressImage(file)
+                file.delete()
+                return compressedFile
+            }
             return file
         } catch (_: Exception) {
             null

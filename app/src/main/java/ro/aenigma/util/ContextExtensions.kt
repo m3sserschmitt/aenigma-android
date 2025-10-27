@@ -7,14 +7,11 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.graphics.Canvas
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.content.ContextCompat
 import ro.aenigma.activities.AppActivity
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
@@ -22,7 +19,6 @@ import ro.aenigma.R
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
 import ro.aenigma.util.FileExtensions.lengthSafe
 import java.io.File
-import androidx.core.graphics.createBitmap
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
@@ -32,13 +28,17 @@ import coil3.load
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.stfalcon.imageviewer.StfalconImageViewer
+import id.zelory.compressor.Compressor
+import id.zelory.compressor.constraint.format
+import id.zelory.compressor.constraint.quality
+import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
 import ro.aenigma.models.MessageDto
 import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
+import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
-import ro.aenigma.util.UrlExtensions.isImageUrlByExtension
 import ro.aenigma.util.UrlExtensions.isRemoteUri
 
 object ContextExtensions {
@@ -114,7 +114,8 @@ object ContextExtensions {
     }
 
     fun Context.isImageUri(uri: String): Boolean {
-        return uri.isNotBlank() && contentResolver.getType(uri.toUri())?.startsWith("image/") == true
+        return uri.isNotBlank() && contentResolver.getType(uri.toUri())
+            ?.startsWith("image/") == true
     }
 
     private fun Context.sizeOf(uriString: String): Long {
@@ -251,10 +252,17 @@ object ContextExtensions {
     fun Context.showImageViewer(message: MessageDto) {
         val uris = (if (message.files.isNullOrEmpty()) message.filesLate.value else message.files)
             .filter { item -> isImageUri(item) && !item.isRemoteUri() }
-        if(uris.isNotEmpty()) {
+        if (uris.isNotEmpty()) {
             StfalconImageViewer.Builder(this, uris) { view, uriString ->
                 view.load(uriString.toUri())
             }.show()
+        }
+    }
+
+    suspend fun Context.compressImage(image: File): File {
+        return Compressor.compress(this@compressImage, image, Dispatchers.IO) {
+            quality(IMAGE_COMPRESSION_QUALITY)
+            format(Bitmap.CompressFormat.JPEG)
         }
     }
 }

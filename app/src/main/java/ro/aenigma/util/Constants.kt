@@ -76,5 +76,7 @@ class Constants {
         const val ATTACHMENTS_MAX_COUNT = 3
 
         const val AUTHENTICATION_DEADLINE = 60_000L
+
+        const val IMAGE_COMPRESSION_QUALITY = 50
     }
 }
