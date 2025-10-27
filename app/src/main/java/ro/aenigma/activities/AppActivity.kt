@@ -40,6 +40,7 @@ import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
 import androidx.core.net.toUri
+import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
 
 @AndroidEntryPoint
 class AppActivity : FragmentActivity() {
@@ -64,6 +65,8 @@ class AppActivity : FragmentActivity() {
     private val isAuthenticated = MutableStateFlow(false)
 
     private val isAuthError = MutableStateFlow(false)
+
+    private val lastPausedTime = MutableStateFlow(0L)
 
     private val mainViewModel: MainViewModel by viewModels()
 
@@ -125,8 +128,7 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        isAuthenticated.value = false
-        isAuthError.value = false
+        resetAuthentication()
         onScreenChanged(navigationTracker.currentRoute.value ?: Screens.Companion.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
@@ -137,6 +139,19 @@ class AppActivity : FragmentActivity() {
     override fun onPause() {
         super.onPause()
         onScreenChanged(Screens.Companion.NO_SCREEN)
+        lastPausedTime.value = System.currentTimeMillis()
+    }
+
+    private fun resetAuthentication() {
+        val lastPausedTimeValue = lastPausedTime.value
+        if (lastPausedTimeValue != 0L) {
+            val elapsed = System.currentTimeMillis() - lastPausedTimeValue
+            if (elapsed > AUTHENTICATION_DEADLINE) {
+                isAuthenticated.value = false
+                isAuthError.value = false
+            }
+        }
+        isAuthError.value = false
     }
 
     private fun sync() {

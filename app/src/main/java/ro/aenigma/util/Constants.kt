@@ -74,5 +74,7 @@ class Constants {
         const val ATTACHMENTS_CHUNK_PACKING_SIZE = 15L * 1024 * 1024
 
         const val ATTACHMENTS_MAX_COUNT = 3
+
+        const val AUTHENTICATION_DEADLINE = 60_000L
     }
 }

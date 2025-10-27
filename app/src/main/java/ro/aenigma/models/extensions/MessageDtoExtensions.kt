@@ -41,7 +41,7 @@ object MessageDtoExtensions {
     }
 
     fun MessageDto.attachmentsNotAvailable(): Boolean {
-        return incoming && type == MessageType.FILES && files.isNullOrEmpty()
+        return incoming && type == MessageType.FILES && files.isNullOrEmpty() && filesLate.value.isEmpty()
     }
 
     fun MessageDto.isNotSent(): Boolean {

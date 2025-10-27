@@ -58,6 +58,7 @@ import ro.aenigma.ui.screens.common.FilesList
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
+import ro.aenigma.util.ContextExtensions.showImageViewer
 
 @Composable
 fun MessageItem(
@@ -106,7 +107,10 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = { onClick(message) }
+                    onClick = {
+                        onClick(message)
+                        context.showImageViewer(message.message)
+                    }
                 ),
             colors = CardDefaults.cardColors().copy(
                 containerColor = containerColor,

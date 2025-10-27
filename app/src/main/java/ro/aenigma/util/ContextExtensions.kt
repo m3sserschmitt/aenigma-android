@@ -28,13 +28,17 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.load
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import com.stfalcon.imageviewer.StfalconImageViewer
 import okhttp3.OkHttpClient
+import ro.aenigma.models.MessageDto
 import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
+import ro.aenigma.util.UrlExtensions.isImageUrlByExtension
 import ro.aenigma.util.UrlExtensions.isRemoteUri
 
 object ContextExtensions {
@@ -77,6 +81,7 @@ object ContextExtensions {
                 mime.contains("zip") || mime.contains("rar") ||
                         mime.contains("7z") || mime.contains("tar") ||
                         mime.contains("gz") -> R.drawable.ic_zip
+
                 else -> R.drawable.ic_docs_file
             }
         } catch (_: Exception) {
@@ -108,27 +113,8 @@ object ContextExtensions {
         }
     }
 
-    fun Context.getBitmapFromDrawable(
-        drawableResId: Int,
-        width: Int = 0,
-        height: Int = 0
-    ): ImageBitmap? {
-        return try {
-            val drawable = ContextCompat.getDrawable(this, drawableResId) ?: return null
-            val bitmapWidth = if (width > 0) width else drawable.intrinsicWidth
-            val bitmapHeight = if (height > 0) height else drawable.intrinsicHeight
-            val bitmap = createBitmap(bitmapWidth, bitmapHeight)
-            val canvas = Canvas(bitmap)
-            drawable.setBounds(0, 0, canvas.width, canvas.height)
-            drawable.draw(canvas)
-            bitmap.asImageBitmap()
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     fun Context.isImageUri(uri: String): Boolean {
-        return contentResolver.getType(uri.toUri())?.startsWith("image/") == true
+        return uri.isNotBlank() && contentResolver.getType(uri.toUri())?.startsWith("image/") == true
     }
 
     private fun Context.sizeOf(uriString: String): Long {
@@ -259,6 +245,16 @@ object ContextExtensions {
                 this.getString(R.string.failed_to_copy_to_clipboard),
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    fun Context.showImageViewer(message: MessageDto) {
+        val uris = (if (message.files.isNullOrEmpty()) message.filesLate.value else message.files)
+            .filter { item -> isImageUri(item) && !item.isRemoteUri() }
+        if(uris.isNotEmpty()) {
+            StfalconImageViewer.Builder(this, uris) { view, uriString ->
+                view.load(uriString.toUri())
+            }.show()
         }
     }
 }
