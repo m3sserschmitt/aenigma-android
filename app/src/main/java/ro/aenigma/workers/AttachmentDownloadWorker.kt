@@ -29,6 +29,7 @@ import ro.aenigma.services.NotificationService
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
+import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import ro.aenigma.util.FileExtensions.toContentUriString
 import ro.aenigma.util.SerializerExtensions.fromJson
 import java.io.File
@@ -120,8 +121,10 @@ class AttachmentDownloadWorker @AssistedInject constructor(
             if (file.name == ATTACHMENTS_METADATA_FILE) {
                 metadata = file.readText().fromJson()
             }
-            val destinationFile =
-                File(applicationContext.filesDir, "${message.id}_${i}_${file.name}")
+            val destinationFile = File(
+                applicationContext.getConversationFilesDir(message.chatId),
+                "${message.id}_${i}_${file.name}"
+            )
             file.renameTo(destinationFile)
             finalURIs.add(destinationFile.toContentUriString(applicationContext))
             i++

@@ -190,8 +190,10 @@ class LocalDataSource @Inject constructor(
     }
 
     private fun removeFiles(message: MessageEntity) {
-        for (file in message.files ?: listOf()) {
-            context.deleteUri(file)
+        if(message.incoming) {
+            for (file in message.files ?: listOf()) {
+                context.deleteUri(file)
+            }
         }
     }
 

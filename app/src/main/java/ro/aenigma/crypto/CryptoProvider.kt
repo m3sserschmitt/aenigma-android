@@ -152,15 +152,18 @@ object CryptoProvider {
 
     @JvmStatic
     fun encrypt(file: File, key: ByteArray): File? {
+        var encryptedData: ByteArray? = null
         return try {
-            val encryptedData = encrypt(file.readBytes(), key) ?: return null
+            encryptedData = encrypt(file.readBytes(), key) ?: return null
             val outFile = File(file.parentFile, "${file.name}_encrypted")
             outFile.outputStream().use { output ->
                 output.write(encryptedData)
             }
             outFile
-        } catch (_: Exception){
+        } catch (_: Exception) {
             null
+        } finally {
+            encryptedData?.fill(0)
         }
     }
 

@@ -133,6 +133,7 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
+        return true
         if (contactEntity.guardAddress.isValidAddress()) {
             return true
         }
@@ -224,6 +225,7 @@ class MessageSenderWorker @AssistedInject constructor(
         createdSharedData?.resourceUrl ?: return null
 
         archive.delete()
+        encryptedFile.delete()
 
         val finalAttachment = attachment.copy(
             url = createdSharedData.resourceUrl,
@@ -283,6 +285,9 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageToBeSent =
             if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
         val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
+        if(messageToBeSent.message.sent) {
+            return Result.success()
+        }
         val contactWithGroup =
             repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)

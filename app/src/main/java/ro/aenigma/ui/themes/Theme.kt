@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
+// icon font: Medieval Sharp
+
 private val LightColors = lightColorScheme(
     primary = Color(0xFF9575CD), // Light Purple
     onPrimary = Color(0xFFFFFFFF), // White Text on Primary

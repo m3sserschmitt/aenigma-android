@@ -7,9 +7,8 @@ plugins
     id('dagger.hilt.android.plugin')
     id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
-    id('com.mikepenz.aboutlibraries.plugin')
+    id("com.mikepenz.aboutlibraries.plugin.android")
 }
-
 
 android {
     compileSdk = 36
@@ -17,8 +16,8 @@ android {
         applicationId = "ro.aenigma"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "1.1.3"
+        versionCode = 9
+        versionName = "1.1.4"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
@@ -69,7 +68,7 @@ android {
     }
 
     namespace = 'ro.aenigma'
-    ndkVersion = "29.0.13846066"
+    ndkVersion = "29.0.14206865"
 }
 
 dependencies {
@@ -80,9 +79,9 @@ dependencies {
     implementation "io.coil-kt.coil3:coil-gif:3.3.0"
 
     // Room
-    implementation "androidx.room:room-runtime:2.8.2"
-    ksp "androidx.room:room-compiler:2.8.2"
-    implementation "androidx.room:room-ktx:2.8.2"
+    implementation "androidx.room:room-runtime:2.8.3"
+    ksp "androidx.room:room-compiler:2.8.3"
+    implementation "androidx.room:room-ktx:2.8.3"
 
     // SQLCipher
     implementation 'net.zetetic:sqlcipher-android:4.11.0@aar'
@@ -114,7 +113,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-scalars:3.0.0")
 
     // WorkManager
-    implementation "androidx.work:work-runtime-ktx:2.10.5"
+    implementation "androidx.work:work-runtime-ktx:2.11.0"
 
     // QR Codes
     implementation 'me.dm7.barcodescanner:zxing:1.9.8'
@@ -156,11 +155,11 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.9.3"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.9.3"
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.9.3'
+    implementation "androidx.compose.ui:ui:1.9.4"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.9.4"
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.9.4'
     implementation 'androidx.activity:activity-compose:1.11.0'
-    implementation 'androidx.compose.runtime:runtime-livedata:1.9.3'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.9.4'
 
     // Compose Navigation
     implementation "androidx.navigation:navigation-compose:2.9.5"
@@ -180,8 +179,8 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.7.0'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.9.3"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:1.9.3"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.9.4"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:1.9.4"
 
     // open source libraries page
     implementation "com.mikepenz:aboutlibraries:13.1.0"
@@ -193,4 +192,10 @@ dependencies {
 
     // Zip
     implementation 'net.lingala.zip4j:zip4j:2.11.5'
+
+    // Full screen image viewer
+    implementation "com.github.stfalcon-studio:StfalconImageViewer:1.0.1"
+
+    // Image compressor
+    implementation 'id.zelory:compressor:3.0.1'
 }
