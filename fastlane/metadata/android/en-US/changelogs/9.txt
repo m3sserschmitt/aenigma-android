@@ -1,0 +1,2 @@
+* Added image compression
+* Added fullscreen image viewer

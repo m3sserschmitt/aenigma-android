@@ -249,12 +249,17 @@ object ContextExtensions {
         }
     }
 
-    fun Context.showImageViewer(message: MessageDto) {
+    fun Context.showImageViewer(
+        message: MessageDto,
+        onDismiss: () -> Unit
+    ) {
         val uris = (if (message.files.isNullOrEmpty()) message.filesLate.value else message.files)
             .filter { item -> isImageUri(item) && !item.isRemoteUri() }
         if (uris.isNotEmpty()) {
             StfalconImageViewer.Builder(this, uris) { view, uriString ->
                 view.load(uriString.toUri())
+            }.withDismissListener {
+                onDismiss.invoke()
             }.show()
         }
     }

@@ -1,5 +1,16 @@
-Aenigma is a free and open-source messaging application focused on secure, private communication through end-to-end encryption.
+Aenigma is free and open-source software, built with privacy and user autonomy at its core.
 
-• Anonymous sign-up with no personal information required
-• No data collection or processing
-• Built with transparency, privacy and user autonomy in mind
+• Private messaging & file sharing – Send text messages and share files securely with your contacts.
+
+• End-to-end encryption – All messages and files are encrypted; no one else can access your communications.
+
+• No personal data collection – Aenigma requires no email, phone number, or other personal information to use.
+
+• Rich media support – Send images, GIFs, and emojis. Any other file types can be shared through Aenigma and opened in other apps.
+
+• Self-hosting made simple – The long-term goal of Aenigma is to offer the simplest yet most powerful communication service, enabling even non-technical users to set up their own private, self-hosted instance.
+
+• Built-in TOR support – Easily switch between regular internet and TOR (The Onion Router) for complete anonymity.
+
+• Independent development – Aenigma is created and maintained by independent individuals.
+

@@ -24,7 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -93,6 +95,15 @@ fun MessageItem(
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
     val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
     val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
+    var showImageViewer by remember { mutableStateOf(false) }
+
+    FullScreenImageViewer(
+        visible = showImageViewer,
+        message = message.message,
+        onDismiss = {
+            showImageViewer = false
+        }
+    )
 
     Box(
         modifier = Modifier.fillMaxWidth()
@@ -109,7 +120,7 @@ fun MessageItem(
                     onItemDeselected = onItemDeselected,
                     onClick = {
                         onClick(message)
-                        context.showImageViewer(message.message)
+                        showImageViewer = true
                     }
                 ),
             colors = CardDefaults.cardColors().copy(
@@ -214,6 +225,21 @@ fun MessageItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun FullScreenImageViewer(
+    visible: Boolean,
+    message: MessageDto,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    if(visible) {
+        context.showImageViewer(
+            message = message,
+            onDismiss = onDismiss
+        )
     }
 }
 
