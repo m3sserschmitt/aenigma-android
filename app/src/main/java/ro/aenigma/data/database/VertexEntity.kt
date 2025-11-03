@@ -8,5 +8,6 @@ import ro.aenigma.util.Constants.Companion.VERTICES_TABLE
 data class VertexEntity (
     @PrimaryKey val address: String,
     val publicKey: String,
-    val hostname: String?
+    val hostname: String?,
+    val onionService: String?
 )

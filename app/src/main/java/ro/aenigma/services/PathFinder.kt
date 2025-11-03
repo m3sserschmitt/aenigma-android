@@ -35,10 +35,10 @@ class PathFinder @Inject constructor(
             _graph = DefaultDirectedGraph(DefaultEdge::class.java)
             _localAddress ?: return false
             _localPublicKey ?: return false
-            _localVertex = VertexEntityFactory.create(_localAddress, _localPublicKey, null)
+            _localVertex = VertexEntityFactory.create(_localAddress, _localPublicKey, null, null)
             val guard = repository.local.getGuard() ?: return false
             val vertices = repository.local.getVertices()
-            _verticesMap = HashMap<String, VertexEntity>(vertices.size)
+            _verticesMap = HashMap(vertices.size)
             val edges = repository.local.getEdges()
 
             vertices.forEach { vertex ->
@@ -70,7 +70,7 @@ class PathFinder @Inject constructor(
         _graph ?: return listOf()
         destination.publicKey ?: return listOf()
         return try {
-            val destinationVertex = VertexEntityFactory.create(destination.address, destination.publicKey, null)
+            val destinationVertex = VertexEntityFactory.create(destination.address, destination.publicKey, null, null)
             val destinationGuardVertex = _verticesMap?.get(destination.guardAddress) ?: return listOf()
             _graph?.addVertex(destinationVertex)
             _graph?.addEdge(destinationGuardVertex, destinationVertex)

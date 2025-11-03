@@ -31,13 +31,9 @@ class NotificationService @Inject constructor(
         private const val TOR_SERVICE_CHANNEL_ID = "tor-service-channel"
         private const val TOR_SERVICE_CHANNEL_NAME = "Tor Service Notification"
         private const val TOR_SERVICE_CHANNEL_DESCRIPTION = "Channel used for Tor Foreground Service"
-        private const val TOR_SERVICE_NOTIFICATION_TITLE = "Tor"
-
         private const val WORKERS_CHANNEL_ID = "workers-service-channel"
         private const val WORKERS_CHANNEL_NAME = "Background Worker Notification"
         private const val WORKERS_CHANNEL_DESCRIPTION = "Channel used for Background workers"
-        private const val WORKERS_NOTIFICATION_TITLE = "Background work"
-
         private const val NEW_MESSAGE_CHANNEL_ID = "new-message-channel"
         private const val NEW_MESSAGE_CHANNEL_NAME = "New message notifications"
         private const val NEW_MESSAGE_CHANNEL_DESCRIPTION =
@@ -92,7 +88,7 @@ class NotificationService @Inject constructor(
         )
         return NotificationCompat.Builder(context, TOR_SERVICE_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_vpn)
-            .setContentTitle(TOR_SERVICE_NOTIFICATION_TITLE)
+            .setContentTitle(context.getString(R.string.tor_service))
             .setContentText(text)
             .setStyle(
                 NotificationCompat.BigTextStyle()
@@ -108,7 +104,7 @@ class NotificationService @Inject constructor(
         )
         return NotificationCompat.Builder(context, WORKERS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_api)
-            .setContentTitle(WORKERS_NOTIFICATION_TITLE)
+            .setContentTitle(context.getString(R.string.background_work))
             .setContentText(text)
             .setStyle(
                 NotificationCompat.BigTextStyle()

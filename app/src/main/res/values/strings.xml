@@ -107,10 +107,10 @@
     <string name="reset_username">Reset user name</string>
     <string name="cannot_share_channels">channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
-    <string name="tor">TOR</string>
+    <string name="tor_service">The Onion Router service</string>
     <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
-    <string name="guard_syncing">Syncing</string>
+    <string name="guard_syncing">Fetch server info</string>
     <string name="downloading_channel_info">Downloading channel info</string>
     <string name="uploading_channel_info">Uploading channel info</string>
     <string name="sending_message">Sending message</string>
@@ -140,4 +140,8 @@
     <string name="apache_v2_0_license" translatable="false">Apache License Version 2.0</string>
     <string name="apache_v2_0_license_title" translatable="false">Apache License Version 2.0, January 2004</string>
     <string name="privacy_policy">Privacy policy</string>
+    <string name="tor_starting">TOR is starting</string>
+    <string name="connected_through_tor">Connected through The Onion Router network</string>
+    <string name="tor_stopped">TOR service stopped</string>
+    <string name="background_work">Background work</string>
 </resources>

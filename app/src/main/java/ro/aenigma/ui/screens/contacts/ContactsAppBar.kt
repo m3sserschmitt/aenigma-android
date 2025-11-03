@@ -187,7 +187,7 @@ fun TorSwitch(
             Icon(
                 modifier = Modifier.alpha(.75f),
                 painter = painterResource(id = R.drawable.ic_vpn),
-                contentDescription = stringResource(id = R.string.tor),
+                contentDescription = stringResource(id = R.string.tor_service),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         },
@@ -209,7 +209,7 @@ fun TorSwitch(
                     )
                 )
                 Text(
-                    text = stringResource(id = R.string.tor),
+                    text = stringResource(id = R.string.tor_service),
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                     style = MaterialTheme.typography.bodyLarge
                 )

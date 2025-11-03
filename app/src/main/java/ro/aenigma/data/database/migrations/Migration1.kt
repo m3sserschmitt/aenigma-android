@@ -6,6 +6,7 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_TABLE
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 
+// v1.1.0
 object Migration1: Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE $MESSAGES_TABLE ADD COLUMN files TEXT")
@@ -19,7 +20,7 @@ object Migration1: Migration(1, 2) {
                 FOREIGN KEY(messageId) REFERENCES $MESSAGES_TABLE(id) ON UPDATE NO ACTION ON DELETE CASCADE
             )
         """.trimIndent())
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_Contacts_lastMessageId` ON $CONTACTS_TABLE (`lastMessageId`)")
-        db.execSQL("DROP INDEX IF EXISTS `index_Contacts_hasNewMessage_name`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_${CONTACTS_TABLE}_lastMessageId` ON $CONTACTS_TABLE (`lastMessageId`)")
+        db.execSQL("DROP INDEX IF EXISTS `index_${CONTACTS_TABLE}_hasNewMessage_name`")
     }
 }

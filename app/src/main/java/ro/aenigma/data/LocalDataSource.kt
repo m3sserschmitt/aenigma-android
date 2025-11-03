@@ -14,6 +14,7 @@ import ro.aenigma.data.database.MessagesDao
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import ro.aenigma.data.database.AttachmentEntity
 import ro.aenigma.data.database.ContactWithGroup
@@ -61,8 +62,18 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    suspend fun saveLastGraphVersion(graphVersion: String): Boolean {
-        return preferencesDataStore.saveLastGraphVersion(graphVersion)
+    suspend fun getHostname(): String? {
+        val useTor = useTor.firstOrNull() == true
+        val guard = getGuard() ?: return null
+        return if(useTor) {
+            if(guard.onionService.isNullOrBlank()) {
+                guard.hostname
+            } else {
+                guard.onionService
+            }
+        } else {
+            guard.hostname
+        }
     }
 
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
@@ -70,8 +81,6 @@ class LocalDataSource @Inject constructor(
     val name: Flow<String> = preferencesDataStore.name
 
     val useTor: Flow<Boolean> = preferencesDataStore.useTor
-
-    val lastGraphVersion: Flow<String> = preferencesDataStore.lastGraphVersion
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessage>> {
         return contactsDao.get().getWithMessagesFlow()
@@ -237,7 +246,7 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun insertGuard(guard: GuardEntity) {
-        return guardsDao.get().insert(guard)
+        return guardsDao.get().insertWithLimit(guard)
     }
 
     suspend fun getGuard(): GuardEntity? {

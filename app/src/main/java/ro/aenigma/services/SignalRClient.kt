@@ -228,7 +228,7 @@ class SignalRClient @Inject constructor(
         try {
             updateStatus(SignalRStatus.Broadcasting)
             val neighborhood =
-                Neighborhood(signatureService.address, null, listOf(_guardAddress.value))
+                Neighborhood(signatureService.address, null, null,listOf(_guardAddress.value))
             val data = neighborhood.toJson()?.toByteArray() ?: return
             val signature = signatureService.sign(data)
             if (signature.publicKey == null || signature.signedData == null) {

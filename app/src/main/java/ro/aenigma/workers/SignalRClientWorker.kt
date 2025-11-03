@@ -112,7 +112,6 @@ class SignalRClientWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val guard = repository.local.getGuard() ?: return Result.failure()
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
 
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
@@ -120,7 +119,7 @@ class SignalRClientWorker @AssistedInject constructor(
         }
 
         if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            signalrController.connect(guard.hostname)
+            signalrController.connect(repository.local.getHostname() ?: return Result.failure())
         }
 
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Pull()) {

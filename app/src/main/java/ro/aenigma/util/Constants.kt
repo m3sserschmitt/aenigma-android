@@ -78,5 +78,7 @@ class Constants {
         const val AUTHENTICATION_DEADLINE = 60_000L
 
         const val IMAGE_COMPRESSION_QUALITY = 50
+
+        const val GUARDS_HISTORY_MAX_COUNT = 10
     }
 }

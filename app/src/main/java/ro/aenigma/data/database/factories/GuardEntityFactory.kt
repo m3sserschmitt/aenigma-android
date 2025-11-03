@@ -5,11 +5,13 @@ import java.time.ZonedDateTime
 
 object GuardEntityFactory {
     @JvmStatic
-    fun create(address: String, publicKey: String, hostname: String): GuardEntity {
+    fun create(address: String, publicKey: String, graphVersion: String?, hostname: String?, onionService: String?): GuardEntity {
         return GuardEntity(
             address = address,
             publicKey = publicKey,
             hostname = hostname,
+            onionService = onionService,
+            graphVersion = graphVersion,
             dateCreated = ZonedDateTime.now()
         )
     }

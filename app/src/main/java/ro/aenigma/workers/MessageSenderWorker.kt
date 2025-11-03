@@ -15,7 +15,6 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -29,8 +28,6 @@ import kotlinx.coroutines.flow.first
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
 import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
@@ -132,24 +129,24 @@ class MessageSenderWorker @AssistedInject constructor(
         return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
-    private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
+    private /*suspend*/ fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
         return true
-        if (contactEntity.guardAddress.isValidAddress()) {
-            return true
-        }
-        try {
-            val vertex =
-                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
-                    ?: return false
-            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
-            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
-            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
-                .withGuardHostname(guardVertex.neighborhood?.hostname)
-            updatedContact?.let { repository.local.updateContact(it) }
-        } catch (_: Exception) {
-            return false
-        }
-        return true
+//        if (contactEntity.guardAddress.isValidAddress()) {
+//            return true
+//        }
+//        try {
+//            val vertex =
+//                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
+//                    ?: return false
+//            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
+//            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
+//            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
+//                .withGuardHostname(guardVertex.neighborhood?.hostname)
+//            updatedContact?.let { repository.local.updateContact(it) }
+//        } catch (_: Exception) {
+//            return false
+//        }
+//        return true
     }
 
     private suspend fun saveAsSent(message: MessageEntity) {

@@ -4,11 +4,12 @@ import ro.aenigma.data.database.VertexEntity
 
 object VertexEntityFactory {
     @JvmStatic
-    fun create(address: String, publicKey: String, hostname: String?): VertexEntity {
+    fun create(address: String, publicKey: String, hostname: String?, onionService: String?): VertexEntity {
         return VertexEntity(
             address = address,
             publicKey = publicKey,
-            hostname = hostname
+            hostname = hostname,
+            onionService = onionService
         )
     }
 }

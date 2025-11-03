@@ -32,7 +32,7 @@ class RetrofitProvider @Inject constructor(
 
     suspend fun getInstance(): Retrofit {
         return try {
-            val baseUrl = localDataSource.getGuard()?.hostname?.getBaseUrl() ?: API_BASE_URL
+            val baseUrl = localDataSource.getHostname()?.getBaseUrl() ?: API_BASE_URL
             getInstance(baseUrl, okHttpClientProvider.getInstance())
         } catch (_: Exception) {
             getInstance(API_BASE_URL, okHttpClientProvider.getInstance())

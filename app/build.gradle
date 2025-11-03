@@ -6,7 +6,7 @@ plugins
     id('com.google.dagger.hilt.android')
     id('dagger.hilt.android.plugin')
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.2.20"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.2.21"
     id("com.mikepenz.aboutlibraries.plugin.android")
 }
 
@@ -125,8 +125,8 @@ dependencies {
     implementation "androidx.camera:camera-view:1.5.1"
 
     // Serializer
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.20.0"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.0"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.20.1"
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 
     // Bouncy Castle - Crypto
@@ -138,9 +138,9 @@ dependencies {
     implementation("org.apache.commons:commons-rng-simple:1.6")
 
     // Markdown renderer
-    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.37.0"
-    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.37.0"
-    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.37.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.38.1"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.38.1"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.38.1"
 
     // JGraph
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
