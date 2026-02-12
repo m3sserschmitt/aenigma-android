@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -13,12 +15,12 @@ import ro.aenigma.util.RequestState
 @Composable
 fun ContactsContent(
     modifier: Modifier = Modifier,
-    contacts: RequestState<List<ContactWithLastMessage>>,
+    contacts: RequestState<List<ContactWithLastMessageDto>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
-    selectedContacts: List<ContactWithLastMessage>,
-    onItemSelected: (ContactWithLastMessage) -> Unit,
-    onItemDeselected: (ContactWithLastMessage) -> Unit,
+    selectedContacts: List<ContactWithLastMessageDto>,
+    onItemSelected: (ContactWithLastMessageDto) -> Unit,
+    onItemDeselected: (ContactWithLastMessageDto) -> Unit,
     navigateToChatScreen: (chatId: String) -> Unit
 ) {
     when(contacts)
@@ -73,7 +75,7 @@ fun ContactsContentPreview() {
                         guardHostname = "",
                         guardAddress = "",
                     ), null
-                ),
+                ).toDto(),
                 ContactWithLastMessage(
                     ContactEntityFactory.createContact(
                         address = "124",
@@ -82,7 +84,7 @@ fun ContactsContentPreview() {
                         guardHostname = "",
                         guardAddress = "",
                     ), null
-                )
+                ).toDto()
             )
         ),
         isSearchMode = false,
@@ -96,7 +98,7 @@ fun ContactsContentPreview() {
                     guardHostname = "",
                     guardAddress = "",
                 ), null
-            )
+            ).toDto()
         ),
         onItemSelected = { },
         onItemDeselected = { },

@@ -35,8 +35,10 @@ import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.VertexEntity
+import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
@@ -110,7 +112,7 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: RequestState<List<ContactWithLastMessage>>,
+    contacts: RequestState<List<ContactWithLastMessageDto>>,
     servers: RequestState<List<VertexEntity>>,
     serversHistory: RequestState<List<VertexEntity>>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
@@ -125,11 +127,11 @@ fun ContactsScreen(
     onServersSearch: (String) -> Unit,
     onServerConnectClicked: (String) -> Unit,
     onServerClicked: (VertexEntity) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
-    onContactRenamed: (ContactWithLastMessage, String) -> Unit,
+    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
+    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onContactSaved: (String) -> Unit,
-    onGroupCreated: (List<ContactWithLastMessage>, String) -> Unit,
+    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
     onResetUserNameClicked: () -> Unit,
@@ -146,7 +148,7 @@ fun ContactsScreen(
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var serversSearchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
     val sheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.Hidden,
@@ -492,7 +494,7 @@ fun ContactsScreenPreview() {
                         type = MessageType.TEXT,
                         actionFor = null,
                     )
-                ),
+                ).toDto(),
                 ContactWithLastMessage(
                     ContactEntityFactory.createContact(
                         address = "124",
@@ -510,7 +512,7 @@ fun ContactsScreenPreview() {
                         refId = null,
                         dateReceivedOnServer = ZonedDateTime.now()
                     )
-                )
+                ).toDto()
             )
         ),
         servers = RequestState.Idle,

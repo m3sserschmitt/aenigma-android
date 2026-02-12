@@ -22,14 +22,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
 import ro.aenigma.models.extensions.ExportedContactDataExtensions.toContactDto
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
@@ -42,7 +41,7 @@ private fun getContactsList(
     searchQuery: String,
     existentMembers: List<ExportedContactDataDto>?,
     contacts: RequestState<List<ContactDto>>
-): List<ContactWithLastMessage> {
+): List<ContactWithLastMessageDto> {
     val memberAddresses = remember(key1 = action, key2 = existentMembers) {
         if (action == MessageType.GROUP_MEMBER_ADD) {
             val existentItemsSet = hashSetOf<String>()
@@ -78,7 +77,7 @@ private fun getContactsList(
             else -> {
                 listOf()
             }
-        }.map { item -> ContactWithLastMessage(item.toEntity(), null) }
+        }.map { item -> ContactWithLastMessageDto(item, null) }
     }
 }
 
@@ -99,7 +98,7 @@ fun AddGroupMemberDialog(
 
     val add = action == MessageType.GROUP_MEMBER_ADD
     var searchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
     val items = getContactsList(
         action = action,
         existentMembers = contactWithGroup.data.group?.groupData?.members,

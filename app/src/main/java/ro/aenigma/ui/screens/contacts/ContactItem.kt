@@ -27,9 +27,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
@@ -38,10 +39,10 @@ import java.time.ZonedDateTime
 
 @Composable
 fun ContactItem(
-    onItemSelected: (ContactWithLastMessage) -> Unit,
-    onItemDeselected: (ContactWithLastMessage) -> Unit,
-    onClick: (ContactWithLastMessage) -> Unit,
-    contact: ContactWithLastMessage,
+    onItemSelected: (ContactWithLastMessageDto) -> Unit,
+    onItemDeselected: (ContactWithLastMessageDto) -> Unit,
+    onClick: (ContactWithLastMessageDto) -> Unit,
+    contact: ContactWithLastMessageDto,
     isSelectionMode: Boolean,
     isSelected: Boolean
 ) {
@@ -134,16 +135,16 @@ fun ContactItem(
 
 @Composable
 fun ConversationPreview(
-    contact: ContactWithLastMessage
+    contact: ContactWithLastMessageDto
 ) {
     if (contact.lastMessage != null && !contact.lastMessage.deleted) {
         val context = LocalContext.current
         val messagePreview = remember(key1 = contact.lastMessage) {
             if (!contact.lastMessage.incoming) {
                 context.getString(R.string.you) + " " +
-                        contact.lastMessage.toDto().getMessageTextByAction(context)
+                        contact.lastMessage.getMessageTextByAction(context)
             } else {
-                contact.lastMessage.toDto().getMessageTextByAction(context)
+                contact.lastMessage.getMessageTextByAction(context)
             }
         }
         Text(
@@ -174,7 +175,7 @@ fun ContactItemPreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
             )
-        ),
+        ).toDto(),
         isSelectionMode = false,
         isSelected = false,
         onClick = {},
@@ -205,7 +206,7 @@ fun ContactItemSelectedPreview()
                 dateReceivedOnServer = ZonedDateTime.now(),
                 type = MessageType.TEXT
             )
-        ),
+        ).toDto(),
         isSelectionMode = true,
         isSelected = true,
         onClick = {},

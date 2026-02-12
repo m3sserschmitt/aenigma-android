@@ -21,15 +21,16 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
-import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.VertexEntity
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
 import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
@@ -64,7 +65,7 @@ class MainViewModel @Inject constructor(
     private val _serversQuerySearch: MutableStateFlow<String> = MutableStateFlow("")
 
     private val _allContacts =
-        MutableStateFlow<RequestState<List<ContactWithLastMessage>>>(
+        MutableStateFlow<RequestState<List<ContactWithLastMessageDto>>>(
             RequestState.Idle
         )
 
@@ -91,7 +92,7 @@ class MainViewModel @Inject constructor(
 
     private val _useTor = MutableStateFlow(false)
 
-    val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
+    val allContacts: StateFlow<RequestState<List<ContactWithLastMessageDto>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
 
@@ -262,7 +263,7 @@ class MainViewModel @Inject constructor(
                         repository.local.getContactWithMessages()
                     else
                         repository.local.searchContacts(query).map { item ->
-                            ContactWithLastMessage(item, null)
+                            ContactWithLastMessageDto(item.toDto(), null)
                         }
                     _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
@@ -349,7 +350,7 @@ class MainViewModel @Inject constructor(
         resetContactChanges()
     }
 
-    fun createGroup(contacts: List<ContactWithLastMessage>, name: String) {
+    fun createGroup(contacts: List<ContactWithLastMessageDto>, name: String) {
         viewModelScope.launch(ioDispatcher) {
             val memberAddresses = contacts.map { item -> item.contact.address }
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
@@ -439,18 +440,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun deleteContacts(contacts: List<ContactWithLastMessage>) {
+    fun deleteContacts(contacts: List<ContactWithLastMessageDto>) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.removeContacts(contacts.map { contact -> contact.contact })
         }
     }
 
-    fun renameContact(contact: ContactWithLastMessage, name: String) {
+    fun renameContact(contact: ContactWithLastMessageDto, name: String) {
         viewModelScope.launch(ioDispatcher) {
             when (contact.contact.type) {
                 ContactType.CONTACT -> {
-                    val updatedContact = contact.contact.withName(name)
-                    updatedContact?.let { repository.local.updateContact(it) }
+                    val updatedContact = contact.contact.copy(name = name)
+                    updatedContact.let { repository.local.updateContact(it.toEntity()) }
                 }
 
                 ContactType.GROUP -> {

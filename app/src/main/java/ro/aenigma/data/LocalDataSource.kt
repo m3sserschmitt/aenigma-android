@@ -18,15 +18,18 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import ro.aenigma.data.database.AttachmentEntity
 import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.GroupEntity
 import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
+import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import javax.inject.Inject
@@ -82,12 +85,13 @@ class LocalDataSource @Inject constructor(
 
     val useTor: Flow<Boolean> = preferencesDataStore.useTor
 
-    fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessage>> {
+    fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
         return contactsDao.get().getWithMessagesFlow()
+            .map { items -> items.map { item -> item.toDto() } }
     }
 
-    suspend fun getContactWithMessages(): List<ContactWithLastMessage> {
-        return contactsDao.get().getWithMessages()
+    suspend fun getContactWithMessages(): List<ContactWithLastMessageDto> {
+        return contactsDao.get().getWithMessages().map { item -> item.toDto() }
     }
 
     suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity> {
@@ -126,8 +130,8 @@ class LocalDataSource @Inject constructor(
         return updateContactLastMessageId(contactEntity.address)
     }
 
-    suspend fun removeContacts(contacts: List<ContactEntity>) {
-        contactsDao.get().remove(contacts)
+    suspend fun removeContacts(contacts: List<ContactDto>) {
+        contactsDao.get().remove(contacts.map { item -> item.toEntity() })
         for (contact in contacts) {
             clearConversationSoft(contact.address)
         }
