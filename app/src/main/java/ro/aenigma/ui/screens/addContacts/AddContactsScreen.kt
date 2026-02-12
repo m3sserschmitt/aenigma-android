@@ -18,8 +18,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.models.CreatedSharedData
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.CreatedSharedDataDto
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
@@ -85,11 +85,11 @@ fun AddContactsScreen(
 fun AddContactsScreen(
     scannerState: QrCodeScannerState,
     qrCode: RequestState<QrCodeDto>,
-    sharedDataCreate: RequestState<CreatedSharedData>,
-    importedContactDetails: RequestState<ExportedContactData>,
+    sharedDataCreate: RequestState<CreatedSharedDataDto>,
+    importedContactDetails: RequestState<ExportedContactDataDto>,
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
-    onQrCodeFound: (ExportedContactData) -> Unit,
+    onQrCodeFound: (ExportedContactDataDto) -> Unit,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onNewContactNameChanged: (String) -> Boolean,

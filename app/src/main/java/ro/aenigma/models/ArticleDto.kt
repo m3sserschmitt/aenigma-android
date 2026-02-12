@@ -1,6 +1,6 @@
 package ro.aenigma.models
 
-data class Article (
+data class ArticleDto (
     val id: Long?,
     val title: String?,
     val description: String?,

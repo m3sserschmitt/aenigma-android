@@ -31,8 +31,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.models.CreatedSharedData
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.CreatedSharedDataDto
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -48,9 +48,9 @@ fun AddContactsContent(
     modifier: Modifier = Modifier,
     scannerState: QrCodeScannerState,
     qrCode: RequestState<QrCodeDto>,
-    sharedDataCreate: RequestState<CreatedSharedData>,
-    importedContactDetails: RequestState<ExportedContactData>,
-    onQrCodeFound: (ExportedContactData) -> Unit,
+    sharedDataCreate: RequestState<CreatedSharedDataDto>,
+    importedContactDetails: RequestState<ExportedContactDataDto>,
+    onQrCodeFound: (ExportedContactDataDto) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
@@ -148,7 +148,7 @@ fun AddContactsContent(
             )
         }
         QrCodeScannerState.SCAN_CODE -> {
-            QrCodeScanner<ExportedContactData>(
+            QrCodeScanner<ExportedContactDataDto>(
                 onQrCodeFound = { data ->
                     onQrCodeFound(data)
                 }

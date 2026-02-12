@@ -33,7 +33,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
 import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.models.AttachmentsMetadata
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
@@ -202,7 +202,7 @@ class MessageSenderWorker @AssistedInject constructor(
             File(applicationContext.cacheDir, messageWithAttachment.attachment.path)
         else
             zipper.createZip(
-                messageWithAttachment.message.files, AttachmentsMetadata(
+                messageWithAttachment.message.files, AttachmentsMetadataDto(
                     description = messageWithAttachment.message.text,
                     filesCount = messageWithAttachment.message.files.size
                 )

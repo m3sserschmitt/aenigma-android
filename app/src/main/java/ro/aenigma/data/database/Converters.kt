@@ -1,7 +1,7 @@
 package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
-import ro.aenigma.models.GroupData
+import ro.aenigma.models.GroupDataDto
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.toJson
 import java.time.ZonedDateTime
@@ -22,13 +22,13 @@ class Converters {
     }
 
     @TypeConverter
-    fun fromGroupData(value: GroupData?): String? {
+    fun fromGroupData(value: GroupDataDto?): String? {
         return value.toJson() ?: ""
     }
 
     @TypeConverter
-    fun toGroupData(value: String?): GroupData? {
-        return value.fromJson() ?: GroupData()
+    fun toGroupData(value: String?): GroupDataDto? {
+        return value.fromJson() ?: GroupDataDto()
     }
 
     @TypeConverter

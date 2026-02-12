@@ -1,11 +1,11 @@
 package ro.aenigma.models.extensions
 
 import ro.aenigma.models.ContactDto
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.enums.ContactType
 
 object ExportedContactDataExtensions {
-    fun ExportedContactData.toContactDto(): ContactDto {
+    fun ExportedContactDataDto.toContactDto(): ContactDto {
         return ContactDto(
             address = address ?: "",
             name = name,

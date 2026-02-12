@@ -23,7 +23,7 @@ import ro.aenigma.data.Repository
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.models.AttachmentsMetadata
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.Zipper
@@ -113,9 +113,9 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     private suspend fun resolveFiles(
         message: MessageEntity,
         files: List<File>
-    ): AttachmentsMetadata? {
+    ): AttachmentsMetadataDto? {
         var i = 0
-        var metadata: AttachmentsMetadata? = null
+        var metadata: AttachmentsMetadataDto? = null
         val finalURIs = mutableListOf<String>()
         for (file in files) {
             if (file.name == ATTACHMENTS_METADATA_FILE) {

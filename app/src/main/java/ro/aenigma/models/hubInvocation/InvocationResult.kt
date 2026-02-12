@@ -1,6 +1,6 @@
 package ro.aenigma.models.hubInvocation
 
-import ro.aenigma.models.PendingMessage
+import ro.aenigma.models.PendingMessageDto
 
 open class InvocationResult<T>(
     val data: T? = null,
@@ -25,17 +25,11 @@ class AuthenticateResult(
     errors: List<Error>? = null
 ) : InvocationResult<Boolean>(data, success, errors)
 
-class VertexBroadcastResult(
-    data: Boolean? = null,
-    success: Boolean? = null,
-    errors: List<Error>? = null
-) : InvocationResult<Boolean>(data, success, errors)
-
 class PullResult(
-    data: List<PendingMessage>? = null,
+    data: List<PendingMessageDto>? = null,
     success: Boolean? = null,
     errors: List<Error>? = null
-) : InvocationResult<List<PendingMessage>>(data, success, errors)
+) : InvocationResult<List<PendingMessageDto>>(data, success, errors)
 
 class RouteResult(
     data: Boolean? = null,

@@ -6,16 +6,14 @@ import com.mikepenz.markdown.model.ImageTransformer
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.models.CreatedSharedData
+import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.util.RequestState
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
@@ -28,7 +26,7 @@ import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.models.Article
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -70,7 +68,7 @@ class MainViewModel @Inject constructor(
             RequestState.Idle
         )
 
-    private val _newsFeed = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
+    private val _newsFeed = MutableStateFlow<RequestState<List<ArticleDto>>>(RequestState.Idle)
 
     private val _articleContent = MutableStateFlow<RequestState<String>>(RequestState.Idle)
 
@@ -82,12 +80,12 @@ class MainViewModel @Inject constructor(
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
     private val _importedContactDetails =
-        MutableStateFlow<RequestState<ExportedContactData>>(RequestState.Idle)
+        MutableStateFlow<RequestState<ExportedContactDataDto>>(RequestState.Idle)
 
-    private val _exportedContactDetails = MutableStateFlow<ExportedContactData?>(null)
+    private val _exportedContactDetails = MutableStateFlow<ExportedContactDataDto?>(null)
 
     private val _sharedDataCreateResult =
-        MutableStateFlow<RequestState<CreatedSharedData>>(RequestState.Idle)
+        MutableStateFlow<RequestState<CreatedSharedDataDto>>(RequestState.Idle)
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
@@ -97,9 +95,9 @@ class MainViewModel @Inject constructor(
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
 
-    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> = _sharedDataCreateResult
+    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedDataDto>> = _sharedDataCreateResult
 
-    val importedContactDetails: StateFlow<RequestState<ExportedContactData>> =
+    val importedContactDetails: StateFlow<RequestState<ExportedContactDataDto>> =
         _importedContactDetails
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
@@ -108,7 +106,7 @@ class MainViewModel @Inject constructor(
 
     val torOk: StateFlow<Boolean> = torServiceController.isTorOk
 
-    val newsFeed: StateFlow<RequestState<List<Article>>> = _newsFeed
+    val newsFeed: StateFlow<RequestState<List<ArticleDto>>> = _newsFeed
 
     val articleContent: StateFlow<RequestState<String>> = _articleContent
 
@@ -387,7 +385,7 @@ class MainViewModel @Inject constructor(
             val guard = repository.local.getGuard()
             val signatureService = signatureServiceLazy.get()
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
-                _exportedContactDetails.value = ExportedContactData(
+                _exportedContactDetails.value = ExportedContactDataDto(
                     guardHostname = guard.hostname,
                     guardAddress = guard.address,
                     publicKey = signatureService.publicKey!!,
@@ -479,7 +477,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun setScannedContactDetails(scannedDetails: ExportedContactData) {
+    fun setScannedContactDetails(scannedDetails: ExportedContactDataDto) {
         _importedContactDetails.value = RequestState.Success(scannedDetails)
     }
 
@@ -518,7 +516,7 @@ class MainViewModel @Inject constructor(
                     ?: throw Exception("Invalid shared data content")
                 _importedContactDetails.value =
                     RequestState.Success(
-                        content.fromJson<ExportedContactData>()
+                        content.fromJson<ExportedContactDataDto>()
                             ?: throw Exception("Could not deserialize shared data content")
                     )
             } catch (ex: Exception) {
@@ -551,7 +549,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             try {
                 val serverInfoUrl = serverQuery.getHttpUri(SERVER_INFO_API_PATH) ?: return@launch
-                val guardDto = repository.remote.getServerInfo(serverInfoUrl) ?: return@launch
+                val guardDto = repository.remote.getServerInfo(serverInfoUrl)?.copy(graphVersion = null) ?: return@launch
                 repository.local.insertGuard(guardDto.toEntity())
                 signalrConnectionController.disconnect()
             } catch (_: Exception) {

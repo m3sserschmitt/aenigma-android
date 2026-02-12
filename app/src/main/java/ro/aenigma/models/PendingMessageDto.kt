@@ -1,6 +1,6 @@
 package ro.aenigma.models
 
-data class PendingMessage(
+data class PendingMessageDto(
     val uuid: String? = null,
     val destination: String? = null,
     val content: String? = null,

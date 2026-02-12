@@ -2,12 +2,12 @@ package ro.aenigma.models.extensions
 
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.Artifact
+import ro.aenigma.models.ArtifactDto
 import java.time.ZonedDateTime
 
 object ArtifactExtensions {
     @JvmStatic
-    fun Artifact.toMessage(serverUuid: String, dateReceivedOnServer: ZonedDateTime?): MessageEntity? {
+    fun ArtifactDto.toMessage(serverUuid: String, dateReceivedOnServer: ZonedDateTime?): MessageEntity? {
         return MessageEntityFactory.createIncoming(
             chatId = chatId ?: return null,
             senderAddress = senderAddress ?: return null,

@@ -37,7 +37,7 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -113,7 +113,7 @@ fun ContactsScreen(
     contacts: RequestState<List<ContactWithLastMessage>>,
     servers: RequestState<List<VertexEntity>>,
     serversHistory: RequestState<List<VertexEntity>>,
-    importedContactDetails: RequestState<ExportedContactData>,
+    importedContactDetails: RequestState<ExportedContactDataDto>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     useTor: Boolean,

@@ -26,7 +26,7 @@ import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
-import ro.aenigma.models.GroupData
+import ro.aenigma.models.GroupDataDto
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -65,24 +65,24 @@ class GroupDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun createContactEntities(groupData: GroupData, resourceUrl: String) {
-        groupData.address ?: return
-        val contact = (repository.local.getContactWithGroup(groupData.address)?.contact
+    private suspend fun createContactEntities(groupDataDto: GroupDataDto, resourceUrl: String) {
+        groupDataDto.address ?: return
+        val contact = (repository.local.getContactWithGroup(groupDataDto.address)?.contact
             ?: ContactEntityFactory.createGroup(
-                address = groupData.address,
-                name = groupData.name,
-            )).withName(groupData.name).withNewMessage() ?: return
+                address = groupDataDto.address,
+                name = groupDataDto.name,
+            )).withName(groupDataDto.name).withNewMessage() ?: return
         val group = GroupEntityFactory.create(
-            address = groupData.address,
-            groupData = groupData,
+            address = groupDataDto.address,
+            groupDataDto = groupDataDto,
             resourceUrl = resourceUrl
         )
         repository.local.insertOrUpdateContact(contact)
         repository.local.insertOrUpdateGroup(group)
 
-        groupData.members ?: return
+        groupDataDto.members ?: return
 
-        for (member in groupData.members) {
+        for (member in groupDataDto.members) {
             if (member.name == null || member.address == null || signatureService.address == member.address
                 || !member.publicKey.isValidPublicKey()
             ) {

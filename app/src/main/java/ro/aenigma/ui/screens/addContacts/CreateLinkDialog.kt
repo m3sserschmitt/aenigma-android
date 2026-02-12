@@ -25,7 +25,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import ro.aenigma.R
-import ro.aenigma.models.CreatedSharedData
+import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.util.ContextExtensions.copyToClipboard
@@ -36,7 +36,7 @@ import ro.aenigma.util.PrettyDateFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateLinkDialog(
-    sharedData: RequestState<CreatedSharedData>,
+    sharedData: RequestState<CreatedSharedDataDto>,
     onConfirmButtonClick: () -> Unit
 ) {
     if (sharedData !is RequestState.Idle) {
@@ -188,7 +188,7 @@ fun CreateLinkDialog(
 @Composable
 fun CreateLinkDialog(
     visible: Boolean,
-    sharedData: RequestState<CreatedSharedData>,
+    sharedData: RequestState<CreatedSharedDataDto>,
     onConfirmButtonClick: () -> Unit
 ) {
     if(visible)
@@ -206,7 +206,7 @@ fun CreateLinkDialogPreview()
 {
     CreateLinkDialog(
         sharedData = RequestState.Success(
-            CreatedSharedData(
+            CreatedSharedDataDto(
                 "123-123-123-123",
                 resourceUrl = "https://example.com/Share?Tag=123-123-123-123",
                 "2024-06-22 17:43:04.2399895+03:00"

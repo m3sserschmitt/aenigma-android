@@ -9,7 +9,7 @@ import org.apache.commons.rng.sampling.distribution.AliasMethodDiscreteSampler
 import org.apache.commons.rng.sampling.distribution.SharedStateDiscreteSampler
 import org.apache.commons.rng.simple.RandomSource
 import ro.aenigma.data.Repository
-import ro.aenigma.models.Article
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.util.Constants.Companion.ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.SHARED_FILES_FEED_WEIGHT
@@ -25,10 +25,10 @@ class FeedSampler @Inject constructor(
     companion object {
         @JvmStatic
         fun weightedInterleave(
-            sourceLists: List<List<Article>>,
+            sourceLists: List<List<ArticleDto>>,
             weights: List<Double>,
             rng: UniformRandomProvider = RandomSource.MT.create()
-        ): List<Article> {
+        ): List<ArticleDto> {
 
             require(sourceLists.size == weights.size && sourceLists.isNotEmpty()) {
                 "sourceLists and weights must be non‑empty and same size"
@@ -48,7 +48,7 @@ class FeedSampler @Inject constructor(
             var sampler: SharedStateDiscreteSampler? = buildSampler() ?: return listOf()
 
             val outCapacity = queues.sumOf { it.size }
-            val out = HashSet<Article>(outCapacity)
+            val out = HashSet<ArticleDto>(outCapacity)
             var i = 0L
             while (out.size < outCapacity) {
 
@@ -69,7 +69,7 @@ class FeedSampler @Inject constructor(
         }
     }
 
-    fun getFeed(): Flow<List<Article>> {
+    fun getFeed(): Flow<List<ArticleDto>> {
         val latestSharedFilesFlow = repository.local.getLatestSharedFiles().catch {
             emit(listOf())
         }

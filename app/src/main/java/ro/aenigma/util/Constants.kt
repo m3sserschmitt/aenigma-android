@@ -20,7 +20,7 @@ class Constants {
         const val NEWS_FEED_SIZE = 150
         const val SEND_MESSAGES_CHUNK_SIZE = 15
         const val CONTACTS_LIST_MAX_COUNT = 150
-
+        const val OK_HTTP_CLIENT_TIMEOUT: Long = 15
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"

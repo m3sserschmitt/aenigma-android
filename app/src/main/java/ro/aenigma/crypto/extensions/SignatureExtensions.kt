@@ -5,7 +5,7 @@ import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
-import ro.aenigma.models.SignedData
+import ro.aenigma.models.SignatureDto
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 
@@ -36,18 +36,18 @@ object SignatureExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> T.jsonSign(signatureService: SignatureService): SignedData? {
+    inline fun <reified T> T.jsonSign(signatureService: SignatureService): SignatureDto? {
         return try {
             val serializedArtifact = this.toCanonicalJson() ?: return null
             val signature = signatureService.sign(serializedArtifact.toByteArray())
-            SignedData(signedData = signature.signedData, publicKey = signature.publicKey)
+            SignatureDto(signedData = signature.signedData, publicKey = signature.publicKey)
         } catch (_: Exception) {
             null
         }
     }
 
     @JvmStatic
-    inline fun <reified T> SignedData.jsonVerify(): T? {
+    inline fun <reified T> SignatureDto.jsonVerify(): T? {
         try {
             if (!CryptoProvider.verifyEx(
                     this.publicKey ?: return null,

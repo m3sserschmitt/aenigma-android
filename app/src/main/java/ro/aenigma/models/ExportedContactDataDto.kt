@@ -2,7 +2,7 @@ package ro.aenigma.models
 
 import java.time.ZonedDateTime
 
-data class ExportedContactData(
+data class ExportedContactDataDto(
     val guardHostname: String? = null,
     val guardAddress: String? = null,
     val publicKey: String? = null,
@@ -12,7 +12,7 @@ data class ExportedContactData(
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is ExportedContactData) return false
+        if (other !is ExportedContactDataDto) return false
         return address == other.address
     }
 

@@ -14,7 +14,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
-import ro.aenigma.models.Vertex
+import ro.aenigma.models.VertexDto
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
@@ -50,7 +50,7 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun saveGraph(graph: List<Vertex>, guardDto: GuardDto): Boolean {
+    private suspend fun saveGraph(graph: List<VertexDto>, guardDto: GuardDto): Boolean {
         if(guardDto.onionService.isNullOrBlank() && guardDto.hostname.isNullOrBlank()) {
             return false
         }

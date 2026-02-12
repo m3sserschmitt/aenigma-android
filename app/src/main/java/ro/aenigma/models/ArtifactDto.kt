@@ -3,7 +3,7 @@ package ro.aenigma.models
 import ro.aenigma.models.enums.MessageType
 import java.time.ZonedDateTime
 
-data class Artifact(
+data class ArtifactDto(
     val text: String? = null,
     val type: MessageType? = null,
     val senderName: String? = null,

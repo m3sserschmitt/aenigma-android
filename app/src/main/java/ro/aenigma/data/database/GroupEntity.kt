@@ -3,7 +3,7 @@ package ro.aenigma.data.database
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
-import ro.aenigma.models.GroupData
+import ro.aenigma.models.GroupDataDto
 import ro.aenigma.util.Constants.Companion.GROUPS_TABLE
 
 @Entity(
@@ -17,6 +17,6 @@ import ro.aenigma.util.Constants.Companion.GROUPS_TABLE
 )
 data class GroupEntity (
     @PrimaryKey val address: String,
-    val groupData: GroupData,
+    val groupData: GroupDataDto,
     val resourceUrl: String
 )

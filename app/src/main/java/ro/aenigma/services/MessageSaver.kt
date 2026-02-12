@@ -4,8 +4,8 @@ import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
-import ro.aenigma.models.Artifact
-import ro.aenigma.models.PendingMessage
+import ro.aenigma.models.ArtifactDto
+import ro.aenigma.models.PendingMessageDto
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.extensions.SignatureExtensions.jsonVerify
@@ -24,7 +24,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
 import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.models.SignedData
+import ro.aenigma.models.SignatureDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ArtifactExtensions.toMessage
 import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
@@ -46,7 +46,7 @@ class MessageSaver @Inject constructor(
 ) {
     private val localAddress = signatureService.address
 
-    private suspend fun saveIncomingMessage(triple: Triple<SignedData, Artifact, MessageEntity>) {
+    private suspend fun saveIncomingMessage(triple: Triple<SignatureDto, ArtifactDto, MessageEntity>) {
         try {
             val signedData = triple.first
             val artifact = triple.second
@@ -127,14 +127,14 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private fun parseArtifact(message: ParsedMessageDto): Triple<SignedData, Artifact, MessageEntity>? {
+    private fun parseArtifact(message: ParsedMessageDto): Triple<SignatureDto, ArtifactDto, MessageEntity>? {
         return try {
-            val signedData = message.content.fromJson<SignedData>() ?: return null
-            val artifact = signedData.jsonVerify<Artifact>() ?: return null
+            val signedData = message.content.fromJson<SignatureDto>() ?: return null
+            val artifactDto = signedData.jsonVerify<ArtifactDto>() ?: return null
             val message =
-                artifact.toMessage(message.uuid ?: return null, message.dateReceivedOnServer)
+                artifactDto.toMessage(message.uuid ?: return null, message.dateReceivedOnServer)
                     ?: return null
-            Triple(signedData, artifact, message)
+            Triple(signedData, artifactDto, message)
         } catch (_: Exception) {
             null
         }
@@ -146,7 +146,7 @@ class MessageSaver @Inject constructor(
         saveIncomingMessages(messageEntity)
     }
 
-    suspend fun handlePendingMessages(messages: List<PendingMessage>) {
+    suspend fun handlePendingMessages(messages: List<PendingMessageDto>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item -> parseArtifact(item) }
@@ -188,21 +188,21 @@ class MessageSaver @Inject constructor(
         return messages.map { message -> saveOutgoingMessage(message) }.all { it }
     }
 
-    private suspend fun createOrUpdateContact(artifact: Artifact, publicKey: String) {
+    private suspend fun createOrUpdateContact(artifactDto: ArtifactDto, publicKey: String) {
         val originAddress = publicKey.getAddressFromPublicKey() ?: return
         val contact =
             repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
-                address = artifact.senderAddress ?: return,
-                name = artifact.senderName,
+                address = artifactDto.senderAddress ?: return,
+                name = artifactDto.senderName,
                 publicKey = publicKey,
-                guardHostname = artifact.guardHostname,
-                guardAddress = artifact.guardAddress,
+                guardHostname = artifactDto.guardHostname,
+                guardAddress = artifactDto.guardAddress,
             )
         val updatedContact =
-            contact.withGuardAddress(artifact.guardAddress ?: contact.guardAddress)
-                .withGuardHostname(artifact.guardHostname ?: contact.guardHostname)
+            contact.withGuardAddress(artifactDto.guardAddress ?: contact.guardAddress)
+                .withGuardHostname(artifactDto.guardHostname ?: contact.guardHostname)
                 .run {
-                    if (artifact.chatId == artifact.senderAddress) {
+                    if (artifactDto.chatId == artifactDto.senderAddress) {
                         withNewMessage()
                     } else {
                         this
@@ -211,28 +211,28 @@ class MessageSaver @Inject constructor(
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
-    private suspend fun createAttachmentEntity(artifact: Artifact, messageId: Long) {
+    private suspend fun createAttachmentEntity(artifactDto: ArtifactDto, messageId: Long) {
         repository.local.insertOrUpdateAttachment(
             AttachmentEntityFactory.create(
                 id = messageId,
                 path = null,
-                url = artifact.resourceUrl,
-                passphrase = artifact.passphrase
+                url = artifactDto.resourceUrl,
+                passphrase = artifactDto.passphrase
             )
         )
     }
 
-    private suspend fun downloadGroupData(artifact: Artifact, messageId: Long) {
-        createAttachmentEntity(artifact, messageId)
+    private suspend fun downloadGroupData(artifactDto: ArtifactDto, messageId: Long) {
+        createAttachmentEntity(artifactDto, messageId)
         GroupDownloadWorker.createWorkRequest(workManager, messageId)
     }
 
-    private suspend fun downloadAttachment(artifact: Artifact, messageId: Long) {
-        createAttachmentEntity(artifact, messageId)
+    private suspend fun downloadAttachment(artifactDto: ArtifactDto, messageId: Long) {
+        createAttachmentEntity(artifactDto, messageId)
         AttachmentDownloadWorker.createRequest(workManager, messageId)
     }
 
-    private suspend fun saveIncomingMessages(messages: List<Triple<SignedData, Artifact, MessageEntity>>) {
+    private suspend fun saveIncomingMessages(messages: List<Triple<SignatureDto, ArtifactDto, MessageEntity>>) {
         return messages.forEach { item -> saveIncomingMessage(item) }
     }
 

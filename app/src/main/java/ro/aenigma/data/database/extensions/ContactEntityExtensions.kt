@@ -2,7 +2,7 @@ package ro.aenigma.data.database.extensions
 
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.models.ContactDto
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.util.SerializerExtensions.deepCopy
 import java.time.ZonedDateTime
@@ -30,7 +30,7 @@ object ContactEntityExtensions {
             ?.copy(guardHostname = guardHostname, dateUpdated = ZonedDateTime.now())
     }
 
-    fun ContactEntity?.toExportedData(): ExportedContactData? {
+    fun ContactEntity?.toExportedData(): ExportedContactDataDto? {
         this ?: return null
         return ExportedContactDataFactory.create(
             name = name,

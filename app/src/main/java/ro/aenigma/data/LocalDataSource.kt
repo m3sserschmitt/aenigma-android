@@ -25,7 +25,7 @@ import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
 import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.Article
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
@@ -145,7 +145,7 @@ class LocalDataSource @Inject constructor(
         return messagesDao.get().getConversationFlow(chatId)
     }
 
-    fun getLatestSharedFiles(): Flow<List<Article>> {
+    fun getLatestSharedFiles(): Flow<List<ArticleDto>> {
         return messagesDao.get().getLatestSharedFilesFlow()
             .map { items -> items.map { m -> m.toArticle(context) } }
     }

@@ -6,8 +6,8 @@ import ro.aenigma.R
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
-import ro.aenigma.models.Article
-import ro.aenigma.models.Artifact
+import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ArtifactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.MessageType
@@ -58,8 +58,8 @@ object MessageEntityExtensions {
         resourceUrl: String?,
         chatId: String?,
         passphrase: String?
-    ): Artifact? {
-        return Artifact(
+    ): ArtifactDto {
+        return ArtifactDto(
             text = text,
             type = type,
             actionFor = actionFor,
@@ -127,10 +127,10 @@ object MessageEntityExtensions {
     }
 
     @JvmStatic
-    fun MessageWithDetails.toArticle(context: Context): Article {
+    fun MessageWithDetails.toArticle(context: Context): ArticleDto {
         val date = PrettyTime().format(message.date)
         val senderName = sender?.name ?: context.getString(R.string.unknown)
-        return Article(
+        return ArticleDto(
             id = message.id,
             title = context.getString(R.string.article_title_template,  senderName, date),
             description = message.text,

@@ -26,7 +26,7 @@ import ro.aenigma.data.database.ContactWithLastMessage
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
@@ -40,7 +40,7 @@ import ro.aenigma.util.RequestState
 private fun getContactsList(
     action: MessageType,
     searchQuery: String,
-    existentMembers: List<ExportedContactData>?,
+    existentMembers: List<ExportedContactDataDto>?,
     contacts: RequestState<List<ContactDto>>
 ): List<ContactWithLastMessage> {
     val memberAddresses = remember(key1 = action, key2 = existentMembers) {

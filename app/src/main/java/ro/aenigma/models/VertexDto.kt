@@ -1,7 +1,7 @@
 package ro.aenigma.models
 
-data class Vertex (
+data class VertexDto (
     val publicKey: String? = null,
     val signedData: String? = null,
-    val neighborhood: Neighborhood? = null
+    val neighborhood: NeighborhoodDto? = null
 )
