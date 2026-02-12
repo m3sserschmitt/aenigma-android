@@ -250,7 +250,19 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun getGuard(): GuardEntity? {
-        return guardsDao.get().getLastGuard()
+        return guardsDao.get().getGuard()
+    }
+
+    suspend fun getGuards(): List<GuardEntity> {
+        return guardsDao.get().get()
+    }
+
+    fun getGuardsFlow(): Flow<List<GuardEntity>> {
+        return guardsDao.get().getFlow()
+    }
+
+    suspend fun searchGuards(query: String): List<GuardEntity> {
+        return guardsDao.get().search(query)
     }
 
     suspend fun removeVertices() {
@@ -263,6 +275,18 @@ class LocalDataSource @Inject constructor(
 
     suspend fun getVertices(): List<VertexEntity> {
         return verticesDao.get().get()
+    }
+
+    suspend fun getAllVertices(): List<VertexEntity> {
+        return verticesDao.get().getAll()
+    }
+
+    suspend fun searchVertices(searchQuery: String): List<VertexEntity> {
+        return verticesDao.get().search(searchQuery)
+    }
+
+    fun getVerticesFlow(): Flow<List<VertexEntity>> {
+        return verticesDao.get().getFlow()
     }
 
     suspend fun removeEdges() {

@@ -27,6 +27,7 @@ import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.ui.navigation.destinations.articleComposable
 import ro.aenigma.ui.navigation.destinations.feedComposable
+import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
 import ro.aenigma.util.NavBackStackEntryExtensions.isContactsSelected
 import ro.aenigma.util.NavBackStackEntryExtensions.isFeedSelected
 import ro.aenigma.viewmodels.MainViewModel
@@ -46,7 +47,7 @@ fun SetupNavigation(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                modifier = Modifier.height(50.dp),
+                modifier = Modifier.height(NAVIGATION_BAR_HEIGHT),
                 containerColor = MaterialTheme.colorScheme.background
             ) {
                 NavigationBarItem(

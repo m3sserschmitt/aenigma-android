@@ -126,12 +126,6 @@ class SignalRClientWorker @AssistedInject constructor(
             signalrController.pull()
         }
 
-        /*
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Broadcast()) {
-            signalrController.broadcast()
-        }
-        */
-
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
             signalrController.cleanup()
         }

@@ -41,7 +41,7 @@ fun <T> ItemsList(
     items: List<T>,
     nextPageAvailable: Boolean = false,
     itemKeyProvider: (T) -> Any,
-    selectedItems: List<T>,
+    selectedItems: List<T> = listOf(),
     reversedLayout: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
     listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,

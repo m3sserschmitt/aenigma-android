@@ -28,7 +28,7 @@ import ro.aenigma.models.SignedData
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ArtifactExtensions.toMessage
 import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
-import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker

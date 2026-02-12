@@ -8,7 +8,7 @@ import java.time.ZonedDateTime
 
 @Entity(
     tableName = GUARDS_TABLE,
-    indices = [Index(value = ["address"])]
+    indices = [Index(value = ["address"], unique = true)]
 )
 data class GuardEntity (
     @PrimaryKey(autoGenerate = true) var id: Long = 0,

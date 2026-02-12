@@ -8,7 +8,7 @@ import ro.aenigma.data.LocalDataSource
 import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.util.Constants.Companion.API_BASE_URL
 import ro.aenigma.util.SerializerExtensions.createJsonConverterFactory
-import ro.aenigma.util.UrlExtensions.getBaseUrl
+import ro.aenigma.util.StringExtensions.getBaseUrl
 import javax.inject.Inject
 import javax.inject.Singleton
 

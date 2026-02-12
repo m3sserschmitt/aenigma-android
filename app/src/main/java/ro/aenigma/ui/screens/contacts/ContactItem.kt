@@ -40,7 +40,7 @@ import java.time.ZonedDateTime
 fun ContactItem(
     onItemSelected: (ContactWithLastMessage) -> Unit,
     onItemDeselected: (ContactWithLastMessage) -> Unit,
-    onClick: () -> Unit,
+    onClick: (ContactWithLastMessage) -> Unit,
     contact: ContactWithLastMessage,
     isSelectionMode: Boolean,
     isSelected: Boolean

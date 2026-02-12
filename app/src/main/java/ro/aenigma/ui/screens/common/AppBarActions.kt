@@ -55,6 +55,21 @@ fun NavigateBackAppBarAction(
 }
 
 @Composable
+fun ServersListAppBarAction(
+    onOpenServersList: () -> Unit
+) {
+    IconButton(
+        onClick = onOpenServersList
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_storage),
+            contentDescription = stringResource(id = R.string.servers),
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 fun DeleteAppBarAction(
     onDeleteClicked: () -> Unit
 ) {

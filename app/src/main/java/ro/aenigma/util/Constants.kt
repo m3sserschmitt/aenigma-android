@@ -1,5 +1,7 @@
 package ro.aenigma.util
 
+import androidx.compose.foundation.layout.IntrinsicSize
+
 class Constants {
     companion object {
 
@@ -14,6 +16,7 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
+        const val SERVERS_LIST_MAX_COUNT = 50
         const val NEWS_FEED_SIZE = 150
         const val SEND_MESSAGES_CHUNK_SIZE = 15
         const val CONTACTS_LIST_MAX_COUNT = 150
@@ -79,6 +82,18 @@ class Constants {
 
         const val IMAGE_COMPRESSION_QUALITY = 50
 
-        const val GUARDS_HISTORY_MAX_COUNT = 10
+        const val GUARDS_HISTORY_MAX_COUNT = 150
+
+        val NAVIGATION_BAR_HEIGHT = IntrinsicSize.Min
+
+        const val SERVER_INFO_API_PATH = "/Info"
+
+        const val VERTICES_API_PATH = "/Vertices"
+
+        const val SHARE_API_PATH = "/Share"
+
+        const val VERTEX_API_PATH = "/Vertex"
+
+        const val FILE_API_PATH = "/File"
     }
 }

@@ -118,8 +118,7 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = {
-                        onClick(message)
+                    onClick = { item -> onClick(item)
                         showImageViewer = true
                     }
                 ),

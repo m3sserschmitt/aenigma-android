@@ -33,9 +33,7 @@ fun ContactsContent(
                         ContactItem(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
-                            onClick = {
-                                navigateToChatScreen(contact.contact.address)
-                            },
+                            onClick = { item -> navigateToChatScreen(item.contact.address) },
                             contact = contact,
                             isSelectionMode = isSelectionMode,
                             isSelected = isSelected

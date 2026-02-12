@@ -41,7 +41,7 @@ import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.StringExtensions.toJson
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit

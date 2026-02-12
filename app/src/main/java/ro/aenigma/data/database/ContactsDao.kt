@@ -29,7 +29,7 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
     fun getWithGroupFlow(address: String): Flow<ContactWithGroup?>
 
-    @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%'")
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%' LIMIT $CONTACTS_LIST_MAX_COUNT")
     suspend fun search(searchQuery: String): List<ContactEntity>
 
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = 1 WHERE address = :address")

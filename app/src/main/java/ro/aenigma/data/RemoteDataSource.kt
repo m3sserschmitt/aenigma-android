@@ -1,8 +1,5 @@
 package ro.aenigma.data
 
-import android.graphics.BitmapFactory
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
@@ -22,8 +19,8 @@ import ro.aenigma.data.network.EnigmaApi
 import ro.aenigma.models.Article
 import ro.aenigma.models.CreatedSharedData
 import ro.aenigma.models.GroupData
+import ro.aenigma.models.GuardDto
 import ro.aenigma.models.Neighborhood
-import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.SharedData
 import ro.aenigma.models.SharedDataCreate
 import ro.aenigma.models.TorCheck
@@ -33,9 +30,9 @@ import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.DEFAULT_LANGUAGE_CODE
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
-import ro.aenigma.util.SerializerExtensions.fromJson
-import ro.aenigma.util.UrlExtensions.getBaseUrl
-import ro.aenigma.util.UrlExtensions.getTagQueryParameter
+import ro.aenigma.util.StringExtensions.fromJson
+import ro.aenigma.util.StringExtensions.getBaseUrl
+import ro.aenigma.util.StringExtensions.getTagQueryParameter
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,17 +69,97 @@ class RemoteDataSource @Inject constructor(
                 return null
             }
         }
+
+        @JvmStatic
+        private fun validateGroupData(
+            groupData: GroupData,
+            existentGroup: GroupData?,
+            expectedPublisherAddress: String
+        ): GroupData? {
+            if (groupData.name == null || groupData.address == null || groupData.members == null
+                || groupData.nonce == null
+                || groupData.members.isEmpty()
+                || groupData.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
+                || groupData.admins == null || groupData.admins.isEmpty()
+                || groupData.admins.any { item -> !item.isValidAddress() }
+            ) {
+                return null
+            }
+
+            val publisherIsAdmin = groupData.admins.contains(expectedPublisherAddress)
+            val newGroup = existentGroup == null
+            val nonceIsGreaterThanPrevious =
+                !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
+            val adminModifiesGroup =
+                !newGroup && groupData.admins.contains(expectedPublisherAddress) && nonceIsGreaterThanPrevious
+            return when {
+                publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupData
+                else -> null
+            }
+        }
+
+        @JvmStatic
+        private suspend fun verifyServerInfo(api: EnigmaApi): GuardDto? {
+            val response = api.getServerInfo()
+            val serverInfoBody = response.body() ?: return null
+            if (response.code() != 200) {
+                return null
+            } else {
+                val address = serverInfoBody.address ?: return null
+                val vertexResponse = api.getVertex(address)
+                if (vertexResponse.code() != 200) {
+                    return null
+                }
+                val vertexBody = vertexResponse.body() ?: return null
+                if (vertexBody.neighborhood?.address != address) {
+                    return null
+                }
+                val validatedVertex = validateVertex(vertexBody) ?: return null
+                return GuardDto(
+                    publicKey = validatedVertex.publicKey!!,
+                    address = validatedVertex.neighborhood!!.address!!,
+                    hostname = validatedVertex.neighborhood.hostname,
+                    onionService = validatedVertex.neighborhood.onionService,
+                    graphVersion = null
+                )
+            }
+        }
+
+        @JvmStatic
+        private fun validateVertex(vertex: Vertex?): Vertex? {
+            if (vertex == null) {
+                return null
+            }
+            if (!vertex.publicKey.isValidPublicKey()) {
+                return null
+            }
+            if (vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true) {
+                return null
+            }
+            if (!vertex.neighborhood.address.isValidAddress()) {
+                return null
+            }
+            if (!vertex.publicKey.publicKeyMatchAddress(vertex.neighborhood.address)) {
+                return null
+            }
+            if (!vertex.signedData.isValidBase64() || !CryptoProvider.verifyEx(
+                    vertex.publicKey!!,
+                    vertex.signedData!!
+                )
+            ) {
+                return null
+            }
+            val serializedNeighborhood =
+                vertex.signedData.getStringDataFromSignature(vertex.publicKey) ?: return null
+            val neighborhood =
+                serializedNeighborhood.fromJson<Neighborhood>()?.normalizeHostname() ?: return null
+            return Vertex(vertex.publicKey, vertex.signedData, neighborhood)
+        }
     }
 
-    suspend fun getServerInfo(): ServerInfo? {
+    suspend fun getServerInfo(): GuardDto? {
         return try {
-            val response = retrofitProvider.getApi().getServerInfo()
-            val body = response.body()
-
-            if (response.code() == 200 && body != null)
-                body
-            else
-                null
+            verifyServerInfo(retrofitProvider.getApi())
         } catch (_: Exception) {
             null
         }
@@ -96,7 +173,7 @@ class RemoteDataSource @Inject constructor(
             if (response.code() != 200 || body == null) {
                 listOf()
             } else {
-                body.mapNotNull { vertex -> validateVertex(vertex, false) }
+                body.mapNotNull { vertex -> validateVertex(vertex) }
             }
         } catch (_: Exception) {
             listOf()
@@ -129,7 +206,7 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun getSharedDataByUrl(url: String, expectedPublisherAddress: String?): SharedData? {
         val tag = url.getTagQueryParameter() ?: return null
-        val baseUrl = url.getBaseUrl()
+        val baseUrl = url.getBaseUrl() ?: return null
         return getSharedData(retrofitProvider.getApi(baseUrl), tag, expectedPublisherAddress)
     }
 
@@ -163,48 +240,6 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    private fun validateGroupData(
-        groupData: GroupData,
-        existentGroup: GroupData?,
-        expectedPublisherAddress: String
-    ): GroupData? {
-        if (groupData.name == null || groupData.address == null || groupData.members == null
-            || groupData.nonce == null
-            || groupData.members.isEmpty()
-            || groupData.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
-            || groupData.admins == null || groupData.admins.isEmpty()
-            || groupData.admins.any { item -> !item.isValidAddress() }
-        ) {
-            return null
-        }
-
-        val publisherIsAdmin = groupData.admins.contains(expectedPublisherAddress)
-        val newGroup = existentGroup == null
-        val nonceIsGreaterThanPrevious =
-            !newGroup && groupData.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
-        val adminModifiesGroup =
-            !newGroup && groupData.admins.contains(expectedPublisherAddress) && nonceIsGreaterThanPrevious
-        return when {
-            publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupData
-            else -> null
-        }
-    }
-
-    suspend fun getVertex(address: String, isLeaf: Boolean, publicKey: String? = null): Vertex? {
-        return try {
-            val response = retrofitProvider.getApi().getVertex(address)
-            val vertex = response.body()
-
-            if (response.code() != 200 || vertex == null) {
-                null
-            } else {
-                validateVertex(vertex, isLeaf, publicKey)
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     suspend fun postFile(file: File, accessCount: Int = 1): CreatedSharedData? {
         return try {
             val filePart = MultipartBody.Part.createFormData(
@@ -228,10 +263,22 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
+
+
+    suspend fun getServerInfo(url: String): GuardDto? {
+        return try {
+            val baseUrl = url.getBaseUrl() ?: return null
+            val api = retrofitProvider.getApi(baseUrl)
+            verifyServerInfo(api)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun getFile(url: String, outFile: File): Boolean {
         return try {
             val tag = url.getTagQueryParameter() ?: return false
-            val response = retrofitProvider.getApi(url.getBaseUrl()).getFile(tag)
+            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return false).getFile(tag)
             val body = response.body()
             if (response.code() != 200 || body == null) {
                 false
@@ -244,25 +291,10 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getImage(url: String): ImageBitmap? {
-        return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl()).getFileByUrl(url)
-            val body = response.body()
-            if (response.code() != 200 || body == null) {
-                null
-            } else {
-                response.body()?.byteStream().use { stream ->
-                    BitmapFactory.decodeStream(stream).asImageBitmap()
-                }
-            }
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     private suspend fun requestArticles(url: String): List<Article> {
         return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl()).getArticlesIndex(url)
+            val response =
+                retrofitProvider.getApi(url.getBaseUrl() ?: return listOf()).getArticlesIndex(url)
             val body = response.body()
             if (response.code() != 200 || body == null) {
                 listOf()
@@ -290,7 +322,8 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun getStringContent(url: String): String? {
         return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl()).getStringContent(url)
+            val response =
+                retrofitProvider.getApi(url.getBaseUrl() ?: return null).getStringContent(url)
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null
@@ -304,7 +337,7 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun checkTor(url: String): TorCheck? {
         return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl()).checkTor(url)
+            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return null).checkTor(url)
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null
@@ -314,42 +347,5 @@ class RemoteDataSource @Inject constructor(
         } catch (_: Exception) {
             null
         }
-    }
-
-    private fun validateVertex(
-        vertex: Vertex?,
-        isLeaf: Boolean,
-        publicKey: String? = null
-    ): Vertex? {
-        if (vertex == null) {
-            return null
-        }
-        val key = if (publicKey.isNullOrBlank()) vertex.publicKey else publicKey
-        if (!key.isValidPublicKey()) {
-            return null
-        }
-        if ((isLeaf && vertex.neighborhood?.neighbors?.count() != 1)
-            || vertex.neighborhood?.neighbors?.all { item -> item.isValidAddress() } != true
-        ) {
-            return null
-        }
-        if (!vertex.neighborhood.address.isValidAddress()) {
-            return null
-        }
-        if (!isLeaf && !key.publicKeyMatchAddress(vertex.neighborhood.address)) {
-            return null
-        }
-        if (!vertex.signedData.isValidBase64() || !CryptoProvider.verifyEx(
-                key!!,
-                vertex.signedData!!
-            )
-        ) {
-            return null
-        }
-        val serializedNeighborhood =
-            vertex.signedData.getStringDataFromSignature(key) ?: return null
-        val neighborhood =
-            serializedNeighborhood.fromJson<Neighborhood>()?.normalizeHostname() ?: return null
-        return Vertex(vertex.publicKey, vertex.signedData, neighborhood)
     }
 }

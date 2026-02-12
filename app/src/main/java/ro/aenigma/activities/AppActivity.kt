@@ -76,8 +76,8 @@ class AppActivity : FragmentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.Companion.auto(Color.TRANSPARENT, Color.TRANSPARENT)
+            statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
         )
         loadDbPassphrase()
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
@@ -155,7 +155,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun sync() {
-        SignalRClientWorker.Companion.start(
+        SignalRClientWorker.start(
             this,
             actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
         )
@@ -166,7 +166,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun schedulePeriodicSync() {
-        SignalRClientWorker.Companion.schedulePeriodicSync(this)
+        SignalRClientWorker.schedulePeriodicSync(this)
     }
 
     private fun observeTorService() {

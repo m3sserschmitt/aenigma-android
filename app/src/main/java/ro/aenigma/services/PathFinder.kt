@@ -37,7 +37,7 @@ class PathFinder @Inject constructor(
             _localPublicKey ?: return false
             _localVertex = VertexEntityFactory.create(_localAddress, _localPublicKey, null, null)
             val guard = repository.local.getGuard() ?: return false
-            val vertices = repository.local.getVertices()
+            val vertices = repository.local.getAllVertices()
             _verticesMap = HashMap(vertices.size)
             val edges = repository.local.getEdges()
 

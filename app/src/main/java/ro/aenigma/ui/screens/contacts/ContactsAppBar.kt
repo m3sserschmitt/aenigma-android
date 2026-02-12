@@ -33,6 +33,7 @@ import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
+import ro.aenigma.ui.screens.common.ServersListAppBarAction
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
@@ -53,6 +54,7 @@ fun ContactsAppBar(
     onSearchModeExited: () -> Unit,
     onSearchClicked: (String) -> Unit,
     onSelectionModeExited: () -> Unit,
+    onOpenServersList: () -> Unit,
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
@@ -128,6 +130,11 @@ fun ContactsAppBar(
                     useTor = useTor,
                     torOk = torOk,
                     useTorChanged = useTorChanged
+                )
+            },
+            navigateBackAlternative = {
+                ServersListAppBarAction(
+                    onOpenServersList = onOpenServersList
                 )
             }
         )

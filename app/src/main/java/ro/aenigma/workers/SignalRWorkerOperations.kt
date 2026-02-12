@@ -13,8 +13,7 @@ open class SignalRWorkerAction(val value: Int = 0) {
     class Connect: SignalRWorkerAction(1)
     class Pull: SignalRWorkerAction(2)
     class Cleanup: SignalRWorkerAction(4)
-    class Broadcast: SignalRWorkerAction(8)
-    class Disconnect: SignalRWorkerAction(16)
+    class Disconnect: SignalRWorkerAction(8)
 
     infix fun and(action: SignalRWorkerAction): SignalRWorkerAction
     {

@@ -2,8 +2,8 @@ package ro.aenigma.data.database
 
 import androidx.room.TypeConverter
 import ro.aenigma.models.GroupData
-import ro.aenigma.util.SerializerExtensions.fromJson
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.StringExtensions.fromJson
+import ro.aenigma.util.StringExtensions.toJson
 import java.time.ZonedDateTime
 
 class Converters {

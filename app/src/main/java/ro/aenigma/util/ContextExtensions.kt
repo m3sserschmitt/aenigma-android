@@ -39,7 +39,7 @@ import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
-import ro.aenigma.util.UrlExtensions.isRemoteUri
+import ro.aenigma.util.StringExtensions.isRemoteUri
 
 object ContextExtensions {
 

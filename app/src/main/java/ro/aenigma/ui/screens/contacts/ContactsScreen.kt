@@ -5,12 +5,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -18,13 +24,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
+import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ExportedContactData
@@ -52,6 +62,8 @@ fun ContactsScreen(
     mainViewModel: MainViewModel
 ) {
     val allContacts by mainViewModel.allContacts.collectAsState()
+    val servers by mainViewModel.servers.collectAsState()
+    val serversHistory by mainViewModel.serversHistory.collectAsState()
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
@@ -62,17 +74,22 @@ fun ContactsScreen(
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
+        servers = servers,
+        serversHistory = serversHistory,
         importedContactDetails = importedContactDetails,
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
         useTor = useTor,
         torOk = torOk,
         useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
-        onNotificationsPreferenceChanged = {
-            allowed -> mainViewModel.saveNotificationsPreference(allowed)
+        onNotificationsPreferenceChanged = { allowed ->
+            mainViewModel.saveNotificationsPreference(allowed)
         },
         onRetryConnection = { mainViewModel.retryClientConnection() },
         onSearch = { searchQuery -> mainViewModel.searchContacts(searchQuery) },
+        onServersSearch = { searchQuery -> mainViewModel.searchServers(searchQuery) },
+        onServerClicked = { server -> mainViewModel.switchServer(server) },
+        onServerConnectClicked = { serverQuery -> mainViewModel.switchServer(serverQuery) },
         navigateToChatScreen = navigateToChatScreen,
         onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
@@ -80,7 +97,7 @@ fun ContactsScreen(
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  { newValue -> newValue.isNotBlank() },
+        onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
         onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
@@ -89,10 +106,13 @@ fun ContactsScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
     contacts: RequestState<List<ContactWithLastMessage>>,
+    servers: RequestState<List<VertexEntity>>,
+    serversHistory: RequestState<List<VertexEntity>>,
     importedContactDetails: RequestState<ExportedContactData>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
@@ -102,6 +122,9 @@ fun ContactsScreen(
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
+    onServersSearch: (String) -> Unit,
+    onServerConnectClicked: (String) -> Unit,
+    onServerClicked: (VertexEntity) -> Unit,
     onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
     onContactRenamed: (ContactWithLastMessage, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
@@ -122,8 +145,15 @@ fun ContactsScreen(
     var saveContactDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
+    var serversSearchQuery by remember { mutableStateOf("") }
     val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
     val snackBarHostState = remember { SnackbarHostState() }
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        skipHiddenState = false
+    )
+    val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
     LaunchedEffect(key1 = contacts)
@@ -207,7 +237,7 @@ fun ContactsScreen(
     )
 
     val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if(requestSuccessful) importedContactDetails.data.name ?: "" else ""
+    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
     SaveNewContactDialog(
         visible = requestSuccessful && saveContactDialogVisible,
         initialName = initialName,
@@ -271,9 +301,37 @@ fun ContactsScreen(
         onActionPerformed = onRetryConnection
     )
 
-    Scaffold(
+    BottomSheetScaffold(
+        scaffoldState = bottomSheetScaffoldState,
+        sheetPeekHeight = 0.dp,
+        sheetContent = {
+            ServersBottomSheetContent(
+                servers = servers,
+                serversHistory = serversHistory,
+                searchQuery = serversSearchQuery,
+                onSearchQueryChanged = { newSearchQuery ->
+                    serversSearchQuery = newSearchQuery
+                    if (serversSearchQuery.isEmpty()) {
+                        onServersSearch(serversSearchQuery)
+                    }
+                },
+                onSearchClicked = { onServersSearch(serversSearchQuery) },
+                onConnectClicked = {
+                    if (!serversSearchQuery.isBlank()) {
+                        onServerConnectClicked(serversSearchQuery)
+                    }
+                },
+                onServerClicked = onServerClicked
+            )
+        },
+        sheetContainerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
             SnackbarHost(hostState = snackBarHostState)
+        },
+        sheetDragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f)
+            )
         },
         topBar = {
             ContactsAppBar(
@@ -296,6 +354,18 @@ fun ContactsScreen(
                 },
                 isSelectionMode = isSelectionMode,
                 selectedItemsCount = selectedItems.size,
+                onOpenServersList = {
+                    coroutineScope.launch {
+                        val currentState = sheetState.currentValue
+                        if (currentState == SheetValue.Hidden || currentState == SheetValue.PartiallyExpanded) {
+                            onServersSearch("")
+                            serversSearchQuery = ""
+                            sheetState.expand()
+                        } else {
+                            sheetState.hide()
+                        }
+                    }
+                },
                 onDeleteSelectedItemsClicked = {
                     deleteContactsConfirmationVisible = true
                 },
@@ -330,7 +400,20 @@ fun ContactsScreen(
                 navigateToAboutScreen = navigateToAboutScreen
             )
         },
-        content = { paddingValues ->
+    ) { paddingValues ->
+        Scaffold(
+            modifier = Modifier.padding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding()
+            ),
+            floatingActionButton = {
+                ContactsFab(
+                    onFabClicked = {
+                        navigateToAddContactScreen(null)
+                    }
+                )
+            }
+        ) { paddingValues ->
             ContactsContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
@@ -352,15 +435,8 @@ fun ContactsScreen(
                 isSelectionMode = isSelectionMode,
                 selectedContacts = selectedItems
             )
-        },
-        floatingActionButton = {
-            ContactsFab(
-                onFabClicked = {
-                    navigateToAddContactScreen(null)
-                }
-            )
         }
-    )
+    }
 }
 
 @Composable
@@ -397,6 +473,9 @@ fun ContactsScreenPreview() {
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
+        onServersSearch = {},
+        onServerClicked = {},
+        onServerConnectClicked = {},
         onGroupCreated = { _, _ -> },
         contacts = RequestState.Success(
             listOf(
@@ -434,6 +513,8 @@ fun ContactsScreenPreview() {
                 )
             )
         ),
+        servers = RequestState.Idle,
+        serversHistory = RequestState.Idle,
         onResetUserNameClicked = {},
         navigateToChatScreen = {},
         navigateToAddContactScreen = {},

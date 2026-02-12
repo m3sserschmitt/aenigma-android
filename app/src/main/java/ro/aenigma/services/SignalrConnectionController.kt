@@ -32,7 +32,7 @@ class SignalrConnectionController @Inject constructor(
     private fun enqueueSignalRWorkRequest() {
         val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
-            actions = SignalRWorkerAction.connectPullCleanup() and SignalRWorkerAction.Broadcast()
+            actions = SignalRWorkerAction.connectPullCleanup()
         )
         WorkManager.getInstance(applicationContext).beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
@@ -44,7 +44,7 @@ class SignalrConnectionController @Inject constructor(
             is SignalRStatus.Error.ConnectionRefused,
             is SignalRStatus.Error.Disconnected,
             is SignalRStatus.Reset -> {
-                SignalRClientWorker.start(applicationContext)
+                enqueueSignalRWorkRequest()
             }
 
             is SignalRStatus.Error -> {
@@ -91,7 +91,7 @@ class SignalrConnectionController @Inject constructor(
             }
         }
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            repository.local.useTor.drop(1).collect { useTor ->
+            repository.local.useTor.drop(1).collect {
                 signalRClient.disconnect()
             }
         }
@@ -113,10 +113,6 @@ class SignalrConnectionController @Inject constructor(
 
     fun pull() {
         return signalRClient.pull()
-    }
-
-    fun broadcast() {
-        return signalRClient.broadcast()
     }
 
     suspend fun connect(host: String) {

@@ -7,7 +7,7 @@
     <string name="qr_code">Qr Code</string>
     <string name="contacts_floating_button_content_description">Add Contact Button</string>
     <string name="contacts">Contacts</string>
-    <string name="search">Search</string>
+    <string name="search">Search…</string>
     <string name="close">Close</string>
     <string name="contact">Contact</string>
     <string name="back">Back</string>
@@ -144,4 +144,8 @@
     <string name="connected_through_tor">Connected through The Onion Router network</string>
     <string name="tor_stopped">TOR service stopped</string>
     <string name="background_work">Background work</string>
+    <string name="servers">Available servers</string>
+    <string name="history">History</string>
+    <string name="connect">Connect</string>
+    <string name="no_server_found">No server found</string>
 </resources>

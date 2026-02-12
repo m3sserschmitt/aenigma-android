@@ -31,7 +31,7 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import ro.aenigma.util.FileExtensions.toContentUriString
-import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.StringExtensions.fromJson
 import java.io.File
 import java.util.concurrent.TimeUnit
 

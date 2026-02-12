@@ -6,8 +6,8 @@ import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.SignedData
-import ro.aenigma.util.SerializerExtensions.fromJson
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
+import ro.aenigma.util.StringExtensions.fromJson
 
 object SignatureExtensions {
     @JvmStatic

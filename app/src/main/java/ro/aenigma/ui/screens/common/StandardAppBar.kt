@@ -18,7 +18,8 @@ fun StandardAppBar(
     navigateBack: () -> Unit = { },
     navigateBackVisible: Boolean = true,
     transparent: Boolean = false,
-    actions: @Composable RowScope.() -> Unit = { }
+    actions: @Composable RowScope.() -> Unit = { },
+    navigateBackAlternative: @Composable () -> Unit = { }
 ) {
     TopAppBar(
         navigationIcon = {
@@ -26,6 +27,8 @@ fun StandardAppBar(
                 NavigateBackAppBarAction(
                     onBackClicked = navigateBack
                 )
+            } else {
+                navigateBackAlternative()
             }
         },
         title = {

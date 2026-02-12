@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import com.microsoft.signalr.HubConnectionState
+import com.microsoft.signalr.TransportEnum
 import io.reactivex.rxjava3.core.CompletableObserver
 import io.reactivex.rxjava3.core.SingleObserver
 import io.reactivex.rxjava3.disposables.Disposable
@@ -14,11 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.models.Neighborhood
-import ro.aenigma.models.VertexBroadcastRequest
 import ro.aenigma.models.hubInvocation.AuthenticateResult
 import ro.aenigma.models.hubInvocation.AuthenticationRequest
 import ro.aenigma.models.hubInvocation.CleanupResult
@@ -26,11 +24,10 @@ import ro.aenigma.models.hubInvocation.GenerateTokenResult
 import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import ro.aenigma.models.hubInvocation.VertexBroadcastResult
 import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.StringExtensions.getHttpUri
 import java.net.InetSocketAddress
 import java.net.Proxy
 import javax.inject.Inject
@@ -45,6 +42,8 @@ class SignalRClient @Inject constructor(
     companion object {
         const val CLIENT_CONNECTION_RETRY_COUNT = 3
 
+        private const val LOCAL_VERTEX_METHOD = "GetLocalVertex"
+
         private const val ONION_ROUTING_ENDPOINT = "OnionRouting"
 
         private const val GENERATE_NONCE_METHOD = "GenerateToken"
@@ -52,8 +51,6 @@ class SignalRClient @Inject constructor(
         private const val AUTHENTICATE_METHOD = "Authenticate"
 
         private const val ROUTE_MESSAGE_METHOD = "RouteMessage"
-
-        private const val BROADCAST_METHOD = "Broadcast"
 
         private const val PULL_METHOD = "Pull"
 
@@ -74,13 +71,12 @@ class SignalRClient @Inject constructor(
 
         @JvmStatic
         fun createConnection(useTor: Boolean, hostname: String): HubConnection? {
-            val endpointUrl =
-                hostname.toHttpUrlOrNull()?.newBuilder()?.addPathSegment(ONION_ROUTING_ENDPOINT)
-                    ?.build().toString()
+            val endpointUrl = hostname.getHttpUri(ONION_ROUTING_ENDPOINT) ?: return null
             return HubConnectionBuilder
                 .create(endpointUrl)
                 .apply {
                     if (useTor) {
+                        withTransport(TransportEnum.LONG_POLLING)
                         setHttpClientBuilderCallback { builder ->
                             builder.proxy(
                                 Proxy(
@@ -152,7 +148,8 @@ class SignalRClient @Inject constructor(
         try {
             synchronized(_lock)
             {
-                return _hubConnection.value?.close() ?: Unit
+                _hubConnection.value?.close()
+                _hubConnection.value?.invoke(LOCAL_VERTEX_METHOD)
             }
         } catch (_: Exception) {
         } finally {
@@ -218,33 +215,6 @@ class SignalRClient @Inject constructor(
                     AuthenticationRequest(publicKey, signedData)
                 )?.blockingSubscribe(authenticationResultObserver) ?: Unit
             }
-        }
-    }
-
-    fun broadcast() {
-        if (!isConnected()) {
-            return
-        }
-        try {
-            updateStatus(SignalRStatus.Broadcasting)
-            val neighborhood =
-                Neighborhood(signatureService.address, null, null,listOf(_guardAddress.value))
-            val data = neighborhood.toJson()?.toByteArray() ?: return
-            val signature = signatureService.sign(data)
-            if (signature.publicKey == null || signature.signedData == null) {
-                updateStatus(SignalRStatus.Error(_status.value))
-                return
-            }
-
-            val broadcastRequest = VertexBroadcastRequest(signature.publicKey, signature.signedData)
-            synchronized(_lock) {
-                return _hubConnection.value?.invoke(
-                    VertexBroadcastResult::class.java, BROADCAST_METHOD,
-                    broadcastRequest
-                )?.blockingSubscribe(broadcastResultObserver) ?: Unit
-            }
-        } catch (ex: Exception) {
-            updateStatus(SignalRStatus.Error(_status.value, ex.message))
         }
     }
 
@@ -342,28 +312,6 @@ class SignalRClient @Inject constructor(
                 subscription?.dispose()
             } else {
                 updateStatus(SignalRStatus.Authenticated)
-            }
-            subscription?.dispose()
-        }
-    }
-
-    private val broadcastResultObserver = object : SingleObserver<VertexBroadcastResult> {
-        private var subscription: Disposable? = null
-
-        override fun onSubscribe(d: Disposable) {
-            subscription = d
-        }
-
-        override fun onError(e: Throwable) {
-            updateStatus(SignalRStatus.Error(_status.value, e.message))
-            subscription?.dispose()
-        }
-
-        override fun onSuccess(result: VertexBroadcastResult) {
-            if (result.success != true) {
-                updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
-            } else {
-                updateStatus(SignalRStatus.Broadcasted)
             }
             subscription?.dispose()
         }

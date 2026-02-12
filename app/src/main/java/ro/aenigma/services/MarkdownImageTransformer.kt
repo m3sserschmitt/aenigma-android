@@ -25,7 +25,7 @@ class MarkdownImageTransformer @Inject constructor(
 ): ImageTransformer {
 
     @Composable
-    override fun transform(link: String): ImageData? {
+    override fun transform(link: String): ImageData {
         val imageLoader = rememberImageLoader(okHttpClientProvider, link)
         val painter = if (imageLoader == null) {
             painterResource(R.drawable.ic_broken_image)

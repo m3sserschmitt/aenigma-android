@@ -14,14 +14,14 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
-import ro.aenigma.models.ServerInfo
 import ro.aenigma.models.Vertex
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.data.database.factories.EdgeEntityFactory
-import ro.aenigma.data.database.factories.GuardEntityFactory
 import ro.aenigma.data.database.factories.VertexEntityFactory
+import ro.aenigma.models.GuardDto
+import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -50,21 +50,11 @@ class GraphReaderWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun saveGraph(graph: List<Vertex>, serverInfo: ServerInfo): Boolean {
-        serverInfo.address ?: return false
-        serverInfo.publicKey ?: return false
-        if(serverInfo.onionService.isNullOrBlank() && serverInfo.hostname.isNullOrBlank()) {
+    private suspend fun saveGraph(graph: List<Vertex>, guardDto: GuardDto): Boolean {
+        if(guardDto.onionService.isNullOrBlank() && guardDto.hostname.isNullOrBlank()) {
             return false
         }
-        repository.local.insertGuard(
-            GuardEntityFactory.create(
-                address = serverInfo.address,
-                publicKey = serverInfo.publicKey,
-                hostname = serverInfo.hostname,
-                onionService = serverInfo.onionService,
-                graphVersion = serverInfo.graphVersion
-            )
-        )
+        repository.local.insertGuard(guardDto.toEntity())
 
         val vertices = graph.mapNotNull { vertex ->
             vertex.neighborhood?.address?.let { address ->
