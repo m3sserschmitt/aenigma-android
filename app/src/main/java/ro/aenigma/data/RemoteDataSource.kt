@@ -153,8 +153,14 @@ class RemoteDataSource @Inject constructor(
             val serializedNeighborhood =
                 vertexDto.signedData.getStringDataFromSignature(vertexDto.publicKey) ?: return null
             val neighborhood =
-                serializedNeighborhood.fromJson<NeighborhoodDto>()?.normalizeHostname() ?: return null
-            return VertexDto(vertexDto.publicKey, vertexDto.signedData, neighborhood)
+                serializedNeighborhood.fromJson<NeighborhoodDto>()?.normalizeHostname()
+                    ?: return null
+            return VertexDto(
+                address = vertexDto.publicKey,
+                publicKey = vertexDto.signedData,
+                signedData = vertexDto.signedData,
+                neighborhood = neighborhood
+            )
         }
     }
 
@@ -263,8 +269,6 @@ class RemoteDataSource @Inject constructor(
             null
         }
     }
-
-
 
     suspend fun getServerInfo(url: String): GuardDto? {
         return try {

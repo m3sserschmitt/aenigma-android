@@ -22,13 +22,13 @@ import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
 import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.GroupEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.GroupDataDto
+import ro.aenigma.models.GuardDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.GroupDataExtensions.incrementNonce
@@ -98,7 +98,7 @@ class GroupUploadWorker @AssistedInject constructor(
         userName: String,
         groupName: String,
         admins: List<String>,
-        guard: GuardEntity
+        guard: GuardDto
     ): GroupDataDto? {
         signatureService.publicKey ?: return null
         val contacts = memberAddresses.mapNotNull { item -> repository.local.getContact(item) }
@@ -159,7 +159,7 @@ class GroupUploadWorker @AssistedInject constructor(
         userName: String?,
         admins: List<String>,
         actionType: MessageType,
-        guard: GuardEntity,
+        guard: GuardDto,
     ): GroupDataDto? {
         return when (actionType) {
             MessageType.GROUP_RENAMED -> {

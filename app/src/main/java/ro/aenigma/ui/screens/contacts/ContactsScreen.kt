@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
 import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
+import ro.aenigma.models.VertexDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -113,8 +113,8 @@ fun ContactsScreen(
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
     contacts: RequestState<List<ContactWithLastMessageDto>>,
-    servers: RequestState<List<VertexEntity>>,
-    serversHistory: RequestState<List<VertexEntity>>,
+    servers: RequestState<List<VertexDto>>,
+    serversHistory: RequestState<List<VertexDto>>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
@@ -126,7 +126,7 @@ fun ContactsScreen(
     onSearch: (String) -> Unit,
     onServersSearch: (String) -> Unit,
     onServerConnectClicked: (String) -> Unit,
-    onServerClicked: (VertexEntity) -> Unit,
+    onServerClicked: (VertexDto) -> Unit,
     onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
     onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,

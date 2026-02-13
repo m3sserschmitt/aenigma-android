@@ -121,15 +121,6 @@ object StringExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> T?.toJson(): String? {
-        return try {
-            createJsonMapper().writeValueAsString(this)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    @JvmStatic
     fun String?.canonicalize(): String? {
         return try {
             JsonCanonicalizer(this ?: return null).encodedString

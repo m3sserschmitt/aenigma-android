@@ -7,6 +7,7 @@ import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.SignatureDto
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
+import ro.aenigma.util.StringExtensions.canonicalize
 import ro.aenigma.util.StringExtensions.fromJson
 
 object SignatureExtensions {
@@ -57,7 +58,7 @@ object SignatureExtensions {
                 return null
             }
             val data = this.signedData.getStringDataFromSignature(this.publicKey) ?: return null
-            val canonicalData = data.toCanonicalJson()
+            val canonicalData = data.canonicalize()
             if (data != canonicalData) {
                 return null
             }

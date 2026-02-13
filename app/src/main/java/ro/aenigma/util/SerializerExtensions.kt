@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import retrofit2.converter.jackson.JacksonConverterFactory
 import ro.aenigma.util.StringExtensions.canonicalize
-import ro.aenigma.util.StringExtensions.toJson
 import java.time.ZonedDateTime
 
 object SerializerExtensions {
@@ -47,6 +46,19 @@ object SerializerExtensions {
     inline fun <reified T> T?.toCanonicalJson(): String? {
         return try {
             this.toJson().canonicalize()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    @JvmStatic
+    inline fun <reified T> T?.toJson(): String? {
+        return try {
+            if(this is String) {
+                this
+            } else {
+                createJsonMapper().writeValueAsString(this)
+            }
         } catch (_: Exception) {
             null
         }

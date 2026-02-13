@@ -7,7 +7,6 @@ import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgeEntity
 import ro.aenigma.data.database.EdgesDao
-import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.GuardsDao
 import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessagesDao
@@ -23,13 +22,18 @@ import ro.aenigma.data.database.MessageWithAttachments
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
 import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.GuardEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
+import ro.aenigma.data.database.extensions.VertexEntityExtensions.toDto
 import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.GuardDto
+import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
+import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import javax.inject.Inject
@@ -249,24 +253,24 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get().markConversationAsRead(address)
     }
 
-    suspend fun insertGuard(guard: GuardEntity) {
-        return guardsDao.get().insertWithLimit(guard)
+    suspend fun insertGuard(guard: GuardDto) {
+        return guardsDao.get().insertWithLimit(guard.toEntity())
     }
 
-    suspend fun getGuard(): GuardEntity? {
-        return guardsDao.get().getGuard()
+    suspend fun getGuard(): GuardDto? {
+        return guardsDao.get().getGuard()?.toDto()
     }
 
-    suspend fun getGuards(): List<GuardEntity> {
-        return guardsDao.get().get()
+    suspend fun getGuards(): List<GuardDto> {
+        return guardsDao.get().get().map { item -> item.toDto() }
     }
 
-    fun getGuardsFlow(): Flow<List<GuardEntity>> {
-        return guardsDao.get().getFlow()
+    fun getGuardsFlow(): Flow<List<GuardDto>> {
+        return guardsDao.get().getFlow().map { items -> items.map { item -> item.toDto() } }
     }
 
-    suspend fun searchGuards(query: String): List<GuardEntity> {
-        return guardsDao.get().search(query)
+    suspend fun searchGuards(query: String): List<GuardDto> {
+        return guardsDao.get().search(query).map { item -> item.toDto() }
     }
 
     suspend fun removeVertices() {
@@ -277,20 +281,20 @@ class LocalDataSource @Inject constructor(
         return verticesDao.get().insertOrIgnore(vertices)
     }
 
-    suspend fun getVertices(): List<VertexEntity> {
-        return verticesDao.get().get()
+    suspend fun getVertices(): List<VertexDto> {
+        return verticesDao.get().get().map { item -> item.toDto() }
     }
 
-    suspend fun getAllVertices(): List<VertexEntity> {
-        return verticesDao.get().getAll()
+    suspend fun getAllVertices(): List<VertexDto> {
+        return verticesDao.get().getAll().map { item -> item.toDto() }
     }
 
-    suspend fun searchVertices(searchQuery: String): List<VertexEntity> {
-        return verticesDao.get().search(searchQuery)
+    suspend fun searchVertices(searchQuery: String): List<VertexDto> {
+        return verticesDao.get().search(searchQuery).map { item -> item.toDto() }
     }
 
-    fun getVerticesFlow(): Flow<List<VertexEntity>> {
-        return verticesDao.get().getFlow()
+    fun getVerticesFlow(): Flow<List<VertexDto>> {
+        return verticesDao.get().getFlow().map { items -> items.map { item -> item.toDto() } }
     }
 
     suspend fun removeEdges() {

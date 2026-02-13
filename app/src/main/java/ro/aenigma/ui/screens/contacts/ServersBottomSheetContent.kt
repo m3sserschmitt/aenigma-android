@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.VertexEntity
+import ro.aenigma.models.VertexDto
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -49,8 +49,8 @@ import ro.aenigma.util.StringExtensions.getHost
 
 @Composable
 fun ServerItem(
-    server: VertexEntity,
-    onClick: (VertexEntity) -> Unit = { }
+    server: VertexDto,
+    onClick: (VertexDto) -> Unit = { }
 ) {
     Card(
         modifier = Modifier.selectable(
@@ -61,16 +61,16 @@ fun ServerItem(
             onItemSelected = { },
             onItemDeselected = { }
         ).border(
-                width = 4.dp,
-                color = MaterialTheme.colorScheme.primaryContainer
-            ).padding(12.dp)
+            width = 4.dp,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ).padding(12.dp)
             .fillMaxWidth(),
         colors = CardDefaults.cardColors().copy(
             containerColor = MaterialTheme.colorScheme.background,
             contentColor = MaterialTheme.colorScheme.onBackground
         )
     ) {
-        Row (
+        Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -84,7 +84,10 @@ fun ServerItem(
                 thickness = 12.dp
             )
             Text(
-                text = getHost(server.hostname, server.onionService),
+                text = getHost(
+                    hostname = server.neighborhood?.hostname,
+                    onionService = server.neighborhood?.onionService
+                ),
                 color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold
@@ -193,8 +196,8 @@ fun SearchBar(
 @Composable
 fun SheetContent(
     title: String,
-    servers: RequestState<List<VertexEntity>>,
-    onClick: (VertexEntity) -> Unit = { }
+    servers: RequestState<List<VertexDto>>,
+    onClick: (VertexDto) -> Unit = { }
 ) {
     Text(
         modifier = Modifier.padding(bottom = 4.dp),
@@ -207,7 +210,7 @@ fun SheetContent(
             if (servers.data.isNotEmpty()) {
                 ItemsList(
                     items = servers.data,
-                    itemKeyProvider = { server -> server.address },
+                    itemKeyProvider = { server -> server.address!! },
                     listItem = { _, server, _ ->
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)
@@ -237,12 +240,12 @@ fun SheetContent(
 
 @Composable
 fun ServersBottomSheetContent(
-    servers: RequestState<List<VertexEntity>>,
-    serversHistory: RequestState<List<VertexEntity>>,
+    servers: RequestState<List<VertexDto>>,
+    serversHistory: RequestState<List<VertexDto>>,
     searchQuery: String = "",
     onSearchQueryChanged: (String) -> Unit = { },
     onSearchClicked: () -> Unit = { },
-    onServerClicked: (VertexEntity) -> Unit = { },
+    onServerClicked: (VertexDto) -> Unit = { },
     onConnectClicked: () -> Unit = { }
 ) {
     var selectedSection by remember { mutableIntStateOf(0) }

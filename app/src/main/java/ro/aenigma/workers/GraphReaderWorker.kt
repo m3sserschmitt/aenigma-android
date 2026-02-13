@@ -21,7 +21,6 @@ import ro.aenigma.R
 import ro.aenigma.data.database.factories.EdgeEntityFactory
 import ro.aenigma.data.database.factories.VertexEntityFactory
 import ro.aenigma.models.GuardDto
-import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -54,7 +53,7 @@ class GraphReaderWorker @AssistedInject constructor(
         if(guardDto.onionService.isNullOrBlank() && guardDto.hostname.isNullOrBlank()) {
             return false
         }
-        repository.local.insertGuard(guardDto.toEntity())
+        repository.local.insertGuard(guardDto)
 
         val vertices = graph.mapNotNull { vertex ->
             vertex.neighborhood?.address?.let { address ->

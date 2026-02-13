@@ -20,7 +20,6 @@ import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
 import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -34,6 +33,7 @@ import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
 import ro.aenigma.data.database.factories.AttachmentEntityFactory
 import ro.aenigma.models.AttachmentsMetadataDto
+import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
@@ -41,7 +41,7 @@ import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
-import ro.aenigma.util.StringExtensions.toJson
+import ro.aenigma.util.SerializerExtensions.toJson
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -100,7 +100,7 @@ class MessageSenderWorker @AssistedInject constructor(
         message: MessageEntity,
         destination: ContactEntity,
         userName: String?,
-        path: List<VertexEntity>,
+        path: List<VertexDto>,
         groupAddress: String?,
         groupResourceUrl: String?,
         passphrase: String?
@@ -113,9 +113,9 @@ class MessageSenderWorker @AssistedInject constructor(
         val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
         val addresses =
-            arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
+            arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address!! }
         val keys =
-            reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
+            reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey!! }.toTypedArray()
         val data = signatureService.jsonSign(
             message.toArtifact(
                 senderName = userName,
