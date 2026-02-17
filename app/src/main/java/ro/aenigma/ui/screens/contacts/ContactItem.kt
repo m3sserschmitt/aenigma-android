@@ -26,14 +26,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.selectable
 import java.time.ZonedDateTime
 
@@ -162,20 +160,20 @@ fun ConversationPreview(
 @Preview
 fun ContactItemPreview() {
     ContactItem(
-        contact = ContactWithLastMessage(
-            ContactEntityFactory.createContact(
+        contact = ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-            ), MessageEntityFactory.createOutgoing(
+            ), MessageDtoFactory.createOutgoing(
                 chatId = "12345-5678-5678-12345",
                 text = "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
             )
-        ).toDto(),
+        ),
         isSelectionMode = false,
         isSelected = false,
         onClick = {},
@@ -189,14 +187,14 @@ fun ContactItemPreview() {
 fun ContactItemSelectedPreview()
 {
     ContactItem(
-        contact = ContactWithLastMessage(
-            ContactEntityFactory.createContact(
+        contact = ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-            ), MessageEntityFactory.createIncoming(
+            ), MessageDtoFactory.createIncoming(
                 chatId = "12345-5678-5678-12345",
                 senderAddress = "12345-5678-5678-12345",
                 text = "Hey, how are you",
@@ -206,7 +204,7 @@ fun ContactItemSelectedPreview()
                 dateReceivedOnServer = ZonedDateTime.now(),
                 type = MessageType.TEXT
             )
-        ).toDto(),
+        ),
         isSelectionMode = true,
         isSelected = true,
         onClick = {},

@@ -1,18 +1,19 @@
-package ro.aenigma.data.database.factories
+package ro.aenigma.models.factories
 
-import ro.aenigma.data.database.MessageEntity
+import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
 import java.time.ZonedDateTime
 import java.util.UUID
 
-object MessageEntityFactory {
+object MessageDtoFactory {
     @JvmStatic
     fun createIncoming(
         chatId: String, senderAddress: String?, serverUUID: String?, text: String?,
         type: MessageType?, actionFor: String?, refId: String?,
         dateReceivedOnServer: ZonedDateTime?, attachments: List<String> = listOf()
-    ): MessageEntity {
-        return MessageEntity(
+    ): MessageDto {
+        return MessageDto(
+            id = 0,
             chatId = chatId,
             senderAddress = senderAddress,
             serverUUID = serverUUID,
@@ -36,8 +37,9 @@ object MessageEntityFactory {
         type: MessageType?,
         actionFor: String?,
         attachments: List<String> = listOf()
-    ): MessageEntity {
-        return MessageEntity(
+    ): MessageDto {
+        return MessageDto(
+            id = 0,
             chatId = chatId,
             senderAddress = null,
             serverUUID = null,

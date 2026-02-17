@@ -21,15 +21,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ExportedContactDataExtensions.toContactDto
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
@@ -86,7 +85,7 @@ private fun getContactsList(
 fun AddGroupMemberDialog(
     action: MessageType,
     visible: Boolean,
-    contactWithGroup: RequestState<ContactWithGroup>,
+    contactWithGroup: RequestState<ContactWithGroupDto>,
     contacts: RequestState<List<ContactDto>>,
     onSearchQueryChanged: (String) -> Unit,
     onDismissClicked: () -> Unit,
@@ -186,20 +185,20 @@ fun AddGroupMemberDialogPreview() {
         contactWithGroup = RequestState.Idle,
         contacts = RequestState.Success(
             listOf(
-                ContactEntityFactory.createContact(
+                ContactDtoFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                ).toDto(),
-                ContactEntityFactory.createContact(
+                ),
+                ContactDtoFactory.createContact(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                ).toDto()
+                )
             )
         ),
         onConfirmClicked = { },

@@ -1,13 +1,13 @@
 package ro.aenigma.services
 
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
 import org.jgrapht.Graph
 import org.jgrapht.GraphPath
 import org.jgrapht.alg.shortestpath.AllDirectedPaths
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
 import ro.aenigma.crypto.services.SignatureService
+import ro.aenigma.models.ContactDto
 import ro.aenigma.models.VertexDto
 import javax.inject.Inject
 
@@ -70,7 +70,7 @@ class PathFinder @Inject constructor(
         }
     }
 
-    fun calculatePaths(destination: ContactEntity): List<GraphPath<VertexDto, DefaultEdge>> {
+    fun calculatePaths(destination: ContactDto): List<GraphPath<VertexDto, DefaultEdge>> {
         _graph ?: return listOf()
         destination.publicKey ?: return listOf()
         return try {

@@ -20,10 +20,10 @@ import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
+import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.AttachmentsMetadataDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.Zipper
@@ -84,10 +84,10 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         return CryptoProvider.decrypt(file, key)
     }
 
-    private suspend fun storeAttachment(message: MessageWithAttachments, archive: File) {
+    private suspend fun storeAttachment(message: MessageWithAttachmentsDto, archive: File) {
         repository.local.insertOrUpdateAttachment(
-            AttachmentEntityFactory.create(
-                id = message.message.id,
+            AttachmentDto(
+                messageId = message.message.id,
                 path = archive.name,
                 url = message.attachment?.url,
                 passphrase = message.attachment?.passphrase
@@ -95,7 +95,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         )
     }
 
-    private suspend fun resolveAttachments(message: MessageWithAttachments): File? {
+    private suspend fun resolveAttachments(message: MessageWithAttachmentsDto): File? {
         val attachment = message.attachment ?: return null
         val archive = if (attachment.path == null) {
             val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
@@ -111,7 +111,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun resolveFiles(
-        message: MessageEntity,
+        message: MessageDto,
         files: List<File>
     ): AttachmentsMetadataDto? {
         var i = 0

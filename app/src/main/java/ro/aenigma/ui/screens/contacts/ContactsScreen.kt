@@ -33,16 +33,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
@@ -481,28 +479,28 @@ fun ContactsScreenPreview() {
         onGroupCreated = { _, _ -> },
         contacts = RequestState.Success(
             listOf(
-                ContactWithLastMessage(
-                    ContactEntityFactory.createContact(
+                ContactWithLastMessageDto(
+                    ContactDtoFactory.createContact(
                         address = "123",
                         name = "John",
                         publicKey = null,
                         guardHostname = null,
                         guardAddress = null,
-                    ), MessageEntityFactory.createOutgoing(
+                    ), MessageDtoFactory.createOutgoing(
                         chatId = "123",
                         text = "Awesome!",
                         type = MessageType.TEXT,
                         actionFor = null,
                     )
-                ).toDto(),
-                ContactWithLastMessage(
-                    ContactEntityFactory.createContact(
+                ),
+                ContactWithLastMessageDto(
+                    ContactDtoFactory.createContact(
                         address = "124",
                         name = "Elizabeth",
                         publicKey = null,
                         guardHostname = null,
                         guardAddress = null,
-                    ), MessageEntityFactory.createIncoming(
+                    ), MessageDtoFactory.createIncoming(
                         chatId = "124",
                         text = "Can't wait to see you tomorrow!",
                         type = MessageType.TEXT,
@@ -512,7 +510,7 @@ fun ContactsScreenPreview() {
                         refId = null,
                         dateReceivedOnServer = ZonedDateTime.now()
                     )
-                ).toDto()
+                )
             )
         ),
         servers = RequestState.Idle,

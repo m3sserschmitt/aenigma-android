@@ -2,7 +2,6 @@ package ro.aenigma.services
 
 import androidx.work.WorkManager
 import ro.aenigma.crypto.services.OnionParsingService
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.ArtifactDto
 import ro.aenigma.models.PendingMessageDto
@@ -11,23 +10,23 @@ import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.extensions.SignatureExtensions.jsonVerify
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.AttachmentEntity
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
-import ro.aenigma.data.database.extensions.GroupEntityExtensions.removeMember
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFile
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isGroupUpdate
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isText
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.withSenderAddress
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.MessageDto
 import ro.aenigma.models.SignatureDto
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.ArtifactExtensions.toMessage
+import ro.aenigma.models.extensions.ArtifactDtoExtensions.toMessageDto
+import ro.aenigma.models.extensions.ContactDtoExtensions.withGuardAddress
+import ro.aenigma.models.extensions.ContactDtoExtensions.withGuardHostname
+import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
 import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
+import ro.aenigma.models.extensions.GroupDtoExtensions.removeMember
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
+import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupUpdate
+import ro.aenigma.models.extensions.MessageDtoExtensions.isText
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
+import ro.aenigma.models.extensions.MessageDtoExtensions.withSenderAddress
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupDownloadWorker
@@ -46,7 +45,7 @@ class MessageSaver @Inject constructor(
 ) {
     private val localAddress = signatureService.address
 
-    private suspend fun saveIncomingMessage(triple: Triple<SignatureDto, ArtifactDto, MessageEntity>) {
+    private suspend fun saveIncomingMessage(triple: Triple<SignatureDto, ArtifactDto, MessageDto>) {
         try {
             val signedData = triple.first
             val artifact = triple.second
@@ -57,7 +56,7 @@ class MessageSaver @Inject constructor(
 
             when {
                 messageEntity.type == MessageType.DELETE -> {
-                    messageEntity.markAsDeleted()?.let { deletedMessage ->
+                    messageEntity.markAsDeleted().let { deletedMessage ->
                         repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
                             messageEntity.actionFor?.let { refId ->
                                 repository.local.removeMessageSoft(refId)
@@ -67,7 +66,7 @@ class MessageSaver @Inject constructor(
                 }
 
                 messageEntity.type == MessageType.DELETE_ALL -> {
-                    messageEntity.markAsDeleted()?.let { deletedMessage ->
+                    messageEntity.markAsDeleted().let { deletedMessage ->
                         repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
                             repository.local.clearConversationSoft(messageEntity.chatId)
                         }
@@ -127,12 +126,12 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private fun parseArtifact(message: ParsedMessageDto): Triple<SignatureDto, ArtifactDto, MessageEntity>? {
+    private fun parseArtifact(message: ParsedMessageDto): Triple<SignatureDto, ArtifactDto, MessageDto>? {
         return try {
             val signedData = message.content.fromJson<SignatureDto>() ?: return null
             val artifactDto = signedData.jsonVerify<ArtifactDto>() ?: return null
             val message =
-                artifactDto.toMessage(message.uuid ?: return null, message.dateReceivedOnServer)
+                artifactDto.toMessageDto(message.uuid ?: return null, message.dateReceivedOnServer)
                     ?: return null
             Triple(signedData, artifactDto, message)
         } catch (_: Exception) {
@@ -154,18 +153,18 @@ class MessageSaver @Inject constructor(
     }
 
     suspend fun saveOutgoingMessage(
-        message: MessageEntity,
+        message: MessageDto,
         additionalDestinations: Set<String> = hashSetOf(),
-        attachment: AttachmentEntity? = null
+        attachment: AttachmentDto? = null
     ): Boolean {
         try {
-            val entity = message.withSenderAddress(localAddress)?.run {
+            val entity = message.withSenderAddress(localAddress).run {
                 if (isDelete()) {
                     markAsDeleted()
                 } else {
                     this
                 }
-            } ?: return false
+            }
             val messageId = repository.local.insertOrIgnoreMessage(entity)
             if (messageId != null) {
                 if (attachment != null) {
@@ -184,14 +183,14 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    suspend fun saveOutgoingMessages(messages: List<MessageEntity>): Boolean {
+    suspend fun saveOutgoingMessages(messages: List<MessageDto>): Boolean {
         return messages.map { message -> saveOutgoingMessage(message) }.all { it }
     }
 
     private suspend fun createOrUpdateContact(artifactDto: ArtifactDto, publicKey: String) {
         val originAddress = publicKey.getAddressFromPublicKey() ?: return
         val contact =
-            repository.local.getContact(originAddress) ?: ContactEntityFactory.createContact(
+            repository.local.getContact(originAddress) ?: ContactDtoFactory.createContact(
                 address = artifactDto.senderAddress ?: return,
                 name = artifactDto.senderName,
                 publicKey = publicKey,
@@ -207,14 +206,14 @@ class MessageSaver @Inject constructor(
                     } else {
                         this
                     }
-                } ?: return
+                }
         repository.local.insertOrUpdateContact(updatedContact)
     }
 
     private suspend fun createAttachmentEntity(artifactDto: ArtifactDto, messageId: Long) {
         repository.local.insertOrUpdateAttachment(
-            AttachmentEntityFactory.create(
-                id = messageId,
+            AttachmentDto(
+                messageId = messageId,
                 path = null,
                 url = artifactDto.resourceUrl,
                 passphrase = artifactDto.passphrase
@@ -232,11 +231,11 @@ class MessageSaver @Inject constructor(
         AttachmentDownloadWorker.createRequest(workManager, messageId)
     }
 
-    private suspend fun saveIncomingMessages(messages: List<Triple<SignatureDto, ArtifactDto, MessageEntity>>) {
+    private suspend fun saveIncomingMessages(messages: List<Triple<SignatureDto, ArtifactDto, MessageDto>>) {
         return messages.forEach { item -> saveIncomingMessage(item) }
     }
 
-    private suspend fun notify(message: MessageEntity) {
+    private suspend fun notify(message: MessageDto) {
         val contact = repository.local.getContact(message.chatId) ?: return
         notificationService.notifyNewMessage(contact, message)
     }

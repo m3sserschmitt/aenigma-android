@@ -18,9 +18,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.SignalRStatus
@@ -28,6 +27,7 @@ import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
@@ -104,7 +104,7 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    contact: RequestState<ContactWithGroup>,
+    contact: RequestState<ContactWithGroupDto>,
     okHttpClientProvider: IOkHttpClientProvider,
     isMember: Boolean,
     isAdmin: Boolean,
@@ -438,8 +438,8 @@ fun ChatScreenPreview() {
 
     ChatScreen(
         contact = RequestState.Success(
-            ContactWithGroup(
-                ContactEntityFactory.createContact(
+            ContactWithGroupDto(
+                ContactDtoFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = null,

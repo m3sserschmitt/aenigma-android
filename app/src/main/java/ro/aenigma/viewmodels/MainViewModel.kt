@@ -21,17 +21,15 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
-import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
+import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.toVertexDto
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.OkHttpClientProvider
@@ -267,7 +265,7 @@ class MainViewModel @Inject constructor(
                         repository.local.getContactWithMessages()
                     else
                         repository.local.searchContacts(query).map { item ->
-                            ContactWithLastMessageDto(item.toDto(), null)
+                            ContactWithLastMessageDto(item, null)
                         }
                     _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
@@ -339,7 +337,7 @@ class MainViewModel @Inject constructor(
             importedContactDetails.data.publicKey.getAddressFromPublicKey() ?: return
         val publicKey = importedContactDetails.data.publicKey ?: return
         val guardAddress = importedContactDetails.data.guardAddress ?: return
-        val newContact = ContactEntityFactory.createContact(
+        val newContact = ContactDtoFactory.createContact(
             address = contactAddress,
             name = name,
             publicKey = publicKey,
@@ -416,7 +414,7 @@ class MainViewModel @Inject constructor(
             val contact = repository.local.getContact(profileId)
 
             if (contact != null) {
-                _exportedContactDetails.value = contact.toExportedData()
+                _exportedContactDetails.value = contact.toExportedContactDataDto()
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if (code != null) {
@@ -453,7 +451,7 @@ class MainViewModel @Inject constructor(
             when (contact.contact.type) {
                 ContactType.CONTACT -> {
                     val updatedContact = contact.contact.copy(name = name)
-                    updatedContact.let { repository.local.updateContact(it.toEntity()) }
+                    updatedContact.let { repository.local.updateContact(it) }
                 }
 
                 ContactType.GROUP -> {

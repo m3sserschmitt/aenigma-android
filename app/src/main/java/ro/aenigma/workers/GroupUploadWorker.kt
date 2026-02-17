@@ -22,21 +22,21 @@ import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.GroupEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.GroupDataDto
+import ro.aenigma.models.GroupDto
 import ro.aenigma.models.GuardDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GroupDataExtensions.incrementNonce
 import ro.aenigma.models.extensions.GroupDataExtensions.removeMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withName
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
@@ -121,8 +121,8 @@ class GroupUploadWorker @AssistedInject constructor(
         return GroupDataFactory.create(name = groupName, members = members, admins = admins)
     }
 
-    private fun renameGroup(existingGroupDataDto: GroupDataDto, name: String): GroupDataDto? {
-        return existingGroupDataDto.withName(name)?.incrementNonce()
+    private fun renameGroup(existingGroupDataDto: GroupDataDto, name: String): GroupDataDto {
+        return existingGroupDataDto.withName(name).incrementNonce()
     }
 
     private fun removeGroupMembers(
@@ -132,7 +132,7 @@ class GroupUploadWorker @AssistedInject constructor(
         if(memberAddresses.contains(signatureService.address)) {
             return null
         }
-        return existingGroupDataDto.removeMembers(memberAddresses)?.incrementNonce()
+        return existingGroupDataDto.removeMembers(memberAddresses).incrementNonce()
     }
 
     private suspend fun addGroupMembers(
@@ -143,13 +143,13 @@ class GroupUploadWorker @AssistedInject constructor(
         memberAddresses.forEach { address ->
             if (!members.contains(ExportedContactDataFactory.create(address))) {
                 repository.local.getContact(address)?.let { c ->
-                    c.toExportedData()?.let { ecd ->
+                    c.toExportedContactDataDto().let { ecd ->
                         members.add(ecd)
                     }
                 }
             }
         }
-        return existingGroupDataDto.withMembers(members.toList())?.incrementNonce()
+        return existingGroupDataDto.withMembers(members.toList()).incrementNonce()
     }
 
     private suspend fun createGroupData(
@@ -197,14 +197,14 @@ class GroupUploadWorker @AssistedInject constructor(
     private suspend fun saveGroupEntity(groupDataDto: GroupDataDto, resourceUrl: String) {
         groupDataDto.name ?: return
         groupDataDto.address ?: return
-        val contact = ContactEntityFactory.createGroup(
+        val contact = ContactDtoFactory.createGroup(
             address = groupDataDto.address,
             name = groupDataDto.name
         )
         repository.local.insertOrUpdateContact(contact)
-        val group = GroupEntityFactory.create(
+        val group = GroupDto(
             address = groupDataDto.address,
-            groupDataDto = groupDataDto,
+            groupData = groupDataDto,
             resourceUrl = resourceUrl
         )
         repository.local.insertOrUpdateGroup(group)
@@ -220,7 +220,7 @@ class GroupUploadWorker @AssistedInject constructor(
         groupDataDto.address ?: return false
         val encodedKey = CryptoProvider.base64Encode(key)
         return messageSaver.saveOutgoingMessage(
-            MessageEntityFactory.createOutgoing(
+            MessageDtoFactory.createOutgoing(
                 chatId = groupDataDto.address,
                 text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
                 // to null in the future;
@@ -228,8 +228,8 @@ class GroupUploadWorker @AssistedInject constructor(
                 actionFor = null
             ),
             additionalDestinations = additionalDestinations,
-            AttachmentEntityFactory.create(
-                id = 0,
+            AttachmentDto(
+                messageId = 0,
                 path = null,
                 passphrase = encodedKey,
                 url = resourceUrl

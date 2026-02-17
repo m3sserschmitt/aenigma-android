@@ -15,9 +15,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import dagger.hilt.android.qualifiers.ApplicationContext
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.activities.AppActivity
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -117,7 +117,7 @@ class NotificationService @Inject constructor(
         notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
     }
 
-    fun notifyNewMessage(contact: ContactEntity, messageEntity: MessageEntity) {
+    fun notifyNewMessage(contact: ContactDto, messageEntity: MessageDto) {
         if (listOf(NOTIFICATIONS_DISABLE_ALL, contact.address)
                 .contains(blockedNotificationsSource.value)
         ) {

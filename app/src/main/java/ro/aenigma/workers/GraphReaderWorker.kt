@@ -18,9 +18,9 @@ import ro.aenigma.models.VertexDto
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
-import ro.aenigma.data.database.factories.EdgeEntityFactory
-import ro.aenigma.data.database.factories.VertexEntityFactory
+import ro.aenigma.models.EdgeDto
 import ro.aenigma.models.GuardDto
+import ro.aenigma.models.factories.VertexDtoFactory
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -58,7 +58,7 @@ class GraphReaderWorker @AssistedInject constructor(
         val vertices = graph.mapNotNull { vertex ->
             vertex.neighborhood?.address?.let { address ->
                 vertex.publicKey?.let { publicKey ->
-                    VertexEntityFactory.create(
+                    VertexDtoFactory.create(
                         address = address,
                         publicKey = publicKey,
                         hostname = vertex.neighborhood.hostname,
@@ -75,7 +75,7 @@ class GraphReaderWorker @AssistedInject constructor(
                 neighborAddress?.let { targetAddress ->
                     vertex.neighborhood.address?.let { sourceAddress ->
                         repository.local.insertOrIgnoreEdge(
-                            EdgeEntityFactory.create(
+                            EdgeDto(
                                 sourceAddress = sourceAddress,
                                 targetAddress = targetAddress
                             )

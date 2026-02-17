@@ -18,24 +18,24 @@ import androidx.work.WorkerParameters
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
+import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.AttachmentsMetadataDto
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
+import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrConnectionController
 import ro.aenigma.services.Zipper
@@ -97,8 +97,8 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun buildOnion(
-        message: MessageEntity,
-        destination: ContactEntity,
+        message: MessageDto,
+        destination: ContactDto,
         userName: String?,
         path: List<VertexDto>,
         groupAddress: String?,
@@ -117,7 +117,7 @@ class MessageSenderWorker @AssistedInject constructor(
         val keys =
             reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey!! }.toTypedArray()
         val data = signatureService.jsonSign(
-            message.toArtifact(
+            message.toArtifactDto(
                 senderName = userName,
                 guardAddress = guard.address,
                 guardHostname = guard.hostname,
@@ -129,7 +129,7 @@ class MessageSenderWorker @AssistedInject constructor(
         return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
-    private /*suspend*/ fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
+    private /*suspend*/ fun updateContactIfRequired(contactEntity: ContactDto): Boolean {
         return true
 //        if (contactEntity.guardAddress.isValidAddress()) {
 //            return true
@@ -149,14 +149,14 @@ class MessageSenderWorker @AssistedInject constructor(
 //        return true
     }
 
-    private suspend fun saveAsSent(message: MessageEntity) {
+    private suspend fun saveAsSent(message: MessageDto) {
         repository.local.updateMessage(
-            message.markAsSent()?.run { if (isDelete()) markAsDeleted() else this } ?: return)
+            message.markAsSent().run { if (isDelete()) markAsDeleted() else this })
     }
 
     private suspend fun sendMessage(
-        contacts: List<ContactEntity>,
-        message: MessageEntity,
+        contacts: List<ContactDto>,
+        message: MessageDto,
         userName: String?,
         groupAddress: String?,
         resourceUrl: String?,
@@ -185,9 +185,9 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     suspend fun resolveAttachments(
-        messageWithAttachment: MessageWithAttachments,
+        messageWithAttachment: MessageWithAttachmentsDto,
         accessCount: Int
-    ): MessageWithAttachments? {
+    ): MessageWithAttachmentsDto? {
         if (messageWithAttachment.message.type != MessageType.FILES
             || messageWithAttachment.message.files == null
             || messageWithAttachment.message.files.isEmpty()
@@ -208,8 +208,8 @@ class MessageSenderWorker @AssistedInject constructor(
                 )
             ) ?: return null
 
-        val attachment = AttachmentEntityFactory.create(
-            id = messageWithAttachment.message.id,
+        val attachment = AttachmentDto(
+            messageId = messageWithAttachment.message.id,
             path = archive.name,
             url = null,
             passphrase = null
@@ -230,18 +230,18 @@ class MessageSenderWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateAttachment(finalAttachment)
 
-        return MessageWithAttachments(
+        return MessageWithAttachmentsDto(
             message = messageWithAttachment.message,
             attachment = finalAttachment
         )
     }
 
     private suspend fun getDestinationContacts(
-        contactWithGroup: ContactWithGroup,
+        contactWithGroup: ContactWithGroupDto,
         additionalDestinations: Array<String>?
-    ): List<ContactEntity> {
+    ): List<ContactDto> {
         val addressesSet = hashSetOf<String>()
-        val results = mutableListOf<ContactEntity>()
+        val results = mutableListOf<ContactDto>()
         if (contactWithGroup.contact.type == ContactType.CONTACT) {
             addressesSet.add(contactWithGroup.contact.address)
             results.add(contactWithGroup.contact)

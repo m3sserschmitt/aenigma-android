@@ -1,17 +1,17 @@
-package ro.aenigma.data.database.factories
+package ro.aenigma.models.factories
 
-import ro.aenigma.data.database.ContactEntity
+import ro.aenigma.models.ContactDto
 import ro.aenigma.models.enums.ContactType
 import java.time.ZonedDateTime
 
-object ContactEntityFactory {
+object ContactDtoFactory {
     @JvmStatic
     fun createContact(
         address: String, name: String?, publicKey: String?, guardHostname: String?,
         guardAddress: String?
-    ): ContactEntity {
+    ): ContactDto {
         val dateCreated = ZonedDateTime.now()
-        return ContactEntity(
+        return ContactDto(
             address = address,
             name = name,
             publicKey = publicKey,
@@ -26,9 +26,9 @@ object ContactEntityFactory {
     }
 
     @JvmStatic
-    fun createGroup(address: String, name: String?): ContactEntity {
+    fun createGroup(address: String, name: String?): ContactDto {
         val dateCreated = ZonedDateTime.now()
-        return ContactEntity(
+        return ContactDto(
             address = address,
             name = name,
             publicKey = null,

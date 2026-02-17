@@ -16,12 +16,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.factories.ContactEntityFactory
+import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -37,7 +37,7 @@ import ro.aenigma.util.RequestState
 @Composable
 fun ChatAppBar(
     messages: RequestState<List<MessageWithDetailsDto>>,
-    contact: RequestState<ContactWithGroup>,
+    contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
     connectionStatus: SignalRStatus,
@@ -216,8 +216,8 @@ fun DefaultChatAppBarPreview() {
         isSelectionMode = false,
         connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
-            ContactWithGroup(
-                ContactEntityFactory.createContact(
+            ContactWithGroupDto(
+                ContactDtoFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",
@@ -253,8 +253,8 @@ fun SelectionModeChatAppBarPreview() {
         isSelectionMode = true,
         connectionStatus = SignalRStatus.NotConnected,
         contact = RequestState.Success(
-            ContactWithGroup(
-                ContactEntityFactory.createContact(
+            ContactWithGroupDto(
+                ContactDtoFactory.createContact(
                     address = "123456-5678-5678-123456",
                     name = "John",
                     publicKey = "public-key",

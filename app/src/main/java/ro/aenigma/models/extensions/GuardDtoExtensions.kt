@@ -1,7 +1,6 @@
 package ro.aenigma.models.extensions
 
 import ro.aenigma.data.database.GuardEntity
-import ro.aenigma.data.database.factories.GuardEntityFactory
 import ro.aenigma.models.GuardDto
 import ro.aenigma.models.NeighborhoodDto
 import ro.aenigma.models.VertexDto
