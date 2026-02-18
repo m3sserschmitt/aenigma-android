@@ -21,6 +21,7 @@ import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
+import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
@@ -32,14 +33,16 @@ import ro.aenigma.viewmodels.MainViewModel
 @Composable
 fun AddContactsScreen(
     profileToShare: String,
+    initialScannerState: QrCodeScannerState,
     navigateToContactsScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
-    var scannerState by remember { mutableStateOf(QrCodeScannerState.SHARE_CODE) }
+    var scannerState by remember { mutableStateOf(value = initialScannerState) }
     val qrCode by mainViewModel.qrCode.collectAsState()
     val sharedDataCreate by mainViewModel.sharedDataCreateResult.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+            && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
     val context = LocalContext.current
 
     LaunchedEffect(key1 = true)
@@ -60,6 +63,10 @@ fun AddContactsScreen(
             scannedData ->
             mainViewModel.setScannedContactDetails(scannedData)
             scannerState = QrCodeScannerState.SAVE
+        },
+        onServerInfoQrCodeFound = { scannedData ->
+            mainViewModel.setServerInfoScannedDetails(scannedData)
+            navigateToContactsScreen()
         },
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
@@ -90,6 +97,7 @@ fun AddContactsScreen(
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     onQrCodeFound: (ExportedContactDataDto) -> Unit,
+    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
@@ -100,13 +108,16 @@ fun AddContactsScreen(
 ) {
     Scaffold(
         topBar = {
+            val isScanning =
+                scannerState == QrCodeScannerState.SCAN_CODE || scannerState == QrCodeScannerState.SCAN_SERVER_INFO_CODE
             StandardAppBar(
-                title = if (scannerState == QrCodeScannerState.SCAN_CODE)
+                title = if (isScanning) {
                     stringResource(R.string.scan_qr_code)
-                else
-                    stringResource(R.string.add_contacts),
+                } else {
+                    stringResource(R.string.add_contacts)
+                },
                 navigateBack = navigateToContactsScreen,
-                transparent = scannerState == QrCodeScannerState.SCAN_CODE
+                transparent = isScanning
             )
         },
         content = { paddingValues ->
@@ -123,6 +134,7 @@ fun AddContactsScreen(
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
+                onServerInfoQrCodeFound = onServerInfoQrCodeFound,
                 onNewContactNameChanged = onNewContactNameChanged,
                 onCreateLinkClicked = onCreateLinkClicked,
                 onGetLink = onGetLink,
@@ -186,6 +198,7 @@ fun AddContactsScreenPreview() {
         floatingButtonVisible = true,
         onNewContactNameChanged = { true },
         onQrCodeFound = { },
+        onServerInfoQrCodeFound = { },
         onSaveContact = { },
         onScannerStateChanged = { },
         onSaveContactDismissed = { },

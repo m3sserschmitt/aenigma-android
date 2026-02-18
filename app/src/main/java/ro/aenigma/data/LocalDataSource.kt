@@ -32,6 +32,7 @@ import ro.aenigma.models.GuardDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.AttachmentDtoExtensions.toEntity
@@ -40,6 +41,7 @@ import ro.aenigma.models.extensions.ContactDtoExtensions.withLastMessageId
 import ro.aenigma.models.extensions.EdgeDtoExtensions.toEntity
 import ro.aenigma.models.extensions.GroupDtoExtensions.toEntity
 import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
+import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
@@ -79,9 +81,8 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    suspend fun getHostname(): String? {
+    suspend fun getHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
-        val guard = getGuard() ?: return null
         return if (useTor) {
             if (guard.onionService.isNullOrBlank()) {
                 guard.hostname
@@ -91,6 +92,10 @@ class LocalDataSource @Inject constructor(
         } else {
             guard.hostname
         }
+    }
+
+    suspend fun getHostname(): String? {
+        return getHostname(getGuard()?.toServerInfoDto() ?: return null)
     }
 
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed

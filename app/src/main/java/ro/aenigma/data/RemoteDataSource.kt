@@ -99,13 +99,16 @@ class RemoteDataSource @Inject constructor(
         }
 
         @JvmStatic
-        private suspend fun verifyServerInfo(api: EnigmaApi): GuardDto? {
+        private suspend fun verifyServerInfo(api: EnigmaApi, expectedAddress: String? = null): GuardDto? {
             val response = api.getServerInfo()
             val serverInfoBody = response.body() ?: return null
             if (response.code() != 200) {
                 return null
             } else {
                 val address = serverInfoBody.address ?: return null
+                if(!expectedAddress.isNullOrBlank() && address != expectedAddress) {
+                    return null
+                }
                 val graphVersion = serverInfoBody.graphVersion ?: return null
                 val vertexResponse = api.getVertex(address)
                 if (vertexResponse.code() != 200) {
@@ -270,11 +273,11 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getServerInfo(url: String): GuardDto? {
+    suspend fun getServerInfo(url: String, expectedAddress: String? = null): GuardDto? {
         return try {
             val baseUrl = url.getBaseUrl() ?: return null
             val api = retrofitProvider.getApi(baseUrl)
-            verifyServerInfo(api)
+            verifyServerInfo(api, expectedAddress)
         } catch (_: Exception) {
             null
         }

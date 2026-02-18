@@ -3,6 +3,7 @@ package ro.aenigma.ui.navigation
 import android.net.Uri
 import androidx.navigation.NavController
 import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
+import ro.aenigma.util.QrCodeScannerState
 import java.util.Locale
 
 class Screens(navController: NavController) {
@@ -10,6 +11,7 @@ class Screens(navController: NavController) {
     companion object {
         const val CHAT_SCREEN_CHAT_ID_ARG = "chatId"
         const val ADD_CONTACTS_SCREEN_CONTACT_ID_ARG = "contactId"
+        const val ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG = "scannerState"
         const val ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE = "me"
         const val ARTICLE_SCREEN_ARTICLE_URL_ARG = "url"
 
@@ -24,7 +26,7 @@ class Screens(navController: NavController) {
         const val CONTACTS_SCREEN_ROUTE_FULL = CONTACTS_SCREEN_BASE_ROUTE
         const val CHAT_SCREEN_ROUTE_FULL = "$CHAT_SCREEN_BASE_ROUTE/{$CHAT_SCREEN_CHAT_ID_ARG}"
         const val ADD_CONTACT_SCREEN_ROUTE_FULL =
-            "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}"
+            "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}/{$ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG}"
         const val ABOUT_SCREEN_ROUTE_FULL = ABOUT_BASE_ROUTE
         const val LICENSES_SCREEN_ROUTE_FULL = LICENSES_BASE_ROUTE
         const val FEED_SCREEN_ROUTE_FULL = FEED_BASE_ROUTE
@@ -40,8 +42,11 @@ class Screens(navController: NavController) {
         }
 
         @JvmStatic
-        fun getAddContactsScreenRoute(contactId: String?): String {
-            return if (contactId.isNullOrBlank())
+        fun getAddContactsScreenRoute(
+            contactId: String?,
+            scannerState: QrCodeScannerState
+        ): String {
+            return (if (contactId.isNullOrBlank())
                 ADD_CONTACT_SCREEN_ROUTE_FULL.replace(
                     "{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}",
                     ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
@@ -50,6 +55,10 @@ class Screens(navController: NavController) {
                 ADD_CONTACT_SCREEN_ROUTE_FULL.replace(
                     "{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}",
                     contactId
+                )
+                    ).replace(
+                    "{$ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG}",
+                    scannerState.toString()
                 )
         }
 
@@ -88,7 +97,20 @@ class Screens(navController: NavController) {
     }
 
     val addContact: (String?) -> Unit = { contactId ->
-        navController.navigate(getAddContactsScreenRoute(contactId))
+        navController.navigate(
+            getAddContactsScreenRoute(
+                contactId = contactId,
+                scannerState = QrCodeScannerState.SHARE_CODE
+            )
+        )
+    }
+
+    val scanServerCode: () -> Unit = {
+        navController.navigate(
+            getAddContactsScreenRoute(
+                contactId = null, scannerState = QrCodeScannerState.SCAN_SERVER_INFO_CODE
+            )
+        )
     }
 
     val about: () -> Unit = {

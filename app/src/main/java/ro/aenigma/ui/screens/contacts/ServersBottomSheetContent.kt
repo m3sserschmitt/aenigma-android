@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -26,10 +27,6 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -37,7 +34,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.models.VertexDto
+import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.models.ServersSheetStateDto
+import ro.aenigma.models.enums.ServersSheetSection
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isServersHistorySection
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isServersSection
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toServersHistorySection
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toServersSection
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -49,8 +52,8 @@ import ro.aenigma.util.StringExtensions.getHost
 
 @Composable
 fun ServerItem(
-    server: VertexDto,
-    onClick: (VertexDto) -> Unit = { }
+    server: ServerInfoDto,
+    onClick: (ServerInfoDto) -> Unit = { }
 ) {
     Card(
         modifier = Modifier.selectable(
@@ -85,8 +88,8 @@ fun ServerItem(
             )
             Text(
                 text = getHost(
-                    hostname = server.neighborhood?.hostname,
-                    onionService = server.neighborhood?.onionService
+                    hostname = server.hostname,
+                    onionService = server.onionService
                 ),
                 color = MaterialTheme.colorScheme.onBackground,
                 style = MaterialTheme.typography.bodyLarge,
@@ -196,15 +199,30 @@ fun SearchBar(
 @Composable
 fun SheetContent(
     title: String,
-    servers: RequestState<List<VertexDto>>,
-    onClick: (VertexDto) -> Unit = { }
+    servers: RequestState<List<ServerInfoDto>>,
+    onServerClicked: (ServerInfoDto) -> Unit = { },
+    onScanCodeClicked: () -> Unit = { }
 ) {
-    Text(
-        modifier = Modifier.padding(bottom = 4.dp),
-        text = title,
-        style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.onBackground
-    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            modifier = Modifier.padding(bottom = 4.dp).weight(1f),
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        IconButton(
+            onClick = onScanCodeClicked
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_qr_code),
+                contentDescription = stringResource(id = R.string.scan_qr_code),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
+    }
     when (servers) {
         is RequestState.Success -> {
             if (servers.data.isNotEmpty()) {
@@ -217,7 +235,7 @@ fun SheetContent(
                         ) {
                             ServerItem(
                                 server = server,
-                                onClick = onClick
+                                onClick = onServerClicked
                             )
                         }
                     },
@@ -238,18 +256,20 @@ fun SheetContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServersBottomSheetContent(
-    servers: RequestState<List<VertexDto>>,
-    serversHistory: RequestState<List<VertexDto>>,
+    servers: RequestState<List<ServerInfoDto>>,
+    serversHistory: RequestState<List<ServerInfoDto>>,
     searchQuery: String = "",
+    sheetState: ServersSheetStateDto,
+    onSheetStateChanged: (ServersSheetStateDto) -> Unit = { },
     onSearchQueryChanged: (String) -> Unit = { },
     onSearchClicked: () -> Unit = { },
-    onServerClicked: (VertexDto) -> Unit = { },
-    onConnectClicked: () -> Unit = { }
+    onServerClicked: (ServerInfoDto) -> Unit = { },
+    onConnectClicked: () -> Unit = { },
+    onScanCodeClicked: () -> Unit = { }
 ) {
-    var selectedSection by remember { mutableIntStateOf(0) }
-
     Column(
         modifier = Modifier.fillMaxWidth()
             .background(
@@ -269,17 +289,19 @@ fun ServersBottomSheetContent(
                     color = MaterialTheme.colorScheme.background
                 ).padding(start = 12.dp, top = 12.dp, end = 12.dp)
         ) {
-            when (selectedSection) {
-                0 -> SheetContent(
+            when (sheetState.selectedSection) {
+                ServersSheetSection.SERVERS -> SheetContent(
                     title = stringResource(id = R.string.servers),
                     servers = servers,
-                    onClick = onServerClicked,
+                    onServerClicked = onServerClicked,
+                    onScanCodeClicked = onScanCodeClicked
                 )
 
-                1 -> SheetContent(
+                ServersSheetSection.HISTORY -> SheetContent(
                     title = stringResource(id = R.string.history),
                     servers = serversHistory,
-                    onClick = onServerClicked,
+                    onServerClicked = onServerClicked,
+                    onScanCodeClicked = onScanCodeClicked
                 )
             }
             SearchBar(
@@ -308,8 +330,8 @@ fun ServersBottomSheetContent(
             containerColor = MaterialTheme.colorScheme.background
         ) {
             NavigationBarItem(
-                selected = selectedSection == 0,
-                onClick = { selectedSection = 0 },
+                selected = sheetState.isServersSection(),
+                onClick = { onSheetStateChanged(sheetState.toServersSection()) },
                 icon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_storage),
@@ -319,8 +341,8 @@ fun ServersBottomSheetContent(
                 }
             )
             NavigationBarItem(
-                selected = selectedSection == 1,
-                onClick = { selectedSection = 1 },
+                selected = sheetState.isServersHistorySection(),
+                onClick = { onSheetStateChanged(sheetState.toServersHistorySection()) },
                 icon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_history),

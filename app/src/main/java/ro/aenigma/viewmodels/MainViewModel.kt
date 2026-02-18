@@ -1,5 +1,7 @@
 package ro.aenigma.viewmodels
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SheetValue
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import com.mikepenz.markdown.model.ImageTransformer
@@ -24,11 +26,15 @@ import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignatu
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.QrCodeDto
-import ro.aenigma.models.VertexDto
+import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.enums.ServersSheetSection
 import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
-import ro.aenigma.models.extensions.GuardDtoExtensions.toVertexDto
+import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
+import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
+import ro.aenigma.models.extensions.VertexDtoExtensions.toServerInfoDto
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
@@ -71,10 +77,16 @@ class MainViewModel @Inject constructor(
 
     private val _articleContent = MutableStateFlow<RequestState<String>>(RequestState.Idle)
 
-    private val _servers = MutableStateFlow<RequestState<List<VertexDto>>>(RequestState.Idle)
+    private val _servers = MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private val _serversSheetState = MutableStateFlow(ServersSheetStateDto(
+        sheetState = SheetValue.Hidden,
+        selectedSection = ServersSheetSection.SERVERS
+    ))
 
     private val _serversHistory =
-        MutableStateFlow<RequestState<List<VertexDto>>>(RequestState.Idle)
+        MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
 
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
@@ -110,9 +122,11 @@ class MainViewModel @Inject constructor(
 
     val articleContent: StateFlow<RequestState<String>> = _articleContent
 
-    val servers: StateFlow<RequestState<List<VertexDto>>> = _servers
+    val servers: StateFlow<RequestState<List<ServerInfoDto>>> = _servers
 
-    val serversHistory: StateFlow<RequestState<List<VertexDto>>> = _serversHistory
+    val serversSheetState: StateFlow<ServersSheetStateDto> = _serversSheetState
+
+    val serversHistory: StateFlow<RequestState<List<ServerInfoDto>>> = _serversHistory
 
     init {
         loadContacts()
@@ -205,7 +219,7 @@ class MainViewModel @Inject constructor(
                         }
                     } else {
                         servers
-                    }
+                    }.map { item -> item.toServerInfoDto() }
                     _servers.value = RequestState.Success(result)
                 } catch (ex: Exception) {
                     _servers.value = RequestState.Error(ex)
@@ -229,7 +243,7 @@ class MainViewModel @Inject constructor(
                         }
                     } else {
                         serversHistory
-                    }.map { item -> item.toVertexDto() }
+                    }.map { item -> item.toServerInfoDto() }
                     _serversHistory.value = RequestState.Success(vertices)
                 } catch (ex: Exception) {
                     _serversHistory.value = RequestState.Error(ex)
@@ -285,7 +299,7 @@ class MainViewModel @Inject constructor(
                         repository.local.getVertices()
                     } else {
                         repository.local.searchVertices(query)
-                    }
+                    }.map { item -> item.toServerInfoDto() }
 
                     _servers.value = RequestState.Success(serversSearchResult)
 
@@ -293,7 +307,7 @@ class MainViewModel @Inject constructor(
                         repository.local.getGuards()
                     } else {
                         repository.local.searchGuards(query)
-                    }.map { item -> item.toVertexDto() }
+                    }.map { item -> item.toServerInfoDto() }
 
                     _serversHistory.value = RequestState.Success(serversHistorySearchResult)
                 } catch (ex: Exception) {
@@ -482,6 +496,14 @@ class MainViewModel @Inject constructor(
         _importedContactDetails.value = RequestState.Success(scannedDetails)
     }
 
+    fun setServerInfoScannedDetails(scannedDetails: ServerInfoDto) {
+        switchServer(scannedDetails)
+    }
+
+    fun setServersSheetState(sheetState: ServersSheetStateDto) {
+        _serversSheetState.value = sheetState
+    }
+
     fun createContactShareLink() {
         viewModelScope.launch(defaultDispatcher) {
             _sharedDataCreateResult.value = RequestState.Loading
@@ -542,19 +564,21 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun switchServer(server: VertexDto) {
-        return switchServer(
-            server.neighborhood?.hostname ?: server.neighborhood?.onionService ?: return
-        )
+    fun switchServer(server: ServerInfoDto) {
+        viewModelScope.launch(ioDispatcher) {
+            switchServer(
+                serverQuery = repository.local.getHostname(server) ?: return@launch,
+                expectedAddress = server.address
+            )
+        }
     }
 
-    fun switchServer(serverQuery: String) {
+    fun switchServer(serverQuery: String, expectedAddress: String? = null) {
         viewModelScope.launch(ioDispatcher) {
             try {
                 val serverInfoUrl = serverQuery.getHttpUri(SERVER_INFO_API_PATH) ?: return@launch
-                val guardDto =
-                    repository.remote.getServerInfo(serverInfoUrl)?.copy(graphVersion = null)
-                        ?: return@launch
+                val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
+                    ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)
                 signalrConnectionController.disconnect()
             } catch (_: Exception) {
