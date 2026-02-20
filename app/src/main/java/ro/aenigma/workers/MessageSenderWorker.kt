@@ -37,11 +37,11 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
 import ro.aenigma.services.NotificationService
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -51,7 +51,7 @@ class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val zipper: Zipper,
-    private val signalrController: SignalrConnectionController,
+    private val signalrController: SignalrController,
     private val repository: Repository,
     private val signatureService: SignatureService,
     private val notificationService: NotificationService,
@@ -125,7 +125,7 @@ class MessageSenderWorker @AssistedInject constructor(
                 chatId = chatId,
                 passphrase = passphrase
             )
-        ).toJson()?.toByteArray() ?: return null
+        ).toCanonicalJson()?.toByteArray() ?: return null
         return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 

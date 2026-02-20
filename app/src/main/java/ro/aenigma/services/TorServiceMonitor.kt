@@ -8,15 +8,15 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import org.torproject.jni.TorService
 import ro.aenigma.R
-import ro.aenigma.services.TorForegroundService.Companion.START_FOREGROUND_INTENT_EXTRA
+import ro.aenigma.models.enums.TorStatus
 import javax.inject.Singleton
 
 @Singleton
-class TorServiceManager @Inject constructor(
+class TorServiceMonitor @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val notificationService: NotificationService,
 ) {
-    private val _torStatus = MutableStateFlow<TorStatus>(TorStatus.Idle)
+    private val _torStatus = MutableStateFlow(TorStatus.IDLE)
 
     val torStatus: StateFlow<TorStatus> = _torStatus
 
@@ -25,17 +25,17 @@ class TorServiceManager @Inject constructor(
             val status = intent?.getStringExtra(TorService.EXTRA_STATUS)
             when (status) {
                 TorService.STATUS_STARTING -> {
-                    _torStatus.value = TorStatus.Starting
+                    _torStatus.value = TorStatus.STARTING
                     notificationService.notifyTorStatus(appContext.getString(R.string.tor_starting))
                 }
 
                 TorService.STATUS_ON -> {
-                    _torStatus.value = TorStatus.On
+                    _torStatus.value = TorStatus.ON
                     notificationService.notifyTorStatus(appContext.getString(R.string.connected_through_tor))
                 }
 
                 TorService.STATUS_OFF -> {
-                    _torStatus.value = TorStatus.Off
+                    _torStatus.value = TorStatus.OFF
                     notificationService.notifyTorStatus(appContext.getString(R.string.tor_stopped))
                 }
             }
@@ -49,31 +49,6 @@ class TorServiceManager @Inject constructor(
         } else {
             @SuppressLint("UnspecifiedRegisterReceiverFlag")
             appContext.registerReceiver(torStatusReceiver, intentFilter)
-        }
-    }
-
-    fun start(startForeground: Boolean = true) {
-        val currentStatus = _torStatus.value
-        if (currentStatus == TorStatus.On || currentStatus == TorStatus.Starting) {
-            return
-        }
-
-        val intent = Intent(appContext, TorForegroundService::class.java)
-        intent.action = "ON"
-        intent.putExtra(START_FOREGROUND_INTENT_EXTRA, startForeground)
-        appContext.startService(intent)
-    }
-
-    fun stop() {
-        val intent = Intent(appContext, TorForegroundService::class.java)
-        intent.action = "OFF"
-        appContext.stopService(intent)
-    }
-
-    fun destroy() {
-        try {
-            appContext.unregisterReceiver(torStatusReceiver)
-        } catch (_: Exception) {
         }
     }
 }

@@ -39,6 +39,7 @@ import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.enums.ServersSheetSection
+import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
@@ -50,11 +51,17 @@ import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
+import ro.aenigma.ui.screens.common.InstallOrbotDialog
+import ro.aenigma.ui.screens.common.OrbotInfoDialog
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
+import ro.aenigma.ui.screens.common.TorInfoDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
+import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
+import ro.aenigma.util.ContextExtensions.openOrbot
+import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 import java.time.ZonedDateTime
@@ -75,7 +82,8 @@ fun ContactsScreen(
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
-    val torOk by mainViewModel.torOk.collectAsState()
+    val useOrbot by mainViewModel.useOrbot.collectAsState()
+    val torConnectionCheck by mainViewModel.torConnectionCheck.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
 
     ContactsScreen(
@@ -88,8 +96,10 @@ fun ContactsScreen(
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
         useTor = useTor,
-        torOk = torOk,
-        useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
+        useOrbot = useOrbot,
+        torConnectionCheck = torConnectionCheck,
+        onTorPreferenceChanged = { useTor -> mainViewModel.torPreferenceChanged(useTor) },
+        onOrbotPreferenceChanged = { useOrbot -> mainViewModel.orbotPreferenceChanged(useOrbot) },
         onNotificationsPreferenceChanged = { allowed ->
             mainViewModel.saveNotificationsPreference(allowed)
         },
@@ -130,8 +140,10 @@ fun ContactsScreen(
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     useTor: Boolean,
-    torOk: Boolean,
-    useTorChanged: (Boolean) -> Unit,
+    useOrbot: Boolean,
+    torConnectionCheck: TorConnectionCheck,
+    onTorPreferenceChanged: (Boolean) -> Unit,
+    onOrbotPreferenceChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
@@ -158,6 +170,9 @@ fun ContactsScreen(
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
     var getContactDataLoadingDialogVisible by remember { mutableStateOf(true) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
+    var installOrbotDialogVisible by remember { mutableStateOf(false) }
+    var orbotInfoDialogVisible by remember { mutableStateOf(false) }
+    var torServiceInfoDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var serversSearchQuery by remember { mutableStateOf("") }
@@ -169,6 +184,14 @@ fun ContactsScreen(
     )
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val context = LocalContext.current
+
+    LaunchedEffect(key1 = useOrbot) {
+        if(useOrbot) {
+            if (!context.isOrbotInstalled()) {
+                installOrbotDialogVisible = true
+            }
+        }
+    }
 
     LaunchedEffect(key1 = serversSheetState.isNotFullyExpanded()) {
         if (serversSheetState.isNotFullyExpanded()) {
@@ -204,6 +227,43 @@ fun ContactsScreen(
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
+
+    InstallOrbotDialog(
+        visible = installOrbotDialogVisible,
+        onConfirmClicked = {
+            installOrbotDialogVisible = false
+            onOrbotPreferenceChanged(false)
+            context.redirectToOrbotOnPlayStore()
+        },
+        onDismissClicked = {
+            installOrbotDialogVisible = false
+            onOrbotPreferenceChanged(false)
+        }
+    )
+
+    OrbotInfoDialog(
+        visible = orbotInfoDialogVisible,
+        onLaunchOrbot =  {
+            orbotInfoDialogVisible = false
+            context.openOrbot()
+        },
+        onConfirmClicked = {
+            orbotInfoDialogVisible = false
+            onOrbotPreferenceChanged(true)
+        }
+    )
+
+    TorInfoDialog(
+        visible = torServiceInfoDialogVisible,
+        onLaunchOrbot = {
+            torServiceInfoDialogVisible = false
+            context.openOrbot()
+        },
+        onConfirmClicked = {
+            torServiceInfoDialogVisible = false
+            onTorPreferenceChanged(true)
+        }
+    )
 
     CheckNotificationsPermission(
         onPermissionGranted = { granted ->
@@ -371,8 +431,22 @@ fun ContactsScreen(
                 connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
                 useTor = useTor,
-                torOk = torOk,
-                useTorChanged = useTorChanged,
+                useOrbot = useOrbot,
+                torConnectionCheck = torConnectionCheck,
+                onTorPreferenceChanged = { activatingTor ->
+                    if(activatingTor) {
+                        torServiceInfoDialogVisible = true
+                    } else {
+                        onTorPreferenceChanged(false)
+                    }
+                },
+                onOrbotPreferenceChanged = { activatingOrbot ->
+                    if(activatingOrbot) {
+                        orbotInfoDialogVisible = true
+                    } else {
+                        onOrbotPreferenceChanged(false)
+                    }
+                },
                 onSearchTriggered = {
                     isSearchMode = true
                 },
@@ -494,8 +568,10 @@ fun ContactsScreenPreview() {
         notificationsAllowed = true,
         nameDialogVisible = false,
         useTor = true,
-        torOk = true,
-        useTorChanged = { _ -> },
+        useOrbot = false,
+        torConnectionCheck = TorConnectionCheck.OK,
+        onTorPreferenceChanged = { _ -> },
+        onOrbotPreferenceChanged = { },
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },

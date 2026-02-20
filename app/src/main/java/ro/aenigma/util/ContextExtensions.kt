@@ -7,18 +7,13 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import ro.aenigma.activities.AppActivity
-import ro.aenigma.util.ContentResolverExtensions.querySize
 import androidx.core.net.toUri
-import ro.aenigma.R
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
-import ro.aenigma.util.FileExtensions.lengthSafe
-import java.io.File
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
@@ -33,13 +28,22 @@ import id.zelory.compressor.constraint.format
 import id.zelory.compressor.constraint.quality
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
+import ro.aenigma.R
+import ro.aenigma.activities.AppActivity
 import ro.aenigma.models.MessageDto
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
 import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
+import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
+import ro.aenigma.util.Constants.Companion.ORBOT_STORE_LINK
+import ro.aenigma.util.Constants.Companion.ORBOT_WEB_LINK
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
+import ro.aenigma.util.ContentResolverExtensions.querySize
+import ro.aenigma.util.FileExtensions.lengthSafe
 import ro.aenigma.util.StringExtensions.isRemoteUri
+import java.io.File
 
 object ContextExtensions {
 
@@ -268,6 +272,32 @@ object ContextExtensions {
         return Compressor.compress(this@compressImage, image, Dispatchers.IO) {
             quality(IMAGE_COMPRESSION_QUALITY)
             format(Bitmap.CompressFormat.JPEG)
+        }
+    }
+
+    fun Context.isOrbotInstalled(): Boolean {
+        try {
+            packageManager.getPackageInfo(ORBOT_PACKAGE, PackageManager.GET_ACTIVITIES)
+            return true
+        } catch (_: Exception) {
+            return false
+        }
+    }
+
+    fun Context.redirectToOrbotOnPlayStore() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, ORBOT_STORE_LINK.toUri()))
+        } catch (_: Exception) {
+            startActivity(Intent(Intent.ACTION_VIEW, ORBOT_WEB_LINK.toUri()))
+        }
+    }
+
+    fun Context.openOrbot() {
+        val launchIntent = packageManager.getLaunchIntentForPackage(ORBOT_PACKAGE)
+        if (launchIntent != null) {
+            startActivity(launchIntent)
+        } else {
+            redirectToOrbotOnPlayStore()
         }
     }
 }

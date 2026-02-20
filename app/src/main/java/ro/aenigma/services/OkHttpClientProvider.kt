@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.OkHttpClient
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.util.Constants.Companion.OK_HTTP_CLIENT_TIMEOUT
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
+import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_HOSTNAME
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -28,7 +28,7 @@ open class OkHttpClientProvider @Inject constructor(
                         proxy(
                             Proxy(
                                 Proxy.Type.SOCKS,
-                                InetSocketAddress(SOCKS5_PROXY_ADDRESS, SOCKS5_PROXY_PORT)
+                                InetSocketAddress(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)
                             )
                         )
                     }

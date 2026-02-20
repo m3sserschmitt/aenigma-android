@@ -9,11 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import ro.aenigma.services.OkHttpClientProvider
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 
 abstract class BaseViewModel(
     protected val repository: Repository,
-    private val signalrConnectionController: SignalrConnectionController,
+    private val signalrController: SignalrController,
     private val okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>
 ): ViewModel() {
 
@@ -37,11 +37,11 @@ abstract class BaseViewModel(
 
     val userName: StateFlow<String> = _userName
 
-    val clientStatus = signalrConnectionController.clientStatus
+    val clientStatus = signalrController.clientStatus
 
     abstract fun init()
 
     fun retryClientConnection() {
-        signalrConnectionController.resetClient()
+        signalrController.resetClient()
     }
 }

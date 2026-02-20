@@ -43,7 +43,7 @@
     <string name="connection_failed_reason">Serviciul poate fi indisponibil momentan. Reporniți aplicația sau încercați mai târziu</string>
     <string name="retry_now">Reîncercați acum</string>
     <string name="reload">Reîncarcă</string>
-    <string name="retry">Retry</string>
+    <string name="retry">Reîncearcă</string>
     <string name="permission_required">Permisiune necesară</string>
     <string name="notifications_permission_required">Aplicația are nevoie de permisiune pentru afișarea notificărilor. Pentru cea mai bună experiență, acordați permisiunea din meniul Setări.</string>
     <string name="settings">Setări</string>
@@ -106,6 +106,7 @@
     <string name="cannot_share_channels">Nu puteți distribui canale</string>
     <string name="cannot_select_channels_to_create_channel">Nu poteți selecta canale pentru a crea un nou canal.</string>
     <string name="tor_service">Serviciul Onion Router</string>
+    <string name="orbot_service">Serviciul Orbot</string>
     <string name="access_aenigma">Accesați Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Autentificați-vă folosind datele biometrice sau codul PIN</string>
     <string name="guard_syncing">Se preiau informații de la server</string>
@@ -144,4 +145,11 @@
     <string name="history">Istoric</string>
     <string name="connect">Conectează</string>
     <string name="no_server_found">Nu am găsit niciun server</string>
+    <string name="orbot_required_title">Orbot este necesar</string>
+    <string name="do_you_install_orbot">Dorești să instalezi Orbot din Google Play Store pentru a realiza o conxiune securizată?</string>
+    <string name="use_orbot_title">Folosește conexiunea VPN prin Orbot</string>
+    <string name="open_orbot">Deschide Orbot</string>
+    <string name="orbot_info">Asigură-te ca ai lansat Orbot și conexiunea VPN a fost realizată cu succes.</string>
+    <string name="start_tor_service_title">Lansează Serviciul TOR</string>
+    <string name="tor_service_info">Asigură-te că nu ai o conexiune VPN prin Orbot înainte de a lansa servicul TOR</string>
 </resources>

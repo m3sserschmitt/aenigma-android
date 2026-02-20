@@ -27,19 +27,19 @@ class PreferencesDataStore @Inject constructor(
     companion object {
         private const val ALLOW_NOTIFICATIONS_PREFERENCE = "notifications-permission"
         private const val TOR_PREFERENCE = "use-tor"
+        private const val ORBOT_PREFERENCE = "use-orbot"
         private const val NAME_PREFERENCE = "name"
         private const val ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE = "encrypted-database-passphrase"
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
-        private const val LAST_GRAPH_VERSION_PREFERENCE = "last-graph-version"
     }
 
     private object PreferenceKeys {
         val notificationsAllowed = booleanPreferencesKey(ALLOW_NOTIFICATIONS_PREFERENCE)
         val name = stringPreferencesKey(NAME_PREFERENCE)
         val useTor = booleanPreferencesKey(TOR_PREFERENCE)
+        val useOrbot = booleanPreferencesKey(ORBOT_PREFERENCE)
         val encryptedDatabasePassphrase =
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
-        val lastGraphVersion = stringPreferencesKey(LAST_GRAPH_VERSION_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -67,6 +67,10 @@ class PreferencesDataStore @Inject constructor(
         return savePreference(useTor, PreferenceKeys.useTor)
     }
 
+    suspend fun saveOrbotPreference(useOrbot: Boolean): Boolean {
+        return savePreference(useOrbot, PreferenceKeys.useOrbot)
+    }
+
     suspend fun saveEncryptedDatabasePassphrase() {
         val key = CryptoProvider.generateRandomBytes(DATABASE_PASSPHRASE_SIZE_BYTES)
         val encryptedKey = CryptoProvider.masterKeyEncrypt(key)
@@ -77,18 +81,10 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
-    suspend fun saveLastGraphVersion(graphVersion: String): Boolean {
-        return savePreference(graphVersion, PreferenceKeys.lastGraphVersion)
-    }
-
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
-            .catch {
-                emit(emptyPreferences())
-            }
-            .map { preferences ->
-                preferences[key] ?: defaultValue
-            }
+            .catch { emit(emptyPreferences()) }
+            .map { preferences -> preferences[key] ?: defaultValue }
     }
 
     val notificationsAllowed: Flow<Boolean> =
@@ -98,8 +94,8 @@ class PreferencesDataStore @Inject constructor(
 
     val useTor: Flow<Boolean> = getPreference(PreferenceKeys.useTor, false)
 
+    val useOrbot: Flow<Boolean> = getPreference(PreferenceKeys.useOrbot, false)
+
     val encryptedDatabasePassphrase: Flow<ByteArray> =
         getPreference(PreferenceKeys.encryptedDatabasePassphrase, byteArrayOf())
-
-    val lastGraphVersion: Flow<String> = getPreference(PreferenceKeys.lastGraphVersion, "")
 }

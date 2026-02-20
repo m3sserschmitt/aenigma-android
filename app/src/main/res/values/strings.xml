@@ -108,6 +108,7 @@
     <string name="cannot_share_channels">channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
     <string name="tor_service">The Onion Router service</string>
+    <string name="orbot_service">Orbot service</string>
     <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
     <string name="guard_syncing">Fetch server info</string>
@@ -148,4 +149,11 @@
     <string name="history">History</string>
     <string name="connect">Connect</string>
     <string name="no_server_found">No server found</string>
+    <string name="orbot_required_title">Orbot is required</string>
+    <string name="do_you_install_orbot">Would you like to install Orbot from Google Play Store to establish a secure VPN connection</string>
+    <string name="use_orbot_title">Use Orbot VPN</string>
+    <string name="open_orbot">Open Orbot</string>
+    <string name="orbot_info">Make sure you launched Orbot and the VPN connection was successfully established</string>
+    <string name="start_tor_service_title">Start TOR Service</string>
+    <string name="tor_service_info">Make sure Orbot VPN connection is not running before starting TOR Service</string>
 </resources>

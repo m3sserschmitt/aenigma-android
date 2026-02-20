@@ -26,7 +26,7 @@ import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_ADDRESS
+import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_HOSTNAME
 import ro.aenigma.util.StringExtensions.getHttpUri
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -70,18 +70,20 @@ class SignalRClient @Inject constructor(
             "Could not create connection or invalid URL."
 
         @JvmStatic
-        fun createConnection(useTor: Boolean, hostname: String): HubConnection? {
-            val endpointUrl = hostname.getHttpUri(ONION_ROUTING_ENDPOINT) ?: return null
+        fun createConnection(useTor: Boolean, useOrbot: Boolean, hostname: String): HubConnection? {
+            val uri = hostname.getHttpUri(ONION_ROUTING_ENDPOINT) ?: return null
             return HubConnectionBuilder
-                .create(endpointUrl)
+                .create(uri)
                 .apply {
-                    if (useTor) {
+                    if (useTor || useOrbot) {
                         withTransport(TransportEnum.LONG_POLLING)
+                    }
+                    if (useTor) {
                         setHttpClientBuilderCallback { builder ->
                             builder.proxy(
                                 Proxy(
                                     Proxy.Type.SOCKS,
-                                    InetSocketAddress(SOCKS5_PROXY_ADDRESS, SOCKS5_PROXY_PORT)
+                                    InetSocketAddress(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)
                                 )
                             )
                         }
@@ -130,7 +132,8 @@ class SignalRClient @Inject constructor(
         }
         try {
             val useTor = repository.local.useTor.firstOrNull() == true
-            _hubConnection.value = createConnection(useTor, hostname)
+            val useOrbot = repository.local.useOrbot.firstOrNull() == true
+            _hubConnection.value = createConnection(useTor, useOrbot, hostname)
             val guard = repository.local.getGuard() ?: throw Exception()
             _guardAddress.value = guard.address
             configureConnection()
@@ -202,7 +205,8 @@ class SignalRClient @Inject constructor(
             synchronized(_lock) {
                 return _hubConnection.value?.invoke(
                     GenerateTokenResult::class.java,
-                    GENERATE_NONCE_METHOD)?.blockingSubscribe(nonceObserver) ?: Unit
+                    GENERATE_NONCE_METHOD
+                )?.blockingSubscribe(nonceObserver) ?: Unit
             }
         }
     }

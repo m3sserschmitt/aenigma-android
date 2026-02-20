@@ -26,7 +26,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.OkHttpClientProvider
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.services.UriBatcher
 import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
@@ -41,9 +41,9 @@ class ChatViewModel @Inject constructor(
     private val uriBatcher: UriBatcher,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     signatureService: SignatureService,
-    signalrConnectionController: SignalrConnectionController,
+    signalrController: SignalrController,
     repository: Repository,
-) : BaseViewModel(repository, signalrConnectionController, okHttpClientProviderLazy) {
+) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
 
     private val localAddress = signatureService.address
 

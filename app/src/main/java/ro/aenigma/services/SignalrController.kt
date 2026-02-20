@@ -6,7 +6,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -14,6 +13,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ro.aenigma.data.Repository
+import ro.aenigma.models.enums.TorStatus
 import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
@@ -21,9 +21,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SignalrConnectionController @Inject constructor(
+class SignalrController @Inject constructor(
     @param:ApplicationContext private val applicationContext: Context,
-    private val torServiceManager: TorServiceManager,
+    private val torServiceManager: TorServiceMonitor,
     private val signalRClient: SignalRClient,
     private val repository: Repository
 ) {
@@ -67,7 +67,7 @@ class SignalrConnectionController @Inject constructor(
     private suspend fun start() {
         val useTor = repository.local.useTor.first()
         if (useTor) {
-            torServiceManager.torStatus.filter { status -> status is TorStatus.On }.first()
+            torServiceManager.torStatus.filter { status -> status == TorStatus.ON }.first()
                 .apply {
                     enqueueSignalRWorkRequest()
                 }
@@ -85,7 +85,7 @@ class SignalrConnectionController @Inject constructor(
             ) { useTor, torStatus, clientStatus ->
                 Triple(useTor, torStatus, clientStatus)
             }.distinctUntilChanged().collect { (useTor, torStatus, clientStatus) ->
-                if ((useTor && torStatus == TorStatus.On) || (!useTor)) {
+                if ((useTor && torStatus == TorStatus.ON) || (!useTor)) {
                     performClientAction(clientStatus)
                 }
             }
@@ -95,9 +95,12 @@ class SignalrConnectionController @Inject constructor(
                 signalRClient.disconnect()
             }
         }
+        lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            repository.local.useOrbot.drop(1).collect {
+                signalRClient.disconnect()
+            }
+        }
     }
-
-    val authToken: StateFlow<String> = signalRClient.authToken
 
     fun resetClient() {
         return signalRClient.resetAborted()

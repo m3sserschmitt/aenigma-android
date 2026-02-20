@@ -22,7 +22,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.services.NotificationService
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.SIGNALR_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 class SignalRClientWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalrController: SignalrConnectionController,
+    private val signalrController: SignalrController,
     private val repository: Repository,
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {

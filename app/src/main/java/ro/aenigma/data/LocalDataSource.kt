@@ -77,13 +77,18 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveTorPreference(useTor)
     }
 
+    suspend fun  saveOrbotPreference(useOrbot: Boolean): Boolean {
+        return preferencesDataStore.saveOrbotPreference(useOrbot)
+    }
+
     suspend fun saveNotificationsAllowed(granted: Boolean): Boolean {
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
     suspend fun getHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
-        return if (useTor) {
+        val useOrbot = useOrbot.firstOrNull() == true
+        return if (useTor || useOrbot) {
             if (guard.onionService.isNullOrBlank()) {
                 guard.hostname
             } else {
@@ -103,6 +108,8 @@ class LocalDataSource @Inject constructor(
     val name: Flow<String> = preferencesDataStore.name
 
     val useTor: Flow<Boolean> = preferencesDataStore.useTor
+
+    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
         return contactsDao.get().getWithMessagesFlow()

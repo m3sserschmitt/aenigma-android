@@ -45,6 +45,12 @@ class Constants {
 
         const val IMAGES_CACHE_DIR = "images_cache"
 
+        const val ORBOT_PACKAGE = "org.torproject.android"
+
+        const val ORBOT_STORE_LINK = "market://details?id=$ORBOT_PACKAGE"
+
+        const val ORBOT_WEB_LINK = "https://play.google.com/store/apps/details?id=$ORBOT_PACKAGE"
+
         const val COIL_MEMORY_CACHE_PERCENTAGE = .25
 
         const val PRIVATE_KEY_FILE = "private-key.locked"
@@ -55,7 +61,7 @@ class Constants {
 
         const val ARTICLES_FEED_WEIGHT = 0.35
 
-        const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
+        const val SOCKS5_PROXY_HOSTNAME = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
         const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 

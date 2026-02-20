@@ -9,7 +9,7 @@ import ro.aenigma.R
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class TorForegroundService @Inject constructor(): TorService() {
+class TorServiceImpl @Inject constructor(): TorService() {
     companion object {
         const val START_FOREGROUND_INTENT_EXTRA = "start-foreground"
     }

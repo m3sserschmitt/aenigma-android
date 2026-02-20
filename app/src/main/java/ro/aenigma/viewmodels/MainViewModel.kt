@@ -31,6 +31,7 @@ import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.enums.ServersSheetSection
+import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
@@ -39,8 +40,8 @@ import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.OkHttpClientProvider
-import ro.aenigma.services.SignalrConnectionController
-import ro.aenigma.services.TorServiceController
+import ro.aenigma.services.SignalrController
+import ro.aenigma.services.TorController
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getHttpUri
@@ -56,10 +57,10 @@ class MainViewModel @Inject constructor(
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
-    torServiceController: TorServiceController,
+    torController: TorController,
     repository: Repository,
-    private val signalrConnectionController: SignalrConnectionController,
-) : BaseViewModel(repository, signalrConnectionController, okHttpClientProviderLazy) {
+    private val signalrController: SignalrController,
+) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
@@ -102,6 +103,8 @@ class MainViewModel @Inject constructor(
 
     private val _useTor = MutableStateFlow(false)
 
+    private val _useOrbot = MutableStateFlow(false)
+
     val allContacts: StateFlow<RequestState<List<ContactWithLastMessageDto>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
@@ -116,7 +119,9 @@ class MainViewModel @Inject constructor(
 
     val useTor: StateFlow<Boolean> = _useTor
 
-    val torOk: StateFlow<Boolean> = torServiceController.isTorOk
+    val useOrbot: StateFlow<Boolean> = _useOrbot
+
+    val torConnectionCheck: StateFlow<TorConnectionCheck> = torController.torConnectionCheck
 
     val newsFeed: StateFlow<RequestState<List<ArticleDto>>> = _newsFeed
 
@@ -131,7 +136,8 @@ class MainViewModel @Inject constructor(
     init {
         loadContacts()
         loadServers()
-        collectUseTor()
+        collectTorPreference()
+        collectOrbotPreference()
         collectNotificationsPreferences()
         collectFeed()
     }
@@ -162,13 +168,19 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun collectUseTor() {
+    private fun collectTorPreference() {
         viewModelScope.launch(ioDispatcher) {
             repository.local.useTor.catch {
                 _useTor.value = false
-            }.collect { useTor ->
-                _useTor.value = useTor
-            }
+            }.collect { useTor -> _useTor.value = useTor }
+        }
+    }
+
+    private fun collectOrbotPreference() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.useOrbot.catch {
+                _useOrbot.value = false
+            }.collect { useOrbot -> _useOrbot.value = useOrbot }
         }
     }
 
@@ -389,9 +401,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun useTorChanged(useTor: Boolean) {
+    fun torPreferenceChanged(useTor: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.saveTorPreference(useTor)
+        }
+    }
+
+    fun orbotPreferenceChanged(useOrbot: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveOrbotPreference(useOrbot)
         }
     }
 
@@ -580,7 +598,7 @@ class MainViewModel @Inject constructor(
                 val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
                     ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)
-                signalrConnectionController.disconnect()
+                signalrController.disconnect()
             } catch (_: Exception) {
             }
         }

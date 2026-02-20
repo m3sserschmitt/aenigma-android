@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
 
+    <queries>
+        <package android:name="org.torproject.android"/>
+    </queries>
+
     <application
         android:name="ro.aenigma.AenigmaApp"
         android:allowBackup="false"
@@ -25,7 +29,7 @@
         tools:targetApi="31"
         android:usesCleartextTraffic="true">
         <service
-            android:name="ro.aenigma.services.TorForegroundService"
+            android:name="ro.aenigma.services.TorServiceImpl"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
