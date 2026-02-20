@@ -159,8 +159,8 @@ class RemoteDataSource @Inject constructor(
                 serializedNeighborhood.fromJson<NeighborhoodDto>()?.normalizeHostname()
                     ?: return null
             return VertexDto(
-                address = vertexDto.publicKey,
-                publicKey = vertexDto.signedData,
+                address = vertexDto.address,
+                publicKey = vertexDto.publicKey,
                 signedData = vertexDto.signedData,
                 neighborhood = neighborhood
             )

@@ -9,6 +9,7 @@ import org.jgrapht.graph.DefaultEdge
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.VertexDto
+import ro.aenigma.models.factories.VertexDtoFactory
 import javax.inject.Inject
 
 class PathFinder @Inject constructor(
@@ -34,11 +35,11 @@ class PathFinder @Inject constructor(
             _graph = DefaultDirectedGraph(DefaultEdge::class.java)
             _localAddress ?: return false
             _localPublicKey ?: return false
-            _localVertex = VertexDto(
+            _localVertex = VertexDtoFactory.create(
                 address = _localAddress,
                 publicKey = _localPublicKey,
-                signedData = null,
-                neighborhood = null
+                hostname = null,
+                onionService = null
             )
             val guard = repository.local.getGuard() ?: return false
             val vertices = repository.local.getAllVertices()
@@ -46,8 +47,10 @@ class PathFinder @Inject constructor(
             val edges = repository.local.getEdges()
 
             vertices.forEach { vertex ->
-                _graph?.addVertex(vertex)
-                _verticesMap?.put(vertex.address!!, vertex)
+                vertex.address?.let {
+                    _graph?.addVertex(vertex)
+                    _verticesMap?.put(vertex.address, vertex)
+                }
             }
             val guardVertex = _verticesMap?.get(guard.address) ?: return false
 
@@ -74,12 +77,13 @@ class PathFinder @Inject constructor(
         _graph ?: return listOf()
         destination.publicKey ?: return listOf()
         return try {
-            val destinationVertex = VertexDto(
-                address = destination.address,
-                publicKey = destination.publicKey,
-                signedData = null,
-                neighborhood = null
-            )
+            val destinationVertex =
+                VertexDtoFactory.create(
+                    address = destination.address,
+                    publicKey = destination.publicKey,
+                    hostname = null,
+                    onionService = null
+                )
             val destinationGuardVertex =
                 _verticesMap?.get(destination.guardAddress) ?: return listOf()
             _graph?.addVertex(destinationVertex)
