@@ -9,11 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import ro.aenigma.data.Repository
 import ro.aenigma.models.enums.TorStatus
+import ro.aenigma.models.extensions.TorStatusExtensions.torPreferenceIsChanging
+import ro.aenigma.models.extensions.TorStatusExtensions.with
 import ro.aenigma.workers.GraphReaderWorker
 import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
@@ -23,56 +23,60 @@ import javax.inject.Singleton
 @Singleton
 class SignalrController @Inject constructor(
     @param:ApplicationContext private val applicationContext: Context,
-    private val torServiceManager: TorServiceMonitor,
+    private val torServiceMonitor: TorServiceMonitor,
     private val signalRClient: SignalRClient,
     private val repository: Repository
 ) {
     val clientStatus = signalRClient.status
 
-    private fun enqueueSignalRWorkRequest() {
+    private fun enqueueSyncAndConnect() {
         val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
             actions = SignalRWorkerAction.connectPullCleanup()
         )
-        WorkManager.getInstance(applicationContext).beginWith(syncGraphWorkRequest)
+        WorkManager.getInstance(applicationContext)
+            .beginWith(syncGraphWorkRequest)
             .then(startConnectionWorkRequest)
             .enqueue()
     }
 
-    private suspend fun performClientAction(clientStatus: SignalRStatus) {
+    private fun enqueueReconnect() {
+        SignalRClientWorker.start(
+            context = applicationContext,
+            actions = SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
+        )
+    }
+
+    private fun enqueue(clientStatus: SignalRStatus, torPreference: Boolean, torStatus: TorStatus) {
         when (clientStatus) {
-            is SignalRStatus.Error.ConnectionRefused,
-            is SignalRStatus.Error.Disconnected,
-            is SignalRStatus.Reset -> {
-                enqueueSignalRWorkRequest()
+            SignalRStatus.NotConnected,
+            is SignalRStatus.Error.ConnectionRefused -> {
+                enqueueSyncAndConnect()
+            }
+
+            is SignalRStatus.Error.Disconnected -> {
+                enqueueReconnect()
+            }
+
+            is SignalRStatus.Error.Aborted -> {
             }
 
             is SignalRStatus.Error -> {
-                SignalRClientWorker.start(
-                    applicationContext,
-                    SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
-                )
+                enqueueReconnect()
             }
 
-            is SignalRStatus.Synchronized -> { }
-
-            is SignalRStatus.NotConnected -> {
-                start()
-            }
-
-            else -> {}
-        }
-    }
-
-    private suspend fun start() {
-        val useTor = repository.local.useTor.first()
-        if (useTor) {
-            torServiceManager.torStatus.filter { status -> status == TorStatus.ON }.first()
-                .apply {
-                    enqueueSignalRWorkRequest()
+            SignalRStatus.Authenticated,
+            SignalRStatus.Authenticating,
+            SignalRStatus.Clean,
+            SignalRStatus.Cleaning,
+            SignalRStatus.Connected,
+            SignalRStatus.Connecting,
+            SignalRStatus.Pulling,
+            SignalRStatus.Synchronized -> {
+                if (torStatus.torPreferenceIsChanging(torPreference)) {
+                    enqueueReconnect()
                 }
-        } else {
-            enqueueSignalRWorkRequest()
+            }
         }
     }
 
@@ -80,25 +84,16 @@ class SignalrController @Inject constructor(
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             combine(
                 repository.local.useTor,
-                torServiceManager.torStatus,
+                torServiceMonitor.torStatus,
                 signalRClient.status
-            ) { useTor, torStatus, clientStatus ->
-                Triple(useTor, torStatus, clientStatus)
-            }.distinctUntilChanged().collect { (useTor, torStatus, clientStatus) ->
-                if ((useTor && torStatus == TorStatus.ON) || (!useTor)) {
-                    performClientAction(clientStatus)
-                }
+            ) { torPreference, torStatus, clientStatus ->
+                Triple(torPreference, torStatus, clientStatus)
+            }.distinctUntilChanged().collect { (torPreference, torStatus, clientStatus) ->
+                torStatus.with(torPreference) { enqueue(clientStatus, torPreference, torStatus) }
             }
         }
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            repository.local.useTor.drop(1).collect {
-                signalRClient.disconnect()
-            }
-        }
-        lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            repository.local.useOrbot.drop(1).collect {
-                signalRClient.disconnect()
-            }
+            repository.local.useOrbot.drop(1).collect { enqueueReconnect() }
         }
     }
 
@@ -106,7 +101,7 @@ class SignalrController @Inject constructor(
         return signalRClient.resetAborted()
     }
 
-    fun sendMessages(messages: List<String>): Boolean {
+    suspend fun sendMessages(messages: List<String>): Boolean {
         return signalRClient.sendChunkedMessages(messages)
     }
 
@@ -114,19 +109,19 @@ class SignalrController @Inject constructor(
         return signalRClient.isConnected()
     }
 
-    fun pull() {
+    suspend fun pull(): Boolean {
         return signalRClient.pull()
     }
 
-    suspend fun connect(host: String) {
+    suspend fun connect(host: String): Boolean {
         return signalRClient.connect(host)
     }
 
-    fun disconnect() {
+    suspend fun disconnect(): Boolean {
         return signalRClient.disconnect()
     }
 
-    fun cleanup() {
+    suspend fun cleanup(): Boolean {
         return signalRClient.cleanup()
     }
 }

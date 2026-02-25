@@ -39,7 +39,6 @@ class SignalRClientWorker @AssistedInject constructor(
         private const val ACTION_ARG = "Action"
         private const val UNIQUE_ONE_TIME_REQUEST = "SIGNALR_ONE_TIME_REQUEST"
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
-        private const val INITIAL_PERIODIC_WORK_DELAY: Long = 10 // Minutes
         private const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15 // Minutes
         private const val DELAY_BETWEEN_RETRIES: Long = 5 // Seconds
         private const val MAX_RETRY_COUNT = 5 // Seconds
@@ -58,7 +57,6 @@ class SignalRClientWorker @AssistedInject constructor(
                 PERIODIC_WORK_REPEAT_INTERVAL,
                 TimeUnit.MINUTES
             )
-                .setInitialDelay(INITIAL_PERIODIC_WORK_DELAY, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .setInputData(parameters)
                 .build()
@@ -102,7 +100,7 @@ class SignalRClientWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_ONE_TIME_REQUEST,
-                    ExistingWorkPolicy.APPEND_OR_REPLACE,
+                    ExistingWorkPolicy.KEEP,
                     createRequest(actions)
                 )
         }
@@ -113,24 +111,30 @@ class SignalRClientWorker @AssistedInject constructor(
             return Result.failure()
         }
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
-
+        var ok = true
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
-            signalrController.disconnect()
+            ok = ok && signalrController.disconnect()
         }
 
         if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            signalrController.connect(repository.local.getHostname() ?: return Result.failure())
+            ok = ok && signalrController.connect(
+                repository.local.getHostname() ?: return Result.failure()
+            )
         }
 
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Pull()) {
-            signalrController.pull()
+            ok = ok && signalrController.pull()
         }
 
         if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
-            signalrController.cleanup()
+            ok = ok && signalrController.cleanup()
         }
 
-        return Result.success()
+        return if (ok) {
+            Result.success()
+        } else {
+            Result.retry()
+        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

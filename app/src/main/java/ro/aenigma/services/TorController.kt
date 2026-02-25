@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,6 +16,8 @@ import kotlinx.coroutines.withContext
 import ro.aenigma.data.Repository
 import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.enums.TorStatus
+import ro.aenigma.models.extensions.TorStatusExtensions.shouldStartTor
+import ro.aenigma.models.extensions.TorStatusExtensions.shouldStopTor
 import ro.aenigma.services.TorServiceImpl.Companion.START_FOREGROUND_INTENT_EXTRA
 import ro.aenigma.util.Constants.Companion.CHECK_TOR_URL
 import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_HOSTNAME
@@ -73,22 +76,19 @@ class TorController @Inject constructor(
                 repository.local.useTor,
                 repository.local.useOrbot,
                 torServiceMonitor.torStatus
-            ) { useTor, useOrbot, torStatus ->
-                Triple(useTor, useOrbot, torStatus)
-            }.distinctUntilChanged().collect { (useTor, useOrbot, torStatus) ->
-                if (useTor && !useOrbot) {
-                    if (torStatus == TorStatus.OFF || torStatus == TorStatus.IDLE) {
-//                        if (!isSocks5Listening(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)) {
+            ) { torPreference, orbotPreference, torStatus ->
+                Triple(torPreference, orbotPreference, torStatus)
+            }.distinctUntilChanged().collect { (torPreference, orbotPreference, torStatus) ->
+                if (torStatus.shouldStartTor(torPreference) && !orbotPreference) {
+                    if (!isSocks5Listening(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)) {
                         start(startForeground = true)
-//                        }
                     }
-                } else if (!useTor) {
-                    if (torStatus == TorStatus.ON) {
-                        stop()
-                    }
+                } else if (torStatus.shouldStopTor(torPreference)) {
+                    delay(2000)
+                    stop()
                 }
 
-                if ((useTor && !useOrbot && torStatus == TorStatus.ON) || (!useTor && useOrbot)) {
+                if ((torPreference && !orbotPreference && torStatus == TorStatus.ON) || (!torPreference && torStatus == TorStatus.OFF && orbotPreference)) {
                     queryTorConnection()
                 }
             }

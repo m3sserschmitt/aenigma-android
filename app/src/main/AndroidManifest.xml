@@ -30,6 +30,7 @@
         android:usesCleartextTraffic="true">
         <service
             android:name="ro.aenigma.services.TorServiceImpl"
+            android:process=":tor"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
@@ -59,8 +60,7 @@
         <activity
             android:name="ro.aenigma.activities.AppActivity"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            tools:ignore="DiscouragedApi,LockedOrientationActivity">
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

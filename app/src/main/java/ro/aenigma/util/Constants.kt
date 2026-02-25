@@ -101,5 +101,17 @@ class Constants {
         const val VERTEX_API_PATH = "/Vertex"
 
         const val FILE_API_PATH = "/File"
+
+        const val ONION_ROUTING_ENDPOINT = "OnionRouting"
+
+        const val GENERATE_NONCE_METHOD = "GenerateToken"
+
+        const val AUTHENTICATE_METHOD = "Authenticate"
+
+        const val ROUTE_MESSAGE_METHOD = "RouteMessage"
+
+        const val PULL_METHOD = "Pull"
+
+        const val CLEANUP_METHOD = "Cleanup"
     }
 }

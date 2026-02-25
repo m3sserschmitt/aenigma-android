@@ -16,7 +16,7 @@ class TorServiceMonitor @Inject constructor(
     @param:ApplicationContext private val appContext: Context,
     private val notificationService: NotificationService,
 ) {
-    private val _torStatus = MutableStateFlow(TorStatus.IDLE)
+    private val _torStatus = MutableStateFlow(TorStatus.OFF)
 
     val torStatus: StateFlow<TorStatus> = _torStatus
 
