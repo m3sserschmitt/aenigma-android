@@ -5,8 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -26,10 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedDataDto
+import ro.aenigma.ui.screens.common.CopyToClipboardButton
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
-import ro.aenigma.util.ContextExtensions.copyToClipboard
-import ro.aenigma.util.ContextExtensions.shareText
+import ro.aenigma.ui.screens.common.ShareButton
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 
@@ -111,34 +109,14 @@ fun CreateLinkDialog(
                                             color = MaterialTheme.colorScheme.onBackground
                                         )
                                         Row {
-                                            IconButton(
-                                                onClick = {
-                                                    context.shareText(link)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Share,
-                                                    contentDescription = stringResource(
-                                                        id = R.string.share
-                                                    ),
-                                                    tint = MaterialTheme.colorScheme.onBackground
-                                                )
-                                            }
-                                            IconButton(
-                                                onClick = {
-                                                    context.copyToClipboard(link)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    painter = painterResource(
-                                                        id = R.drawable.ic_copy
-                                                    ),
-                                                    contentDescription = stringResource(
-                                                        id = R.string.copy
-                                                    ),
-                                                    tint = MaterialTheme.colorScheme.onBackground
-                                                )
-                                            }
+                                            ShareButton(
+                                                text = link,
+                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                            )
+                                            CopyToClipboardButton(
+                                                text = link,
+                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                            )
                                         }
                                     }
                                 }

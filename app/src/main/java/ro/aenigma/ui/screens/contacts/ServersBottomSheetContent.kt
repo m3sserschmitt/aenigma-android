@@ -25,7 +25,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +43,7 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toServersSect
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
+import ro.aenigma.ui.screens.common.ShareButton
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
@@ -77,24 +77,40 @@ fun ServerItem(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_storage),
-                contentDescription = stringResource(id = R.string.servers),
-                tint = MaterialTheme.colorScheme.onBackground
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_storage),
+                    contentDescription = stringResource(id = R.string.servers),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            val host = getHost(
+                hostname = server.hostname,
+                onionService = server.onionService
             )
-            VerticalDivider(
-                color = MaterialTheme.colorScheme.background,
-                thickness = 12.dp
-            )
-            Text(
-                text = getHost(
-                    hostname = server.hostname,
-                    onionService = server.onionService
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold
-            )
+            Box(
+                modifier = Modifier.weight(8f),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = host,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                ShareButton(
+                    text = host,
+                    iconTint = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
     }
 }
@@ -158,6 +174,7 @@ fun SheetEmptySearchResult() {
 @Composable
 fun SearchBar(
     value: String,
+    placeholder: String = stringResource(id = R.string.search),
     onValueChanged: (String) -> Unit,
     onSearchClicked: () -> Unit
 ) {
@@ -177,7 +194,7 @@ fun SearchBar(
             onValueChange = onValueChanged,
             placeholder = {
                 Text(
-                    text = stringResource(id = R.string.search),
+                    text = placeholder,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = .25f),
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -306,6 +323,7 @@ fun ServersBottomSheetContent(
             }
             SearchBar(
                 value = searchQuery,
+                placeholder = stringResource(id = R.string.server_query),
                 onValueChanged = { newSearchQuery -> onSearchQueryChanged(newSearchQuery) },
                 onSearchClicked = onSearchClicked
             )

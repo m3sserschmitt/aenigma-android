@@ -8,6 +8,7 @@
     <string name="contacts_floating_button_content_description">Add Contact Button</string>
     <string name="contacts">Contacts</string>
     <string name="search">Search…</string>
+    <string name="server_query">Server query…</string>
     <string name="close">Close</string>
     <string name="contact">Contact</string>
     <string name="back">Back</string>
