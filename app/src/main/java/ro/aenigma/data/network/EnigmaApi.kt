@@ -13,6 +13,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Query
 import retrofit2.http.Streaming
@@ -20,6 +21,8 @@ import retrofit2.http.Url
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.TorCheckDto
 import ro.aenigma.util.Constants.Companion.FILE_API_PATH
+import ro.aenigma.util.Constants.Companion.INCREMENT_FILE_COUNT_API_PAT
+import ro.aenigma.util.Constants.Companion.INCREMENT_SHARE_DATA_COUNT_API_PATH
 import ro.aenigma.util.Constants.Companion.SERVER_INFO_API_PATH
 import ro.aenigma.util.Constants.Companion.SHARE_API_PATH
 import ro.aenigma.util.Constants.Companion.VERTEX_API_PATH
@@ -38,6 +41,9 @@ interface EnigmaApi {
     @POST(SHARE_API_PATH)
     suspend fun createSharedData(@Body sharedDataCreate: SharedDataCreate): Response<CreatedSharedDataDto?>
 
+    @PUT(INCREMENT_SHARE_DATA_COUNT_API_PATH)
+    suspend fun incrementSharedDataAccessCount(@Query("Tag") tag: String): Response<ResponseBody>
+
     @GET(VERTEX_API_PATH)
     suspend fun getVertex(@Query("Address") address: String): Response<VertexDto?>
 
@@ -47,6 +53,9 @@ interface EnigmaApi {
         @Part file: MultipartBody.Part,
         @Part("maxAccessCount") maxAccessCount: RequestBody
     ): Response<CreatedSharedDataDto?>
+
+    @PUT(INCREMENT_FILE_COUNT_API_PAT)
+    suspend fun incrementFileAccessCount(@Query("Tag") tag: String): Response<ResponseBody>
 
     @Streaming
     @GET(FILE_API_PATH)

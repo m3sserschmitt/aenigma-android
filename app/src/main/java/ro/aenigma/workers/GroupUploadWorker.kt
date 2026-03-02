@@ -237,6 +237,13 @@ class GroupUploadWorker @AssistedInject constructor(
         )
     }
 
+    private fun calculateDestinations(groupData: GroupDataDto?, existingGroupData: GroupDataDto?): Set<String> {
+        return groupData?.members?.mapNotNull { item -> item.address }
+            ?.union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: listOf())
+            ?.filter { item -> item != signatureService.address }
+            ?.toSet() ?: setOf()
+    }
+
     override suspend fun doWork(): Result {
         if (signatureService.address == null || signatureService.publicKey == null || runAttemptCount >= MAX_ATTEMPTS_COUNT) {
             return Result.failure()
@@ -264,11 +271,13 @@ class GroupUploadWorker @AssistedInject constructor(
         groupData.members ?: return Result.failure()
         val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
             ?: return Result.failure()
-        val destinations = groupData.members.mapNotNull { item -> item.address }.toHashSet()
-            .union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: hashSetOf())
-        val accessCount = (destinations.count() - 1) * GroupDownloadWorker.MAX_RETRY_COUNT
+        val destinations = calculateDestinations(groupData, existingGroupData)
+        val destinationsCount = destinations.count()
+        if(destinationsCount <= 0) {
+            return Result.failure()
+        }
         val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val response = repository.remote.createSharedData(serializedGroupData, key, accessCount)
+        val response = repository.remote.createSharedData(serializedGroupData, key, destinationsCount)
             ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 

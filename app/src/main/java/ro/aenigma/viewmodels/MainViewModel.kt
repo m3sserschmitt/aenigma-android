@@ -528,7 +528,11 @@ class MainViewModel @Inject constructor(
             try {
                 val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
                 if (data != null) {
-                    val response = repository.remote.createSharedData(data, null)
+                    val response = repository.remote.createSharedData(
+                        data = data,
+                        passphrase = null,
+                        accessCount = 1
+                    )
                     if (response != null) {
                         _sharedDataCreateResult.value = RequestState.Success(response)
                     } else {
@@ -551,7 +555,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(defaultDispatcher) {
             _importedContactDetails.value = RequestState.Loading
             try {
-                val response = repository.remote.getSharedDataByUrl(url, null)
+                val response = repository.remote.getSharedData(url, null)
                     ?: throw Exception("Invalid shared data content or link")
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception("Invalid shared data content")
@@ -560,6 +564,7 @@ class MainViewModel @Inject constructor(
                         content.fromJson<ExportedContactDataDto>()
                             ?: throw Exception("Could not deserialize shared data content")
                     )
+                repository.remote.incrementSharedDataAccessCount(url)
             } catch (ex: Exception) {
                 _importedContactDetails.value = RequestState.Error(Exception(ex))
             }

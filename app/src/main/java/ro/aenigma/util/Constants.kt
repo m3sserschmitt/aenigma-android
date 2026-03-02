@@ -98,9 +98,13 @@ class Constants {
 
         const val SHARE_API_PATH = "/Share"
 
+        const val INCREMENT_SHARE_DATA_COUNT_API_PATH = "/IncrementSharedDataAccessCount"
+
         const val VERTEX_API_PATH = "/Vertex"
 
         const val FILE_API_PATH = "/File"
+
+        const val INCREMENT_FILE_COUNT_API_PAT = "/IncrementFileAccessCount"
 
         const val ONION_ROUTING_ENDPOINT = "OnionRouting"
 

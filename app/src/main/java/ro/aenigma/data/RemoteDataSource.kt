@@ -80,7 +80,7 @@ class RemoteDataSource @Inject constructor(
                 || groupDataDto.nonce == null
                 || groupDataDto.members.isEmpty()
                 || groupDataDto.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
-                || groupDataDto.admins == null || groupDataDto.admins.isEmpty()
+                || groupDataDto.admins.isNullOrEmpty()
                 || groupDataDto.admins.any { item -> !item.isValidAddress() }
             ) {
                 return null
@@ -214,18 +214,28 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getSharedDataByUrl(url: String, expectedPublisherAddress: String?): SharedDataDto? {
+    suspend fun incrementSharedDataAccessCount(url: String): Boolean {
+        try {
+            return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
+                .incrementSharedDataAccessCount(url.getTagQueryParameter() ?: return false)
+                .code() == 200
+        } catch (_: Exception) {
+            return false
+        }
+    }
+
+    suspend fun getSharedData(url: String, expectedPublisherAddress: String?): SharedDataDto? {
         val tag = url.getTagQueryParameter() ?: return null
         val baseUrl = url.getBaseUrl() ?: return null
         return getSharedData(retrofitProvider.getApi(baseUrl), tag, expectedPublisherAddress)
     }
 
-    suspend fun getSharedDataContentByUrl(
+    private suspend fun getSharedData(
         url: String,
         passphrase: ByteArray?,
         expectedPublisherAddress: String?
     ): ByteArray? {
-        val response = getSharedDataByUrl(url, expectedPublisherAddress) ?: return null
+        val response = getSharedData(url, expectedPublisherAddress) ?: return null
         val data = response.data.getDataFromSignature(response.publicKey ?: return null)
         return if (passphrase != null) {
             CryptoProvider.decrypt(data ?: return null, passphrase)
@@ -234,15 +244,14 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getGroupDataByUrl(
+    suspend fun getGroupData(
         url: String,
         existentGroup: GroupDataDto?,
         passphrase: ByteArray,
         expectedPublisherAddress: String
     ): GroupDataDto? {
         try {
-            val data =
-                getSharedDataContentByUrl(url, passphrase, expectedPublisherAddress) ?: return null
+            val data = getSharedData(url, passphrase, expectedPublisherAddress) ?: return null
             val groupDataDto = String(data).fromJson<GroupDataDto>() ?: return null
             return validateGroupData(groupDataDto, existentGroup, expectedPublisherAddress)
         } catch (_: Exception) {
@@ -270,6 +279,16 @@ class RemoteDataSource @Inject constructor(
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    suspend fun incrementFileAccessCount(url: String): Boolean {
+        try {
+            return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
+                .incrementFileAccessCount(url.getTagQueryParameter() ?: return false)
+                .code() == 200
+        } catch (_: Exception) {
+            return false
         }
     }
 

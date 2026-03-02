@@ -129,26 +129,6 @@ class MessageSenderWorker @AssistedInject constructor(
         return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
-    private /*suspend*/ fun updateContactIfRequired(contactEntity: ContactDto): Boolean {
-        return true
-//        if (contactEntity.guardAddress.isValidAddress()) {
-//            return true
-//        }
-//        try {
-//            val vertex =
-//                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
-//                    ?: return false
-//            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
-//            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
-//            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
-//                .withGuardHostname(guardVertex.neighborhood?.hostname)
-//            updatedContact?.let { repository.local.updateContact(it) }
-//        } catch (_: Exception) {
-//            return false
-//        }
-//        return true
-    }
-
     private suspend fun saveAsSent(message: MessageDto) {
         repository.local.updateMessage(
             message.markAsSent().run { if (isDelete()) markAsDeleted() else this })
@@ -163,22 +143,20 @@ class MessageSenderWorker @AssistedInject constructor(
         passphrase: String?
     ): Boolean {
         val onions = contacts.mapNotNull { contact ->
-            if (updateContactIfRequired(contact)) {
-                val paths = pathFinder.calculatePaths(contact).filter { item ->
-                    item.startVertex.address == signatureService.address
-                            && item.endVertex.address == contact.address
-                }
-                if (paths.isNotEmpty()) {
-                    buildOnion(
-                        message = message,
-                        destination = contact,
-                        userName = userName,
-                        path = paths.random().vertexList,
-                        groupAddress = groupAddress,
-                        groupResourceUrl = resourceUrl,
-                        passphrase = passphrase
-                    )
-                } else null
+            val paths = pathFinder.calculatePaths(contact).filter { item ->
+                item.startVertex.address == signatureService.address
+                        && item.endVertex.address == contact.address
+            }
+            if (paths.isNotEmpty()) {
+                buildOnion(
+                    message = message,
+                    destination = contact,
+                    userName = userName,
+                    path = paths.random().vertexList,
+                    groupAddress = groupAddress,
+                    groupResourceUrl = resourceUrl,
+                    passphrase = passphrase
+                )
             } else null
         }
         return signalrController.sendMessages(onions)
@@ -189,8 +167,7 @@ class MessageSenderWorker @AssistedInject constructor(
         accessCount: Int
     ): MessageWithAttachmentsDto? {
         if (messageWithAttachment.message.type != MessageType.FILES
-            || messageWithAttachment.message.files == null
-            || messageWithAttachment.message.files.isEmpty()
+            || messageWithAttachment.message.files.isNullOrEmpty()
             || messageWithAttachment.attachment?.url != null
         ) {
             return messageWithAttachment
@@ -282,18 +259,19 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageToBeSent =
             if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
         val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
-        if(messageToBeSent.message.sent) {
+        if (messageToBeSent.message.sent) {
             return Result.success()
         }
         val contactWithGroup =
             repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
-        val messageWithAttachments =
-            (if (!contacts.isEmpty()) resolveAttachments(
-                messageToBeSent,
-                contacts.size * AttachmentDownloadWorker.MAX_RETRY_COUNT
-            ) else messageToBeSent)
-                ?: return Result.retry()
+        val messageWithAttachments = (
+                if (!contacts.isEmpty()) {
+                    resolveAttachments(messageToBeSent, contacts.size)
+                } else {
+                    messageToBeSent
+                })
+            ?: return Result.retry()
 
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,

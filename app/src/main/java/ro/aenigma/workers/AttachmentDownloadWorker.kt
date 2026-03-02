@@ -17,6 +17,8 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.Repository
@@ -75,8 +77,15 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun downloadEncryptedFile(url: String): File? {
-        val tempFile = File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
-        return if (repository.remote.getFile(url, tempFile)) tempFile else null
+        val tempFile = withContext(Dispatchers.IO) {
+            File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
+        }
+        if(repository.remote.getFile(url, tempFile)) {
+            repository.remote.incrementFileAccessCount(url)
+            return tempFile
+        } else {
+            return null
+        }
     }
 
     private fun decryptArchive(file: File, passphrase: String?): File? {
@@ -114,10 +123,9 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         message: MessageDto,
         files: List<File>
     ): AttachmentsMetadataDto? {
-        var i = 0
         var metadata: AttachmentsMetadataDto? = null
         val finalURIs = mutableListOf<String>()
-        for (file in files) {
+        for ((i, file) in files.withIndex()) {
             if (file.name == ATTACHMENTS_METADATA_FILE) {
                 metadata = file.readText().fromJson()
             }
@@ -127,7 +135,6 @@ class AttachmentDownloadWorker @AssistedInject constructor(
             )
             file.renameTo(destinationFile)
             finalURIs.add(destinationFile.toContentUriString(applicationContext))
-            i++
         }
         repository.local.updateMessage(
             message.copy(
