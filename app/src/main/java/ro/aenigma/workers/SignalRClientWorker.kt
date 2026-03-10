@@ -118,7 +118,7 @@ class SignalRClientWorker @AssistedInject constructor(
 
         if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
             ok = ok && signalrController.connect(
-                repository.local.getHostname() ?: return Result.failure()
+                repository.local.getGuardHostname() ?: return Result.failure()
             )
         }
 

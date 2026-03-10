@@ -85,7 +85,7 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    suspend fun getHostname(guard: ServerInfoDto): String? {
+    suspend fun getGuardHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
         val useOrbot = useOrbot.firstOrNull() == true
         return if (useTor || useOrbot) {
@@ -99,8 +99,8 @@ class LocalDataSource @Inject constructor(
         }
     }
 
-    suspend fun getHostname(): String? {
-        return getHostname(getGuard()?.toServerInfoDto() ?: return null)
+    suspend fun getGuardHostname(): String? {
+        return getGuardHostname(getGuard()?.toServerInfoDto() ?: return null)
     }
 
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed

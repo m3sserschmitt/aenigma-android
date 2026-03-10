@@ -590,7 +590,7 @@ class MainViewModel @Inject constructor(
     fun switchServer(server: ServerInfoDto) {
         viewModelScope.launch(ioDispatcher) {
             switchServer(
-                serverQuery = repository.local.getHostname(server) ?: return@launch,
+                serverQuery = repository.local.getGuardHostname(server) ?: return@launch,
                 expectedAddress = server.address
             )
         }

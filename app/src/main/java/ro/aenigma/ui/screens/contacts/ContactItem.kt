@@ -1,6 +1,7 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -33,6 +35,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.selectable
+import ro.aenigma.util.StringExtensions.getHost
 import java.time.ZonedDateTime
 
 @Composable
@@ -53,11 +56,14 @@ fun ContactItem(
                 onItemSelected = onItemSelected,
                 onItemDeselected = onItemDeselected,
                 onClick = onClick
-            ).fillMaxWidth().height(64.dp),
+            ).fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .fillMaxWidth(),
         color = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
+                .height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -114,6 +120,9 @@ fun ContactItem(
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                ContactGuardHost(
+                    contact = contact.contact
+                )
                 ConversationPreview(
                     contact = contact
                 )
@@ -128,6 +137,23 @@ fun ContactItem(
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ContactGuardHost(
+    contact: ContactDto
+) {
+    val guardHost = contact.guardHostname.getHost()
+    if(!guardHost.isNullOrBlank()) {
+        Text(
+            modifier = Modifier.alpha(.75f),
+            text = "@$guardHost",
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
     }
 }
 

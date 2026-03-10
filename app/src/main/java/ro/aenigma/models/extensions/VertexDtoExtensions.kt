@@ -3,6 +3,7 @@ package ro.aenigma.models.extensions
 import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.VertexDto
+import ro.aenigma.models.extensions.NeighborhoodExtensions.hasHost
 
 object VertexDtoExtensions {
     @JvmStatic
@@ -23,5 +24,10 @@ object VertexDtoExtensions {
             onionService = neighborhood?.onionService,
             graphVersion = null
         )
+    }
+
+    @JvmStatic
+    fun VertexDto.hasHost(targetHost: String): Boolean {
+        return neighborhood?.hasHost(targetHost) == true
     }
 }

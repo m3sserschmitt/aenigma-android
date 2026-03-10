@@ -32,6 +32,7 @@ import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.GuardDtoExtensions.getHostname
 import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
@@ -120,7 +121,7 @@ class MessageSenderWorker @AssistedInject constructor(
             message.toArtifactDto(
                 senderName = userName,
                 guardAddress = guard.address,
-                guardHostname = guard.hostname,
+                guardHostname = guard.getHostname(),
                 resourceUrl = groupResourceUrl,
                 chatId = chatId,
                 passphrase = passphrase

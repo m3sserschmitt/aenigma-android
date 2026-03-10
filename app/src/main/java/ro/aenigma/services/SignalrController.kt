@@ -55,7 +55,7 @@ class SignalrController @Inject constructor(
             }
 
             is SignalRStatus.Error.Disconnected -> {
-                enqueueReconnect()
+                enqueueSyncAndConnect()
             }
 
             is SignalRStatus.Error.Aborted -> {

@@ -9,8 +9,11 @@ import org.jgrapht.graph.DefaultEdge
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.VertexDto
+import ro.aenigma.models.extensions.VertexDtoExtensions.hasHost
 import ro.aenigma.models.factories.VertexDtoFactory
+import ro.aenigma.util.StringExtensions.getHost
 import javax.inject.Inject
+import kotlin.collections.get
 
 class PathFinder @Inject constructor(
     private val repository: Repository,
@@ -73,6 +76,19 @@ class PathFinder @Inject constructor(
         }
     }
 
+    private fun searchDestination(contact: ContactDto): VertexDto? {
+        val destination = _verticesMap?.get(contact.guardAddress)
+        val contactGuardHost = contact.guardHostname.getHost()
+        if(destination == null && !contactGuardHost.isNullOrBlank()) {
+            _verticesMap?.forEach { (_, dto) ->
+                if(dto.hasHost(targetHost = contactGuardHost)) {
+                    return dto
+                }
+            }
+        }
+        return destination
+    }
+
     fun calculatePaths(destination: ContactDto): List<GraphPath<VertexDto, DefaultEdge>> {
         _graph ?: return listOf()
         destination.publicKey ?: return listOf()
@@ -84,8 +100,7 @@ class PathFinder @Inject constructor(
                     hostname = null,
                     onionService = null
                 )
-            val destinationGuardVertex =
-                _verticesMap?.get(destination.guardAddress) ?: return listOf()
+            val destinationGuardVertex = searchDestination(destination) ?: return listOf()
             _graph?.addVertex(destinationVertex)
             _graph?.addEdge(destinationGuardVertex, destinationVertex)
             AllDirectedPaths(_graph).getAllPaths(
