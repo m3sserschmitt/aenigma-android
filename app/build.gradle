@@ -5,7 +5,7 @@ plugins
     id('com.google.dagger.hilt.android')
     id('dagger.hilt.android.plugin')
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.mikepenz.aboutlibraries.plugin.android")
 }
 
@@ -15,8 +15,8 @@ android {
         applicationId = "ro.aenigma"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.1.4"
+        versionCode = 10
+        versionName = "1.2.0"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
