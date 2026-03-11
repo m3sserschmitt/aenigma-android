@@ -15,36 +15,34 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardAddress
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withGuardHostname
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.isDelete
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsDeleted
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.markAsSent
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArtifact
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.models.AttachmentsMetadata
+import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.AttachmentsMetadataDto
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithAttachmentsDto
+import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.GuardDtoExtensions.getHostname
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
+import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
 import ro.aenigma.services.NotificationService
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.services.Zipper
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -54,7 +52,7 @@ class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val zipper: Zipper,
-    private val signalrController: SignalrConnectionController,
+    private val signalrController: SignalrController,
     private val repository: Repository,
     private val signatureService: SignatureService,
     private val notificationService: NotificationService,
@@ -100,10 +98,10 @@ class MessageSenderWorker @AssistedInject constructor(
     }
 
     private suspend fun buildOnion(
-        message: MessageEntity,
-        destination: ContactEntity,
+        message: MessageDto,
+        destination: ContactDto,
         userName: String?,
-        path: List<VertexEntity>,
+        path: List<VertexDto>,
         groupAddress: String?,
         groupResourceUrl: String?,
         passphrase: String?
@@ -116,84 +114,61 @@ class MessageSenderWorker @AssistedInject constructor(
         val chatId = groupAddress ?: (signatureService.address ?: return null)
         val reversedPath = path.reversed()
         val addresses =
-            arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address }
+            arrayOf(chatId) + reversedPath.take(path.size - 2).map { item -> item.address!! }
         val keys =
-            reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey }.toTypedArray()
+            reversedPath.take(path.size - 1).map { vertex -> vertex.publicKey!! }.toTypedArray()
         val data = signatureService.jsonSign(
-            message.toArtifact(
+            message.toArtifactDto(
                 senderName = userName,
                 guardAddress = guard.address,
-                guardHostname = guard.hostname,
+                guardHostname = guard.getHostname(),
                 resourceUrl = groupResourceUrl,
                 chatId = chatId,
                 passphrase = passphrase
             )
-        ).toJson()?.toByteArray() ?: return null
+        ).toCanonicalJson()?.toByteArray() ?: return null
         return CryptoProvider.sealOnionEx(data, keys, addresses)
     }
 
-    private suspend fun updateContactIfRequired(contactEntity: ContactEntity): Boolean {
-        return true
-        if (contactEntity.guardAddress.isValidAddress()) {
-            return true
-        }
-        try {
-            val vertex =
-                repository.remote.getVertex(contactEntity.address, true, contactEntity.publicKey)
-                    ?: return false
-            val guardAddress = vertex.neighborhood?.neighbors?.singleOrNull() ?: return false
-            val guardVertex = repository.remote.getVertex(guardAddress, false) ?: return false
-            val updatedContact = contactEntity.withGuardAddress(guardVertex.neighborhood?.address)
-                .withGuardHostname(guardVertex.neighborhood?.hostname)
-            updatedContact?.let { repository.local.updateContact(it) }
-        } catch (_: Exception) {
-            return false
-        }
-        return true
-    }
-
-    private suspend fun saveAsSent(message: MessageEntity) {
+    private suspend fun saveAsSent(message: MessageDto) {
         repository.local.updateMessage(
-            message.markAsSent()?.run { if (isDelete()) markAsDeleted() else this } ?: return)
+            message.markAsSent().run { if (isDelete()) markAsDeleted() else this })
     }
 
     private suspend fun sendMessage(
-        contacts: List<ContactEntity>,
-        message: MessageEntity,
+        contacts: List<ContactDto>,
+        message: MessageDto,
         userName: String?,
         groupAddress: String?,
         resourceUrl: String?,
         passphrase: String?
     ): Boolean {
         val onions = contacts.mapNotNull { contact ->
-            if (updateContactIfRequired(contact)) {
-                val paths = pathFinder.calculatePaths(contact).filter { item ->
-                    item.startVertex.address == signatureService.address
-                            && item.endVertex.address == contact.address
-                }
-                if (paths.isNotEmpty()) {
-                    buildOnion(
-                        message = message,
-                        destination = contact,
-                        userName = userName,
-                        path = paths.random().vertexList,
-                        groupAddress = groupAddress,
-                        groupResourceUrl = resourceUrl,
-                        passphrase = passphrase
-                    )
-                } else null
+            val paths = pathFinder.calculatePaths(contact).filter { item ->
+                item.startVertex.address == signatureService.address
+                        && item.endVertex.address == contact.address
+            }
+            if (paths.isNotEmpty()) {
+                buildOnion(
+                    message = message,
+                    destination = contact,
+                    userName = userName,
+                    path = paths.random().vertexList,
+                    groupAddress = groupAddress,
+                    groupResourceUrl = resourceUrl,
+                    passphrase = passphrase
+                )
             } else null
         }
         return signalrController.sendMessages(onions)
     }
 
     suspend fun resolveAttachments(
-        messageWithAttachment: MessageWithAttachments,
+        messageWithAttachment: MessageWithAttachmentsDto,
         accessCount: Int
-    ): MessageWithAttachments? {
+    ): MessageWithAttachmentsDto? {
         if (messageWithAttachment.message.type != MessageType.FILES
-            || messageWithAttachment.message.files == null
-            || messageWithAttachment.message.files.isEmpty()
+            || messageWithAttachment.message.files.isNullOrEmpty()
             || messageWithAttachment.attachment?.url != null
         ) {
             return messageWithAttachment
@@ -205,14 +180,14 @@ class MessageSenderWorker @AssistedInject constructor(
             File(applicationContext.cacheDir, messageWithAttachment.attachment.path)
         else
             zipper.createZip(
-                messageWithAttachment.message.files, AttachmentsMetadata(
+                messageWithAttachment.message.files, AttachmentsMetadataDto(
                     description = messageWithAttachment.message.text,
                     filesCount = messageWithAttachment.message.files.size
                 )
             ) ?: return null
 
-        val attachment = AttachmentEntityFactory.create(
-            id = messageWithAttachment.message.id,
+        val attachment = AttachmentDto(
+            messageId = messageWithAttachment.message.id,
             path = archive.name,
             url = null,
             passphrase = null
@@ -233,18 +208,18 @@ class MessageSenderWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateAttachment(finalAttachment)
 
-        return MessageWithAttachments(
+        return MessageWithAttachmentsDto(
             message = messageWithAttachment.message,
             attachment = finalAttachment
         )
     }
 
     private suspend fun getDestinationContacts(
-        contactWithGroup: ContactWithGroup,
+        contactWithGroup: ContactWithGroupDto,
         additionalDestinations: Array<String>?
-    ): List<ContactEntity> {
+    ): List<ContactDto> {
         val addressesSet = hashSetOf<String>()
-        val results = mutableListOf<ContactEntity>()
+        val results = mutableListOf<ContactDto>()
         if (contactWithGroup.contact.type == ContactType.CONTACT) {
             addressesSet.add(contactWithGroup.contact.address)
             results.add(contactWithGroup.contact)
@@ -285,18 +260,19 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageToBeSent =
             if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
         val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
-        if(messageToBeSent.message.sent) {
+        if (messageToBeSent.message.sent) {
             return Result.success()
         }
         val contactWithGroup =
             repository.local.getContactWithGroup(chatId) ?: return Result.failure()
         val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
-        val messageWithAttachments =
-            (if (!contacts.isEmpty()) resolveAttachments(
-                messageToBeSent,
-                contacts.size * AttachmentDownloadWorker.MAX_RETRY_COUNT
-            ) else messageToBeSent)
-                ?: return Result.retry()
+        val messageWithAttachments = (
+                if (!contacts.isEmpty()) {
+                    resolveAttachments(messageToBeSent, contacts.size)
+                } else {
+                    messageToBeSent
+                })
+            ?: return Result.retry()
 
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,

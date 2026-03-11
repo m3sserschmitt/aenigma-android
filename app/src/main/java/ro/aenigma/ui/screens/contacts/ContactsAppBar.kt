@@ -1,30 +1,23 @@
 package ro.aenigma.ui.screens.contacts
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.extensions.TorConnectionCheckExtensions.isOk
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
@@ -32,7 +25,9 @@ import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
+import ro.aenigma.ui.screens.common.DropdownMenuSwitch
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
+import ro.aenigma.ui.screens.common.ServersListAppBarAction
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
@@ -46,13 +41,16 @@ fun ContactsAppBar(
     isSearchMode: Boolean,
     selectedItemsCount: Int,
     useTor: Boolean,
-    torOk: Boolean,
-    useTorChanged: (Boolean) -> Unit,
+    useOrbot: Boolean,
+    torConnectionCheck: TorConnectionCheck,
+    onTorPreferenceChanged: (Boolean) -> Unit,
+    onOrbotPreferenceChanged: (Boolean) -> Unit,
     onSearchTriggered: () -> Unit,
     onRetryConnection: () -> Unit,
     onSearchModeExited: () -> Unit,
     onSearchClicked: (String) -> Unit,
     onSelectionModeExited: () -> Unit,
+    onOpenServersList: () -> Unit,
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
@@ -126,8 +124,15 @@ fun ContactsAppBar(
                     navigateToAboutScreen = navigateToAboutScreen,
                     onResetUsernameClicked = onResetUsernameClicked,
                     useTor = useTor,
-                    torOk = torOk,
-                    useTorChanged = useTorChanged
+                    useOrbot = useOrbot,
+                    torConnectionCheck = torConnectionCheck,
+                    onTorPreferenceChanged = onTorPreferenceChanged,
+                    onOrbotPreferenceChanged = onOrbotPreferenceChanged
+                )
+            },
+            navigateBackAlternative = {
+                ServersListAppBarAction(
+                    onOpenServersList = onOpenServersList
                 )
             }
         )
@@ -137,22 +142,37 @@ fun ContactsAppBar(
 @Composable
 fun MoreActions(
     useTor: Boolean,
-    torOk: Boolean,
-    useTorChanged: (Boolean) -> Unit,
+    useOrbot: Boolean,
+    torConnectionCheck: TorConnectionCheck,
+    onTorPreferenceChanged: (Boolean) -> Unit,
+    onOrbotPreferenceChanged: (Boolean) -> Unit,
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     BasicDropdownMenu(
         expanded = expanded,
-        onToggle = { isExpended ->
-            expanded = isExpended
-        }
+        onToggle = { isExpended -> expanded = isExpended }
     ) {
         TorSwitch(
             useTor = useTor,
-            torOk = torOk,
-            useTorChanged = useTorChanged
+            torConnectionCheck = torConnectionCheck,
+            onTorPreferenceChanged = { activatingTor ->
+                if(useOrbot) {
+                    onOrbotPreferenceChanged(false)
+                }
+                onTorPreferenceChanged(activatingTor)
+            }
+        )
+        OrbotSwitch(
+            useOrbot = useOrbot,
+            torConnectionCheck = torConnectionCheck,
+            onOrbotPreferenceChanged = { activatingOrbot ->
+                if(useTor) {
+                    onTorPreferenceChanged(false)
+                }
+                onOrbotPreferenceChanged(activatingOrbot)
+            }
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.AccountCircle,
@@ -178,45 +198,43 @@ fun MoreActions(
 @Composable
 fun TorSwitch(
     useTor: Boolean,
-    torOk: Boolean,
-    useTorChanged: (Boolean) -> Unit
+    torConnectionCheck: TorConnectionCheck,
+    onTorPreferenceChanged: (Boolean) -> Unit
 ) {
-    DropdownMenuItem(
-        enabled = true,
-        leadingIcon = {
+    DropdownMenuSwitch(
+        value = useTor,
+        isActive = useTor && torConnectionCheck.isOk(),
+        text = stringResource(id = R.string.tor_service),
+        icon = {
             Icon(
                 modifier = Modifier.alpha(.75f),
                 painter = painterResource(id = R.drawable.ic_vpn),
-                contentDescription = stringResource(id = R.string.tor),
+                contentDescription = stringResource(id = R.string.tor_service),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         },
-        text = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Switch(
-                    checked = useTor,
-                    onCheckedChange = useTorChanged,
-                    colors = SwitchDefaults.colors().copy(
-                        checkedBorderColor = if (torOk) Color.Green else MaterialTheme.colorScheme.onPrimaryContainer,
-                        uncheckedBorderColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        uncheckedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        checkedThumbColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                        uncheckedTrackColor = MaterialTheme.colorScheme.primaryContainer
-                    )
-                )
-                Text(
-                    text = stringResource(id = R.string.tor),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
+        onValueChanged = onTorPreferenceChanged
+    )
+}
+
+@Composable
+fun OrbotSwitch(
+    useOrbot: Boolean,
+    torConnectionCheck: TorConnectionCheck,
+    onOrbotPreferenceChanged: (Boolean) -> Unit
+) {
+    DropdownMenuSwitch(
+        value = useOrbot,
+        isActive = useOrbot && torConnectionCheck.isOk(),
+        text = stringResource(id = R.string.orbot_service),
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                painter = painterResource(id = R.drawable.ic_vpn),
+                contentDescription = stringResource(id = R.string.orbot_service),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
         },
-        onClick = {
-            useTorChanged(!useTor)
-        }
+        onValueChanged = onOrbotPreferenceChanged
     )
 }

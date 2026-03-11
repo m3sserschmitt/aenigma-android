@@ -1,14 +1,16 @@
 package ro.aenigma.viewmodels
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.SheetValue
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import com.mikepenz.markdown.model.ImageTransformer
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.models.CreatedSharedData
+import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.util.RequestState
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,24 +23,33 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.models.Article
+import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.QrCodeDto
+import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.enums.ServersSheetSection
+import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
+import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
+import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
+import ro.aenigma.models.extensions.VertexDtoExtensions.toServerInfoDto
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.OkHttpClientProvider
-import ro.aenigma.services.SignalrConnectionController
-import ro.aenigma.services.TorServiceController
-import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.services.SignalrController
+import ro.aenigma.services.TorController
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.StringExtensions.fromJson
+import ro.aenigma.util.StringExtensions.getHttpUri
 import ro.aenigma.workers.GroupUploadWorker
 import javax.inject.Inject
+import kotlin.collections.filter
+import ro.aenigma.util.Constants.Companion.SERVER_INFO_API_PATH
+import ro.aenigma.util.SerializerExtensions.toJson
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -46,60 +57,87 @@ class MainViewModel @Inject constructor(
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
-    torServiceController: TorServiceController,
+    torController: TorController,
     repository: Repository,
-    signalrConnectionController: SignalrConnectionController,
-) : BaseViewModel(repository, signalrConnectionController, okHttpClientProviderLazy) {
+    private val signalrController: SignalrController,
+) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
 
     @Inject
     lateinit var workManager: dagger.Lazy<WorkManager>
 
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
+    private val _serversQuerySearch: MutableStateFlow<String> = MutableStateFlow("")
+
     private val _allContacts =
-        MutableStateFlow<RequestState<List<ContactWithLastMessage>>>(
+        MutableStateFlow<RequestState<List<ContactWithLastMessageDto>>>(
             RequestState.Idle
         )
 
-    private val _newsFeed = MutableStateFlow<RequestState<List<Article>>>(RequestState.Idle)
+    private val _newsFeed = MutableStateFlow<RequestState<List<ArticleDto>>>(RequestState.Idle)
 
     private val _articleContent = MutableStateFlow<RequestState<String>>(RequestState.Idle)
+
+    private val _servers = MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private val _serversSheetState = MutableStateFlow(ServersSheetStateDto(
+        sheetState = SheetValue.Hidden,
+        selectedSection = ServersSheetSection.SERVERS
+    ))
+
+    private val _serversHistory =
+        MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
 
     private val _qrCode = MutableStateFlow<RequestState<QrCodeDto>>(RequestState.Idle)
 
     private val _importedContactDetails =
-        MutableStateFlow<RequestState<ExportedContactData>>(RequestState.Idle)
+        MutableStateFlow<RequestState<ExportedContactDataDto>>(RequestState.Idle)
 
-    private val _exportedContactDetails = MutableStateFlow<ExportedContactData?>(null)
+    private val _exportedContactDetails = MutableStateFlow<ExportedContactDataDto?>(null)
 
     private val _sharedDataCreateResult =
-        MutableStateFlow<RequestState<CreatedSharedData>>(RequestState.Idle)
+        MutableStateFlow<RequestState<CreatedSharedDataDto>>(RequestState.Idle)
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
     private val _useTor = MutableStateFlow(false)
 
-    val allContacts: StateFlow<RequestState<List<ContactWithLastMessage>>> = _allContacts
+    private val _useOrbot = MutableStateFlow(false)
+
+    val allContacts: StateFlow<RequestState<List<ContactWithLastMessageDto>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
 
-    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedData>> = _sharedDataCreateResult
+    val sharedDataCreateResult: StateFlow<RequestState<CreatedSharedDataDto>> =
+        _sharedDataCreateResult
 
-    val importedContactDetails: StateFlow<RequestState<ExportedContactData>> = _importedContactDetails
+    val importedContactDetails: StateFlow<RequestState<ExportedContactDataDto>> =
+        _importedContactDetails
 
     val notificationsAllowed: StateFlow<Boolean> = _notificationsAllowed
 
     val useTor: StateFlow<Boolean> = _useTor
 
-    val torOk: StateFlow<Boolean> = torServiceController.isTorOk
+    val useOrbot: StateFlow<Boolean> = _useOrbot
 
-    val newsFeed: StateFlow<RequestState<List<Article>>> = _newsFeed
+    val torConnectionCheck: StateFlow<TorConnectionCheck> = torController.torConnectionCheck
+
+    val newsFeed: StateFlow<RequestState<List<ArticleDto>>> = _newsFeed
 
     val articleContent: StateFlow<RequestState<String>> = _articleContent
 
+    val servers: StateFlow<RequestState<List<ServerInfoDto>>> = _servers
+
+    val serversSheetState: StateFlow<ServersSheetStateDto> = _serversSheetState
+
+    val serversHistory: StateFlow<RequestState<List<ServerInfoDto>>> = _serversHistory
+
     init {
         loadContacts()
-        collectUseTor()
+        loadServers()
+        collectTorPreference()
+        collectOrbotPreference()
         collectNotificationsPreferences()
         collectFeed()
     }
@@ -111,7 +149,13 @@ class MainViewModel @Inject constructor(
 
     fun loadContacts() {
         collectContacts()
-        collectSearches()
+        collectContactSearches()
+    }
+
+    fun loadServers() {
+        collectServers()
+        collectServerSearches()
+        collectServersHistory()
     }
 
     private fun collectNotificationsPreferences() {
@@ -124,13 +168,19 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun collectUseTor() {
+    private fun collectTorPreference() {
         viewModelScope.launch(ioDispatcher) {
             repository.local.useTor.catch {
                 _useTor.value = false
-            }.collect { useTor ->
-                _useTor.value = useTor
-            }
+            }.collect { useTor -> _useTor.value = useTor }
+        }
+    }
+
+    private fun collectOrbotPreference() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.useOrbot.catch {
+                _useOrbot.value = false
+            }.collect { useOrbot -> _useOrbot.value = useOrbot }
         }
     }
 
@@ -160,6 +210,60 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun collectServers() {
+        viewModelScope.launch(ioDispatcher) {
+            _servers.value = RequestState.Loading
+            repository.local.getVerticesFlow().catch { ex ->
+                _servers.value = RequestState.Error(ex)
+            }.collect { servers ->
+                try {
+                    val query = _serversQuerySearch.value
+                    val result = if (query.isNotBlank()) {
+                        servers.filter { server ->
+                            server.neighborhood?.hostname?.contains(
+                                query,
+                                ignoreCase = true
+                            ) == true ||
+                                    server.neighborhood?.onionService?.contains(
+                                        query,
+                                        ignoreCase = true
+                                    ) == true
+                        }
+                    } else {
+                        servers
+                    }.map { item -> item.toServerInfoDto() }
+                    _servers.value = RequestState.Success(result)
+                } catch (ex: Exception) {
+                    _servers.value = RequestState.Error(ex)
+                }
+            }
+        }
+    }
+
+    fun collectServersHistory() {
+        viewModelScope.launch(ioDispatcher) {
+            _serversHistory.value = RequestState.Loading
+            repository.local.getGuardsFlow().catch { ex ->
+                _serversHistory.value = RequestState.Error(ex)
+            }.collect { serversHistory ->
+                try {
+                    val query = _serversQuerySearch.value
+                    val vertices = if (query.isNotBlank()) {
+                        serversHistory.filter { server ->
+                            server.hostname?.contains(query, ignoreCase = true) == true ||
+                                    server.onionService?.contains(query, ignoreCase = true) == true
+                        }
+                    } else {
+                        serversHistory
+                    }.map { item -> item.toServerInfoDto() }
+                    _serversHistory.value = RequestState.Success(vertices)
+                } catch (ex: Exception) {
+                    _serversHistory.value = RequestState.Error(ex)
+                }
+            }
+        }
+    }
+
     fun collectFeed() {
         viewModelScope.launch(ioDispatcher) {
             _newsFeed.value = RequestState.Loading
@@ -178,7 +282,7 @@ class MainViewModel @Inject constructor(
         _newsFeed.value = RequestState.Idle
     }
 
-    private fun collectSearches() {
+    private fun collectContactSearches() {
         viewModelScope.launch(defaultDispatcher) {
             _contactsSearchQuery.collect { query ->
                 _allContacts.value = RequestState.Loading
@@ -187,7 +291,7 @@ class MainViewModel @Inject constructor(
                         repository.local.getContactWithMessages()
                     else
                         repository.local.searchContacts(query).map { item ->
-                            ContactWithLastMessage(item, null)
+                            ContactWithLastMessageDto(item, null)
                         }
                     _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
@@ -197,8 +301,40 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private fun collectServerSearches() {
+        viewModelScope.launch(defaultDispatcher) {
+            _serversQuerySearch.collect { query ->
+                _servers.value = RequestState.Loading
+                _serversHistory.value = RequestState.Loading
+                try {
+                    val serversSearchResult = if (query.isBlank()) {
+                        repository.local.getVertices()
+                    } else {
+                        repository.local.searchVertices(query)
+                    }.map { item -> item.toServerInfoDto() }
+
+                    _servers.value = RequestState.Success(serversSearchResult)
+
+                    val serversHistorySearchResult = if (query.isBlank()) {
+                        repository.local.getGuards()
+                    } else {
+                        repository.local.searchGuards(query)
+                    }.map { item -> item.toServerInfoDto() }
+
+                    _serversHistory.value = RequestState.Success(serversHistorySearchResult)
+                } catch (ex: Exception) {
+                    _servers.value = RequestState.Error(ex)
+                }
+            }
+        }
+    }
+
     fun searchContacts(searchQuery: String) {
         _contactsSearchQuery.update { searchQuery }
+    }
+
+    fun searchServers(searchQuery: String) {
+        _serversQuerySearch.update { searchQuery }
     }
 
     fun generateCode(profileId: String) {
@@ -220,14 +356,14 @@ class MainViewModel @Inject constructor(
 
     fun saveNewContact(name: String) {
         val importedContactDetails = _importedContactDetails.value
-        if(importedContactDetails !is RequestState.Success) {
+        if (importedContactDetails !is RequestState.Success) {
             return
         }
         val contactAddress =
             importedContactDetails.data.publicKey.getAddressFromPublicKey() ?: return
         val publicKey = importedContactDetails.data.publicKey ?: return
         val guardAddress = importedContactDetails.data.guardAddress ?: return
-        val newContact = ContactEntityFactory.createContact(
+        val newContact = ContactDtoFactory.createContact(
             address = contactAddress,
             name = name,
             publicKey = publicKey,
@@ -240,7 +376,7 @@ class MainViewModel @Inject constructor(
         resetContactChanges()
     }
 
-    fun createGroup(contacts: List<ContactWithLastMessage>, name: String) {
+    fun createGroup(contacts: List<ContactWithLastMessageDto>, name: String) {
         viewModelScope.launch(ioDispatcher) {
             val memberAddresses = contacts.map { item -> item.contact.address }
             GroupUploadWorker.createOrUpdateGroupWorkRequest(
@@ -265,9 +401,15 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun useTorChanged(useTor: Boolean) {
+    fun torPreferenceChanged(useTor: Boolean) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.saveTorPreference(useTor)
+        }
+    }
+
+    fun orbotPreferenceChanged(useOrbot: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveOrbotPreference(useOrbot)
         }
     }
 
@@ -276,7 +418,7 @@ class MainViewModel @Inject constructor(
             val guard = repository.local.getGuard()
             val signatureService = signatureServiceLazy.get()
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
-                _exportedContactDetails.value = ExportedContactData(
+                _exportedContactDetails.value = ExportedContactDataDto(
                     guardHostname = guard.hostname,
                     guardAddress = guard.address,
                     publicKey = signatureService.publicKey!!,
@@ -304,7 +446,7 @@ class MainViewModel @Inject constructor(
             val contact = repository.local.getContact(profileId)
 
             if (contact != null) {
-                _exportedContactDetails.value = contact.toExportedData()
+                _exportedContactDetails.value = contact.toExportedContactDataDto()
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if (code != null) {
@@ -330,18 +472,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun deleteContacts(contacts: List<ContactWithLastMessage>) {
+    fun deleteContacts(contacts: List<ContactWithLastMessageDto>) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.removeContacts(contacts.map { contact -> contact.contact })
         }
     }
 
-    fun renameContact(contact: ContactWithLastMessage, name: String) {
+    fun renameContact(contact: ContactWithLastMessageDto, name: String) {
         viewModelScope.launch(ioDispatcher) {
             when (contact.contact.type) {
                 ContactType.CONTACT -> {
-                    val updatedContact = contact.contact.withName(name)
-                    updatedContact?.let { repository.local.updateContact(it) }
+                    val updatedContact = contact.contact.copy(name = name)
+                    updatedContact.let { repository.local.updateContact(it) }
                 }
 
                 ContactType.GROUP -> {
@@ -368,8 +510,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun setScannedContactDetails(scannedDetails: ExportedContactData) {
+    fun setScannedContactDetails(scannedDetails: ExportedContactDataDto) {
         _importedContactDetails.value = RequestState.Success(scannedDetails)
+    }
+
+    fun setServerInfoScannedDetails(scannedDetails: ServerInfoDto) {
+        switchServer(scannedDetails)
+    }
+
+    fun setServersSheetState(sheetState: ServersSheetStateDto) {
+        _serversSheetState.value = sheetState
     }
 
     fun createContactShareLink() {
@@ -378,7 +528,11 @@ class MainViewModel @Inject constructor(
             try {
                 val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
                 if (data != null) {
-                    val response = repository.remote.createSharedData(data, null)
+                    val response = repository.remote.createSharedData(
+                        data = data,
+                        passphrase = null,
+                        accessCount = 1
+                    )
                     if (response != null) {
                         _sharedDataCreateResult.value = RequestState.Success(response)
                     } else {
@@ -401,13 +555,16 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch(defaultDispatcher) {
             _importedContactDetails.value = RequestState.Loading
             try {
-                val response = repository.remote.getSharedDataByUrl(url, null)
+                val response = repository.remote.getSharedData(url, null)
                     ?: throw Exception("Invalid shared data content or link")
                 val content = response.data.getStringDataFromSignature(response.publicKey!!)
                     ?: throw Exception("Invalid shared data content")
                 _importedContactDetails.value =
-                    RequestState.Success(content.fromJson<ExportedContactData>()
-                        ?: throw Exception("Could not deserialize shared data content"))
+                    RequestState.Success(
+                        content.fromJson<ExportedContactDataDto>()
+                            ?: throw Exception("Could not deserialize shared data content")
+                    )
+                repository.remote.incrementSharedDataAccessCount(url)
             } catch (ex: Exception) {
                 _importedContactDetails.value = RequestState.Error(Exception(ex))
             }
@@ -426,6 +583,28 @@ class MainViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 RequestState.Error(e)
+            }
+        }
+    }
+
+    fun switchServer(server: ServerInfoDto) {
+        viewModelScope.launch(ioDispatcher) {
+            switchServer(
+                serverQuery = repository.local.getGuardHostname(server) ?: return@launch,
+                expectedAddress = server.address
+            )
+        }
+    }
+
+    fun switchServer(serverQuery: String, expectedAddress: String? = null) {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val serverInfoUrl = serverQuery.getHttpUri(SERVER_INFO_API_PATH) ?: return@launch
+                val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
+                    ?.withNoGraphVersion() ?: return@launch
+                repository.local.insertGuard(guardDto)
+                signalrController.disconnect()
+            } catch (_: Exception) {
             }
         }
     }

@@ -1,5 +1,7 @@
 package ro.aenigma.util
 
+import androidx.compose.foundation.layout.IntrinsicSize
+
 class Constants {
     companion object {
 
@@ -14,10 +16,11 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
+        const val SERVERS_LIST_MAX_COUNT = 50
         const val NEWS_FEED_SIZE = 150
         const val SEND_MESSAGES_CHUNK_SIZE = 15
         const val CONTACTS_LIST_MAX_COUNT = 150
-
+        const val OK_HTTP_CLIENT_TIMEOUT: Long = 15
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
@@ -42,6 +45,12 @@ class Constants {
 
         const val IMAGES_CACHE_DIR = "images_cache"
 
+        const val ORBOT_PACKAGE = "org.torproject.android"
+
+        const val ORBOT_STORE_LINK = "market://details?id=$ORBOT_PACKAGE"
+
+        const val ORBOT_WEB_LINK = "https://play.google.com/store/apps/details?id=$ORBOT_PACKAGE"
+
         const val COIL_MEMORY_CACHE_PERCENTAGE = .25
 
         const val PRIVATE_KEY_FILE = "private-key.locked"
@@ -52,7 +61,7 @@ class Constants {
 
         const val ARTICLES_FEED_WEIGHT = 0.35
 
-        const val SOCKS5_PROXY_ADDRESS = "127.0.0.1"
+        const val SOCKS5_PROXY_HOSTNAME = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
         const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 
@@ -78,5 +87,35 @@ class Constants {
         const val AUTHENTICATION_DEADLINE = 60_000L
 
         const val IMAGE_COMPRESSION_QUALITY = 50
+
+        const val GUARDS_HISTORY_MAX_COUNT = 150
+
+        val NAVIGATION_BAR_HEIGHT = IntrinsicSize.Min
+
+        const val SERVER_INFO_API_PATH = "/Info"
+
+        const val VERTICES_API_PATH = "/Vertices"
+
+        const val SHARE_API_PATH = "/Share"
+
+        const val INCREMENT_SHARE_DATA_COUNT_API_PATH = "/IncrementSharedDataAccessCount"
+
+        const val VERTEX_API_PATH = "/Vertex"
+
+        const val FILE_API_PATH = "/File"
+
+        const val INCREMENT_FILE_COUNT_API_PAT = "/IncrementFileAccessCount"
+
+        const val ONION_ROUTING_ENDPOINT = "OnionRouting"
+
+        const val GENERATE_NONCE_METHOD = "GenerateToken"
+
+        const val AUTHENTICATE_METHOD = "Authenticate"
+
+        const val ROUTE_MESSAGE_METHOD = "RouteMessage"
+
+        const val PULL_METHOD = "Pull"
+
+        const val CLEANUP_METHOD = "Cleanup"
     }
 }

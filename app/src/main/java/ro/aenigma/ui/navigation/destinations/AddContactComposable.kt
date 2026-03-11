@@ -8,6 +8,7 @@ import androidx.navigation.navArgument
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.addContacts.AddContactsScreen
 import ro.aenigma.services.NavigationTracker
+import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.addContactComposable(
@@ -21,13 +22,18 @@ fun NavGraphBuilder.addContactComposable(
             navArgument(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
             {
                 type = NavType.StringType
+            },
+            navArgument(Screens.ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG) {
+                type = NavType.StringType
             })
     ) { navBackStackEntry ->
-        var profileId =
-            navBackStackEntry.arguments!!.getString(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
-        if (profileId == null) {
-            profileId = Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
-        }
+        val profileId =
+            navBackStackEntry.arguments?.getString(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
+                ?: Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+        val scanTypeString =
+            navBackStackEntry.arguments?.getString(Screens.ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG)
+                ?: QrCodeScannerState.SCAN_CODE.toString()
+        val scannerState = QrCodeScannerState.valueOf(scanTypeString)
 
         LaunchedEffect(key1 = true)
         {
@@ -37,6 +43,7 @@ fun NavGraphBuilder.addContactComposable(
 
         AddContactsScreen(
             profileToShare = profileId,
+            initialScannerState = scannerState,
             navigateToContactsScreen = navigateToChatsScreen,
             mainViewModel = mainViewModel
         )

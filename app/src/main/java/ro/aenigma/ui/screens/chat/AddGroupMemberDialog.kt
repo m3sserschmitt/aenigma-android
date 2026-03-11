@@ -21,16 +21,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
 import ro.aenigma.models.ContactDto
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
 import ro.aenigma.models.extensions.ExportedContactDataExtensions.toContactDto
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.contacts.ContactItem
@@ -40,9 +38,9 @@ import ro.aenigma.util.RequestState
 private fun getContactsList(
     action: MessageType,
     searchQuery: String,
-    existentMembers: List<ExportedContactData>?,
+    existentMembers: List<ExportedContactDataDto>?,
     contacts: RequestState<List<ContactDto>>
-): List<ContactWithLastMessage> {
+): List<ContactWithLastMessageDto> {
     val memberAddresses = remember(key1 = action, key2 = existentMembers) {
         if (action == MessageType.GROUP_MEMBER_ADD) {
             val existentItemsSet = hashSetOf<String>()
@@ -78,7 +76,7 @@ private fun getContactsList(
             else -> {
                 listOf()
             }
-        }.map { item -> ContactWithLastMessage(item.toEntity(), null) }
+        }.map { item -> ContactWithLastMessageDto(item, null) }
     }
 }
 
@@ -87,7 +85,7 @@ private fun getContactsList(
 fun AddGroupMemberDialog(
     action: MessageType,
     visible: Boolean,
-    contactWithGroup: RequestState<ContactWithGroup>,
+    contactWithGroup: RequestState<ContactWithGroupDto>,
     contacts: RequestState<List<ContactDto>>,
     onSearchQueryChanged: (String) -> Unit,
     onDismissClicked: () -> Unit,
@@ -99,7 +97,7 @@ fun AddGroupMemberDialog(
 
     val add = action == MessageType.GROUP_MEMBER_ADD
     var searchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
     val items = getContactsList(
         action = action,
         existentMembers = contactWithGroup.data.group?.groupData?.members,
@@ -187,20 +185,20 @@ fun AddGroupMemberDialogPreview() {
         contactWithGroup = RequestState.Idle,
         contacts = RequestState.Success(
             listOf(
-                ContactEntityFactory.createContact(
+                ContactDtoFactory.createContact(
                     address = "123",
                     name = "John",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                ).toDto(),
-                ContactEntityFactory.createContact(
+                ),
+                ContactDtoFactory.createContact(
                     address = "124",
                     name = "Paul",
                     publicKey = "",
                     guardHostname = "",
                     guardAddress = "",
-                ).toDto()
+                )
             )
         ),
         onConfirmClicked = { },

@@ -5,12 +5,18 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -23,23 +29,39 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.ExportedContactDataDto
+import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.enums.ServersSheetSection
+import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isFullyExpanded
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toHidden
+import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
+import ro.aenigma.ui.screens.common.InstallOrbotDialog
+import ro.aenigma.ui.screens.common.OrbotInfoDialog
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
+import ro.aenigma.ui.screens.common.TorInfoDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
+import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
+import ro.aenigma.util.ContextExtensions.openOrbot
+import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 import java.time.ZonedDateTime
@@ -48,31 +70,48 @@ import java.time.ZonedDateTime
 fun ContactsScreen(
     navigateToChatScreen: (String) -> Unit,
     navigateToAddContactScreen: (String?) -> Unit,
+    navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
     mainViewModel: MainViewModel
 ) {
     val allContacts by mainViewModel.allContacts.collectAsState()
+    val servers by mainViewModel.servers.collectAsState()
+    val serversHistory by mainViewModel.serversHistory.collectAsState()
+    val serversSheetState by mainViewModel.serversSheetState.collectAsState()
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
-    val torOk by mainViewModel.torOk.collectAsState()
+    val useOrbot by mainViewModel.useOrbot.collectAsState()
+    val torConnectionCheck by mainViewModel.torConnectionCheck.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
         contacts = allContacts,
+        servers = servers,
+        serversHistory = serversHistory,
+        serversSheetState = serversSheetState,
         importedContactDetails = importedContactDetails,
         notificationsAllowed = notificationsAllowed,
         nameDialogVisible = userName.isBlank(),
         useTor = useTor,
-        torOk = torOk,
-        useTorChanged = { useTor -> mainViewModel.useTorChanged(useTor) },
-        onNotificationsPreferenceChanged = {
-            allowed -> mainViewModel.saveNotificationsPreference(allowed)
+        useOrbot = useOrbot,
+        torConnectionCheck = torConnectionCheck,
+        onTorPreferenceChanged = { useTor -> mainViewModel.torPreferenceChanged(useTor) },
+        onOrbotPreferenceChanged = { useOrbot -> mainViewModel.orbotPreferenceChanged(useOrbot) },
+        onNotificationsPreferenceChanged = { allowed ->
+            mainViewModel.saveNotificationsPreference(allowed)
         },
         onRetryConnection = { mainViewModel.retryClientConnection() },
         onSearch = { searchQuery -> mainViewModel.searchContacts(searchQuery) },
+        onServersSearch = { searchQuery -> mainViewModel.searchServers(searchQuery) },
+        onServerClicked = { server -> mainViewModel.switchServer(server) },
+        onServerConnectClicked = { serverQuery -> mainViewModel.switchServer(serverQuery) },
+        onScanServerCodeClicked = navigateToScanServerScreen,
+        onServersSheetStateChanged = { newSheetState ->
+            mainViewModel.setServersSheetState(newSheetState)
+        },
         navigateToChatScreen = navigateToChatScreen,
         onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
@@ -80,7 +119,7 @@ fun ContactsScreen(
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
-        onNewContactNameChanged =  { newValue -> newValue.isNotBlank() },
+        onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
         onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
@@ -89,24 +128,35 @@ fun ContactsScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
     connectionStatus: SignalRStatus,
-    contacts: RequestState<List<ContactWithLastMessage>>,
-    importedContactDetails: RequestState<ExportedContactData>,
+    contacts: RequestState<List<ContactWithLastMessageDto>>,
+    servers: RequestState<List<ServerInfoDto>>,
+    serversHistory: RequestState<List<ServerInfoDto>>,
+    serversSheetState: ServersSheetStateDto,
+    importedContactDetails: RequestState<ExportedContactDataDto>,
     notificationsAllowed: Boolean,
     nameDialogVisible: Boolean,
     useTor: Boolean,
-    torOk: Boolean,
-    useTorChanged: (Boolean) -> Unit,
+    useOrbot: Boolean,
+    torConnectionCheck: TorConnectionCheck,
+    onTorPreferenceChanged: (Boolean) -> Unit,
+    onOrbotPreferenceChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithLastMessage>) -> Unit,
-    onContactRenamed: (ContactWithLastMessage, String) -> Unit,
+    onServersSearch: (String) -> Unit,
+    onServerConnectClicked: (String) -> Unit,
+    onServerClicked: (ServerInfoDto) -> Unit,
+    onScanServerCodeClicked: () -> Unit,
+    onServersSheetStateChanged: (ServersSheetStateDto) -> Unit,
+    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
+    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onContactSaved: (String) -> Unit,
-    onGroupCreated: (List<ContactWithLastMessage>, String) -> Unit,
+    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
     onResetUserNameClicked: () -> Unit,
@@ -120,11 +170,44 @@ fun ContactsScreen(
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
     var getContactDataLoadingDialogVisible by remember { mutableStateOf(true) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
+    var installOrbotDialogVisible by remember { mutableStateOf(false) }
+    var orbotInfoDialogVisible by remember { mutableStateOf(false) }
+    var torServiceInfoDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessage>() }
+    var serversSearchQuery by remember { mutableStateOf("") }
+    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
+    val bottomSheetState = rememberStandardBottomSheetState(
+        initialValue = serversSheetState.sheetState,
+        skipHiddenState = false
+    )
+    val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val context = LocalContext.current
+
+    LaunchedEffect(key1 = useOrbot) {
+        if(useOrbot) {
+            if (!context.isOrbotInstalled()) {
+                installOrbotDialogVisible = true
+            }
+        }
+    }
+
+    LaunchedEffect(key1 = serversSheetState.isNotFullyExpanded()) {
+        if (serversSheetState.isNotFullyExpanded()) {
+            bottomSheetState.hide()
+        } else {
+            onServersSearch("")
+            serversSearchQuery = ""
+            bottomSheetState.expand()
+        }
+    }
+
+    LaunchedEffect(key1 = bottomSheetScaffoldState.isNotFullyExpanded()) {
+        if (serversSheetState.isFullyExpanded() && bottomSheetScaffoldState.isNotFullyExpanded()) {
+            onServersSheetStateChanged(serversSheetState.toHidden())
+        }
+    }
 
     LaunchedEffect(key1 = contacts)
     {
@@ -144,6 +227,43 @@ fun ContactsScreen(
             Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
+
+    InstallOrbotDialog(
+        visible = installOrbotDialogVisible,
+        onConfirmClicked = {
+            installOrbotDialogVisible = false
+            onOrbotPreferenceChanged(false)
+            context.redirectToOrbotOnPlayStore()
+        },
+        onDismissClicked = {
+            installOrbotDialogVisible = false
+            onOrbotPreferenceChanged(false)
+        }
+    )
+
+    OrbotInfoDialog(
+        visible = orbotInfoDialogVisible,
+        onLaunchOrbot =  {
+            orbotInfoDialogVisible = false
+            context.openOrbot()
+        },
+        onConfirmClicked = {
+            orbotInfoDialogVisible = false
+            onOrbotPreferenceChanged(true)
+        }
+    )
+
+    TorInfoDialog(
+        visible = torServiceInfoDialogVisible,
+        onLaunchOrbot = {
+            torServiceInfoDialogVisible = false
+            context.openOrbot()
+        },
+        onConfirmClicked = {
+            torServiceInfoDialogVisible = false
+            onTorPreferenceChanged(true)
+        }
+    )
 
     CheckNotificationsPermission(
         onPermissionGranted = { granted ->
@@ -207,7 +327,7 @@ fun ContactsScreen(
     )
 
     val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if(requestSuccessful) importedContactDetails.data.name ?: "" else ""
+    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
     SaveNewContactDialog(
         visible = requestSuccessful && saveContactDialogVisible,
         initialName = initialName,
@@ -271,17 +391,62 @@ fun ContactsScreen(
         onActionPerformed = onRetryConnection
     )
 
-    Scaffold(
+    BottomSheetScaffold(
+        scaffoldState = bottomSheetScaffoldState,
+        sheetPeekHeight = 0.dp,
+        sheetContent = {
+            ServersBottomSheetContent(
+                servers = servers,
+                serversHistory = serversHistory,
+                sheetState = serversSheetState,
+                searchQuery = serversSearchQuery,
+                onSearchQueryChanged = { newSearchQuery ->
+                    serversSearchQuery = newSearchQuery
+                    if (serversSearchQuery.isEmpty()) {
+                        onServersSearch(serversSearchQuery)
+                    }
+                },
+                onSearchClicked = { onServersSearch(serversSearchQuery) },
+                onConnectClicked = {
+                    if (!serversSearchQuery.isBlank()) {
+                        onServerConnectClicked(serversSearchQuery)
+                    }
+                },
+                onServerClicked = onServerClicked,
+                onSheetStateChanged = onServersSheetStateChanged,
+                onScanCodeClicked = onScanServerCodeClicked
+            )
+        },
+        sheetContainerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
             SnackbarHost(hostState = snackBarHostState)
+        },
+        sheetDragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f)
+            )
         },
         topBar = {
             ContactsAppBar(
                 connectionStatus = connectionStatus,
                 isSearchMode = isSearchMode,
                 useTor = useTor,
-                torOk = torOk,
-                useTorChanged = useTorChanged,
+                useOrbot = useOrbot,
+                torConnectionCheck = torConnectionCheck,
+                onTorPreferenceChanged = { activatingTor ->
+                    if(activatingTor) {
+                        torServiceInfoDialogVisible = true
+                    } else {
+                        onTorPreferenceChanged(false)
+                    }
+                },
+                onOrbotPreferenceChanged = { activatingOrbot ->
+                    if(activatingOrbot) {
+                        orbotInfoDialogVisible = true
+                    } else {
+                        onOrbotPreferenceChanged(false)
+                    }
+                },
                 onSearchTriggered = {
                     isSearchMode = true
                 },
@@ -296,6 +461,13 @@ fun ContactsScreen(
                 },
                 isSelectionMode = isSelectionMode,
                 selectedItemsCount = selectedItems.size,
+                onOpenServersList = {
+                    if (bottomSheetScaffoldState.isNotFullyExpanded()) {
+                        onServersSheetStateChanged(serversSheetState.toExpanded())
+                    } else {
+                        onServersSheetStateChanged(serversSheetState.toHidden())
+                    }
+                },
                 onDeleteSelectedItemsClicked = {
                     deleteContactsConfirmationVisible = true
                 },
@@ -330,7 +502,20 @@ fun ContactsScreen(
                 navigateToAboutScreen = navigateToAboutScreen
             )
         },
-        content = { paddingValues ->
+    ) { paddingValues ->
+        Scaffold(
+            modifier = Modifier.padding(
+                top = paddingValues.calculateTopPadding(),
+                bottom = paddingValues.calculateBottomPadding()
+            ),
+            floatingActionButton = {
+                ContactsFab(
+                    onFabClicked = {
+                        navigateToAddContactScreen(null)
+                    }
+                )
+            }
+        ) { paddingValues ->
             ContactsContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
@@ -352,15 +537,8 @@ fun ContactsScreen(
                 isSelectionMode = isSelectionMode,
                 selectedContacts = selectedItems
             )
-        },
-        floatingActionButton = {
-            ContactsFab(
-                onFabClicked = {
-                    navigateToAddContactScreen(null)
-                }
-            )
         }
-    )
+    }
 }
 
 @Composable
@@ -381,6 +559,7 @@ fun ContactsFab(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun ContactsScreenPreview() {
@@ -389,39 +568,46 @@ fun ContactsScreenPreview() {
         notificationsAllowed = true,
         nameDialogVisible = false,
         useTor = true,
-        torOk = true,
-        useTorChanged = { _ -> },
+        useOrbot = false,
+        torConnectionCheck = TorConnectionCheck.OK,
+        onTorPreferenceChanged = { _ -> },
+        onOrbotPreferenceChanged = { },
         onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },
         onNewContactNameChanged = { true },
         onDeleteSelectedItems = {},
         onSearch = {},
+        onServersSearch = {},
+        onServerClicked = {},
+        onServerConnectClicked = {},
+        onScanServerCodeClicked = {},
+        onServersSheetStateChanged = { },
         onGroupCreated = { _, _ -> },
         contacts = RequestState.Success(
             listOf(
-                ContactWithLastMessage(
-                    ContactEntityFactory.createContact(
+                ContactWithLastMessageDto(
+                    ContactDtoFactory.createContact(
                         address = "123",
                         name = "John",
                         publicKey = null,
                         guardHostname = null,
                         guardAddress = null,
-                    ), MessageEntityFactory.createOutgoing(
+                    ), MessageDtoFactory.createOutgoing(
                         chatId = "123",
                         text = "Awesome!",
                         type = MessageType.TEXT,
                         actionFor = null,
                     )
                 ),
-                ContactWithLastMessage(
-                    ContactEntityFactory.createContact(
+                ContactWithLastMessageDto(
+                    ContactDtoFactory.createContact(
                         address = "124",
                         name = "Elizabeth",
                         publicKey = null,
                         guardHostname = null,
                         guardAddress = null,
-                    ), MessageEntityFactory.createIncoming(
+                    ), MessageDtoFactory.createIncoming(
                         chatId = "124",
                         text = "Can't wait to see you tomorrow!",
                         type = MessageType.TEXT,
@@ -433,6 +619,12 @@ fun ContactsScreenPreview() {
                     )
                 )
             )
+        ),
+        servers = RequestState.Idle,
+        serversHistory = RequestState.Idle,
+        serversSheetState = ServersSheetStateDto(
+            sheetState = SheetValue.Hidden,
+            selectedSection = ServersSheetSection.SERVERS
         ),
         onResetUserNameClicked = {},
         navigateToChatScreen = {},

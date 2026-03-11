@@ -22,7 +22,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.services.NotificationService
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.SIGNALR_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 class SignalRClientWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val signalrController: SignalrConnectionController,
+    private val signalrController: SignalrController,
     private val repository: Repository,
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
@@ -39,7 +39,6 @@ class SignalRClientWorker @AssistedInject constructor(
         private const val ACTION_ARG = "Action"
         private const val UNIQUE_ONE_TIME_REQUEST = "SIGNALR_ONE_TIME_REQUEST"
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
-        private const val INITIAL_PERIODIC_WORK_DELAY: Long = 10 // Minutes
         private const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15 // Minutes
         private const val DELAY_BETWEEN_RETRIES: Long = 5 // Seconds
         private const val MAX_RETRY_COUNT = 5 // Seconds
@@ -58,7 +57,6 @@ class SignalRClientWorker @AssistedInject constructor(
                 PERIODIC_WORK_REPEAT_INTERVAL,
                 TimeUnit.MINUTES
             )
-                .setInitialDelay(INITIAL_PERIODIC_WORK_DELAY, TimeUnit.MINUTES)
                 .setConstraints(constraints)
                 .setInputData(parameters)
                 .build()
@@ -102,7 +100,7 @@ class SignalRClientWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_ONE_TIME_REQUEST,
-                    ExistingWorkPolicy.APPEND_OR_REPLACE,
+                    ExistingWorkPolicy.KEEP,
                     createRequest(actions)
                 )
         }
@@ -112,32 +110,31 @@ class SignalRClientWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val guard = repository.local.getGuard() ?: return Result.failure()
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
-
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
-            signalrController.disconnect()
+        var ok = true
+        if (action contains SignalRWorkerAction.Disconnect()) {
+            ok = signalrController.disconnect()
         }
 
-        if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            signalrController.connect(guard.hostname)
+        if (ok && action contains SignalRWorkerAction.Connect()) {
+            ok = signalrController.connect(
+                repository.local.getGuardHostname() ?: return Result.failure()
+            )
         }
 
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Pull()) {
-            signalrController.pull()
+        if (ok && action contains SignalRWorkerAction.Pull()) {
+            ok = signalrController.pull()
         }
 
-        /*
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Broadcast()) {
-            signalrController.broadcast()
-        }
-        */
-
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
-            signalrController.cleanup()
+        if (ok && action contains SignalRWorkerAction.Cleanup()) {
+            ok = signalrController.cleanup()
         }
 
-        return Result.success()
+        return if (ok) {
+            Result.success()
+        } else {
+            Result.retry()
+        }
     }
 
     override suspend fun getForegroundInfo(): ForegroundInfo {

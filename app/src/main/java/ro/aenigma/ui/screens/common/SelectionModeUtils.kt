@@ -28,7 +28,7 @@ fun <T> Modifier.selectable(
     isSelected: Boolean,
     onItemSelected: (T) -> Unit,
     onItemDeselected: (T) -> Unit,
-    onClick: () -> Unit
+    onClick: (T) -> Unit
 ): Modifier {
     return this.combinedClickable(
         onClick = {
@@ -39,7 +39,7 @@ fun <T> Modifier.selectable(
             {
                 onItemDeselected(item)
             } else {
-                onClick()
+                onClick(item)
             }
         },
         onLongClick = {

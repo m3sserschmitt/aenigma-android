@@ -13,7 +13,7 @@ import androidx.room.TypeConverters
         EdgeEntity::class,
         GroupEntity::class,
         AttachmentEntity::class],
-    version = 2,
+    version = 4,
     exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class AppDatabase: RoomDatabase() {

@@ -31,9 +31,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.models.CreatedSharedData
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.CreatedSharedDataDto
+import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
+import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
@@ -48,9 +49,10 @@ fun AddContactsContent(
     modifier: Modifier = Modifier,
     scannerState: QrCodeScannerState,
     qrCode: RequestState<QrCodeDto>,
-    sharedDataCreate: RequestState<CreatedSharedData>,
-    importedContactDetails: RequestState<ExportedContactData>,
-    onQrCodeFound: (ExportedContactData) -> Unit,
+    sharedDataCreate: RequestState<CreatedSharedDataDto>,
+    importedContactDetails: RequestState<ExportedContactDataDto>,
+    onQrCodeFound: (ExportedContactDataDto) -> Unit,
+    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
@@ -68,12 +70,9 @@ fun AddContactsContent(
         visible = useLinkLoadingDialogVisible,
         state = importedContactDetails,
         onConfirmButtonClicked = {
-            if(importedContactDetails is RequestState.Error)
-            {
+            if (importedContactDetails is RequestState.Error) {
                 onSharedDataConfirm()
-            }
-            else
-            {
+            } else {
                 saveContactDialogVisible = true
             }
             useLinkLoadingDialogVisible = false
@@ -84,12 +83,9 @@ fun AddContactsContent(
         visible = createLinkLoadingDialogVisible,
         state = sharedDataCreate,
         onConfirmButtonClicked = {
-            if(sharedDataCreate is RequestState.Error)
-            {
+            if (sharedDataCreate is RequestState.Error) {
                 onSharedDataConfirm()
-            }
-            else
-            {
+            } else {
                 createLinkDialogVisible = true
             }
             createLinkLoadingDialogVisible = false
@@ -97,7 +93,7 @@ fun AddContactsContent(
     )
 
     val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if(requestSuccessful) importedContactDetails.data.name ?: "" else ""
+    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
     SaveNewContactDialog(
         visible = scannerState == QrCodeScannerState.SAVE
                 || (requestSuccessful && saveContactDialogVisible),
@@ -147,10 +143,19 @@ fun AddContactsContent(
                 }
             )
         }
+
         QrCodeScannerState.SCAN_CODE -> {
-            QrCodeScanner<ExportedContactData>(
+            QrCodeScanner<ExportedContactDataDto>(
                 onQrCodeFound = { data ->
                     onQrCodeFound(data)
+                }
+            )
+        }
+
+        QrCodeScannerState.SCAN_SERVER_INFO_CODE -> {
+            QrCodeScanner<ServerInfoDto>(
+                onQrCodeFound = { data ->
+                    onServerInfoQrCodeFound(data)
                 }
             )
         }
@@ -342,6 +347,7 @@ fun AddContactsContentPreview()
                 qrCode = RequestState.Success(QrCodeDto(bitmap, "John", false)),
                 importedContactDetails = RequestState.Idle,
                 onQrCodeFound = { },
+                onServerInfoQrCodeFound = { },
                 onNewContactNameChanged = { true },
                 onSaveContact = { },
                 onSaveContactDismissed = { },

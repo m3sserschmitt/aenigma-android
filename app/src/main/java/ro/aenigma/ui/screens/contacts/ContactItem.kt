@@ -1,6 +1,7 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,22 +27,23 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.selectable
+import ro.aenigma.util.StringExtensions.getHost
 import java.time.ZonedDateTime
 
 @Composable
 fun ContactItem(
-    onItemSelected: (ContactWithLastMessage) -> Unit,
-    onItemDeselected: (ContactWithLastMessage) -> Unit,
-    onClick: () -> Unit,
-    contact: ContactWithLastMessage,
+    onItemSelected: (ContactWithLastMessageDto) -> Unit,
+    onItemDeselected: (ContactWithLastMessageDto) -> Unit,
+    onClick: (ContactWithLastMessageDto) -> Unit,
+    contact: ContactWithLastMessageDto,
     isSelectionMode: Boolean,
     isSelected: Boolean
 ) {
@@ -54,11 +56,14 @@ fun ContactItem(
                 onItemSelected = onItemSelected,
                 onItemDeselected = onItemDeselected,
                 onClick = onClick
-            ).fillMaxWidth().height(64.dp),
+            ).fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .fillMaxWidth(),
         color = MaterialTheme.colorScheme.background
     ) {
         Row(
             modifier = Modifier
+                .height(IntrinsicSize.Min)
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -115,6 +120,9 @@ fun ContactItem(
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                ContactGuardHost(
+                    contact = contact.contact
+                )
                 ConversationPreview(
                     contact = contact
                 )
@@ -133,17 +141,34 @@ fun ContactItem(
 }
 
 @Composable
+fun ContactGuardHost(
+    contact: ContactDto
+) {
+    val guardHost = contact.guardHostname.getHost()
+    if(!guardHost.isNullOrBlank()) {
+        Text(
+            modifier = Modifier.alpha(.75f),
+            text = "@$guardHost",
+            maxLines = 1,
+            overflow = TextOverflow.MiddleEllipsis,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 fun ConversationPreview(
-    contact: ContactWithLastMessage
+    contact: ContactWithLastMessageDto
 ) {
     if (contact.lastMessage != null && !contact.lastMessage.deleted) {
         val context = LocalContext.current
         val messagePreview = remember(key1 = contact.lastMessage) {
             if (!contact.lastMessage.incoming) {
                 context.getString(R.string.you) + " " +
-                        contact.lastMessage.toDto().getMessageTextByAction(context)
+                        contact.lastMessage.getMessageTextByAction(context)
             } else {
-                contact.lastMessage.toDto().getMessageTextByAction(context)
+                contact.lastMessage.getMessageTextByAction(context)
             }
         }
         Text(
@@ -161,14 +186,14 @@ fun ConversationPreview(
 @Preview
 fun ContactItemPreview() {
     ContactItem(
-        contact = ContactWithLastMessage(
-            ContactEntityFactory.createContact(
+        contact = ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-            ), MessageEntityFactory.createOutgoing(
+            ), MessageDtoFactory.createOutgoing(
                 chatId = "12345-5678-5678-12345",
                 text = "Hello",
                 type = MessageType.TEXT,
@@ -188,14 +213,14 @@ fun ContactItemPreview() {
 fun ContactItemSelectedPreview()
 {
     ContactItem(
-        contact = ContactWithLastMessage(
-            ContactEntityFactory.createContact(
+        contact = ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",
                 name = "John",
                 publicKey = "public-key",
                 guardHostname = "guard-hostname",
                 guardAddress = "guard-address",
-            ), MessageEntityFactory.createIncoming(
+            ), MessageDtoFactory.createIncoming(
                 chatId = "12345-5678-5678-12345",
                 senderAddress = "12345-5678-5678-12345",
                 text = "Hey, how are you",

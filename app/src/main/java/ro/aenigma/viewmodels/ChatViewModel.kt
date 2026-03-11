@@ -5,33 +5,28 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.util.RequestState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ro.aenigma.crypto.services.SignatureService
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.GroupEntity
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFullPage
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.GroupDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ContactDtoExtensions.withName
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
-import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.OkHttpClientProvider
-import ro.aenigma.services.SignalrConnectionController
+import ro.aenigma.services.SignalrController
 import ro.aenigma.services.UriBatcher
 import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
@@ -46,9 +41,9 @@ class ChatViewModel @Inject constructor(
     private val uriBatcher: UriBatcher,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     signatureService: SignatureService,
-    signalrConnectionController: SignalrConnectionController,
+    signalrController: SignalrController,
     repository: Repository,
-) : BaseViewModel(repository, signalrConnectionController, okHttpClientProviderLazy) {
+) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
 
     private val localAddress = signatureService.address
 
@@ -65,7 +60,7 @@ class ChatViewModel @Inject constructor(
         MutableStateFlow<RequestState<List<ContactDto>>>(RequestState.Idle)
 
     private val _selectedContact =
-        MutableStateFlow<RequestState<ContactWithGroup>>(RequestState.Idle)
+        MutableStateFlow<RequestState<ContactWithGroupDto>>(RequestState.Idle)
 
     private val _isMember = MutableStateFlow(false)
 
@@ -83,7 +78,7 @@ class ChatViewModel @Inject constructor(
 
     private val _attachments = MutableStateFlow<List<String>>(listOf())
 
-    val selectedContact: StateFlow<RequestState<ContactWithGroup>> = _selectedContact
+    val selectedContact: StateFlow<RequestState<ContactWithGroupDto>> = _selectedContact
 
     val isMember: StateFlow<Boolean> = _isMember
 
@@ -106,7 +101,7 @@ class ChatViewModel @Inject constructor(
             _contacts.value = RequestState.Loading
             try {
                 _contacts.value = RequestState.Success(
-                    repository.local.searchContacts(searchQuery).map { c -> c.toDto() })
+                    repository.local.searchContacts(searchQuery))
             } catch (ex: Exception) {
                 _contacts.value = RequestState.Error(ex)
             }
@@ -214,7 +209,7 @@ class ChatViewModel @Inject constructor(
             viewModelScope.launch(ioDispatcher) {
                 val actionForSender = repository.local.getContact(message.actionFor.senderAddress)
                 if (actionForSender != null) {
-                    message.actionForSender.value = actionForSender.toDto()
+                    message.actionForSender.value = actionForSender
                 } else {
                     message.actionForSender.value = null
                 }
@@ -280,7 +275,6 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             _conversation.value = RequestState.Loading
             repository.local.getConversationFlow(chatId)
-                .map { messages -> messages.map { message -> message.toDto() } }
                 .catch { ex -> _conversation.value = RequestState.Error(ex) }
                 .collect { messages ->
                     synchronized(_conversationSortedSet) {
@@ -306,7 +300,6 @@ class ChatViewModel @Inject constructor(
                 try {
                     val searchResult =
                         repository.local.getConversationPage(chatId, getLastMessageId(), query)
-                            .map { item -> item.toDto() }
                     synchronized(_conversationSortedSet) {
                         clearConversation()
                         addItemsToConversation(searchResult)
@@ -328,7 +321,7 @@ class ChatViewModel @Inject constructor(
                         chatId,
                         lastIndex,
                         _messageSearchQuery.value
-                    ).map { item -> item.toDto() }
+                    )
                 synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
@@ -363,7 +356,7 @@ class ChatViewModel @Inject constructor(
         synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
             val textMessagesWithRefs = messages.filter { item -> item.message.refId != null }
-            repository.local.removeMessagesSoft(messages.map { item -> item.message.toEntity() })
+            repository.local.removeMessagesSoft(messages.map { item -> item.message })
             textMessagesWithRefs.forEach { item ->
                 postToDatabase(MessageType.DELETE, item.message.refId, null)
             }
@@ -381,7 +374,7 @@ class ChatViewModel @Inject constructor(
                     _replyToMessage.value = RequestState.Success(
                         MessageWithDetailsDto(
                             message = message.message,
-                            sender = sender?.toDto(),
+                            sender = sender,
                             actionFor = message.actionFor,
                             actionForSender = message.actionForSender
                         )
@@ -448,7 +441,7 @@ class ChatViewModel @Inject constructor(
             val contact = getSelectedContactEntity() ?: return false
             val messages = if (type == MessageType.FILES) {
                 uriBatcher.split(attachments).map { batch ->
-                    MessageEntityFactory.createOutgoing(
+                    MessageDtoFactory.createOutgoing(
                         chatId = contact.address,
                         text = text,
                         type = type,
@@ -458,7 +451,7 @@ class ChatViewModel @Inject constructor(
                 }
             } else {
                 listOf(
-                    MessageEntityFactory.createOutgoing(
+                    MessageDtoFactory.createOutgoing(
                         chatId = contact.address,
                         text = text,
                         type = type,
@@ -500,19 +493,19 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun getSelectedContactWithGroup(): ContactWithGroup? {
+    private fun getSelectedContactWithGroup(): ContactWithGroupDto? {
         return try {
-            (selectedContact.value as RequestState.Success<ContactWithGroup>).data
+            (selectedContact.value as RequestState.Success<ContactWithGroupDto>).data
         } catch (_: Exception) {
             return null
         }
     }
 
-    private fun getSelectedContactEntity(): ContactEntity? {
+    private fun getSelectedContactEntity(): ContactDto? {
         return getSelectedContactWithGroup()?.contact
     }
 
-    private fun getSelectedGroupEntity(): GroupEntity? {
+    private fun getSelectedGroupEntity(): GroupDto? {
         return getSelectedContactWithGroup()?.group
     }
 
@@ -533,7 +526,7 @@ class ChatViewModel @Inject constructor(
 
             ContactType.CONTACT -> viewModelScope.launch(ioDispatcher) {
                 val updatedContact = contact.withName(name)
-                updatedContact?.let { repository.local.updateContact(it) }
+                updatedContact.let { repository.local.updateContact(it) }
             }
         }
     }

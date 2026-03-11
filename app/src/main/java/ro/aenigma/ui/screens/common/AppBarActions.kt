@@ -55,6 +55,21 @@ fun NavigateBackAppBarAction(
 }
 
 @Composable
+fun ServersListAppBarAction(
+    onOpenServersList: () -> Unit
+) {
+    IconButton(
+        onClick = onOpenServersList
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_storage),
+            contentDescription = stringResource(id = R.string.servers),
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
 fun DeleteAppBarAction(
     onDeleteClicked: () -> Unit
 ) {
@@ -114,7 +129,7 @@ fun ConnectionStatusAppBarAction(
         size = 18.dp,
         color = MaterialTheme.colorScheme.onBackground,
         textColor = MaterialTheme.colorScheme.onBackground,
-        visible = connectionStatus greaterOrEqualThan connectionStatus
+        visible = connectionStatus greaterOrEqualThan SignalRStatus.NotConnected
                 && connectionStatus smallerThan SignalRStatus.Authenticated,
         text = stringResource(id = R.string.connecting),
         textStyle = MaterialTheme.typography.bodyMedium

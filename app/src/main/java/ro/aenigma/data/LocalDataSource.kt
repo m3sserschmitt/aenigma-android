@@ -3,29 +3,49 @@ package ro.aenigma.data
 import android.content.Context
 import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
-import ro.aenigma.data.database.ContactEntity
 import ro.aenigma.data.database.ContactsDao
-import ro.aenigma.data.database.EdgeEntity
 import ro.aenigma.data.database.EdgesDao
-import ro.aenigma.data.database.GuardEntity
 import ro.aenigma.data.database.GuardsDao
-import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.data.database.MessagesDao
-import ro.aenigma.data.database.VertexEntity
 import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import ro.aenigma.data.database.AttachmentEntity
-import ro.aenigma.data.database.ContactWithGroup
-import ro.aenigma.data.database.ContactWithLastMessage
-import ro.aenigma.data.database.GroupEntity
-import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.MessageWithDetails
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withLastMessageId
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toArticle
-import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.Article
+import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.ContactWithGroupEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.EdgeEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.GuardEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.MessageWithAttachmentsEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.MessageWithDetailsEntityExtensions.toArticleDto
+import ro.aenigma.data.database.extensions.MessageWithDetailsEntityExtensions.toDto
+import ro.aenigma.data.database.extensions.VertexEntityExtensions.toDto
+import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.ContactDto
+import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.EdgeDto
+import ro.aenigma.models.GroupDto
+import ro.aenigma.models.GuardDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithAttachmentsDto
+import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.AttachmentDtoExtensions.toEntity
+import ro.aenigma.models.extensions.ContactDtoExtensions.toEntity
+import ro.aenigma.models.extensions.ContactDtoExtensions.withLastMessageId
+import ro.aenigma.models.extensions.EdgeDtoExtensions.toEntity
+import ro.aenigma.models.extensions.GroupDtoExtensions.toEntity
+import ro.aenigma.models.extensions.GuardDtoExtensions.toEntity
+import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
+import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
+import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
+import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import javax.inject.Inject
@@ -57,12 +77,30 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveTorPreference(useTor)
     }
 
+    suspend fun  saveOrbotPreference(useOrbot: Boolean): Boolean {
+        return preferencesDataStore.saveOrbotPreference(useOrbot)
+    }
+
     suspend fun saveNotificationsAllowed(granted: Boolean): Boolean {
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    suspend fun saveLastGraphVersion(graphVersion: String): Boolean {
-        return preferencesDataStore.saveLastGraphVersion(graphVersion)
+    suspend fun getGuardHostname(guard: ServerInfoDto): String? {
+        val useTor = useTor.firstOrNull() == true
+        val useOrbot = useOrbot.firstOrNull() == true
+        return if (useTor || useOrbot) {
+            if (guard.onionService.isNullOrBlank()) {
+                guard.hostname
+            } else {
+                guard.onionService
+            }
+        } else {
+            guard.hostname
+        }
+    }
+
+    suspend fun getGuardHostname(): String? {
+        return getGuardHostname(getGuard()?.toServerInfoDto() ?: return null)
     }
 
     val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
@@ -71,82 +109,85 @@ class LocalDataSource @Inject constructor(
 
     val useTor: Flow<Boolean> = preferencesDataStore.useTor
 
-    val lastGraphVersion: Flow<String> = preferencesDataStore.lastGraphVersion
+    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
 
-    fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessage>> {
+    fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
         return contactsDao.get().getWithMessagesFlow()
+            .map { items -> items.map { item -> item.toDto() } }
     }
 
-    suspend fun getContactWithMessages(): List<ContactWithLastMessage> {
-        return contactsDao.get().getWithMessages()
+    suspend fun getContactWithMessages(): List<ContactWithLastMessageDto> {
+        return contactsDao.get().getWithMessages().map { item -> item.toDto() }
     }
 
-    suspend fun searchContacts(searchQuery: String = ""): List<ContactEntity> {
-        return contactsDao.get().search(searchQuery)
+    suspend fun searchContacts(searchQuery: String = ""): List<ContactDto> {
+        return contactsDao.get().search(searchQuery).map { item -> item.toDto() }
     }
 
-    suspend fun getContact(address: String): ContactEntity? {
-        return contactsDao.get().get(address)
+    suspend fun getContact(address: String): ContactDto? {
+        return contactsDao.get().get(address)?.toDto()
     }
 
-    suspend fun getContactWithGroup(address: String): ContactWithGroup? {
-        return contactsDao.get().getWithGroup(address)
+    suspend fun getContactWithGroup(address: String): ContactWithGroupDto? {
+        return contactsDao.get().getWithGroup(address)?.toDto()
     }
 
-    fun getContactWithGroupFlow(address: String): Flow<ContactWithGroup?> {
-        return contactsDao.get().getWithGroupFlow(address)
+    fun getContactWithGroupFlow(address: String): Flow<ContactWithGroupDto?> {
+        return contactsDao.get().getWithGroupFlow(address).map { item -> item?.toDto() }
     }
 
-    suspend fun insertOrUpdateContact(contactEntity: ContactEntity) {
-        contactsDao.get().insertOrUpdate(contactEntity)
+    suspend fun insertOrUpdateContact(contactEntity: ContactDto) {
+        contactsDao.get().insertOrUpdate(contactEntity.toEntity())
         return updateContactLastMessageId(contactEntity.address)
     }
 
-    suspend fun insertOrIgnoreContact(contactEntity: ContactEntity) {
-        contactsDao.get().insertOrIgnore(contactEntity)
+    suspend fun insertOrIgnoreContact(contactEntity: ContactDto) {
+        contactsDao.get().insertOrIgnore(contactEntity.toEntity())
         return updateContactLastMessageId(contactEntity.address)
     }
 
-    suspend fun insertOrUpdateGroup(group: GroupEntity) {
-        contactsDao.get().insertOrUpdate(group)
+    suspend fun insertOrUpdateGroup(group: GroupDto) {
+        contactsDao.get().insertOrUpdate(group.toEntity())
         return updateContactLastMessageId(group.address)
     }
 
-    suspend fun updateContact(contactEntity: ContactEntity) {
-        contactsDao.get().update(contactEntity)
+    suspend fun updateContact(contactEntity: ContactDto) {
+        contactsDao.get().update(contactEntity.toEntity())
         return updateContactLastMessageId(contactEntity.address)
     }
 
-    suspend fun removeContacts(contacts: List<ContactEntity>) {
-        contactsDao.get().remove(contacts)
+    suspend fun removeContacts(contacts: List<ContactDto>) {
+        contactsDao.get().remove(contacts.map { item -> item.toEntity() })
         for (contact in contacts) {
             clearConversationSoft(contact.address)
         }
     }
 
-    suspend fun getMessage(id: Long): MessageEntity? {
-        return messagesDao.get().get(id)
+    suspend fun getMessage(id: Long): MessageDto? {
+        return messagesDao.get().get(id)?.toDto()
     }
 
-    suspend fun getMessageWithAttachments(id: Long): MessageWithAttachments? {
-        return messagesDao.get().getWithAttachments(id)
+    suspend fun getMessageWithAttachments(id: Long): MessageWithAttachmentsDto? {
+        return messagesDao.get().getWithAttachments(id)?.toDto()
     }
 
-    fun getConversationFlow(chatId: String): Flow<List<MessageWithDetails>> {
+    fun getConversationFlow(chatId: String): Flow<List<MessageWithDetailsDto>> {
         return messagesDao.get().getConversationFlow(chatId)
+            .map { items -> items.map { item -> item.toDto() } }
     }
 
-    fun getLatestSharedFiles(): Flow<List<Article>> {
+    fun getLatestSharedFiles(): Flow<List<ArticleDto>> {
         return messagesDao.get().getLatestSharedFilesFlow()
-            .map { items -> items.map { m -> m.toArticle(context) } }
+            .map { items -> items.map { m -> m.toArticleDto(context) } }
     }
 
     suspend fun getConversationPage(
         chatId: String,
         lastIndex: Long,
         searchQuery: String = ""
-    ): List<MessageWithDetails> {
+    ): List<MessageWithDetailsDto> {
         return messagesDao.get().getConversationPage(chatId, lastIndex, searchQuery)
+            .map { item -> item.toDto() }
     }
 
     suspend fun clearConversationSoft(chatId: String) {
@@ -164,21 +205,21 @@ class LocalDataSource @Inject constructor(
     }
 
     private suspend fun updateContactLastMessageId(chatId: String) {
-        val contact = contactsDao.get().get(chatId) ?: return
+        val contact = contactsDao.get().get(chatId)?.toDto() ?: return
         val lastMessageId = messagesDao.get().getLastMessageId(chatId) ?: messagesDao.get()
             .insertOrIgnore(
-                MessageEntityFactory.createOutgoing(
+                MessageDtoFactory.createOutgoing(
                     chatId = contact.address,
                     text = null,
                     type = MessageType.TEXT,
                     actionFor = null
-                ).copy(deleted = true)
+                ).markAsDeleted().toEntity()
             )
-        val updatedContact = contact.withLastMessageId(lastMessageId) ?: return
-        return contactsDao.get().update(updatedContact)
+        val updatedContact = contact.withLastMessageId(lastMessageId)
+        return contactsDao.get().update(updatedContact.toEntity())
     }
 
-    suspend fun removeMessagesSoft(messages: List<MessageEntity>) {
+    suspend fun removeMessagesSoft(messages: List<MessageDto>) {
         val chatIds = mutableSetOf<String>()
         for (message in messages) {
             messagesDao.get().removeSoft(message.id)
@@ -189,8 +230,8 @@ class LocalDataSource @Inject constructor(
         }
     }
 
-    private fun removeFiles(message: MessageEntity) {
-        if(message.incoming) {
+    private fun removeFiles(message: MessageDto) {
+        if (message.incoming) {
             for (file in message.files ?: listOf()) {
                 context.deleteUri(file)
             }
@@ -198,18 +239,18 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun removeMessageSoft(refId: String) {
-        val message = messagesDao.get().getByRefId(refId) ?: return
+        val message = messagesDao.get().getByRefId(refId)?.toDto() ?: return
         messagesDao.get().removeSoft(refId)
         removeFiles(message)
         updateContactLastMessageId(message.chatId)
     }
 
-    fun getLastDeletedMessage(charId: String): Flow<MessageEntity?> {
-        return messagesDao.get().getLastDeletedFlow(charId)
+    fun getLastDeletedMessage(charId: String): Flow<MessageDto?> {
+        return messagesDao.get().getLastDeletedFlow(charId).map { item -> item?.toDto() }
     }
 
-    suspend fun insertOrIgnoreMessage(message: MessageEntity): Long? {
-        val messageId = messagesDao.get().insertOrIgnore(message)
+    suspend fun insertOrIgnoreMessage(message: MessageDto): Long? {
+        val messageId = messagesDao.get().insertOrIgnore(message.toEntity())
         if (messageId != null && messageId > 0) {
             updateContactLastMessageId(message.chatId)
             if (message.incoming) {
@@ -220,12 +261,12 @@ class LocalDataSource @Inject constructor(
         return null
     }
 
-    suspend fun insertOrUpdateAttachment(attachment: AttachmentEntity) {
-        return messagesDao.get().insertOrUpdateAttachment(attachment)
+    suspend fun insertOrUpdateAttachment(attachment: AttachmentDto) {
+        return messagesDao.get().insertOrUpdateAttachment(attachment.toEntity())
     }
 
-    suspend fun updateMessage(message: MessageEntity) {
-        return messagesDao.get().update(message)
+    suspend fun updateMessage(message: MessageDto) {
+        return messagesDao.get().update(message.toEntity())
     }
 
     suspend fun markConversationAsUnread(address: String) {
@@ -236,35 +277,59 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get().markConversationAsRead(address)
     }
 
-    suspend fun insertGuard(guard: GuardEntity) {
-        return guardsDao.get().insert(guard)
+    suspend fun insertGuard(guard: GuardDto) {
+        return guardsDao.get().insertWithLimit(guard.toEntity())
     }
 
-    suspend fun getGuard(): GuardEntity? {
-        return guardsDao.get().getLastGuard()
+    suspend fun getGuard(): GuardDto? {
+        return guardsDao.get().getGuard()?.toDto()
+    }
+
+    suspend fun getGuards(): List<GuardDto> {
+        return guardsDao.get().get().map { item -> item.toDto() }
+    }
+
+    fun getGuardsFlow(): Flow<List<GuardDto>> {
+        return guardsDao.get().getFlow().map { items -> items.map { item -> item.toDto() } }
+    }
+
+    suspend fun searchGuards(query: String): List<GuardDto> {
+        return guardsDao.get().search(query).map { item -> item.toDto() }
     }
 
     suspend fun removeVertices() {
         return verticesDao.get().remove()
     }
 
-    suspend fun insertOrIgnoreVertices(vertices: List<VertexEntity>) {
-        return verticesDao.get().insertOrIgnore(vertices)
+    suspend fun insertOrIgnoreVertices(vertices: List<VertexDto>) {
+        return verticesDao.get().insertOrIgnore(vertices.map { item -> item.toEntity() })
     }
 
-    suspend fun getVertices(): List<VertexEntity> {
-        return verticesDao.get().get()
+    suspend fun getVertices(): List<VertexDto> {
+        return verticesDao.get().get().map { item -> item.toDto() }
+    }
+
+    suspend fun getAllVertices(): List<VertexDto> {
+        return verticesDao.get().getAll().map { item -> item.toDto() }
+    }
+
+    suspend fun searchVertices(searchQuery: String): List<VertexDto> {
+        return verticesDao.get().search(searchQuery).map { item -> item.toDto() }
+    }
+
+    fun getVerticesFlow(): Flow<List<VertexDto>> {
+        return verticesDao.get().getFlow().map { items -> items.map { item -> item.toDto() } }
     }
 
     suspend fun removeEdges() {
         return edgesDao.get().remove()
     }
 
-    suspend fun insertOrIgnoreEdge(edge: EdgeEntity) {
-        return edgesDao.get().insertOrIgnore(edge)
+    suspend fun insertOrIgnoreEdge(edge: EdgeDto) {
+        return edgesDao.get().insertOrIgnore(edge.toEntity())
     }
 
-    suspend fun getEdges(): List<EdgeEntity> {
-        return edgesDao.get().get()
+    suspend fun getEdges(): List<EdgeDto> {
+        return edgesDao.get().get().map { item -> item.toDto() }
     }
 }

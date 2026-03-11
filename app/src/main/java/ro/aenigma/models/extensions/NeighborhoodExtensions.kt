@@ -1,11 +1,20 @@
 package ro.aenigma.models.extensions
 
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import ro.aenigma.models.Neighborhood
+import ro.aenigma.models.NeighborhoodDto
+import ro.aenigma.util.StringExtensions.getHost
+import ro.aenigma.util.StringExtensions.getHttpUri
 
 object NeighborhoodExtensions {
     @JvmStatic
-    fun Neighborhood.normalizeHostname(): Neighborhood {
-        return copy(hostname = hostname?.toHttpUrlOrNull().toString())
+    fun NeighborhoodDto.normalizeHostname(): NeighborhoodDto {
+        return copy(
+            hostname = hostname?.getHttpUri(),
+            onionService = onionService?.getHttpUri()
+        )
+    }
+
+    @JvmStatic
+    fun NeighborhoodDto.hasHost(targetHost: String): Boolean {
+        return hostname.getHost() == targetHost || onionService.getHost() == targetHost
     }
 }

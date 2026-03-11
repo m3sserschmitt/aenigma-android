@@ -5,7 +5,6 @@ import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
 import ro.aenigma.crypto.extensions.SignatureExtensions.jsonSign
 import ro.aenigma.models.SignatureDto
-import ro.aenigma.models.SignedData
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,7 +53,7 @@ class SignatureService @Inject constructor(keysManager: KeysManager) {
         }
     }
 
-    inline fun <reified T> jsonSign(data: T): SignedData? {
+    inline fun <reified T> jsonSign(data: T): SignatureDto? {
         return data.jsonSign(this)
     }
 }

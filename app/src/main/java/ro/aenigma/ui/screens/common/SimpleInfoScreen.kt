@@ -38,6 +38,7 @@ fun SimpleInfoScreen(
         ) {
             icon()
             Text(
+                modifier = Modifier.padding(top = 4.dp),
                 text = message,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge,
@@ -54,9 +55,10 @@ fun SimpleInfoScreen(
         ) {
             icon()
             Text(
+                modifier = Modifier.padding(start = 4.dp),
                 text = message,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }

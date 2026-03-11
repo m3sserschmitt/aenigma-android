@@ -12,6 +12,7 @@ fun NavGraphBuilder.contactsComposable(
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
     navigateToAddContactScreen: (String?) -> Unit,
+    navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit,
 ) {
@@ -24,6 +25,7 @@ fun NavGraphBuilder.contactsComposable(
 
         ContactsScreen(
             navigateToAddContactScreen = navigateToAddContactScreen,
+            navigateToScanServerScreen = navigateToScanServerScreen,
             navigateToChatScreen = navigateToChatScreen,
             navigateToAboutScreen = navigateToAboutScreen,
             mainViewModel = mainViewModel

@@ -151,7 +151,7 @@ Java_ro_aenigma_crypto_CryptoProvider_encrypt(
 
     int len;
     auto data = toUnsignedCharArray(env, plaintext, len);
-    auto ciphertext = EncryptDataEx(ctx, data, len);
+    auto ciphertext = RunEx(ctx, data, len);
     delete[] data;
 
     if(not ciphertext or ciphertext->isError())
@@ -180,7 +180,7 @@ Java_ro_aenigma_crypto_CryptoProvider_decrypt(
 
     int len;
     auto data = toUnsignedCharArray(env, ciphertext, len);
-    auto plaintext = DecryptDataEx(decryptContext, data, len);
+    auto plaintext = RunEx(decryptContext, data, len);
     delete[] data;
 
     if(not plaintext or plaintext->isError())
@@ -205,7 +205,7 @@ Java_ro_aenigma_crypto_CryptoProvider_sign(
 
     int len;
     auto data = toUnsignedCharArray(env, plaintext, len);
-    auto signature = SignDataEx(signContext, data, len);
+    auto signature = RunEx(signContext, data, len);
     delete[] data;
 
     if(not signature or signature->isError())
@@ -233,7 +233,7 @@ Java_ro_aenigma_crypto_CryptoProvider_verify(
 
     int len;
     auto data = toUnsignedCharArray(env, signature, len);
-    auto result = VerifySignature(ctx, data, len);
+    auto result = RunVerification(ctx, data, len);
     delete[] data;
     delete ctx;
 
@@ -335,7 +335,7 @@ Java_ro_aenigma_crypto_CryptoProvider_encryptSymmetric(
     auto cPlaintext = toUnsignedCharArray(env, plaintext, plaintextSize);
 
     int ciphertextSize;
-    auto ciphertext = EncryptData(ctx, cPlaintext, plaintextSize, ciphertextSize);
+    auto ciphertext = Run(ctx, cPlaintext, plaintextSize, ciphertextSize);
 
     delete[] cPlaintext;
     if(not ciphertext)
@@ -364,7 +364,7 @@ Java_ro_aenigma_crypto_CryptoProvider_decryptSymmetric(
     auto cCiphertext = toUnsignedCharArray(env, ciphertext, ciphertextSize);
 
     int plaintextSize;
-    auto plaintext = DecryptData(ctx, cCiphertext, ciphertextSize, plaintextSize);
+    auto plaintext = Run(ctx, cCiphertext, ciphertextSize, plaintextSize);
 
     delete[] cCiphertext;
     if(not plaintext)

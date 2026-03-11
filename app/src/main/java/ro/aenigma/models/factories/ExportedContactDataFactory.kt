@@ -1,7 +1,7 @@
 package ro.aenigma.models.factories
 
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
-import ro.aenigma.models.ExportedContactData
+import ro.aenigma.models.ExportedContactDataDto
 
 object ExportedContactDataFactory {
     @JvmStatic
@@ -10,8 +10,8 @@ object ExportedContactDataFactory {
         publicKey: String?,
         guardAddress: String?,
         guardHostname: String?
-    ): ExportedContactData {
-        return ExportedContactData(
+    ): ExportedContactDataDto {
+        return ExportedContactDataDto(
             name = name,
             publicKey = publicKey,
             address = publicKey.getAddressFromPublicKey(),
@@ -21,8 +21,8 @@ object ExportedContactDataFactory {
     }
 
     @JvmStatic
-    fun create(address: String): ExportedContactData {
-        return ExportedContactData(
+    fun create(address: String): ExportedContactDataDto {
+        return ExportedContactDataDto(
             address = address,
             name = null,
             publicKey = null,

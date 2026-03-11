@@ -1,40 +1,39 @@
 package ro.aenigma.models.extensions
 
-import ro.aenigma.models.ExportedContactData
-import ro.aenigma.models.GroupData
-import ro.aenigma.util.SerializerExtensions.deepCopy
+import ro.aenigma.models.ExportedContactDataDto
+import ro.aenigma.models.GroupDataDto
 
 object GroupDataExtensions {
     @JvmStatic
-    fun GroupData?.withName(name: String?): GroupData? {
-        return deepCopy()?.copy(name = name)
+    fun GroupDataDto.withName(name: String?): GroupDataDto {
+        return copy(name = name)
     }
 
     @JvmStatic
-    fun GroupData?.withMembers(members: List<ExportedContactData>?): GroupData? {
-        return deepCopy()?.copy(members = members)
+    fun GroupDataDto.withMembers(members: List<ExportedContactDataDto>?): GroupDataDto {
+        return copy(members = members)
     }
 
     @JvmStatic
-    fun GroupData.removeMember(address: String): GroupData? {
+    fun GroupDataDto.removeMember(address: String): GroupDataDto {
         val filteredMembers = members?.filter { item -> item.address != address }
         return withMembers(filteredMembers)
     }
 
     @JvmStatic
-    fun GroupData.removeMembers(addresses: List<String>): GroupData? {
+    fun GroupDataDto.removeMembers(addresses: List<String>): GroupDataDto {
         val set = addresses.toSet()
         return withMembers(members?.filter { member -> !set.contains(member.address) })
     }
 
     @JvmStatic
-    fun GroupData.iAmAdmin(localAddress: String): Boolean {
+    fun GroupDataDto.iAmAdmin(localAddress: String): Boolean {
         return admins?.contains(localAddress) == true
     }
 
     @JvmStatic
-    fun GroupData.incrementNonce(): GroupData? {
+    fun GroupDataDto.incrementNonce(): GroupDataDto {
         val newNonce = (nonce ?: 0) + 1
-        return deepCopy()?.copy(nonce = newNonce)
+        return copy(nonce = newNonce)
     }
 }

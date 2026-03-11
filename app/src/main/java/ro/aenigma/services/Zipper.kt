@@ -7,7 +7,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.ZipParameters
 import net.lingala.zip4j.model.enums.CompressionLevel
-import ro.aenigma.models.AttachmentsMetadata
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -56,7 +56,7 @@ class Zipper @Inject constructor(@param:ApplicationContext val context: Context)
 
     suspend fun createZip(
         files: List<String>,
-        metadata: AttachmentsMetadata? = null
+        metadata: AttachmentsMetadataDto? = null
     ): File? {
         val tempFiles = files.mapNotNull { uri -> copyUriToCache(uri) }
         try {

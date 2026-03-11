@@ -7,7 +7,8 @@
     <string name="qr_code">Qr Code</string>
     <string name="contacts_floating_button_content_description">Add Contact Button</string>
     <string name="contacts">Contacts</string>
-    <string name="search">Search</string>
+    <string name="search">Search…</string>
+    <string name="server_query">Server query…</string>
     <string name="close">Close</string>
     <string name="contact">Contact</string>
     <string name="back">Back</string>
@@ -107,10 +108,11 @@
     <string name="reset_username">Reset user name</string>
     <string name="cannot_share_channels">channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
-    <string name="tor">TOR</string>
+    <string name="tor_service">The Onion Router service</string>
+    <string name="orbot_service">Orbot service</string>
     <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
-    <string name="guard_syncing">Syncing</string>
+    <string name="guard_syncing">Fetch server info</string>
     <string name="downloading_channel_info">Downloading channel info</string>
     <string name="uploading_channel_info">Uploading channel info</string>
     <string name="sending_message">Sending message</string>
@@ -140,4 +142,19 @@
     <string name="apache_v2_0_license" translatable="false">Apache License Version 2.0</string>
     <string name="apache_v2_0_license_title" translatable="false">Apache License Version 2.0, January 2004</string>
     <string name="privacy_policy">Privacy policy</string>
+    <string name="tor_starting">TOR is starting</string>
+    <string name="connected_through_tor">Connected through The Onion Router network</string>
+    <string name="tor_stopped">TOR service stopped</string>
+    <string name="background_work">Background work</string>
+    <string name="servers">Available servers</string>
+    <string name="history">History</string>
+    <string name="connect">Connect</string>
+    <string name="no_server_found">No server found</string>
+    <string name="orbot_required_title">Orbot is required</string>
+    <string name="do_you_install_orbot">Would you like to install Orbot from Google Play Store to establish a secure VPN connection</string>
+    <string name="use_orbot_title">Use Orbot VPN</string>
+    <string name="open_orbot">Open Orbot</string>
+    <string name="orbot_info">Make sure you launched Orbot and the VPN connection was successfully established</string>
+    <string name="start_tor_service_title">Start TOR Service</string>
+    <string name="tor_service_info">Make sure Orbot VPN connection is not running before starting TOR Service</string>
 </resources>

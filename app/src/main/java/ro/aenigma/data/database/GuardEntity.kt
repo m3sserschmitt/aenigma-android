@@ -8,12 +8,14 @@ import java.time.ZonedDateTime
 
 @Entity(
     tableName = GUARDS_TABLE,
-    indices = [Index(value = ["address"])]
+    indices = [Index(value = ["address"], unique = true)]
 )
 data class GuardEntity (
     @PrimaryKey(autoGenerate = true) var id: Long = 0,
     val address: String,
     val publicKey: String,
-    val hostname: String,
+    val hostname: String?,
+    val onionService: String?,
+    val graphVersion: String?,
     val dateCreated: ZonedDateTime
 )

@@ -9,9 +9,8 @@ import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.readValue
-import org.erdtman.jcs.JsonCanonicalizer
 import retrofit2.converter.jackson.JacksonConverterFactory
+import ro.aenigma.util.StringExtensions.canonicalize
 import java.time.ZonedDateTime
 
 object SerializerExtensions {
@@ -44,9 +43,9 @@ object SerializerExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> String?.fromJson(): T? {
+    inline fun <reified T> T?.toCanonicalJson(): String? {
         return try {
-            this?.let { createJsonMapper().readValue<T>(it) }
+            this.toJson().canonicalize()
         } catch (_: Exception) {
             null
         }
@@ -55,21 +54,11 @@ object SerializerExtensions {
     @JvmStatic
     inline fun <reified T> T?.toJson(): String? {
         return try {
-            createJsonMapper().writeValueAsString(this)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    @JvmStatic
-    fun String?.toCanonicalJson(): String? {
-        return JsonCanonicalizer(this ?: return null).encodedString
-    }
-
-    @JvmStatic
-    inline fun <reified T> T?.toCanonicalJson(): String? {
-        return try {
-            this.toJson().toCanonicalJson()
+            if(this is String) {
+                this
+            } else {
+                createJsonMapper().writeValueAsString(this)
+            }
         } catch (_: Exception) {
             null
         }

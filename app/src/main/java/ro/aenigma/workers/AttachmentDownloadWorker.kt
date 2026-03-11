@@ -17,13 +17,15 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.MessageEntity
-import ro.aenigma.data.database.MessageWithAttachments
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.models.AttachmentsMetadata
+import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.AttachmentsMetadataDto
+import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.Zipper
@@ -31,7 +33,7 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.getConversationFilesDir
 import ro.aenigma.util.FileExtensions.toContentUriString
-import ro.aenigma.util.SerializerExtensions.fromJson
+import ro.aenigma.util.StringExtensions.fromJson
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -75,8 +77,15 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun downloadEncryptedFile(url: String): File? {
-        val tempFile = File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
-        return if (repository.remote.getFile(url, tempFile)) tempFile else null
+        val tempFile = withContext(Dispatchers.IO) {
+            File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
+        }
+        if(repository.remote.getFile(url, tempFile)) {
+            repository.remote.incrementFileAccessCount(url)
+            return tempFile
+        } else {
+            return null
+        }
     }
 
     private fun decryptArchive(file: File, passphrase: String?): File? {
@@ -84,10 +93,10 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         return CryptoProvider.decrypt(file, key)
     }
 
-    private suspend fun storeAttachment(message: MessageWithAttachments, archive: File) {
+    private suspend fun storeAttachment(message: MessageWithAttachmentsDto, archive: File) {
         repository.local.insertOrUpdateAttachment(
-            AttachmentEntityFactory.create(
-                id = message.message.id,
+            AttachmentDto(
+                messageId = message.message.id,
                 path = archive.name,
                 url = message.attachment?.url,
                 passphrase = message.attachment?.passphrase
@@ -95,7 +104,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         )
     }
 
-    private suspend fun resolveAttachments(message: MessageWithAttachments): File? {
+    private suspend fun resolveAttachments(message: MessageWithAttachmentsDto): File? {
         val attachment = message.attachment ?: return null
         val archive = if (attachment.path == null) {
             val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
@@ -111,13 +120,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun resolveFiles(
-        message: MessageEntity,
+        message: MessageDto,
         files: List<File>
-    ): AttachmentsMetadata? {
-        var i = 0
-        var metadata: AttachmentsMetadata? = null
+    ): AttachmentsMetadataDto? {
+        var metadata: AttachmentsMetadataDto? = null
         val finalURIs = mutableListOf<String>()
-        for (file in files) {
+        for ((i, file) in files.withIndex()) {
             if (file.name == ATTACHMENTS_METADATA_FILE) {
                 metadata = file.readText().fromJson()
             }
@@ -127,7 +135,6 @@ class AttachmentDownloadWorker @AssistedInject constructor(
             )
             file.renameTo(destinationFile)
             finalURIs.add(destinationFile.toContentUriString(applicationContext))
-            i++
         }
         repository.local.updateMessage(
             message.copy(

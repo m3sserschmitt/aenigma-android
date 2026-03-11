@@ -22,11 +22,11 @@ import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withName
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.withNewMessage
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.GroupEntityFactory
-import ro.aenigma.models.GroupData
+import ro.aenigma.models.GroupDataDto
+import ro.aenigma.models.GroupDto
+import ro.aenigma.models.extensions.ContactDtoExtensions.withName
+import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -65,30 +65,30 @@ class GroupDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun createContactEntities(groupData: GroupData, resourceUrl: String) {
-        groupData.address ?: return
-        val contact = (repository.local.getContactWithGroup(groupData.address)?.contact
-            ?: ContactEntityFactory.createGroup(
-                address = groupData.address,
-                name = groupData.name,
-            )).withName(groupData.name).withNewMessage() ?: return
-        val group = GroupEntityFactory.create(
-            address = groupData.address,
-            groupData = groupData,
+    private suspend fun createContactEntities(groupDataDto: GroupDataDto, resourceUrl: String) {
+        groupDataDto.address ?: return
+        val contact = (repository.local.getContactWithGroup(groupDataDto.address)?.contact
+            ?: ContactDtoFactory.createGroup(
+                address = groupDataDto.address,
+                name = groupDataDto.name,
+            )).withName(groupDataDto.name).withNewMessage()
+        val group = GroupDto(
+            address = groupDataDto.address,
+            groupData = groupDataDto,
             resourceUrl = resourceUrl
         )
         repository.local.insertOrUpdateContact(contact)
         repository.local.insertOrUpdateGroup(group)
 
-        groupData.members ?: return
+        groupDataDto.members ?: return
 
-        for (member in groupData.members) {
+        for (member in groupDataDto.members) {
             if (member.name == null || member.address == null || signatureService.address == member.address
                 || !member.publicKey.isValidPublicKey()
             ) {
                 continue
             }
-            val c = ContactEntityFactory.createContact(
+            val c = ContactDtoFactory.createContact(
                 address = member.address,
                 name = member.name,
                 publicKey = member.publicKey,
@@ -116,13 +116,14 @@ class GroupDownloadWorker @AssistedInject constructor(
         message.message.senderAddress ?: return Result.failure()
 
         val existentGroup = repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
-        val groupData = repository.remote.getGroupDataByUrl(
+        val groupData = repository.remote.getGroupData(
             url = message.attachment.url,
             existentGroup = existentGroup,
             passphrase = CryptoProvider.base64Decode(passphrase)
                 ?: return Result.failure(),
             expectedPublisherAddress = message.message.senderAddress
         ) ?: return Result.retry()
+        repository.remote.incrementSharedDataAccessCount(message.attachment.url)
         createContactEntities(groupData, message.attachment.url)
         return Result.success()
     }

@@ -1,7 +1,7 @@
 package ro.aenigma.crypto.services
 
 import ro.aenigma.models.ParsedMessageDto
-import ro.aenigma.models.PendingMessage
+import ro.aenigma.models.PendingMessageDto
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.util.Constants
 import ro.aenigma.util.HexConverter
@@ -27,7 +27,7 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
     fun parse(routingRequest: RoutingRequest): List<ParsedMessageDto> {
         return routingRequest.payloads?.mapNotNull { item ->
             parse(
-                PendingMessage(
+                PendingMessageDto(
                     routingRequest.uuid,
                     null,
                     item,
@@ -38,15 +38,15 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
         } ?: listOf()
     }
 
-    fun parse(pendingMessage: PendingMessage): ParsedMessageDto? {
-        if (!ready || pendingMessage.content == null) {
+    fun parse(pendingMessageDto: PendingMessageDto): ParsedMessageDto? {
+        if (!ready || pendingMessageDto.content == null) {
             return null
         }
         synchronized(lock)
         {
             return try {
                 val decryptedData =
-                    CryptoProvider.unsealOnionEx(pendingMessage.content) ?: return null
+                    CryptoProvider.unsealOnionEx(pendingMessageDto.content) ?: return null
                 if (decryptedData.size < Constants.ADDRESS_SIZE_BYTES + 1) {
                     return null
                 }
@@ -54,9 +54,9 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
                     HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE_BYTES))
                 val content =
                     String(decryptedData.sliceArray(Constants.ADDRESS_SIZE_BYTES until decryptedData.size))
-                val dateReceivedOnServer = ZonedDateTime.parse(pendingMessage.dateReceived)
+                val dateReceivedOnServer = ZonedDateTime.parse(pendingMessageDto.dateReceived)
                     .withZoneSameInstant(ZoneId.systemDefault())
-                ParsedMessageDto(address, content, dateReceivedOnServer, pendingMessage.uuid)
+                ParsedMessageDto(address, content, dateReceivedOnServer, pendingMessageDto.uuid)
             } catch (_: Exception) {
                 null
             }

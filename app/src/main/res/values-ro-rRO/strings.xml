@@ -8,7 +8,8 @@
     <string name="qr_code">Cod QR</string>
     <string name="contacts_floating_button_content_description">Butonul pentru adăugarea contactelor</string>
     <string name="contacts">Contacte</string>
-    <string name="search">Căutați</string>
+    <string name="search">Căutați…</string>
+    <string name="server_query">Interogare server…</string>
     <string name="close">Închideți</string>
     <string name="contact">Contact</string>
     <string name="back">Înapoi</string>
@@ -43,7 +44,7 @@
     <string name="connection_failed_reason">Serviciul poate fi indisponibil momentan. Reporniți aplicația sau încercați mai târziu</string>
     <string name="retry_now">Reîncercați acum</string>
     <string name="reload">Reîncarcă</string>
-    <string name="retry">Retry</string>
+    <string name="retry">Reîncearcă</string>
     <string name="permission_required">Permisiune necesară</string>
     <string name="notifications_permission_required">Aplicația are nevoie de permisiune pentru afișarea notificărilor. Pentru cea mai bună experiență, acordați permisiunea din meniul Setări.</string>
     <string name="settings">Setări</string>
@@ -105,10 +106,11 @@
     <string name="reset_username">Resetați numele de utilizator</string>
     <string name="cannot_share_channels">Nu puteți distribui canale</string>
     <string name="cannot_select_channels_to_create_channel">Nu poteți selecta canale pentru a crea un nou canal.</string>
-    <string name="tor">TOR</string>
+    <string name="tor_service">Serviciul Onion Router</string>
+    <string name="orbot_service">Serviciul Orbot</string>
     <string name="access_aenigma">Accesați Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Autentificați-vă folosind datele biometrice sau codul PIN</string>
-    <string name="guard_syncing">Se sincronizează</string>
+    <string name="guard_syncing">Se preiau informații de la server</string>
     <string name="downloading_channel_info">Se preiau informațiile canalului</string>
     <string name="uploading_channel_info">Se distribuie informațiile canalului</string>
     <string name="sending_message">Se trimite un mesaj</string>
@@ -136,4 +138,19 @@
     <string name="restart_app_to_retry">Reporniți aplicația pentru a reîncerca</string>
     <string name="backed_by_openssl">OpenSSL 3.0, licențiată sub:</string>
     <string name="privacy_policy">Politica de confidențialitate</string>
+    <string name="tor_starting">Se inițializează TOR</string>
+    <string name="connected_through_tor">Conectat prin rețeaua Onion Router</string>
+    <string name="tor_stopped">Serviciul TOR a fost oprit</string>
+    <string name="background_work">Lucrează în fundal</string>
+    <string name="servers">Servere disponibile</string>
+    <string name="history">Istoric</string>
+    <string name="connect">Conectează</string>
+    <string name="no_server_found">Nu am găsit niciun server</string>
+    <string name="orbot_required_title">Orbot este necesar</string>
+    <string name="do_you_install_orbot">Dorești să instalezi Orbot din Google Play Store pentru a realiza o conxiune securizată?</string>
+    <string name="use_orbot_title">Folosește conexiunea VPN prin Orbot</string>
+    <string name="open_orbot">Deschide Orbot</string>
+    <string name="orbot_info">Asigură-te ca ai lansat Orbot și conexiunea VPN a fost realizată cu succes.</string>
+    <string name="start_tor_service_title">Lansează Serviciul TOR</string>
+    <string name="tor_service_info">Asigură-te că nu ai o conexiune VPN prin Orbot înainte de a lansa servicul TOR</string>
 </resources>

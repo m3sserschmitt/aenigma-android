@@ -43,8 +43,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import ro.aenigma.R
-import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
-import ro.aenigma.data.database.factories.MessageEntityFactory
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
@@ -53,6 +51,7 @@ import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
@@ -118,8 +117,7 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = {
-                        onClick(message)
+                    onClick = { item -> onClick(item)
                         showImageViewer = true
                     }
                 ),
@@ -432,7 +430,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
         isSelectionMode = true,
         isSelected = false,
         message = MessageWithDetailsDto(
-            MessageEntityFactory.createIncoming(
+            MessageDtoFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
                 text = "Hello, how are you?",
@@ -441,7 +439,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ).toDto(), null, null
+            ), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -457,7 +455,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
         isSelectionMode = true,
         isSelected = true,
         message = MessageWithDetailsDto(
-            MessageEntityFactory.createIncoming(
+            MessageDtoFactory.createIncoming(
                 chatId = "123-123-123-124",
                 senderAddress = "123-123-123-125",
                 text = "Hello, how are you?",
@@ -466,7 +464,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
                 type = MessageType.TEXT,
                 actionFor = null,
                 dateReceivedOnServer = ZonedDateTime.now(),
-            ).toDto(), null, null
+            ), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -482,12 +480,12 @@ fun MessagePending() {
         isSelectionMode = false,
         isSelected = false,
         message = MessageWithDetailsDto(
-            MessageEntityFactory.createOutgoing(
+            MessageDtoFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ).toDto(), null, null
+            ), null, null
         ),
         onItemDeselected = {},
         onClick = {},
@@ -503,12 +501,12 @@ fun MessageSent() {
         isSelectionMode = false,
         isSelected = false,
         message = MessageWithDetailsDto(
-            MessageEntityFactory.createOutgoing(
+            MessageDtoFactory.createOutgoing(
                 "123-123-123-123",
                 "Hello",
                 type = MessageType.TEXT,
                 actionFor = null,
-            ).toDto(), null, null
+            ), null, null
         ),
         onItemDeselected = {},
         onClick = {},

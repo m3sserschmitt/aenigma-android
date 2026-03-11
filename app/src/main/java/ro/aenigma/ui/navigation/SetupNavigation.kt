@@ -14,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -27,6 +26,7 @@ import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.services.NavigationTracker
 import ro.aenigma.ui.navigation.destinations.articleComposable
 import ro.aenigma.ui.navigation.destinations.feedComposable
+import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
 import ro.aenigma.util.NavBackStackEntryExtensions.isContactsSelected
 import ro.aenigma.util.NavBackStackEntryExtensions.isFeedSelected
 import ro.aenigma.viewmodels.MainViewModel
@@ -46,7 +46,7 @@ fun SetupNavigation(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                modifier = Modifier.height(50.dp),
+                modifier = Modifier.height(NAVIGATION_BAR_HEIGHT),
                 containerColor = MaterialTheme.colorScheme.background
             ) {
                 NavigationBarItem(
@@ -91,6 +91,7 @@ fun SetupNavigation(
                 navigationTracker = navigationTracker,
                 navigateToChatScreen = screen.chat,
                 navigateToAddContactScreen = screen.addContact,
+                navigateToScanServerScreen = screen.scanServerCode,
                 navigateToAboutScreen = screen.about,
                 mainViewModel = mainViewModel
             )

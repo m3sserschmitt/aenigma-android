@@ -18,7 +18,7 @@ import coil3.request.error
 import coil3.request.placeholder
 import ro.aenigma.R
 import ro.aenigma.services.IOkHttpClientProvider
-import ro.aenigma.util.UrlExtensions.isRemoteUri
+import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.util.rememberImageLoader
 
 @Composable

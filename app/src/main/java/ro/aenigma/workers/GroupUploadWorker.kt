@@ -22,21 +22,21 @@ import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
-import ro.aenigma.data.database.GuardEntity
-import ro.aenigma.data.database.extensions.ContactEntityExtensions.toExportedData
-import ro.aenigma.data.database.factories.AttachmentEntityFactory
-import ro.aenigma.data.database.factories.ContactEntityFactory
-import ro.aenigma.data.database.factories.GroupEntityFactory
-import ro.aenigma.data.database.factories.MessageEntityFactory
-import ro.aenigma.models.GroupData
+import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.GroupDataDto
+import ro.aenigma.models.GroupDto
+import ro.aenigma.models.GuardDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GroupDataExtensions.incrementNonce
 import ro.aenigma.models.extensions.GroupDataExtensions.removeMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withMembers
 import ro.aenigma.models.extensions.GroupDataExtensions.withName
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
@@ -98,8 +98,8 @@ class GroupUploadWorker @AssistedInject constructor(
         userName: String,
         groupName: String,
         admins: List<String>,
-        guard: GuardEntity
-    ): GroupData? {
+        guard: GuardDto
+    ): GroupDataDto? {
         signatureService.publicKey ?: return null
         val contacts = memberAddresses.mapNotNull { item -> repository.local.getContact(item) }
             .filter { item -> item.type == ContactType.CONTACT }
@@ -121,51 +121,51 @@ class GroupUploadWorker @AssistedInject constructor(
         return GroupDataFactory.create(name = groupName, members = members, admins = admins)
     }
 
-    private fun renameGroup(existingGroupData: GroupData, name: String): GroupData? {
-        return existingGroupData.withName(name)?.incrementNonce()
+    private fun renameGroup(existingGroupDataDto: GroupDataDto, name: String): GroupDataDto {
+        return existingGroupDataDto.withName(name).incrementNonce()
     }
 
     private fun removeGroupMembers(
-        existingGroupData: GroupData,
+        existingGroupDataDto: GroupDataDto,
         memberAddresses: List<String>
-    ): GroupData? {
+    ): GroupDataDto? {
         if(memberAddresses.contains(signatureService.address)) {
             return null
         }
-        return existingGroupData.removeMembers(memberAddresses)?.incrementNonce()
+        return existingGroupDataDto.removeMembers(memberAddresses).incrementNonce()
     }
 
     private suspend fun addGroupMembers(
-        existingGroupData: GroupData,
+        existingGroupDataDto: GroupDataDto,
         memberAddresses: List<String>
-    ): GroupData? {
-        val members = existingGroupData.members?.toHashSet() ?: return null
+    ): GroupDataDto? {
+        val members = existingGroupDataDto.members?.toHashSet() ?: return null
         memberAddresses.forEach { address ->
             if (!members.contains(ExportedContactDataFactory.create(address))) {
                 repository.local.getContact(address)?.let { c ->
-                    c.toExportedData()?.let { ecd ->
+                    c.toExportedContactDataDto().let { ecd ->
                         members.add(ecd)
                     }
                 }
             }
         }
-        return existingGroupData.withMembers(members.toList())?.incrementNonce()
+        return existingGroupDataDto.withMembers(members.toList()).incrementNonce()
     }
 
     private suspend fun createGroupData(
-        existingGroupData: GroupData?,
+        existingGroupDataDto: GroupDataDto?,
         groupName: String?,
         memberAddresses: List<String>?,
         userName: String?,
         admins: List<String>,
         actionType: MessageType,
-        guard: GuardEntity,
-    ): GroupData? {
+        guard: GuardDto,
+    ): GroupDataDto? {
         return when (actionType) {
             MessageType.GROUP_RENAMED -> {
                 groupName ?: return null
-                existingGroupData ?: return null
-                renameGroup(existingGroupData, groupName)
+                existingGroupDataDto ?: return null
+                renameGroup(existingGroupDataDto, groupName)
             }
 
             MessageType.GROUP_CREATE -> {
@@ -177,64 +177,71 @@ class GroupUploadWorker @AssistedInject constructor(
             }
 
             MessageType.GROUP_MEMBER_ADD -> {
-                existingGroupData ?: return null
+                existingGroupDataDto ?: return null
                 memberAddresses ?: return null
                 if (memberAddresses.isEmpty()) return null
-                addGroupMembers(existingGroupData, memberAddresses)
+                addGroupMembers(existingGroupDataDto, memberAddresses)
             }
 
             MessageType.GROUP_MEMBER_REMOVE -> {
                 memberAddresses ?: return null
                 if (memberAddresses.isEmpty()) return null
-                existingGroupData ?: return null
-                removeGroupMembers(existingGroupData, memberAddresses)
+                existingGroupDataDto ?: return null
+                removeGroupMembers(existingGroupDataDto, memberAddresses)
             }
 
             else -> null
         }
     }
 
-    private suspend fun saveGroupEntity(groupData: GroupData, resourceUrl: String) {
-        groupData.name ?: return
-        groupData.address ?: return
-        val contact = ContactEntityFactory.createGroup(
-            address = groupData.address,
-            name = groupData.name
+    private suspend fun saveGroupEntity(groupDataDto: GroupDataDto, resourceUrl: String) {
+        groupDataDto.name ?: return
+        groupDataDto.address ?: return
+        val contact = ContactDtoFactory.createGroup(
+            address = groupDataDto.address,
+            name = groupDataDto.name
         )
         repository.local.insertOrUpdateContact(contact)
-        val group = GroupEntityFactory.create(
-            address = groupData.address,
-            groupData = groupData,
+        val group = GroupDto(
+            address = groupDataDto.address,
+            groupData = groupDataDto,
             resourceUrl = resourceUrl
         )
         repository.local.insertOrUpdateGroup(group)
     }
 
     private suspend fun sendGroupUpdate(
-        groupData: GroupData,
+        groupDataDto: GroupDataDto,
         key: ByteArray,
         resourceUrl: String,
         actionType: MessageType,
         additionalDestinations: Set<String> = hashSetOf()
     ): Boolean {
-        groupData.address ?: return false
+        groupDataDto.address ?: return false
         val encodedKey = CryptoProvider.base64Encode(key)
         return messageSaver.saveOutgoingMessage(
-            MessageEntityFactory.createOutgoing(
-                chatId = groupData.address,
+            MessageDtoFactory.createOutgoing(
+                chatId = groupDataDto.address,
                 text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
                 // to null in the future;
                 type = actionType,
                 actionFor = null
             ),
             additionalDestinations = additionalDestinations,
-            AttachmentEntityFactory.create(
-                id = 0,
+            AttachmentDto(
+                messageId = 0,
                 path = null,
                 passphrase = encodedKey,
                 url = resourceUrl
             )
         )
+    }
+
+    private fun calculateDestinations(groupData: GroupDataDto?, existingGroupData: GroupDataDto?): Set<String> {
+        return groupData?.members?.mapNotNull { item -> item.address }
+            ?.union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: listOf())
+            ?.filter { item -> item != signatureService.address }
+            ?.toSet() ?: setOf()
     }
 
     override suspend fun doWork(): Result {
@@ -253,7 +260,7 @@ class GroupUploadWorker @AssistedInject constructor(
         val guard = repository.local.getGuard() ?: return Result.failure()
 
         val groupData = createGroupData(
-            existingGroupData = existingGroupData,
+            existingGroupDataDto = existingGroupData,
             groupName = groupName,
             memberAddresses = memberAddresses,
             userName = userName,
@@ -264,11 +271,13 @@ class GroupUploadWorker @AssistedInject constructor(
         groupData.members ?: return Result.failure()
         val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
             ?: return Result.failure()
-        val destinations = groupData.members.mapNotNull { item -> item.address }.toHashSet()
-            .union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: hashSetOf())
-        val accessCount = (destinations.count() - 1) * GroupDownloadWorker.MAX_RETRY_COUNT
+        val destinations = calculateDestinations(groupData, existingGroupData)
+        val destinationsCount = destinations.count()
+        if(destinationsCount <= 0) {
+            return Result.failure()
+        }
         val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val response = repository.remote.createSharedData(serializedGroupData, key, accessCount)
+        val response = repository.remote.createSharedData(serializedGroupData, key, destinationsCount)
             ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 

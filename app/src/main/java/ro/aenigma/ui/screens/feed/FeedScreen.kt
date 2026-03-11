@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
-import ro.aenigma.models.Article
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.ui.screens.common.ErrorScreen
@@ -49,9 +49,9 @@ fun FeedScreen(
 
 @Composable
 fun FeedScreen(
-    articles: RequestState<List<Article>>,
+    articles: RequestState<List<ArticleDto>>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (Article) -> Unit,
+    onArticleClicked: (ArticleDto) -> Unit,
     onReloadFeedClicked: () -> Unit
 ) {
     Scaffold(
@@ -82,16 +82,16 @@ fun FeedScreen(
 @Composable
 fun FeedScreenContent(
     modifier: Modifier,
-    articles: RequestState<List<Article>>,
+    articles: RequestState<List<ArticleDto>>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (Article) -> Unit
+    onArticleClicked: (ArticleDto) -> Unit
 ) {
     when (articles) {
         is RequestState.Success -> {
             if (articles.data.isNotEmpty()) {
                 FeedList(
                     modifier = modifier,
-                    articles = articles.data,
+                    articleDtos = articles.data,
                     okHttpClientProvider = okHttpClientProvider,
                     onArticleClicked = onArticleClicked
                 )
@@ -112,8 +112,8 @@ fun FeedScreenContent(
 @Preview
 @Composable
 fun FeedScreenPreview() {
-    val articles = List(1) {
-        Article(
+    val articleDtos = List(1) {
+        ArticleDto(
             id = 1,
             title = "Article $it",
             description = "A short description for item $it",
@@ -123,7 +123,7 @@ fun FeedScreenPreview() {
         )
     }
     FeedScreen(
-        articles = RequestState.Success(articles),
+        articles = RequestState.Success(articleDtos),
         okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = {},
         onReloadFeedClicked = {}

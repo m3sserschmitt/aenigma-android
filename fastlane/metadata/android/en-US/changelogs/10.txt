@@ -1,0 +1,3 @@
+* Added support for connections to other servers
+* Added support for connections via Orbot
+* Improved stability for TOR service

@@ -36,8 +36,8 @@ import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
 import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
-import ro.aenigma.util.UrlExtensions.isImageUrlByExtension
-import ro.aenigma.util.UrlExtensions.isRemoteUri
+import ro.aenigma.util.StringExtensions.isImageUrlByExtension
+import ro.aenigma.util.StringExtensions.isRemoteUri
 
 @Composable
 fun FilesList(
