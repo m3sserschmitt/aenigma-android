@@ -161,6 +161,7 @@ class SignalRClient @Inject constructor(
                 return
             }
         }
+        _failedAttempts.value = 0
         _status.value = status
     }
 
@@ -181,6 +182,7 @@ class SignalRClient @Inject constructor(
             updateStatus(SignalRStatus.Connecting)
             try {
                 _hubConnection.value.start()
+                updateStatus(SignalRStatus.Connected)
                 return generateNonce()
             } catch (e: Exception) {
                 updateStatus(SignalRStatus.Error.ConnectionRefused(e.message))

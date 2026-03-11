@@ -112,22 +112,22 @@ class SignalRClientWorker @AssistedInject constructor(
         }
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
         var ok = true
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
-            ok = ok && signalrController.disconnect()
+        if (action contains SignalRWorkerAction.Disconnect()) {
+            ok = signalrController.disconnect()
         }
 
-        if (!signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            ok = ok && signalrController.connect(
+        if (ok && action contains SignalRWorkerAction.Connect()) {
+            ok = signalrController.connect(
                 repository.local.getGuardHostname() ?: return Result.failure()
             )
         }
 
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Pull()) {
-            ok = ok && signalrController.pull()
+        if (ok && action contains SignalRWorkerAction.Pull()) {
+            ok = signalrController.pull()
         }
 
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Cleanup()) {
-            ok = ok && signalrController.cleanup()
+        if (ok && action contains SignalRWorkerAction.Cleanup()) {
+            ok = signalrController.cleanup()
         }
 
         return if (ok) {
