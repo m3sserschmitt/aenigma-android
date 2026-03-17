@@ -15,8 +15,8 @@ android {
         applicationId = "ro.aenigma"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.2.1"
+        versionCode = 12
+        versionName = "1.2.2"
         externalNativeBuild {
             cmake {
                 arguments "-DANDROID_STL=c++_shared"
@@ -73,13 +73,13 @@ android {
 dependencies {
 
     // Coil
-    implementation "io.coil-kt.coil3:coil-compose:3.3.0"
-    implementation "io.coil-kt.coil3:coil-network-okhttp:3.3.0"
-    implementation "io.coil-kt.coil3:coil-gif:3.3.0"
+    implementation "io.coil-kt.coil3:coil-compose:3.4.0"
+    implementation "io.coil-kt.coil3:coil-network-okhttp:3.4.0"
+    implementation "io.coil-kt.coil3:coil-gif:3.4.0"
 
     // Room
     implementation "androidx.room:room-runtime:2.8.4"
-    implementation 'androidx.compose.runtime:runtime:1.10.3'
+    implementation 'androidx.compose.runtime:runtime:1.10.5'
     ksp "androidx.room:room-compiler:2.8.4"
     implementation "androidx.room:room-ktx:2.8.4"
 
@@ -91,9 +91,9 @@ dependencies {
     implementation "androidx.biometric:biometric:1.4.0-alpha05"
 
     // Hilt
-    implementation "com.google.dagger:hilt-android:2.59.1"
+    implementation "com.google.dagger:hilt-android:2.59.2"
     implementation 'androidx.hilt:hilt-work:1.3.0'
-    ksp "com.google.dagger:hilt-android-compiler:2.59.1"
+    ksp "com.google.dagger:hilt-android-compiler:2.59.2"
     implementation 'androidx.hilt:hilt-navigation-compose:1.3.0'
     ksp "androidx.hilt:hilt-compiler:1.3.0"
 
@@ -104,13 +104,13 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.10.0'
 
     // SignalR
-    implementation 'com.microsoft.signalr:signalr:10.0.3'
+    implementation 'com.microsoft.signalr:signalr:10.0.5'
 
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:3.0.0'
     implementation 'com.squareup.retrofit2:converter-jackson:3.0.0'
     implementation 'com.squareup.retrofit2:adapter-rxjava2:3.0.0'
-    implementation("com.squareup.retrofit2:converter-scalars:3.0.0")
+    implementation "com.squareup.retrofit2:converter-scalars:3.0.0"
 
     // WorkManager
     implementation "androidx.work:work-runtime-ktx:2.11.1"
@@ -125,8 +125,8 @@ dependencies {
     implementation "androidx.camera:camera-view:1.5.3"
 
     // Serializer
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.21.0"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.0"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.21.1"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.1"
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 
     // Bouncy Castle - Crypto
@@ -146,20 +146,20 @@ dependencies {
     implementation 'org.jgrapht:jgrapht-core:1.5.2'
 
     // DataStore
-    implementation "androidx.datastore:datastore-preferences:1.2.0"
+    implementation "androidx.datastore:datastore-preferences:1.2.1"
 
     // Material3
     implementation 'com.google.android.material:material:1.13.0'
     implementation "androidx.compose.material3:material3:1.4.0"
     implementation 'androidx.compose.material3:material3-android:1.4.0'
-    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+    implementation "androidx.compose.material:material-icons-extended:1.7.8"
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.10.3"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.10.3"
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.10.3'
-    implementation 'androidx.activity:activity-compose:1.12.4'
-    implementation 'androidx.compose.runtime:runtime-livedata:1.10.3'
+    implementation "androidx.compose.ui:ui:1.10.5"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.10.5"
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.10.5'
+    implementation 'androidx.activity:activity-compose:1.13.0'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.10.5'
 
     // Compose Navigation
     implementation "androidx.navigation:navigation-compose:2.9.7"
@@ -169,7 +169,7 @@ dependencies {
 
     // Kotlin
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.10.2"
 
@@ -180,8 +180,8 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.7.0'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.10.3"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:1.10.3"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.10.5"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:1.10.5"
 
     // open source libraries page
     implementation "com.mikepenz:aboutlibraries:13.2.1"

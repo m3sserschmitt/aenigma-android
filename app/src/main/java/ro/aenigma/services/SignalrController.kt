@@ -29,7 +29,7 @@ class SignalrController @Inject constructor(
 ) {
     val clientStatus = signalRClient.status
 
-    private fun enqueueSyncAndConnect() {
+    fun enqueueSyncAndReconnect() {
         val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
         val startConnectionWorkRequest = SignalRClientWorker.createRequest(
             actions = SignalRWorkerAction.connectPullCleanup()
@@ -40,7 +40,7 @@ class SignalrController @Inject constructor(
             .enqueue()
     }
 
-    private fun enqueueReconnect() {
+    fun enqueueReconnect() {
         SignalRClientWorker.start(
             context = applicationContext,
             actions = SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
@@ -49,20 +49,14 @@ class SignalrController @Inject constructor(
 
     private fun enqueue(clientStatus: SignalRStatus, torPreference: Boolean, torStatus: TorStatus) {
         when (clientStatus) {
-            SignalRStatus.NotConnected,
-            is SignalRStatus.Error.ConnectionRefused -> {
-                enqueueSyncAndConnect()
-            }
-
-            is SignalRStatus.Error.Disconnected -> {
-                enqueueSyncAndConnect()
-            }
-
             is SignalRStatus.Error.Aborted -> {
             }
 
+            SignalRStatus.NotConnected,
+            is SignalRStatus.Error.ConnectionRefused,
+            is SignalRStatus.Error.Disconnected,
             is SignalRStatus.Error -> {
-                enqueueReconnect()
+                enqueueSyncAndReconnect()
             }
 
             SignalRStatus.Authenticated,
@@ -107,6 +101,10 @@ class SignalrController @Inject constructor(
 
     fun isConnected(): Boolean {
         return signalRClient.isConnected()
+    }
+
+    fun isAuthenticated(): Boolean {
+        return signalRClient.isAuthenticated()
     }
 
     suspend fun pull(): Boolean {

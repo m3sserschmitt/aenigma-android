@@ -24,7 +24,6 @@ fun LoadingDialog(
             is RequestState.Loading -> stringResource(R.string.please_wait)
             is RequestState.Success -> stringResource(R.string.request_successfully_completed)
             is RequestState.Error -> stringResource(R.string.request_completed_with_errors)
-            else -> ""
         }
         val okButtonVisible = when (state) {
             is RequestState.Success,

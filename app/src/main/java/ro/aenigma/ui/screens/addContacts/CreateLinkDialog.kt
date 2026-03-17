@@ -8,13 +8,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -50,8 +48,6 @@ fun CreateLinkDialog(
             is RequestState.Error -> stringResource(
                 id = R.string.failure
             )
-
-            else -> ""
         }
         val body = when (sharedData) {
             is RequestState.Success -> stringResource(
@@ -62,15 +58,12 @@ fun CreateLinkDialog(
             is RequestState.Error -> stringResource(
                 id = R.string.link_could_not_be_created
             )
-
-            else -> ""
         }
 
         val link = if (sharedData is RequestState.Success)
             sharedData.data.resourceUrl ?: stringResource(id = R.string.link_not_available)
         else
             stringResource(id = R.string.link_not_available)
-        val context = LocalContext.current
 
         BasicAlertDialog(
             onDismissRequest = { },
@@ -143,8 +136,6 @@ fun CreateLinkDialog(
                                         tint = MaterialTheme.colorScheme.onBackground
                                     )
                                 }
-
-                                else -> {}
                             }
                         }
                     },

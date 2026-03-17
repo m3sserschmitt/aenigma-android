@@ -1,0 +1,1 @@
+* Update dependencies and fix small issues related to signalr real-time connections
