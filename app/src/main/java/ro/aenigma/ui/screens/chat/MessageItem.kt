@@ -118,7 +118,9 @@ fun MessageItem(
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
                     onClick = { item -> onClick(item)
-                        showImageViewer = true
+                        if(!isOutgoingFailed) {
+                            showImageViewer = true
+                        }
                     }
                 ),
             colors = CardDefaults.cardColors().copy(

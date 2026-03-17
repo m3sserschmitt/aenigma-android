@@ -603,7 +603,10 @@ class MainViewModel @Inject constructor(
                 val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
                     ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)
-                signalrController.disconnect()
+                if(!signalrController.disconnect())
+                {
+                    signalrController.enqueueSyncAndReconnect()
+                }
             } catch (_: Exception) {
             }
         }

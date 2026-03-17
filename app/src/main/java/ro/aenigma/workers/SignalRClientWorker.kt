@@ -40,8 +40,8 @@ class SignalRClientWorker @AssistedInject constructor(
         private const val UNIQUE_ONE_TIME_REQUEST = "SIGNALR_ONE_TIME_REQUEST"
         private const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
         private const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15 // Minutes
-        private const val DELAY_BETWEEN_RETRIES: Long = 5 // Seconds
-        private const val MAX_RETRY_COUNT = 5 // Seconds
+        private const val DELAY_BETWEEN_RETRIES: Long = 2 // Seconds
+        private const val MAX_RETRY_COUNT = 3
 
         @JvmStatic
         fun schedulePeriodicSync(context: Context) {
@@ -64,7 +64,7 @@ class SignalRClientWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniquePeriodicWork(
                     UNIQUE_PERIODIC_WORK_REQUEST,
-                    ExistingPeriodicWorkPolicy.KEEP,
+                    ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
                     signalRClientRequest
                 )
         }
@@ -100,7 +100,7 @@ class SignalRClientWorker @AssistedInject constructor(
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(
                     UNIQUE_ONE_TIME_REQUEST,
-                    ExistingWorkPolicy.KEEP,
+                    ExistingWorkPolicy.REPLACE,
                     createRequest(actions)
                 )
         }
@@ -112,21 +112,21 @@ class SignalRClientWorker @AssistedInject constructor(
         }
         val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
         var ok = true
-        if (action contains SignalRWorkerAction.Disconnect()) {
+        if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
             ok = signalrController.disconnect()
         }
 
-        if (ok && action contains SignalRWorkerAction.Connect()) {
+        if (ok && !signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
             ok = signalrController.connect(
                 repository.local.getGuardHostname() ?: return Result.failure()
             )
         }
 
-        if (ok && action contains SignalRWorkerAction.Pull()) {
+        if (ok && signalrController.isAuthenticated() && action contains SignalRWorkerAction.Pull()) {
             ok = signalrController.pull()
         }
 
-        if (ok && action contains SignalRWorkerAction.Cleanup()) {
+        if (ok && signalrController.isAuthenticated() && action contains SignalRWorkerAction.Cleanup()) {
             ok = signalrController.cleanup()
         }
 

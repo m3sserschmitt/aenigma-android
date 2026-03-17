@@ -33,8 +33,8 @@ class GraphReaderWorker @AssistedInject constructor(
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
     companion object {
-        private const val MAX_RETRY_COUNT = 5
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
+        private const val MAX_RETRY_COUNT = 3
+        private const val DELAY_BETWEEN_RETRIES: Long = 2 // Seconds
 
         @JvmStatic
         fun createSyncRequest(): OneTimeWorkRequest {
