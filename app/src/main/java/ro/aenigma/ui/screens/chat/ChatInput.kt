@@ -1,10 +1,5 @@
 package ro.aenigma.ui.screens.chat
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,15 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
+import ro.aenigma.ui.screens.common.FilesCountIndicator
+import ro.aenigma.ui.screens.common.FilesPickerButton
 import ro.aenigma.util.RequestState
 
 @Composable
@@ -49,32 +43,8 @@ fun ChatInput(
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
-    if(!visible) {
+    if (!visible) {
         return
-    }
-    val context = LocalContext.current
-    val multiplePhotoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris: List<Uri> ->
-        val contentResolver = context.contentResolver
-        val takeFlags =
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-
-        uris.forEach { uri ->
-            try {
-                contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (_: SecurityException) {
-            }
-        }
-        if (uris.size > ATTACHMENTS_MAX_COUNT) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.attachment_files_limit).format(ATTACHMENTS_MAX_COUNT),
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            onAttachmentsSelected(uris.map { it.toString() })
-        }
     }
 
     Column {
@@ -82,8 +52,8 @@ fun ChatInput(
             message = replyToMessage,
             onReplyAborted = onReplyAborted
         )
-        SelectedAttachments(
-            files = attachments,
+        FilesCountIndicator(
+            count = attachments.size,
             onRemoveAttachments = {
                 onAttachmentsSelected(listOf())
             }
@@ -94,21 +64,10 @@ fun ChatInput(
                 .background(MaterialTheme.colorScheme.background),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
+            FilesPickerButton(
                 modifier = Modifier.weight(1f),
-                onClick = {
-                    multiplePhotoPicker.launch(arrayOf("*/*"))
-                }
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    painter = painterResource(id = R.drawable.ic_attachement),
-                    contentDescription = stringResource(
-                        id = R.string.send_file
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+                onFilesSelected = onAttachmentsSelected
+            )
             TextField(
                 modifier = Modifier.weight(8f),
                 value = messageInputText,
@@ -138,43 +97,6 @@ fun ChatInput(
                     imageVector = Icons.AutoMirrored.Filled.Send,
                     contentDescription = stringResource(
                         id = R.string.send
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SelectedAttachments(
-    files: List<String>,
-    onRemoveAttachments: () -> Unit
-) {
-    if(files.isNotEmpty())
-    {
-        Row {
-            Text(
-                modifier = Modifier
-                    .weight(9f)
-                    .padding(4.dp)
-                    .align(alignment = Alignment.CenterVertically),
-                text = if (files.size > 1)
-                    stringResource(id = R.string.n_attachments_selected).format(files.size)
-                else
-                    stringResource(id = R.string.one_attachment_selected),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            IconButton(
-                modifier = Modifier.weight(1f),
-                onClick = onRemoveAttachments
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(
-                        id = R.string.close
                     ),
                     tint = MaterialTheme.colorScheme.onBackground
                 )

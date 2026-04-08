@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
 
 @Composable
 fun SimpleInfoScreen(
@@ -58,7 +59,7 @@ fun SimpleInfoScreen(
                 modifier = Modifier.padding(start = 4.dp),
                 text = message,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -90,7 +91,7 @@ fun SimpleInfoScreenIcon(
     contentDescription: String
 ) {
     Icon(
-        modifier = Modifier.size(60.dp),
+        modifier = Modifier.size(INFO_SCREEN_ICON_SIZE),
         painter = icon,
         contentDescription = contentDescription,
         tint = MaterialTheme.colorScheme.onBackground

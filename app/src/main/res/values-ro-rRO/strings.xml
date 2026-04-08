@@ -115,7 +115,7 @@
     <string name="uploading_channel_info">Se distribuie informațiile canalului</string>
     <string name="sending_message">Se trimite un mesaj</string>
     <string name="connecting_server">Se conecteaza</string>
-    <string name="send_file">Trimiteți un atașament</string>
+    <string name="attach_files">Atașați fișiere</string>
     <string name="one_attachment_selected">1 atașament selectat</string>
     <string name="n_attachments_selected">%s atașamente selectate</string>
     <string name="downloading_file">Se descarcă un fișier</string>
@@ -153,4 +153,13 @@
     <string name="orbot_info">Asigură-te ca ai lansat Orbot și conexiunea VPN a fost realizată cu succes.</string>
     <string name="start_tor_service_title">Lansează Serviciul TOR</string>
     <string name="tor_service_info">Asigură-te că nu ai o conexiune VPN prin Orbot înainte de a lansa servicul TOR</string>
+    <string name="cover_preview">Previzualizare copertă</string>
+    <string name="content_preview">Previzualizare conținut</string>
+    <string name="compose_article">Compuneți un articol</string>
+    <string name="title">Title</string>
+    <string name="cover_photo">Imagine de copertă</string>
+    <string name="optional_description">Descriere opțională</string>
+    <string name="content">Conținut</string>
+    <string name="empty_article_cover">Începeți să editați articolul pentru a previzualiza coperta</string>
+    <string name="empty_article_content">Nu există conținut pentru previzualizare</string>
 </resources>

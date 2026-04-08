@@ -12,8 +12,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,27 +50,15 @@ fun TextInputDialog(
     ) {
         DialogContentTemplate(
             content = {
-                OutlinedTextField(
+                SimpleOutlineTextInput(
                     modifier = Modifier.fillMaxWidth(),
                     value = text,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    colors = OutlinedTextFieldDefaults.colors().copy(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.background,
-                        focusedContainerColor = MaterialTheme.colorScheme.background,
-                        errorContainerColor = MaterialTheme.colorScheme.background,
-                    ),
                     isError = isValidationError,
-                    onValueChange = { newValue ->
+                    onValueChanged = { newValue ->
                         isValidationError = !onTextChanged(newValue)
                         text = newValue
                     },
-                    label = {
-                        Text(
-                            text = placeholderText,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    },
+                    label = placeholderText,
                     singleLine = true
                 )
             },

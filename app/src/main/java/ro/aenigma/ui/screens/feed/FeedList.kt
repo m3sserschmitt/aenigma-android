@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,7 +27,7 @@ import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 @Composable
 fun FeedList(
     modifier: Modifier = Modifier,
-    articleDtos: List<ArticleDto>,
+    articles: List<ArticleDto>,
     okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (ArticleDto) -> Unit = {}
 ) {
@@ -36,12 +35,12 @@ fun FeedList(
         modifier = modifier
     ) {
         items(
-            items = articleDtos,
+            items = articles,
             key = { article -> article.hashCode() }
         ) { article ->
             ArticleCard(
                 modifier = Modifier.clickable { onArticleClicked(article) },
-                articleDto = article,
+                article = article,
                 okHttpClientProvider = okHttpClientProvider
             )
         }
@@ -51,12 +50,11 @@ fun FeedList(
 @Composable
 fun ArticleCard(
     modifier: Modifier = Modifier,
-    articleDto: ArticleDto,
+    article: ArticleDto,
     okHttpClientProvider: IOkHttpClientProvider
 ) {
     Card(
-        modifier
-            .fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
             .padding(
                 horizontal = 8.dp,
                 vertical = 4.dp
@@ -70,12 +68,12 @@ fun ArticleCard(
     ) {
         Column(
             Modifier.background(color = MaterialTheme.colorScheme.secondaryContainer)
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(8.dp)
         ) {
-            if (!articleDto.title.isNullOrBlank()) {
+            if (!article.title.isNullOrBlank()) {
                 Text(
-                    text = articleDto.title,
+                    text = article.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -84,7 +82,7 @@ fun ArticleCard(
                 )
             }
             FilesList(
-                uris = articleDto.imageUrls?.mapNotNull { uri -> uri }
+                uris = article.imageUrls?.mapNotNull { uri -> uri }
                     ?.filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
                     ?: listOf(),
                 textColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -93,9 +91,9 @@ fun ArticleCard(
             Spacer(
                 modifier = Modifier.height(4.dp)
             )
-            if (!articleDto.description.isNullOrBlank()) {
+            if (!article.description.isNullOrBlank()) {
                 Text(
-                    text = articleDto.description,
+                    text = article.description,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
@@ -107,7 +105,7 @@ fun ArticleCard(
 @Preview(showBackground = true)
 @Composable
 fun FeedListPreview() {
-    val articleDtos = List(1) {
+    val articles = List(1) {
         ArticleDto(
             id = 1,
             title = "Article $it",
@@ -118,7 +116,7 @@ fun FeedListPreview() {
         )
     }
     FeedList(
-        articleDtos = articleDtos,
+        articles = articles,
         okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = { }
     )

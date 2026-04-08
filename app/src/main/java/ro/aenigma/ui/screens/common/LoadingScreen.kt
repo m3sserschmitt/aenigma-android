@@ -5,8 +5,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
 
 @Composable
 fun LoadingScreen(
@@ -21,7 +21,7 @@ fun LoadingScreen(
             IndeterminateCircularIndicator(
                 visible = true,
                 text = "",
-                size = 60.dp,
+                size = INFO_SCREEN_ICON_SIZE,
                 color = MaterialTheme.colorScheme.onBackground,
                 textStyle = MaterialTheme.typography.bodySmall,
                 textColor = MaterialTheme.colorScheme.onBackground

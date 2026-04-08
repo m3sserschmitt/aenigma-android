@@ -2,7 +2,11 @@ package ro.aenigma.ui.screens.feed
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -12,12 +16,21 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.NewPostSheetStateDto
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isFullyExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
+import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.ui.screens.common.ComposeNewArticleAppBarAction
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
+import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
+import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 
@@ -27,34 +40,61 @@ fun FeedScreen(
     navigateToArticle: (String) -> Unit
 ) {
     val articles by mainViewModel.newsFeed.collectAsState()
+    val newPostSheetState by mainViewModel.newPostSheetState.collectAsState()
 
     LaunchedEffect(key1 = articles) {
-        if(articles is RequestState.Idle)
-        {
+        if (articles is RequestState.Idle) {
             mainViewModel.collectFeed()
         }
     }
 
     FeedScreen(
         articles = articles,
+        newPostSheetState = newPostSheetState,
         okHttpClientProvider = mainViewModel.okHttpClientProvider,
         onArticleClicked = { article ->
             if (article.url?.isNotBlank() == true) {
                 navigateToArticle(article.url)
             }
         },
+        onNewPostSheetStateChanged = { sheetState -> mainViewModel.setNewPostSheetState(sheetState) },
         onReloadFeedClicked = { mainViewModel.reloadFeed() }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     articles: RequestState<List<ArticleDto>>,
+    newPostSheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (ArticleDto) -> Unit,
+    onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
     onReloadFeedClicked: () -> Unit
 ) {
-    Scaffold(
+    val bottomSheetState = rememberStandardBottomSheetState(
+        initialValue = newPostSheetState.sheetState
+    )
+    val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
+
+    LaunchedEffect(key1 = newPostSheetState.isNotFullyExpanded()) {
+        if (newPostSheetState.isNotFullyExpanded()) {
+            bottomSheetState.partialExpand()
+        } else {
+            bottomSheetState.expand()
+        }
+    }
+
+    LaunchedEffect(key1 = bottomSheetScaffoldState.isNotFullyExpanded()) {
+        if (newPostSheetState.isFullyExpanded() && bottomSheetScaffoldState.isNotFullyExpanded()) {
+            onNewPostSheetStateChanged(newPostSheetState.toPartiallyExpanded())
+        }
+    }
+
+    BottomSheetScaffold(
+        scaffoldState = bottomSheetScaffoldState,
+        sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
+        sheetContainerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StandardAppBar(
                 title = stringResource(id = R.string.news),
@@ -64,7 +104,24 @@ fun FeedScreen(
                         visible = true,
                         onClick = onReloadFeedClicked
                     )
+                },
+                navigateBackAlternative = {
+                    ComposeNewArticleAppBarAction(
+                        onComposeNewArticle = {
+                            if (bottomSheetScaffoldState.isNotFullyExpanded()) {
+                                onNewPostSheetStateChanged(newPostSheetState.toExpanded())
+                            } else {
+                                onNewPostSheetStateChanged(newPostSheetState.toPartiallyExpanded())
+                            }
+                        }
+                    )
                 }
+            )
+        },
+        sheetContent = {
+            NewPostBottomSheet(
+                sheetState = newPostSheetState,
+                onSheetStateChanged = onNewPostSheetStateChanged
             )
         }
     ) { padding ->
@@ -91,7 +148,7 @@ fun FeedScreenContent(
             if (articles.data.isNotEmpty()) {
                 FeedList(
                     modifier = modifier,
-                    articleDtos = articles.data,
+                    articles = articles.data,
                     okHttpClientProvider = okHttpClientProvider,
                     onArticleClicked = onArticleClicked
                 )

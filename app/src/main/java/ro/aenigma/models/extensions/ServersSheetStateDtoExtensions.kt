@@ -22,8 +22,8 @@ object ServersSheetStateDtoExtensions {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @JvmStatic
-    fun ServersSheetStateDto.toHidden(): ServersSheetStateDto {
-        return copy(sheetState = SheetValue.Hidden)
+    fun ServersSheetStateDto.toPartiallyExpanded(): ServersSheetStateDto {
+        return copy(sheetState = SheetValue.PartiallyExpanded)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

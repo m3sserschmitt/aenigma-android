@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.common
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -64,6 +65,21 @@ fun ServersListAppBarAction(
         Icon(
             painter = painterResource(id = R.drawable.ic_storage),
             contentDescription = stringResource(id = R.string.servers),
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+fun ComposeNewArticleAppBarAction(
+    onComposeNewArticle: () -> Unit,
+) {
+    IconButton(
+        onClick = onComposeNewArticle
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(id = R.string.compose_article),
             tint = MaterialTheme.colorScheme.onBackground
         )
     }

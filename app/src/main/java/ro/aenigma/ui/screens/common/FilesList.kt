@@ -1,5 +1,11 @@
 package ro.aenigma.ui.screens.common
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,9 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,12 +40,16 @@ import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ro.aenigma.R
+import ro.aenigma.models.NewPostSheetStateDto
+import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
 import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.StringExtensions.isImageUrlByExtension
 import ro.aenigma.util.StringExtensions.isRemoteUri
+import kotlin.collections.forEach
 
 @Composable
 fun FilesList(
@@ -160,6 +172,125 @@ fun FileItem(
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun rememberFilesPicker(
+    onFilesSelected: (List<String>) -> Unit
+): ManagedActivityResultLauncher<Array<String>, List<@JvmSuppressWildcards Uri>> {
+    val context = LocalContext.current
+    return rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        val contentResolver = context.contentResolver
+        val takeFlags =
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+
+        uris.forEach { uri ->
+            try {
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (_: SecurityException) {
+            }
+        }
+        if (uris.size > ATTACHMENTS_MAX_COUNT) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.attachment_files_limit).format(ATTACHMENTS_MAX_COUNT),
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            onFilesSelected(uris.map { it.toString() })
+        }
+    }
+}
+
+@Composable
+fun FilesPickerButton(
+    modifier: Modifier = Modifier,
+    onFilesSelected: (List<String>) -> Unit = { }
+) {
+    val multiplePhotoPicker = rememberFilesPicker(
+        onFilesSelected = onFilesSelected
+    )
+    IconButton(
+        modifier = modifier,
+        onClick = {
+            multiplePhotoPicker.launch(arrayOf("*/*"))
+        }
+    ) {
+        Icon(
+            modifier = Modifier.alpha(.75f),
+            painter = painterResource(id = R.drawable.ic_attachement),
+            contentDescription = stringResource(
+                id = R.string.attach_files
+            ),
+            tint = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilesSelector(
+    modifier: Modifier = Modifier,
+    sheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
+    onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { }
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = stringResource(id = R.string.attach_files),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        FilesPickerButton(
+            onFilesSelected = { fileUris ->
+                onSheetStateChanged(sheetState.copy(fileUris = fileUris))
+            }
+        )
+    }
+}
+
+@Composable
+fun FilesCountIndicator(
+    modifier: Modifier = Modifier,
+    count: Int,
+    onRemoveAttachments: () -> Unit
+) {
+    if(count > 0)
+    {
+        Row(
+            modifier = modifier
+        ) {
+            Text(
+                modifier = Modifier
+                    .weight(1f)
+                    .align(alignment = Alignment.CenterVertically),
+                text = if (count > 1)
+                    stringResource(id = R.string.n_attachments_selected).format(count)
+                else
+                    stringResource(id = R.string.one_attachment_selected),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            IconButton(
+
+                onClick = onRemoveAttachments
+            ) {
+                Icon(
+                    modifier = Modifier.alpha(.75f),
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = stringResource(
+                        id = R.string.close
+                    ),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
             }
         }
     }

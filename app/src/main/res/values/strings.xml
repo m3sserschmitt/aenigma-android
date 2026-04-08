@@ -117,7 +117,7 @@
     <string name="uploading_channel_info">Uploading channel info</string>
     <string name="sending_message">Sending message</string>
     <string name="connecting_server">Connecting server</string>
-    <string name="send_file">Send an attachment</string>
+    <string name="attach_files">Attach files</string>
     <string name="one_attachment_selected">1 attachment selected</string>
     <string name="n_attachments_selected">%s attachments selected</string>
     <string name="downloading_file">Downloading file</string>
@@ -157,4 +157,13 @@
     <string name="orbot_info">Make sure you launched Orbot and the VPN connection was successfully established</string>
     <string name="start_tor_service_title">Start TOR Service</string>
     <string name="tor_service_info">Make sure Orbot VPN connection is not running before starting TOR Service</string>
+    <string name="cover_preview">Cover preview</string>
+    <string name="content_preview">Content preview</string>
+    <string name="compose_article">Compose article</string>
+    <string name="title">Title</string>
+    <string name="cover_photo">Cover image</string>
+    <string name="optional_description">Optional description</string>
+    <string name="content">Content</string>
+    <string name="empty_article_cover">Start editing the article to preview the cover</string>
+    <string name="empty_article_content">There is no content to preview yet</string>
 </resources>

@@ -1,6 +1,7 @@
 package ro.aenigma.util
 
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.ui.unit.dp
 
 class Constants {
     companion object {
@@ -91,6 +92,10 @@ class Constants {
         const val GUARDS_HISTORY_MAX_COUNT = 150
 
         val NAVIGATION_BAR_HEIGHT = IntrinsicSize.Min
+
+        val BOTTOM_SHEET_PEEK_HEIGHT = 45.dp
+
+        val INFO_SCREEN_ICON_SIZE = 50.dp
 
         const val SERVER_INFO_API_PATH = "/Info"
 

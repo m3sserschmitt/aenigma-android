@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
@@ -43,7 +42,7 @@ import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
-import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toHidden
+import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
@@ -58,6 +57,7 @@ import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.ui.screens.common.TorInfoDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
+import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.ContextExtensions.openOrbot
@@ -178,10 +178,7 @@ fun ContactsScreen(
     var serversSearchQuery by remember { mutableStateOf("") }
     val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
-    val bottomSheetState = rememberStandardBottomSheetState(
-        initialValue = serversSheetState.sheetState,
-        skipHiddenState = false
-    )
+    val bottomSheetState = rememberStandardBottomSheetState(initialValue = serversSheetState.sheetState)
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val context = LocalContext.current
 
@@ -195,7 +192,7 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = serversSheetState.isNotFullyExpanded()) {
         if (serversSheetState.isNotFullyExpanded()) {
-            bottomSheetState.hide()
+             bottomSheetState.partialExpand()
         } else {
             onServersSearch("")
             serversSearchQuery = ""
@@ -205,7 +202,7 @@ fun ContactsScreen(
 
     LaunchedEffect(key1 = bottomSheetScaffoldState.isNotFullyExpanded()) {
         if (serversSheetState.isFullyExpanded() && bottomSheetScaffoldState.isNotFullyExpanded()) {
-            onServersSheetStateChanged(serversSheetState.toHidden())
+            onServersSheetStateChanged(serversSheetState.toPartiallyExpanded())
         }
     }
 
@@ -393,9 +390,9 @@ fun ContactsScreen(
 
     BottomSheetScaffold(
         scaffoldState = bottomSheetScaffoldState,
-        sheetPeekHeight = 0.dp,
+        sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
         sheetContent = {
-            ServersBottomSheetContent(
+            ServersBottomSheet(
                 servers = servers,
                 serversHistory = serversHistory,
                 sheetState = serversSheetState,
@@ -465,7 +462,7 @@ fun ContactsScreen(
                     if (bottomSheetScaffoldState.isNotFullyExpanded()) {
                         onServersSheetStateChanged(serversSheetState.toExpanded())
                     } else {
-                        onServersSheetStateChanged(serversSheetState.toHidden())
+                        onServersSheetStateChanged(serversSheetState.toPartiallyExpanded())
                     }
                 },
                 onDeleteSelectedItemsClicked = {
@@ -546,6 +543,7 @@ fun ContactsFab(
     onFabClicked: () -> Unit
 ) {
     FloatingActionButton(
+        modifier = Modifier.padding(bottom = BOTTOM_SHEET_PEEK_HEIGHT),
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         onClick = { onFabClicked() },
     ) {

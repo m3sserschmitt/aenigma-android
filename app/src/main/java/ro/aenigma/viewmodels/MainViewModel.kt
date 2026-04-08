@@ -1,7 +1,6 @@
 package ro.aenigma.viewmodels
 
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.SheetValue
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
 import com.mikepenz.markdown.model.ImageTransformer
@@ -25,18 +24,20 @@ import kotlinx.coroutines.launch
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.enums.ServersSheetSection
 import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
 import ro.aenigma.models.extensions.VertexDtoExtensions.toServerInfoDto
 import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
+import ro.aenigma.models.factories.ServersSheetStateDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.OkHttpClientProvider
@@ -81,10 +82,10 @@ class MainViewModel @Inject constructor(
     private val _servers = MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
 
     @OptIn(ExperimentalMaterial3Api::class)
-    private val _serversSheetState = MutableStateFlow(ServersSheetStateDto(
-        sheetState = SheetValue.Hidden,
-        selectedSection = ServersSheetSection.SERVERS
-    ))
+    private val _serversSheetState = MutableStateFlow(ServersSheetStateDtoFactory.create())
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    private val _newPostSheetState = MutableStateFlow(NewPostSheetStateDtoFactory.create())
 
     private val _serversHistory =
         MutableStateFlow<RequestState<List<ServerInfoDto>>>(RequestState.Idle)
@@ -130,6 +131,8 @@ class MainViewModel @Inject constructor(
     val servers: StateFlow<RequestState<List<ServerInfoDto>>> = _servers
 
     val serversSheetState: StateFlow<ServersSheetStateDto> = _serversSheetState
+
+    val newPostSheetState: StateFlow<NewPostSheetStateDto> = _newPostSheetState
 
     val serversHistory: StateFlow<RequestState<List<ServerInfoDto>>> = _serversHistory
 
@@ -520,6 +523,10 @@ class MainViewModel @Inject constructor(
 
     fun setServersSheetState(sheetState: ServersSheetStateDto) {
         _serversSheetState.value = sheetState
+    }
+
+    fun setNewPostSheetState(sheetState: NewPostSheetStateDto) {
+        _newPostSheetState.value = sheetState
     }
 
     fun createContactShareLink() {
