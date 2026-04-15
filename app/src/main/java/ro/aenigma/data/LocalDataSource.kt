@@ -1,8 +1,10 @@
 package ro.aenigma.data
 
 import android.content.Context
+import android.net.Uri
 import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgesDao
 import ro.aenigma.data.database.GuardsDao
@@ -11,6 +13,7 @@ import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactWithGroupEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
@@ -23,6 +26,7 @@ import ro.aenigma.data.database.extensions.MessageWithDetailsEntityExtensions.to
 import ro.aenigma.data.database.extensions.VertexEntityExtensions.toDto
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.ContactWithLastMessageDto
@@ -46,8 +50,14 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
+import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
+import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
 import ro.aenigma.util.ContextExtensions.deleteUri
-import ro.aenigma.util.ContextExtensions.getConversationFilesDir
+import ro.aenigma.util.ContextExtensions.createAppFilesDirectory
+import ro.aenigma.util.ContextExtensions.getAppFile
+import ro.aenigma.util.ContextExtensions.toContentUri
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -68,6 +78,19 @@ class LocalDataSource @Inject constructor(
 
     @Inject
     lateinit var edgesDao: Lazy<EdgesDao>
+
+    suspend fun saveArticle(content: String): Uri {
+        val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$MARKDOWN_FILE_EXTENSION")
+        withContext(Dispatchers.IO){ file.writeText(content) }
+        return context.toContentUri(file)
+    }
+
+    suspend fun saveAttachmentsMetadata(metadata: AttachmentsMetadataDto): Uri? {
+        val jsonMetadata = metadata.toCanonicalJson() ?: return null
+        val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$JSON_FILE_EXTENSION")
+        withContext(Dispatchers.IO) { file.writeText(jsonMetadata) }
+        return context.toContentUri(file)
+    }
 
     suspend fun saveName(name: String): Boolean {
         return preferencesDataStore.saveName(name)
@@ -126,6 +149,10 @@ class LocalDataSource @Inject constructor(
 
     suspend fun getContact(address: String): ContactDto? {
         return contactsDao.get().get(address)?.toDto()
+    }
+
+    suspend fun getAllContacts(): List<ContactDto> {
+        return contactsDao.get().getAll().map { item -> item.toDto() }
     }
 
     suspend fun getContactWithGroup(address: String): ContactWithGroupDto? {
@@ -196,9 +223,9 @@ class LocalDataSource @Inject constructor(
         return updateContactLastMessageId(chatId)
     }
 
-    private fun clearConversationFiles(chatId: String): Boolean {
+    private suspend fun clearConversationFiles(chatId: String): Boolean {
         return try {
-            context.getConversationFilesDir(chatId).deleteRecursively()
+            context.createAppFilesDirectory(chatId).deleteRecursively()
         } catch (_: Exception) {
             false
         }

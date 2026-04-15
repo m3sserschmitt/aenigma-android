@@ -22,7 +22,6 @@ import ro.aenigma.models.ArticleDto
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.ui.screens.common.FilesList
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 
 @Composable
 fun FeedList(
@@ -82,9 +81,7 @@ fun ArticleCard(
                 )
             }
             FilesList(
-                uris = article.imageUrls?.mapNotNull { uri -> uri }
-                    ?.filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
-                    ?: listOf(),
+                uris = article.imageUrls?.mapNotNull { uri -> uri } ?: listOf(),
                 textColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 okHttpClientProvider = okHttpClientProvider
             )

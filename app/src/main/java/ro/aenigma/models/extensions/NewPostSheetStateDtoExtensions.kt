@@ -3,6 +3,7 @@ package ro.aenigma.models.extensions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.SheetValue
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.enums.NewPostSheetSection
 import ro.aenigma.util.SheetValueExtensions.isFullyExpanded
@@ -79,6 +80,14 @@ object NewPostSheetStateDtoExtensions {
                 imageUrls = fileUris,
                 url = null,
                 date = null
+            )
+        }
+
+        @JvmStatic
+        fun NewPostSheetStateDto.toAttachmentsMetadata(): AttachmentsMetadataDto {
+            return AttachmentsMetadataDto(
+                title = title,
+                description = description
             )
         }
     }

@@ -121,3 +121,5 @@
 -keepclassmembers class ** {
     public <init>(...);
 }
+
+-keep class org.apache.tika.** { *; }

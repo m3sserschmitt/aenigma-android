@@ -10,6 +10,9 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address LIMIT 1")
     suspend fun get(address: String): ContactEntity?
 
+    @Query("SELECT * FROM $CONTACTS_TABLE")
+    suspend fun getAll(): List<ContactEntity>
+
     @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_MAX_COUNT")
     fun getFlow(): Flow<List<ContactEntity>>
 

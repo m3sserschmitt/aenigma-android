@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,6 +38,7 @@ import ro.aenigma.ui.screens.common.BottomSheetTitle
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
+import ro.aenigma.ui.screens.common.PrimaryButton
 import ro.aenigma.ui.screens.common.ShareButton
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleTextInput
@@ -358,20 +357,12 @@ fun ServersBottomSheet(
             onValueChanged = { newSearchQuery -> onSearchQueryChanged(newSearchQuery) },
             onSearchClicked = onSearchClicked
         )
-        Button(
+        PrimaryButton(
             modifier = Modifier.fillMaxWidth()
                 .padding(top = 4.dp)
                 .weight(.75f),
-            colors = ButtonDefaults.buttonColors().copy(
-                containerColor = MaterialTheme.colorScheme.primary
-            ),
+            text = stringResource(id = R.string.connect),
             onClick = onConnectClicked
-        ) {
-            Text(
-                text = stringResource(id = R.string.connect),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        }
+        )
     }
 }

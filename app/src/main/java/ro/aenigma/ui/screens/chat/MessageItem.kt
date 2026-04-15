@@ -24,9 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -42,6 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageDto
@@ -56,7 +56,6 @@ import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 import ro.aenigma.util.ContextExtensions.showImageViewer
@@ -94,15 +93,7 @@ fun MessageItem(
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
     val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
     val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
-    var showImageViewer by remember { mutableStateOf(false) }
-
-    FullScreenImageViewer(
-        visible = showImageViewer,
-        message = message.message,
-        onDismiss = {
-            showImageViewer = false
-        }
-    )
+    val coroutineScope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier.fillMaxWidth()
@@ -119,7 +110,11 @@ fun MessageItem(
                     onItemDeselected = onItemDeselected,
                     onClick = { item -> onClick(item)
                         if(!isOutgoingFailed) {
-                            showImageViewer = true
+                            coroutineScope.launch {
+                                context.showImageViewer(
+                                    message = message.message
+                                )
+                            }
                         }
                     }
                 ),
@@ -229,21 +224,6 @@ fun MessageItem(
 }
 
 @Composable
-fun FullScreenImageViewer(
-    visible: Boolean,
-    message: MessageDto,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    if(visible) {
-        context.showImageViewer(
-            message = message,
-            onDismiss = onDismiss
-        )
-    }
-}
-
-@Composable
 fun rememberMatchedLinks(text: String): List<String> {
     return remember(key1 = text) {
         val matcher = Patterns.WEB_URL.matcher(text)
@@ -332,7 +312,6 @@ fun DisplayFiles(
     } else if(message.type == MessageType.FILES) {
         val filesLate by message.filesLate.collectAsState()
         val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
-            .filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
         FilesList(
             uris = files,
             textColor = textColor,

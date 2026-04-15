@@ -199,4 +199,6 @@ dependencies {
 
     // Image compressor
     implementation 'id.zelory:compressor:3.0.1'
+
+    implementation 'org.apache.tika:tika-core:3.3.0'
 }

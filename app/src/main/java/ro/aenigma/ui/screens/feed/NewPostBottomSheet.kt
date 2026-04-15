@@ -14,6 +14,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -39,6 +43,7 @@ import ro.aenigma.ui.screens.common.BottomSheetTemplate
 import ro.aenigma.ui.screens.common.BottomSheetTitle
 import ro.aenigma.ui.screens.common.FilesCountIndicator
 import ro.aenigma.ui.screens.common.FilesSelector
+import ro.aenigma.ui.screens.common.PrimaryButton
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleOutlineTextInput
 import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
@@ -48,8 +53,12 @@ import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
 fun EditArticleSection(
     modifier: Modifier = Modifier,
     sheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
-    onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { }
+    onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
+    onPostClicked: () -> Unit = { }
 ) {
+    var titleError by remember { mutableStateOf(false) }
+    var contentError by remember { mutableStateOf(false) }
+
     BottomSheetTitle(
         title = stringResource(id = R.string.compose_article)
     )
@@ -61,7 +70,11 @@ fun EditArticleSection(
             modifier = Modifier.fillMaxWidth(),
             value = sheetState.title,
             label = stringResource(id = R.string.title),
-            onValueChanged = { newValue -> onSheetStateChanged(sheetState.copy(title = newValue)) }
+            isError = titleError,
+            onValueChanged = { newValue ->
+                onSheetStateChanged(sheetState.copy(title = newValue))
+                titleError = newValue.isBlank()
+            }
         )
         SimpleOutlineTextInput(
             modifier = Modifier.fillMaxWidth(),
@@ -83,11 +96,26 @@ fun EditArticleSection(
             onSheetStateChanged = onSheetStateChanged
         )
         SimpleOutlineTextInput(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             value = sheetState.content,
             label = stringResource(id = R.string.content),
-            onValueChanged = { newValue -> onSheetStateChanged(sheetState.copy(content = newValue)) },
+            isError = contentError,
+            onValueChanged = { newValue ->
+                onSheetStateChanged(sheetState.copy(content = newValue))
+                contentError = newValue.isBlank()
+            },
             singleLine = false
+        )
+        PrimaryButton(
+            modifier = Modifier.fillMaxWidth(),
+            text = stringResource(id = R.string.post),
+            onClick = {
+                contentError = sheetState.content.isBlank()
+                titleError = sheetState.title.isBlank()
+                if(!contentError && !titleError) {
+                    onPostClicked()
+                }
+            }
         )
     }
 }
@@ -188,14 +216,16 @@ fun SheetContent(
     sheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
-    onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { }
+    onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
+    onPostClicked: () -> Unit = { }
 ) {
     when (sheetState.selectedSection) {
         NewPostSheetSection.EDIT -> {
             EditArticleSection(
                 modifier = modifier,
                 sheetState = sheetState,
-                onSheetStateChanged = onSheetStateChanged
+                onSheetStateChanged = onSheetStateChanged,
+                onPostClicked = onPostClicked
             )
         }
 
@@ -259,6 +289,7 @@ fun NewPostBottomSheet(
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
+    onPostClicked: () -> Unit = { }
 ) {
     BottomSheetTemplate(
         navigationBarItems = {
@@ -291,7 +322,8 @@ fun NewPostBottomSheet(
             sheetState = sheetState,
             imageTransformer = imageTransformer,
             okHttpClientProvider = okHttpClientProvider,
-            onSheetStateChanged = onSheetStateChanged
+            onSheetStateChanged = onSheetStateChanged,
+            onPostClicked = onPostClicked
         )
     }
 }

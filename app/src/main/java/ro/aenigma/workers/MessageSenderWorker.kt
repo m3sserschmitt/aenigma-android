@@ -24,7 +24,6 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import ro.aenigma.R
 import ro.aenigma.models.AttachmentDto
-import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
@@ -39,11 +38,12 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrController
-import ro.aenigma.services.Zipper
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
+import ro.aenigma.util.ContextExtensions.createZip
+import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import java.io.File
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -51,7 +51,6 @@ import java.util.concurrent.TimeUnit
 class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val zipper: Zipper,
     private val signalrController: SignalrController,
     private val repository: Repository,
     private val signatureService: SignatureService,
@@ -169,24 +168,20 @@ class MessageSenderWorker @AssistedInject constructor(
     ): MessageWithAttachmentsDto? {
         if (messageWithAttachment.message.type != MessageType.FILES
             || messageWithAttachment.message.files.isNullOrEmpty()
-            || messageWithAttachment.attachment?.url != null
+            || !messageWithAttachment.attachment?.url.isNullOrBlank()
         ) {
             return messageWithAttachment
         }
 
         setForeground(getForegroundInfo())
 
-        val archive = if (messageWithAttachment.attachment?.path != null)
-            File(applicationContext.cacheDir, messageWithAttachment.attachment.path)
-        else
-            zipper.createZip(
-                messageWithAttachment.message.files, AttachmentsMetadataDto(
-                    description = messageWithAttachment.message.text,
-                    filesCount = messageWithAttachment.message.files.size
-                )
-            ) ?: return null
+        val archive = if (!messageWithAttachment.attachment?.path.isNullOrBlank()) {
+            applicationContext.getCacheFile(messageWithAttachment.attachment.path)
+        } else {
+            applicationContext.createZip(uris = messageWithAttachment.message.files)
+        } ?: return null
 
-        val attachment = AttachmentDto(
+        var attachment = AttachmentDto(
             messageId = messageWithAttachment.message.id,
             path = archive.name,
             url = null,
@@ -197,42 +192,49 @@ class MessageSenderWorker @AssistedInject constructor(
         val passphrase = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
         val encryptedFile = CryptoProvider.encrypt(archive, passphrase) ?: return null
         val createdSharedData = repository.remote.postFile(encryptedFile, accessCount)
-        createdSharedData?.resourceUrl ?: return null
-
-        archive.delete()
         encryptedFile.delete()
+        createdSharedData?.resourceUrl ?: return null
+        archive.delete()
 
-        val finalAttachment = attachment.copy(
+        attachment = attachment.copy(
             url = createdSharedData.resourceUrl,
             passphrase = CryptoProvider.base64Encode(passphrase)
         )
-        repository.local.insertOrUpdateAttachment(finalAttachment)
+        repository.local.insertOrUpdateAttachment(attachment)
 
-        return MessageWithAttachmentsDto(
-            message = messageWithAttachment.message,
-            attachment = finalAttachment
+        return messageWithAttachment.copy(
+            attachment = attachment
         )
     }
 
     private suspend fun getDestinationContacts(
-        contactWithGroup: ContactWithGroupDto,
-        additionalDestinations: Array<String>?
+        contactWithGroup: ContactWithGroupDto?,
+        additionalDestinations: Array<String>?,
+        isBroadcast: Boolean
     ): List<ContactDto> {
         val addressesSet = hashSetOf<String>()
         val results = mutableListOf<ContactDto>()
-        if (contactWithGroup.contact.type == ContactType.CONTACT) {
-            addressesSet.add(contactWithGroup.contact.address)
-            results.add(contactWithGroup.contact)
-        } else {
-            contactWithGroup.group?.groupData?.members?.forEach { item ->
-                if (item.address != null && item.address != signatureService.address && addressesSet.add(
-                        item.address
-                    )
-                ) {
-                    repository.local.getContact(item.address)?.let { c -> results.add(c) }
+        when {
+            contactWithGroup?.contact?.type == ContactType.CONTACT -> {
+                addressesSet.add(contactWithGroup.contact.address)
+                results.add(contactWithGroup.contact)
+            }
+
+            contactWithGroup?.contact?.type == ContactType.GROUP -> {
+                contactWithGroup.group?.groupData?.members?.forEach { item ->
+                    if (item.address != null && item.address != signatureService.address &&
+                        addressesSet.add(item.address)
+                    ) {
+                        repository.local.getContact(item.address)?.let { c -> results.add(c) }
+                    }
                 }
             }
+
+            isBroadcast -> {
+                return repository.local.getAllContacts()
+            }
         }
+
         additionalDestinations?.forEach { address ->
             if (!addressesSet.contains(address)) {
                 repository.local.getContact(address)?.let { c -> results.add(c) }
@@ -257,30 +259,39 @@ class MessageSenderWorker @AssistedInject constructor(
         val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
         val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
         val userName = repository.local.name.first()
-        val messageToBeSent =
-            if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
+        val messageToBeSent = if (messageId > 0) {
+            repository.local.getMessageWithAttachments(messageId)
+        } else {
+            null
+        }
         val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
         if (messageToBeSent.message.sent) {
             return Result.success()
         }
-        val contactWithGroup =
-            repository.local.getContactWithGroup(chatId) ?: return Result.failure()
-        val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
+
+        val isBroadcast = chatId == BROADCAST_CONTACT_ADDRESS
+        val contactWithGroup = repository.local.getContactWithGroup(chatId)
+            ?: if (!isBroadcast) {
+                return Result.failure()
+            } else {
+                null
+            }
+        val contacts = getDestinationContacts(contactWithGroup, additionalDestinations, isBroadcast)
+
         val messageWithAttachments = (
                 if (!contacts.isEmpty()) {
                     resolveAttachments(messageToBeSent, contacts.size)
                 } else {
                     messageToBeSent
-                })
-            ?: return Result.retry()
+                }) ?: return Result.retry()
 
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,
             message = messageWithAttachments.message,
             userName = userName,
-            groupAddress = contactWithGroup.group?.address,
+            groupAddress = contactWithGroup?.group?.address,
             resourceUrl = messageWithAttachments.attachment?.url
-                ?: contactWithGroup.group?.resourceUrl,
+                ?: contactWithGroup?.group?.resourceUrl,
             passphrase = messageWithAttachments.attachment?.passphrase
         )
         return if (ok) {

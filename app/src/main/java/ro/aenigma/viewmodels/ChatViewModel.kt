@@ -443,9 +443,9 @@ class ChatViewModel @Inject constructor(
                 uriBatcher.split(attachments).map { batch ->
                     MessageDtoFactory.createOutgoing(
                         chatId = contact.address,
-                        text = text,
+                        text = null,
                         type = type,
-                        actionFor = actionFor,
+                        actionFor = null,
                         attachments = batch
                     )
                 }
@@ -467,16 +467,14 @@ class ChatViewModel @Inject constructor(
 
     private suspend fun postToDatabase() {
         if (attachments.value.isNotEmpty()) {
-            postToDatabase(MessageType.FILES, null, messageInputText.value, attachments.value)
+            postToDatabase(MessageType.FILES, null, null, attachments.value)
             _attachments.value = listOf()
-            _messageInputText.value = ""
-            return
         }
         val hasText = messageInputText.value.isNotBlank()
-        if (replyToMessage.value is RequestState.Success && hasText) {
-            postToDatabase(
-                MessageType.REPLY, getReplyToMessage()?.message?.refId, messageInputText.value
-            )
+        val hasReplyTo = replyToMessage.value is RequestState.Success
+        if (hasReplyTo && hasText) {
+            val refId = getReplyToMessage()?.message?.refId
+            postToDatabase(MessageType.REPLY, refId, messageInputText.value)
             _replyToMessage.value = RequestState.Idle
             _messageInputText.value = ""
         } else if (hasText) {

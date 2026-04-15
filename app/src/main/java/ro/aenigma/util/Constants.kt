@@ -66,7 +66,6 @@ class Constants {
         const val SOCKS5_PROXY_PORT = 9050
         const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 
-        const val ATTACHMENTS_METADATA_FILE = "metadata.json"
         const val ENCRYPTION_KEY_SIZE = 32
 
         const val ATTACHMENT_DOWNLOAD_NOTIFICATION_ID = 105
@@ -122,5 +121,11 @@ class Constants {
         const val PULL_METHOD = "Pull"
 
         const val CLEANUP_METHOD = "Cleanup"
+
+        const val BROADCAST_CONTACT_ADDRESS = "ffffffffffffffffffffffffffffffff"
+
+        const val MARKDOWN_FILE_EXTENSION = "md"
+
+        const val JSON_FILE_EXTENSION = "json"
     }
 }

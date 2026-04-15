@@ -34,15 +34,19 @@ import ro.aenigma.models.enums.TorConnectionCheck
 import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toAttachmentsMetadata
 import ro.aenigma.models.extensions.VertexDtoExtensions.toServerInfoDto
 import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.models.factories.ServersSheetStateDtoFactory
 import ro.aenigma.services.FeedSampler
 import ro.aenigma.services.MarkdownImageTransformer
+import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrController
 import ro.aenigma.services.TorController
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getHttpUri
@@ -54,6 +58,7 @@ import ro.aenigma.util.SerializerExtensions.toJson
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val messageSaver: MessageSaver,
     private val feedSamplerLazy: dagger.Lazy<FeedSampler>,
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
@@ -527,6 +532,28 @@ class MainViewModel @Inject constructor(
 
     fun setNewPostSheetState(sheetState: NewPostSheetStateDto) {
         _newPostSheetState.value = sheetState
+    }
+
+    fun postArticle() {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                val metadata = newPostSheetState.value.toAttachmentsMetadata()
+                val metadataUri = repository.local.saveAttachmentsMetadata(metadata).toString()
+                val articleUri = repository.local.saveArticle(newPostSheetState.value.content).toString()
+                val attachments = newPostSheetState.value.fileUris + metadataUri + articleUri
+                val message = MessageDtoFactory.createOutgoing(
+                    chatId = BROADCAST_CONTACT_ADDRESS,
+                    text = null,
+                    type = MessageType.FILES,
+                    actionFor = null,
+                    attachments = attachments
+                )
+                if(messageSaver.saveOutgoingMessage(message)) {
+                    _newPostSheetState.value = NewPostSheetStateDtoFactory.create()
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun createContactShareLink() {

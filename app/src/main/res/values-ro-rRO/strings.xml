@@ -162,4 +162,5 @@
     <string name="content">Conținut</string>
     <string name="empty_article_cover">Începeți să editați articolul pentru a previzualiza coperta</string>
     <string name="empty_article_content">Nu există conținut pentru previzualizare</string>
+    <string name="post">Postează</string>
 </resources>

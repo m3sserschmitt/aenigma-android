@@ -166,4 +166,5 @@
     <string name="content">Content</string>
     <string name="empty_article_cover">Start editing the article to preview the cover</string>
     <string name="empty_article_content">There is no content to preview yet</string>
+    <string name="post">Post</string>
 </resources>

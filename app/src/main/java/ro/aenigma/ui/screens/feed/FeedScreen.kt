@@ -58,7 +58,8 @@ fun FeedScreen(
             }
         },
         onNewPostSheetStateChanged = { sheetState -> mainViewModel.setNewPostSheetState(sheetState) },
-        onReloadFeedClicked = { mainViewModel.reloadFeed() }
+        onReloadFeedClicked = { mainViewModel.reloadFeed() },
+        onPostClicked = { mainViewModel.postArticle() }
     )
 }
 
@@ -70,7 +71,8 @@ fun FeedScreen(
     okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (ArticleDto) -> Unit,
     onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
-    onReloadFeedClicked: () -> Unit
+    onReloadFeedClicked: () -> Unit = { },
+    onPostClicked: () -> Unit = { }
 ) {
     val bottomSheetState = rememberStandardBottomSheetState(
         initialValue = newPostSheetState.sheetState
@@ -121,7 +123,8 @@ fun FeedScreen(
         sheetContent = {
             NewPostBottomSheet(
                 sheetState = newPostSheetState,
-                onSheetStateChanged = onNewPostSheetStateChanged
+                onSheetStateChanged = onNewPostSheetStateChanged,
+                onPostClicked = onPostClicked
             )
         }
     ) { padding ->

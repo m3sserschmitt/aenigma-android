@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -37,17 +39,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import ro.aenigma.R
+import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
-import ro.aenigma.util.ContextExtensions.isImageUri
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
-import ro.aenigma.util.StringExtensions.isImageUrlByExtension
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import kotlin.collections.forEach
 
@@ -102,12 +102,13 @@ fun NoFilesWarning(
 }
 
 @Composable
-fun rememberIsImage(uri: String): State<Boolean?> {
+fun rememberFileDisplayInfo(uri: String): State<FileDisplayInfoDto> {
     val context = LocalContext.current
-    return produceState(initialValue = null, key1 = uri) {
-        value = withContext(Dispatchers.IO) {
-            context.isImageUri(uri) || uri.isImageUrlByExtension()
-        }
+    return produceState(initialValue = FileDisplayInfoDto(
+        painterResourceId = null,
+        isImage = false
+    ), key1 = uri) {
+        value = context.getFileTypeIcon(uri)
     }
 }
 
@@ -126,8 +127,8 @@ fun FileItem(
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider
 ) {
-    val isImage by rememberIsImage(uri)
-    if (isImage == true) {
+    val fileDisplayInfo by rememberFileDisplayInfo(uri)
+    if (fileDisplayInfo.isImage) {
         AsyncImage(
             uri = uri,
             okHttpClientProvider = okHttpClientProvider
@@ -142,34 +143,50 @@ fun FileItem(
             )
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.padding(8.dp).fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val context = LocalContext.current
-                Icon(
-                    modifier = Modifier.alpha(.75f).size(36.dp),
-                    painter = painterResource(context.getFileTypeIcon(uri)),
-                    contentDescription = stringResource(R.string.files),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                )
-                Text(
-                    text = getUriTitle(uri),
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
-                IconButton(
-                    onClick = { context.openUriInExternalApp(uri.toUri()) },
-                ) {
+                val resourceId = fileDisplayInfo.painterResourceId
+                if (resourceId != null) {
                     Icon(
-                        modifier = Modifier.alpha(.75f).size(24.dp),
-                        painter = painterResource(R.drawable.ic_open),
-                        contentDescription = stringResource(id = R.string.open),
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        modifier = Modifier.alpha(.75f).size(36.dp),
+                        painter = painterResource(resourceId),
+                        contentDescription = stringResource(R.string.files),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                    )
+
+                    Text(
+                        text = getUriTitle(uri),
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.MiddleEllipsis,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    val context = LocalContext.current
+                    val coroutineScope = rememberCoroutineScope()
+                    IconButton(
+                        onClick = {
+                            coroutineScope.launch { context.openUriInExternalApp(uri.toUri()) }
+                        },
+                    ) {
+                        Icon(
+                            modifier = Modifier.alpha(.75f).size(24.dp),
+                            painter = painterResource(R.drawable.ic_open),
+                            contentDescription = stringResource(id = R.string.open),
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                } else {
+                    IndeterminateCircularIndicator(
+                        visible = true,
+                        size = 36.dp,
+                        text = stringResource(id = R.string.loading),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
+                        textColor = MaterialTheme.colorScheme.onPrimary,
+                        textStyle = MaterialTheme.typography.bodyMedium
                     )
                 }
             }

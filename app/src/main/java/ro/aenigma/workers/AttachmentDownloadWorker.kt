@@ -17,23 +17,19 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.Repository
 import ro.aenigma.models.AttachmentDto
-import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.NotificationService
-import ro.aenigma.services.Zipper
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
-import ro.aenigma.util.ContextExtensions.getConversationFilesDir
-import ro.aenigma.util.FileExtensions.toContentUriString
-import ro.aenigma.util.StringExtensions.fromJson
+import ro.aenigma.util.ContextExtensions.getCacheFile
+import ro.aenigma.util.ContextExtensions.createTempCacheFile
+import ro.aenigma.util.ContextExtensions.extractZip
+import ro.aenigma.util.ContextExtensions.toContentUri
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +37,6 @@ import java.util.concurrent.TimeUnit
 class AttachmentDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val zipper: Zipper,
     private val repository: Repository,
     private val notificationService: NotificationService
 ) : CoroutineWorker(context, params) {
@@ -77,10 +72,8 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     }
 
     private suspend fun downloadEncryptedFile(url: String): File? {
-        val tempFile = withContext(Dispatchers.IO) {
-            File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
-        }
-        if(repository.remote.getFile(url, tempFile)) {
+        val tempFile = applicationContext.createTempCacheFile()
+        if (repository.remote.getFile(url, tempFile)) {
             repository.remote.incrementFileAccessCount(url)
             return tempFile
         } else {
@@ -106,13 +99,13 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     private suspend fun resolveAttachments(message: MessageWithAttachmentsDto): File? {
         val attachment = message.attachment ?: return null
-        val archive = if (attachment.path == null) {
+        val archive = if (attachment.path.isNullOrBlank()) {
             val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
             val decrypted = decryptArchive(downloaded, attachment.passphrase) ?: return null
             downloaded.delete()
             decrypted
         } else {
-            File(applicationContext.cacheDir, attachment.path)
+            applicationContext.getCacheFile(attachment.path)
         }
 
         storeAttachment(message, archive)
@@ -122,27 +115,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     private suspend fun resolveFiles(
         message: MessageDto,
         files: List<File>
-    ): AttachmentsMetadataDto? {
-        var metadata: AttachmentsMetadataDto? = null
-        val finalURIs = mutableListOf<String>()
-        for ((i, file) in files.withIndex()) {
-            if (file.name == ATTACHMENTS_METADATA_FILE) {
-                metadata = file.readText().fromJson()
-            }
-            val destinationFile = File(
-                applicationContext.getConversationFilesDir(message.chatId),
-                "${message.id}_${i}_${file.name}"
-            )
-            file.renameTo(destinationFile)
-            finalURIs.add(destinationFile.toContentUriString(applicationContext))
-        }
+    ) {
         repository.local.updateMessage(
-            message.copy(
-                text = metadata?.description,
-                files = finalURIs
-            )
+            message.copy(files = files.map { file ->
+                applicationContext.toContentUri(file).toString()
+            })
         )
-        return metadata
     }
 
     override suspend fun doWork(): Result {
@@ -160,8 +138,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
             setForeground(getForegroundInfo())
 
             val archive = resolveAttachments(message) ?: return Result.retry()
-            val files = zipper.extractZipToFilesDir(
-                applicationContext,
+            val files = applicationContext.extractZip(
                 archive,
                 message.message.chatId
             )
