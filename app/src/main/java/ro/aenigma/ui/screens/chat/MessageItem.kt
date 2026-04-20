@@ -49,9 +49,9 @@ import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
-import ro.aenigma.models.extensions.MessageDtoExtensions.getDateTime
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.getDateTime
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
@@ -213,7 +213,7 @@ fun MessageItem(
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.messageCardStyleFormat(message.message.getDateTime()),
+                            text = PrettyDateFormatter.messageCardStyleFormat(message.getDateTime()),
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )

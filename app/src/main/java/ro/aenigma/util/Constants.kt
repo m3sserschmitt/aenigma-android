@@ -2,6 +2,7 @@ package ro.aenigma.util
 
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
+import java.time.Duration
 
 class Constants {
     companion object {
@@ -17,8 +18,8 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
-        const val SERVERS_LIST_MAX_COUNT = 50
-        const val NEWS_FEED_SIZE = 150
+        const val SERVERS_LIST_MAX_COUNT = 150
+        const val NEWS_FEED_SIZE = 1000
         const val SEND_MESSAGES_CHUNK_SIZE = 15
         const val CONTACTS_LIST_MAX_COUNT = 150
         const val OK_HTTP_CLIENT_TIMEOUT: Long = 15
@@ -129,5 +130,7 @@ class Constants {
         const val MARKDOWN_FILE_EXTENSION = "md"
 
         const val JSON_FILE_EXTENSION = "json"
+
+        val NEWS_FEED_TIME_PERIOD: Duration = Duration.ofDays(30)
     }
 }

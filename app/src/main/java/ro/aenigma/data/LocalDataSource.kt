@@ -235,8 +235,8 @@ class LocalDataSource @Inject constructor(
             .map { items -> items.map { item -> item.toDto() } }
     }
 
-    suspend fun getLatestSharedFiles(): List<MessageWithDetailsDto> {
-        return messagesDao.get().getLatestSharedFiles().map { item -> item.toDto() }
+    suspend fun getSharedFiles(lastIndex: Long): List<MessageWithDetailsDto> {
+        return messagesDao.get().getSharedFiles(lastIndex).map { item -> item.toDto() }
     }
 
     suspend fun getConversationPage(

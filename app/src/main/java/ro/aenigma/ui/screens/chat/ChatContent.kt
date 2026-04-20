@@ -26,7 +26,7 @@ import ro.aenigma.ui.screens.common.AutoScrollItemsList
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.extensions.MessageDtoExtensions.getDateTime
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.getDateTime
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.util.RequestState
@@ -105,8 +105,8 @@ fun ChatContent(
 
 @Composable
 fun MessageDate(next: MessageWithDetailsDto?, message: MessageWithDetailsDto) {
-    val localDate1 = next?.message?.getDateTime()?.toLocalDate()
-    val localDate2 = message.message.getDateTime().toLocalDate()
+    val localDate1 = next?.getDateTime()?.toLocalDate()
+    val localDate2 = message.getDateTime().toLocalDate()
 
     if (localDate1 == null || localDate1 != localDate2) {
         Text(

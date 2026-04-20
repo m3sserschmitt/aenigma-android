@@ -10,7 +10,6 @@ import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
-import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 
 @Dao
 interface MessagesDao {
@@ -75,8 +74,11 @@ interface MessagesDao {
     suspend fun update(message: MessageEntity)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE (type = 'FILES' AND deleted = 0 AND incoming = 1) OR " +
-            "(chatId = '$BROADCAST_CONTACT_ADDRESS') " +
-            "ORDER BY Id DESC LIMIT $NEWS_FEED_SIZE")
-    suspend fun getLatestSharedFiles(): List<MessageWithDetails>
+    @Query("SELECT * FROM $MESSAGES_TABLE " +
+            "WHERE id < :lastIndex " +
+            "AND deleted = 0 " +
+            "AND type = 'FILES' " +
+            "AND (incoming = 1 OR chatId = '$BROADCAST_CONTACT_ADDRESS') " +
+            "ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
+    suspend fun getSharedFiles(lastIndex: Long): List<MessageWithDetails>
 }

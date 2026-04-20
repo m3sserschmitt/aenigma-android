@@ -10,11 +10,14 @@ import org.apache.commons.rng.sampling.distribution.SharedStateDiscreteSampler
 import org.apache.commons.rng.simple.RandomSource
 import ro.aenigma.data.Repository
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.extensions.ArticleDtoExtensions.prettyFormat
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.isWithinNewsfeedPeriod
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
+import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 import ro.aenigma.util.ContextExtensions.isJsonUri
 import ro.aenigma.util.ContextExtensions.isMarkdownUri
 import ro.aenigma.util.ContextExtensions.isTextUri
@@ -35,7 +38,9 @@ class FeedSampler @Inject constructor(
             weights: List<Int>,
             rng: UniformRandomProvider
         ): SharedStateDiscreteSampler {
-            val probabilities = weights.map { weight -> weight.toDouble() / weights.sum().toDouble() }.toDoubleArray()
+            val probabilities =
+                weights.map { weight -> weight.toDouble() / weights.sum().toDouble() }
+                    .toDoubleArray()
             return AliasMethodDiscreteSampler.of(rng, probabilities)
         }
 
@@ -78,28 +83,44 @@ class FeedSampler @Inject constructor(
         }
     }
 
-    private suspend fun getLocalArticles(): List<ArticleDto> {
+    private suspend fun getLocalArticle(message: MessageWithDetailsDto): ArticleDto? {
         return try {
-            val messages = repository.local.getLatestSharedFiles()
-            val results = mutableListOf<ArticleDto>()
-            for (message in messages) {
-                val metadataFile = message.message.files?.firstOrNull { file ->
-                    context.isJsonUri(file) || context.isTextUri(file)
-                }
-                val markdownFile =
-                    message.message.files?.firstOrNull { file -> context.isMarkdownUri(file) }
-                val files = message.message.files?.minus(setOf(metadataFile, markdownFile))
-                    ?.mapNotNull { uri -> uri }
-                val metadata = if (!metadataFile.isNullOrBlank()) {
-                    repository.local.readMetadata(metadataFile)
-                } else {
-                    null
-                }
-                results.add(message.toArticleDto(uri = markdownFile, files, metadata))
+            val metadataFile = message.message.files?.firstOrNull { file ->
+                context.isJsonUri(file) || context.isTextUri(file)
             }
+            val markdownFile =
+                message.message.files?.firstOrNull { file -> context.isMarkdownUri(file) }
+            val files = message.message.files?.minus(setOf(metadataFile, markdownFile))
+                ?.mapNotNull { uri -> uri }
+            val metadata = if (!metadataFile.isNullOrBlank()) {
+                repository.local.readMetadata(metadataFile)
+            } else {
+                null
+            }
+            message.toArticleDto(uri = markdownFile, files, metadata)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun getLocalArticles(): List<ArticleDto> {
+        val results = mutableListOf<ArticleDto>()
+        return try {
+            var lastIndex = Long.MAX_VALUE
+            do {
+                val messages = repository.local.getSharedFiles(lastIndex)
+
+                for (message in messages) {
+                    results.add(getLocalArticle(message) ?: continue)
+                }
+
+                val last = messages.lastOrNull() ?: break
+                lastIndex = last.message.id
+            } while (last.isWithinNewsfeedPeriod() && results.size < NEWS_FEED_SIZE)
+
             results
         } catch (_: Exception) {
-            listOf()
+            results
         }
     }
 
