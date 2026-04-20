@@ -29,8 +29,10 @@ import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrController
 import ro.aenigma.services.UriBatcher
 import ro.aenigma.workers.AttachmentDownloadWorker
-import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
+import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
+import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
+import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 import java.util.SortedSet
 import javax.inject.Inject
 
@@ -399,24 +401,19 @@ class ChatViewModel @Inject constructor(
     }
 
     fun resendMessage(message: MessageWithDetailsDto) {
-        MessageSenderWorker.createWorkRequest(
-            workManager = workManager,
+        workManager.sendMessage(
             messageId = message.message.id
         )
     }
 
     fun retryAttachmentDownload(message: MessageWithDetailsDto) {
-        AttachmentDownloadWorker.createRequest(
-            workManager = workManager,
-            messageId = message.message.id
-        )
+        workManager.downloadAttachment(messageId = message.message.id)
     }
 
     fun editGroupMembers(members: List<String>, action: MessageType) {
         val group = getSelectedGroupEntity()
         if (group != null && group.groupData.name != null) {
-            GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                workManager = workManager,
+            workManager.createOrUpdateGroup(
                 groupName = group.groupData.name,
                 members = members,
                 existingGroupAddress = group.address,
@@ -514,8 +511,7 @@ class ChatViewModel @Inject constructor(
     fun renameContact(name: String) {
         val contact = getSelectedContactEntity() ?: return
         when (contact.type) {
-            ContactType.GROUP -> GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                workManager = workManager,
+            ContactType.GROUP -> workManager.createOrUpdateGroup(
                 groupName = name,
                 existingGroupAddress = contact.address,
                 actionType = MessageType.GROUP_RENAMED,

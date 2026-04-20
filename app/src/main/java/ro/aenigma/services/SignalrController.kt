@@ -1,10 +1,8 @@
 package ro.aenigma.services
 
-import android.content.Context
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -14,15 +12,15 @@ import ro.aenigma.data.Repository
 import ro.aenigma.models.enums.TorStatus
 import ro.aenigma.models.extensions.TorStatusExtensions.torPreferenceIsChanging
 import ro.aenigma.models.extensions.TorStatusExtensions.with
-import ro.aenigma.workers.GraphReaderWorker
-import ro.aenigma.workers.SignalRClientWorker
 import ro.aenigma.workers.SignalRWorkerAction
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
+import ro.aenigma.workers.extensions.WorkManagerExtensions.syncGraphAndInvokeClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SignalrController @Inject constructor(
-    @param:ApplicationContext private val applicationContext: Context,
+    private val workManager: WorkManager,
     private val torServiceMonitor: TorServiceMonitor,
     private val signalRClient: SignalRClient,
     private val repository: Repository
@@ -30,19 +28,13 @@ class SignalrController @Inject constructor(
     val clientStatus = signalRClient.status
 
     fun enqueueSyncAndReconnect() {
-        val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
-        val startConnectionWorkRequest = SignalRClientWorker.createRequest(
+        workManager.syncGraphAndInvokeClient(
             actions = SignalRWorkerAction.connectPullCleanup()
         )
-        WorkManager.getInstance(applicationContext)
-            .beginWith(syncGraphWorkRequest)
-            .then(startConnectionWorkRequest)
-            .enqueue()
     }
 
     fun enqueueReconnect() {
-        SignalRClientWorker.start(
-            context = applicationContext,
+        workManager.invokeClient(
             actions = SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
         )
     }

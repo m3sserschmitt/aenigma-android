@@ -1,24 +1,22 @@
 package ro.aenigma.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import ro.aenigma.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.util.dataStore
 import javax.inject.Inject
 import javax.inject.Singleton
-
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.DATASTORE_PREFERENCES)
 
 @Singleton
 class PreferencesDataStore @Inject constructor(
@@ -31,6 +29,7 @@ class PreferencesDataStore @Inject constructor(
         private const val NAME_PREFERENCE = "name"
         private const val ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE = "encrypted-database-passphrase"
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
+        private const val NEWS_FEED_URI = "news-feed-file"
     }
 
     private object PreferenceKeys {
@@ -40,6 +39,7 @@ class PreferencesDataStore @Inject constructor(
         val useOrbot = booleanPreferencesKey(ORBOT_PREFERENCE)
         val encryptedDatabasePassphrase =
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
+        val newsFeedUri = stringPreferencesKey(NEWS_FEED_URI)
     }
 
     private val dataStore = context.dataStore
@@ -81,6 +81,10 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
+    suspend fun saveNewsFeedUri(uri: Uri): Boolean {
+        return savePreference(uri.toString(), PreferenceKeys.newsFeedUri)
+    }
+
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
             .catch { emit(emptyPreferences()) }
@@ -98,4 +102,7 @@ class PreferencesDataStore @Inject constructor(
 
     val encryptedDatabasePassphrase: Flow<ByteArray> =
         getPreference(PreferenceKeys.encryptedDatabasePassphrase, byteArrayOf())
+
+    val newsFeedUri: Flow<Uri?> = getPreference(PreferenceKeys.newsFeedUri, "")
+        .map { uri -> uri.takeIf { value -> value.isNotBlank() }?.toUri() }
 }

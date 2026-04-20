@@ -1,28 +1,11 @@
 package ro.aenigma.util
 
-import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.erdtman.jcs.JsonCanonicalizer
 import ro.aenigma.util.SerializerExtensions.createJsonMapper
 
 object StringExtensions {
-    fun String.isImageUrlByExtension(): Boolean {
-        if (!this.isRemoteUri()) {
-            return false
-        }
-        val extension = MimeTypeMap.getFileExtensionFromUrl(this)
-
-        MimeTypeMap.getSingleton()
-            .getMimeTypeFromExtension(extension)
-            ?.let { if (it.startsWith("image/", ignoreCase = true)) return true }
-
-        val otherExtensions = setOf(
-            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic", "heif",
-            "tif", "tiff", "ico", "avif", "apng", "jfif"
-        )
-        return extension in otherExtensions
-    }
 
     fun String?.getBaseUrl(): String? {
         return try {
@@ -127,5 +110,58 @@ object StringExtensions {
         } catch (_: Exception) {
             null
         }
+    }
+
+    @JvmStatic
+    fun String?.isImageMime(): Boolean {
+        return this?.startsWith("image/", ignoreCase = true) == true
+    }
+
+    @JvmStatic
+    fun String?.isVideoMime(): Boolean {
+        return this?.startsWith("video/", ignoreCase = true) == true
+    }
+
+    @JvmStatic
+    fun String?.isAudioMime(): Boolean {
+        return this?.startsWith("audio/", ignoreCase = true) == true
+    }
+
+    @JvmStatic
+    fun String?.isPdfMime(): Boolean {
+        return this?.lowercase() == "application/pdf"
+    }
+
+    @JvmStatic
+    fun String?.isMarkdownMime(): Boolean {
+        return this?.lowercase() == "text/markdown"
+    }
+
+    @JvmStatic
+    fun String?.isApkMime(): Boolean {
+        return this?.lowercase() == "application/vnd.android.package-archive"
+    }
+
+    @JvmStatic
+    fun String?.isArchiveMime(): Boolean {
+        return this?.lowercase() in setOf(
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/x-7z-compressed",
+            "application/x-rar-compressed",
+            "application/vnd.rar",
+            "application/x-tar",
+            "application/gzip"
+        )
+    }
+
+    @JvmStatic
+    fun String?.isJsonMime(): Boolean {
+        return this?.lowercase() == "application/json"
+    }
+
+    @JvmStatic
+    fun String?.isTextMime(): Boolean {
+        return this?.startsWith("text/", ignoreCase = true) == true
     }
 }

@@ -1,7 +1,6 @@
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -33,8 +32,7 @@ private fun RemoteAsyncImage(
         AsyncImage(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .padding(bottom = 12.dp),
+                .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)
                 .data(uri)
                 .crossfade(true)
@@ -66,8 +64,7 @@ fun AsyncImage(
         AsyncImage(
             modifier = Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .padding(bottom = 12.dp),
+                .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)
                 .data(uri)
                 .crossfade(true)

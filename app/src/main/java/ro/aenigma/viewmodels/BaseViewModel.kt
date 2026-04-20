@@ -28,10 +28,9 @@ abstract class BaseViewModel(
         }
     }
 
-    val okHttpClientProvider: OkHttpClientProvider
-        get() {
-            return okHttpClientProviderLazy.get()
-        }
+    fun provideOkHttpClientProvider(): OkHttpClientProvider {
+        return okHttpClientProviderLazy.get()
+    }
 
     protected var defaultDispatcher = Dispatchers.Default
 

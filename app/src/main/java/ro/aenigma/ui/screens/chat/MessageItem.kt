@@ -49,6 +49,7 @@ import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
+import ro.aenigma.models.extensions.MessageDtoExtensions.getDateTime
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.factories.MessageDtoFactory
@@ -71,7 +72,7 @@ fun MessageItem(
     onClick: (MessageWithDetailsDto) -> Unit,
 ) {
     val context = LocalContext.current
-    val text = if(message.message.text.isNullOrBlank()) {
+    val text = if (message.message.text.isNullOrBlank()) {
         null
     } else {
         message.message.getMessageTextByAction(context)
@@ -91,7 +92,8 @@ fun MessageItem(
             message.sender
         else null
     val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
+    val isOutgoingSent =
+        !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
     val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
     val coroutineScope = rememberCoroutineScope()
 
@@ -108,13 +110,12 @@ fun MessageItem(
                     isSelected = isSelected,
                     onItemSelected = onItemSelected,
                     onItemDeselected = onItemDeselected,
-                    onClick = { item -> onClick(item)
-                        if(!isOutgoingFailed) {
-                            coroutineScope.launch {
-                                context.showImageViewer(
-                                    message = message.message
-                                )
-                            }
+                    onClick = { item ->
+                        onClick(item)
+                        coroutineScope.launch {
+                            context.showImageViewer(
+                                message = message.message
+                            )
                         }
                     }
                 ),
@@ -147,7 +148,7 @@ fun MessageItem(
 
                 Column(
                     modifier = Modifier.padding(8.dp).run {
-                        if(message.message.type == MessageType.FILES) {
+                        if (message.message.type == MessageType.FILES) {
                             fillMaxWidth()
                         } else {
                             width(IntrinsicSize.Max)
@@ -212,7 +213,7 @@ fun MessageItem(
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.formatTime(message.message.date),
+                            text = PrettyDateFormatter.messageCardStyleFormat(message.message.getDateTime()),
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )

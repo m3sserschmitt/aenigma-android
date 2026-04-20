@@ -36,11 +36,12 @@ import ro.aenigma.util.Constants.Companion.APP_DOMAIN
 import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
 import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
-import ro.aenigma.workers.SignalRClientWorker
-import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
 import androidx.core.net.toUri
+import androidx.work.WorkManager
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
+import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
 @AndroidEntryPoint
 class AppActivity : FragmentActivity() {
@@ -59,6 +60,9 @@ class AppActivity : FragmentActivity() {
 
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var workManager: WorkManager
 
     private val dbPassphraseLoaded = MutableStateFlow(false)
 
@@ -138,7 +142,7 @@ class AppActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        onScreenChanged(Screens.Companion.NO_SCREEN)
+        onScreenChanged(Screens.NO_SCREEN)
         lastPausedTime.value = System.currentTimeMillis()
     }
 
@@ -155,10 +159,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun sync() {
-        SignalRClientWorker.start(
-            this,
-            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
-        )
+        workManager.invokeClient()
     }
 
     private fun resetClient() {
@@ -166,7 +167,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun schedulePeriodicSync() {
-        SignalRClientWorker.schedulePeriodicSync(this)
+        workManager.schedulePeriodicClientSync()
     }
 
     private fun observeTorPreference() {

@@ -4,16 +4,8 @@ import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
@@ -44,8 +36,6 @@ import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.createZip
 import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class MessageSenderWorker @AssistedInject constructor(
@@ -59,37 +49,10 @@ class MessageSenderWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val MESSAGE_ID_ARG = "MessageId"
-        private const val ADDITIONAL_DESTINATIONS_ARG = "AdditionalDestinations"
-        private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val MAX_RETRY_COUNT = 5
-
-        @JvmStatic
-        fun createWorkRequest(
-            workManager: WorkManager,
-            messageId: Long,
-            additionalDestinations: Set<String> = hashSetOf()
-        ): UUID {
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID_ARG, messageId)
-                .putStringArray(ADDITIONAL_DESTINATIONS_ARG, additionalDestinations.toTypedArray())
-                .build()
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniqueWork(
-                getUniqueWorkRequestName(messageId),
-                ExistingWorkPolicy.KEEP,
-                workRequest
-            )
-            return workRequest.id
-        }
+        const val MESSAGE_ID_ARG = "message-id"
+        const val ADDITIONAL_DESTINATIONS_ARG = "additional-destinations"
+        const val UNIQUE_WORK_REQUEST_NAME = "message-sender-worker"
+        private const val MAX_RETRY_COUNT = 3
 
         fun getUniqueWorkRequestName(messageId: Long): String {
             return "$UNIQUE_WORK_REQUEST_NAME-$messageId"

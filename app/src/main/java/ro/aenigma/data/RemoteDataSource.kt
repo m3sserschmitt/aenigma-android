@@ -1,7 +1,5 @@
 package ro.aenigma.data
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -99,14 +97,17 @@ class RemoteDataSource @Inject constructor(
         }
 
         @JvmStatic
-        private suspend fun verifyServerInfo(api: EnigmaApi, expectedAddress: String? = null): GuardDto? {
+        private suspend fun verifyServerInfo(
+            api: EnigmaApi,
+            expectedAddress: String? = null
+        ): GuardDto? {
             val response = api.getServerInfo()
             val serverInfoBody = response.body() ?: return null
             if (response.code() != 200) {
                 return null
             } else {
                 val address = serverInfoBody.address ?: return null
-                if(!expectedAddress.isNullOrBlank() && address != expectedAddress) {
+                if (!expectedAddress.isNullOrBlank() && address != expectedAddress) {
                     return null
                 }
                 val graphVersion = serverInfoBody.graphVersion ?: return null
@@ -333,24 +334,20 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    fun getArticles(
+    suspend fun getArticles(
         url: String,
         fallback: String = String.format(ARTICLES_INDEX_URL_TEMPLATE, DEFAULT_LANGUAGE_CODE)
-    ): Flow<List<ArticleDto>> {
-        return flow {
-            val response = requestArticles(url)
-            if (response.isEmpty()) {
-                emit(requestArticles(fallback))
-            } else {
-                emit(response)
-            }
+    ): List<ArticleDto> {
+        val response = requestArticles(url)
+        return response.ifEmpty {
+            requestArticles(fallback)
         }
     }
 
-    suspend fun getStringContent(url: String): String? {
+    suspend fun getText(url: String): String? {
         return try {
             val response =
-                retrofitProvider.getApi(url.getBaseUrl() ?: return null).getStringContent(url)
+                retrofitProvider.getApi(url.getBaseUrl() ?: return null).getText(url)
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null

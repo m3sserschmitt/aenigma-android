@@ -516,7 +516,7 @@ fun ContactsScreen(
             ContactsContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = paddingValues.calculateBottomPadding()
+                    bottom = BOTTOM_SHEET_PEEK_HEIGHT
                 ),
                 contacts = contacts,
                 isSearchMode = isSearchMode,

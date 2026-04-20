@@ -6,6 +6,8 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ArtifactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 object MessageDtoExtensions {
     @JvmStatic
@@ -113,5 +115,10 @@ object MessageDtoExtensions {
             chatId = chatId,
             passphrase = passphrase
         )
+    }
+
+    @JvmStatic
+    fun MessageDto.getDateTime(): ZonedDateTime {
+        return (dateReceivedOnServer ?: date).withZoneSameInstant(ZoneId.systemDefault())
     }
 }

@@ -6,8 +6,10 @@ import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.enums.NewPostSheetSection
+import ro.aenigma.util.PrettyDateFormatter
 import ro.aenigma.util.SheetValueExtensions.isFullyExpanded
 import ro.aenigma.util.SheetValueExtensions.isNotFullyExpanded
+import java.time.ZonedDateTime
 
 object NewPostSheetStateDtoExtensions {
     object ServersSheetStateDtoExtensions {
@@ -79,7 +81,7 @@ object NewPostSheetStateDtoExtensions {
                 description = description,
                 imageUrls = fileUris,
                 url = null,
-                date = null
+                date = PrettyDateFormatter.format(ZonedDateTime.now())
             )
         }
 

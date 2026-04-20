@@ -37,9 +37,7 @@ fun ArticleScreen(
     navigateBack: () -> Unit
 ) {
     LaunchedEffect(key1 = url) {
-        if (!url.isNullOrBlank()) {
-            mainViewModel.fetchArticle(url)
-        }
+        mainViewModel.fetchArticle(url)
     }
 
     val articleContent by mainViewModel.articleContent.collectAsState()
@@ -47,7 +45,7 @@ fun ArticleScreen(
 
     ArticleScreen(
         content = articleContent,
-        imageTransformer = mainViewModel.markdownImageTransformer,
+        imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
         onShareArticle = {
             if (!url.isNullOrBlank()) {
                 context.shareText(

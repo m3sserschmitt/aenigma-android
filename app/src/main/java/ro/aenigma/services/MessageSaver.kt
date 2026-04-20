@@ -28,10 +28,10 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.withSenderAddress
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.util.StringExtensions.fromJson
-import ro.aenigma.workers.AttachmentDownloadWorker
-import ro.aenigma.workers.GroupDownloadWorker
-import ro.aenigma.workers.GroupUploadWorker
-import ro.aenigma.workers.MessageSenderWorker
+import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
+import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
+import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadGroupData
+import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -81,8 +81,7 @@ class MessageSaver @Inject constructor(
                                         localAddress
                                     ) == true
                                 ) {
-                                    GroupUploadWorker.createOrUpdateGroupWorkRequest(
-                                        workManager,
+                                    workManager.createOrUpdateGroup(
                                         groupName = null,
                                         members = listOf(messageEntity.senderAddress ?: return),
                                         existingGroupAddress = messageEntity.chatId,
@@ -170,10 +169,9 @@ class MessageSaver @Inject constructor(
                 if (attachment != null) {
                     repository.local.insertOrUpdateAttachment(attachment.copy(messageId = messageId))
                 }
-                MessageSenderWorker.createWorkRequest(
-                    workManager,
-                    messageId,
-                    additionalDestinations
+                workManager.sendMessage(
+                    messageId = messageId,
+                    additionalDestinations = additionalDestinations
                 )
                 return true
             }
@@ -223,12 +221,12 @@ class MessageSaver @Inject constructor(
 
     private suspend fun downloadGroupData(artifactDto: ArtifactDto, messageId: Long) {
         createAttachmentEntity(artifactDto, messageId)
-        GroupDownloadWorker.createWorkRequest(workManager, messageId)
+        workManager.downloadGroupData(messageId)
     }
 
     private suspend fun downloadAttachment(artifactDto: ArtifactDto, messageId: Long) {
         createAttachmentEntity(artifactDto, messageId)
-        AttachmentDownloadWorker.createRequest(workManager, messageId)
+        workManager.downloadAttachment(messageId)
     }
 
     private suspend fun saveIncomingMessages(messages: List<Triple<SignatureDto, ArtifactDto, MessageDto>>) {

@@ -79,7 +79,7 @@ fun CreateLinkDialog(
                             when (sharedData) {
                                 is RequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        val validUntil = PrettyDateFormatter.formatDateTime(
+                                        val validUntil = PrettyDateFormatter.format(
                                             sharedData.data.validUntil
                                         )
                                         if (validUntil != null) {

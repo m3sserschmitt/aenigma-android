@@ -3,25 +3,30 @@ package ro.aenigma.ui.screens.feed
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.ui.screens.common.FilesList
+import ro.aenigma.ui.screens.common.ItemsList
+import ro.aenigma.util.ContextExtensions.showImageViewer
 
 @Composable
 fun FeedList(
@@ -30,30 +35,38 @@ fun FeedList(
     okHttpClientProvider: IOkHttpClientProvider,
     onArticleClicked: (ArticleDto) -> Unit = {}
 ) {
-    LazyColumn(
-        modifier = modifier
-    ) {
-        items(
-            items = articles,
-            key = { article -> article.hashCode() }
-        ) { article ->
+    ItemsList(
+        modifier = modifier,
+        items = articles,
+        itemKeyProvider = { article -> article.hashCode() },
+        listItem = { _, item, _ ->
             ArticleCard(
-                modifier = Modifier.clickable { onArticleClicked(article) },
-                article = article,
-                okHttpClientProvider = okHttpClientProvider
+                article = item,
+                okHttpClientProvider = okHttpClientProvider,
+                onClick = { onArticleClicked(item) }
             )
         }
-    }
+    )
 }
 
 @Composable
 fun ArticleCard(
     modifier: Modifier = Modifier,
     article: ArticleDto,
-    okHttpClientProvider: IOkHttpClientProvider
+    okHttpClientProvider: IOkHttpClientProvider,
+    onClick: () -> Unit = { }
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
     Card(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.clickable {
+            onClick()
+            coroutineScope.launch {
+                context.showImageViewer(
+                    article = article
+                )
+            }
+        }.fillMaxWidth()
             .padding(
                 horizontal = 8.dp,
                 vertical = 4.dp
@@ -72,23 +85,51 @@ fun ArticleCard(
         ) {
             if (!article.title.isNullOrBlank()) {
                 Text(
+                    modifier = Modifier.padding(bottom = 4.dp),
                     text = article.title,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
                 )
-                Spacer(
-                    modifier = Modifier.height(4.dp)
-                )
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (!article.author.isNullOrEmpty()) {
+                    Text(
+                        modifier = Modifier.padding(bottom = 4.dp),
+                        text = article.author,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Text(
+                        modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 4.dp),
+                        text = "|",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                if (!article.date.isNullOrEmpty()) {
+                    Text(
+                        modifier = Modifier.padding(bottom = 4.dp),
+                        text = article.date,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+
             FilesList(
                 uris = article.imageUrls?.mapNotNull { uri -> uri } ?: listOf(),
                 textColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 okHttpClientProvider = okHttpClientProvider
             )
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
+
             if (!article.description.isNullOrBlank()) {
+                Spacer(
+                    modifier = Modifier.height(4.dp)
+                )
                 Text(
                     text = article.description,
                     style = MaterialTheme.typography.bodyMedium,

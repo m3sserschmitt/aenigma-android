@@ -67,7 +67,7 @@ fun ChatScreen(
 
     ChatScreen(
         contact = selectedContact,
-        okHttpClientProvider = chatViewModel.okHttpClientProvider,
+        okHttpClientProvider = chatViewModel.provideOkHttpClientProvider(),
         isMember = isMember,
         isAdmin = isAdmin,
         contacts = contacts,

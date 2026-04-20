@@ -8,15 +8,15 @@ import java.time.temporal.ChronoUnit
 
 object PrettyDateFormatter {
     @JvmStatic
-    fun formatTime(date: ZonedDateTime): String {
+    fun messageCardStyleFormat(dateTime: ZonedDateTime): String {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        return date.withZoneSameInstant(ZoneId.systemDefault()).format(formatter)
+        return dateTime.withZoneSameInstant(ZoneId.systemDefault()).format(formatter)
     }
 
     @JvmStatic
-    fun formatMessageDateTime(zonedDateTime: ZonedDateTime): String {
+    fun chatroomStyleFormat(dateTime: ZonedDateTime): String {
         val now = ZonedDateTime.now()
-        val targetDateTime = zonedDateTime.withZoneSameInstant(ZoneId.systemDefault())
+        val targetDateTime = dateTime.withZoneSameInstant(ZoneId.systemDefault())
         val daysAgo = ChronoUnit.DAYS.between(targetDateTime, now)
         val yearsAgo = ChronoUnit.YEARS.between(targetDateTime, now)
 
@@ -35,13 +35,18 @@ object PrettyDateFormatter {
     }
 
     @JvmStatic
-    fun formatDateTime(zonedDateTime: String?): String? {
+    fun format(dateTime: String?): String? {
         return try {
-            val parsedZonedDateTime =
-                ZonedDateTime.parse(zonedDateTime).withZoneSameInstant(ZoneId.systemDefault())
-            PrettyTime().format(parsedZonedDateTime)
+            val parsedDateTime =
+                ZonedDateTime.parse(dateTime).withZoneSameInstant(ZoneId.systemDefault())
+            format(parsedDateTime)
         } catch (_: Exception) {
             return null
         }
+    }
+
+    @JvmStatic
+    fun format(dateTime: ZonedDateTime): String {
+        return PrettyTime().format(dateTime)
     }
 }

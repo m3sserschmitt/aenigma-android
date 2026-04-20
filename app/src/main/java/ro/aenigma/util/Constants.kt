@@ -44,7 +44,9 @@ class Constants {
 
         const val DEFAULT_LANGUAGE_CODE = "en"
 
-        const val IMAGES_CACHE_DIR = "images_cache"
+        const val IMAGES_CACHE_DIRECTORY = "images_cache"
+
+        const val NEWS_FEED_DIRECTORY = "newsfeed"
 
         const val ORBOT_PACKAGE = "org.torproject.android"
 
@@ -58,9 +60,9 @@ class Constants {
 
         const val PUBLIC_KEY_FILE = "public-key.pem"
 
-        const val SHARED_FILES_FEED_WEIGHT = 0.65
+        const val LOCAL_MEDIA_FEED_WEIGHT = 3
 
-        const val ARTICLES_FEED_WEIGHT = 0.35
+        const val WEB_ARTICLES_FEED_WEIGHT = 1
 
         const val SOCKS5_PROXY_HOSTNAME = "127.0.0.1"
         const val SOCKS5_PROXY_PORT = 9050
@@ -122,7 +124,7 @@ class Constants {
 
         const val CLEANUP_METHOD = "Cleanup"
 
-        const val BROADCAST_CONTACT_ADDRESS = "ffffffffffffffffffffffffffffffff"
+        const val BROADCAST_CONTACT_ADDRESS = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
 
         const val MARKDOWN_FILE_EXTENSION = "md"
 

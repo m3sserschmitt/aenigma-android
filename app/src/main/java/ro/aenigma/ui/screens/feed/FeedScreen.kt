@@ -42,16 +42,10 @@ fun FeedScreen(
     val articles by mainViewModel.newsFeed.collectAsState()
     val newPostSheetState by mainViewModel.newPostSheetState.collectAsState()
 
-    LaunchedEffect(key1 = articles) {
-        if (articles is RequestState.Idle) {
-            mainViewModel.collectFeed()
-        }
-    }
-
     FeedScreen(
         articles = articles,
         newPostSheetState = newPostSheetState,
-        okHttpClientProvider = mainViewModel.okHttpClientProvider,
+        okHttpClientProvider = mainViewModel.provideOkHttpClientProvider(),
         onArticleClicked = { article ->
             if (article.url?.isNotBlank() == true) {
                 navigateToArticle(article.url)
@@ -130,7 +124,8 @@ fun FeedScreen(
     ) { padding ->
         FeedScreenContent(
             modifier = Modifier.padding(
-                top = padding.calculateTopPadding()
+                top = padding.calculateTopPadding(),
+                bottom = BOTTOM_SHEET_PEEK_HEIGHT
             ).fillMaxSize(),
             articles = articles,
             okHttpClientProvider = okHttpClientProvider,
@@ -161,18 +156,19 @@ fun FeedScreenContent(
         }
 
         is RequestState.Error -> ErrorScreen(
+            modifier = modifier,
             text = stringResource(id = R.string.something_went_wrong)
         )
 
         RequestState.Idle,
-        RequestState.Loading -> LoadingScreen()
+        RequestState.Loading -> LoadingScreen(modifier = modifier)
     }
 }
 
 @Preview
 @Composable
 fun FeedScreenPreview() {
-    val articleDtos = List(1) {
+    val articles = List(1) {
         ArticleDto(
             id = 1,
             title = "Article $it",
@@ -183,7 +179,7 @@ fun FeedScreenPreview() {
         )
     }
     FeedScreen(
-        articles = RequestState.Success(articleDtos),
+        articles = RequestState.Success(articles),
         okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = {},
         onReloadFeedClicked = {}

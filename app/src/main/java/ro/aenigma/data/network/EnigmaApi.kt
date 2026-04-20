@@ -67,7 +67,7 @@ interface EnigmaApi {
     suspend fun getArticlesIndex(@Url url: String): Response<List<ArticleDto>?>
 
     @GET
-    suspend fun getStringContent(@Url url: String): Response<String?>
+    suspend fun getText(@Url url: String): Response<String?>
 
     @GET
     suspend fun checkTor(@Url url: String): Response<TorCheckDto?>

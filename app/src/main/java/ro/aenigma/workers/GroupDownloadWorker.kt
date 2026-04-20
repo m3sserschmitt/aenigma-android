@@ -4,16 +4,8 @@ import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -29,7 +21,6 @@ import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.NotificationService
 import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
-import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class GroupDownloadWorker @AssistedInject constructor(
@@ -41,27 +32,12 @@ class GroupDownloadWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val MESSAGE_ID_ARG = "MessageId"
-        const val MAX_RETRY_COUNT = 5
+        const val UNIQUE_WORK_REQUEST_NAME = "group-download-worker"
+        const val MESSAGE_ID_ARG = "message-id"
+        const val MAX_RETRY_COUNT = 3
 
-        @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, messageId: Long) {
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID_ARG, messageId)
-                .build()
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<GroupDownloadWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniqueWork(
-                "$UNIQUE_WORK_REQUEST_NAME-$messageId", ExistingWorkPolicy.KEEP, workRequest
-            )
+        fun getUniqueWorkName(messageId: Long): String {
+            return "${UNIQUE_WORK_REQUEST_NAME}-$messageId"
         }
     }
 
@@ -115,7 +91,8 @@ class GroupDownloadWorker @AssistedInject constructor(
             (message.attachment.passphrase ?: message.message.text) ?: return Result.failure()
         message.message.senderAddress ?: return Result.failure()
 
-        val existentGroup = repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
+        val existentGroup =
+            repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
         val groupData = repository.remote.getGroupData(
             url = message.attachment.url,
             existentGroup = existentGroup,

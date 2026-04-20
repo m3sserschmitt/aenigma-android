@@ -17,6 +17,10 @@ import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.work.WorkInfo
 import coil3.ImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
@@ -39,11 +43,13 @@ import okhttp3.OkHttpClient
 import org.apache.tika.Tika
 import ro.aenigma.R
 import ro.aenigma.activities.AppActivity
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
+import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
 import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
-import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIR
+import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
 import ro.aenigma.util.Constants.Companion.ORBOT_STORE_LINK
@@ -53,11 +59,21 @@ import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 import ro.aenigma.util.ContentResolverExtensions.getExtension
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import ro.aenigma.util.FileExtensions.lengthSafe
+import ro.aenigma.util.StringExtensions.isApkMime
+import ro.aenigma.util.StringExtensions.isArchiveMime
+import ro.aenigma.util.StringExtensions.isAudioMime
+import ro.aenigma.util.StringExtensions.isImageMime
+import ro.aenigma.util.StringExtensions.isJsonMime
+import ro.aenigma.util.StringExtensions.isMarkdownMime
+import ro.aenigma.util.StringExtensions.isPdfMime
 import ro.aenigma.util.StringExtensions.isRemoteUri
+import ro.aenigma.util.StringExtensions.isTextMime
+import ro.aenigma.util.StringExtensions.isVideoMime
 import java.io.BufferedInputStream
 import java.io.File
 import java.util.UUID
-import kotlin.text.startsWith
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.DATASTORE_PREFERENCES)
 
 object ContextExtensions {
 
@@ -121,65 +137,53 @@ object ContextExtensions {
     }
 
     suspend fun Context.getFileTypeIcon(uri: String): FileDisplayInfoDto {
-        return try {
-            val mime = getFileType(uri)
-            when {
-                uri.isRemoteUri() -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_link,
-                    isImage = false
-                )
-
-                mime == null -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_unknown_document,
-                    isImage = false
-                )
-
-                mime.startsWith("image/") -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_photo,
-                    isImage = true
-                )
-
-                mime.startsWith("video/") -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_video_file,
-                    isImage = false
-                )
-
-                mime.startsWith("audio/") -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_audio_file,
-                    isImage = false
-                )
-
-                mime == "application/pdf" -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_pdf,
-                    isImage = false
-                )
-
-                mime == "text/markdown" -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_markdown,
-                    isImage = false
-                )
-
-                mime == "application/vnd.android.package-archive" -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_apk_file,
-                    isImage = false
-                )
-
-                mime.contains("zip") || mime.contains("rar") ||
-                        mime.contains("7z") || mime.contains("tar") ||
-                        mime.contains("gz") -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_zip,
-                    isImage = false
-                )
-
-                else -> FileDisplayInfoDto(
-                    painterResourceId = R.drawable.ic_unknown_document,
-                    isImage = false
-                )
-            }
-        } catch (_: Exception) {
-            FileDisplayInfoDto(
-                painterResourceId = R.drawable.ic_unknown_document,
+        if (uri.isRemoteUri()) {
+            return FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_link,
                 isImage = false
+            )
+        }
+        val mime = getFileType(uri)
+        return when {
+            mime.isImageMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_photo,
+                isImage = true
+            )
+
+            mime.isVideoMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_video_file
+            )
+
+            mime.isAudioMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_audio_file
+            )
+
+            mime.isPdfMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_pdf
+            )
+
+            mime.isApkMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_apk_file
+            )
+
+            mime.isArchiveMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_zip
+            )
+
+            mime.isMarkdownMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_markdown
+            )
+
+            mime.isJsonMime() -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_json
+            )
+
+            mime.isTextMime() -> FileDisplayInfoDto(
+                painterResourceId =R.drawable.ic_text
+            )
+
+            else -> FileDisplayInfoDto(
+                painterResourceId = R.drawable.ic_unknown_document
             )
         }
     }
@@ -211,17 +215,17 @@ object ContextExtensions {
     }
 
     fun Context.getImagesCacheDirectory(): File {
-        return File(cacheDir, IMAGES_CACHE_DIR)
+        return File(cacheDir, IMAGES_CACHE_DIRECTORY)
     }
 
     private suspend fun createTempCacheFile(directory: File, suffix: String?): File {
         return withContext(Dispatchers.IO) {
-            File.createTempFile("file_", suffix, directory)
+            File.createTempFile("${UUID.randomUUID()}", suffix, directory)
         }
     }
 
-    suspend fun Context.createTempCacheFile(): File {
-        return createTempCacheFile(cacheDir, ".tmp")
+    suspend fun Context.createTempCacheFile(suffix: String?): File {
+        return createTempCacheFile(cacheDir, suffix)
     }
 
     fun Context.getCacheFile(relativePath: String): File {
@@ -243,6 +247,22 @@ object ContextExtensions {
 
     fun Context.toContentUri(file: File): Uri {
         return FileProvider.getUriForFile(this, "${this.packageName}.fileprovider", file)
+    }
+
+    suspend fun Context.readTextFromUri(uri: Uri): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                contentResolver.openInputStream(uri)?.use { input ->
+                    input.bufferedReader().use { bufferedReader -> bufferedReader.readText() }
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
+
+    suspend fun Context.readTextFromUri(uri: String): String? {
+        return readTextFromUri(uri.toUri())
     }
 
     suspend fun Context.extractZip(zipFile: File, directory: String): List<File> {
@@ -280,7 +300,7 @@ object ContextExtensions {
                         compressionMethod = CompressionMethod.DEFLATE
                     }
 
-                    val zipFile = createTempCacheFile()
+                    val zipFile = createTempCacheFile(null)
                     val archive = ZipFile(zipFile)
 
                     tempFiles.forEach { file ->
@@ -325,12 +345,16 @@ object ContextExtensions {
         }
     }
 
-    fun Context.deleteUri(uri: String): Boolean {
+    fun Context.deleteUri(uri: Uri): Boolean {
         return try {
-            contentResolver.delete(uri.toUri(), null, null) > 0
+            contentResolver.delete(uri, null, null) > 0
         } catch (_: Exception) {
             false
         }
+    }
+
+    fun Context.deleteUri(uri: String): Boolean {
+        return deleteUri(uri.toUri())
     }
 
     suspend fun Context.isImageUri(uri: String): Boolean {
@@ -338,20 +362,44 @@ object ContextExtensions {
     }
 
     suspend fun Context.isImageUri(uri: Uri): Boolean {
-        return getFileType(uri)?.startsWith("image/") == true
+        return getFileType(uri).isImageMime()
     }
 
-    private fun Context.sizeOf(uriString: String): Long {
-        val uri = uriString.toUri()
+    suspend fun Context.isMarkdownUri(uri: Uri): Boolean {
+        return getFileType(uri).isMarkdownMime()
+    }
+
+    suspend fun Context.isMarkdownUri(uri: String): Boolean {
+        return isMarkdownUri(uri.toUri())
+    }
+
+    suspend fun Context.isJsonUri(uri: Uri): Boolean {
+        return getFileType(uri).isJsonMime()
+    }
+
+    suspend fun Context.isJsonUri(uri: String): Boolean {
+        return isJsonUri(uri.toUri())
+    }
+
+    suspend fun Context.isTextUri(uri: Uri): Boolean {
+        return getFileType(uri).isTextMime()
+    }
+
+    suspend fun Context.isTextUri(uri: String): Boolean {
+        return isTextUri(uri.toUri())
+    }
+
+    private fun Context.sizeOf(uri: String): Long {
+        val parsedUri = uri.toUri()
 
         return when {
-            uri.scheme?.equals(ContentResolver.SCHEME_CONTENT, true) == true ->
-                contentResolver.querySize(uri)
+            parsedUri.scheme?.equals(ContentResolver.SCHEME_CONTENT, true) == true ->
+                contentResolver.querySize(parsedUri)
 
-            uri.scheme?.equals(ContentResolver.SCHEME_FILE, true) == true ->
-                File(uri.path ?: return -1).lengthSafe()
+            parsedUri.scheme?.equals(ContentResolver.SCHEME_FILE, true) == true ->
+                File(parsedUri.path ?: return -1).lengthSafe()
 
-            uri.scheme == null -> File(uriString).lengthSafe()
+            parsedUri.scheme == null -> File(uri).lengthSafe()
 
             else -> -1L
         }
@@ -476,18 +524,48 @@ object ContextExtensions {
     }
 
     suspend fun Context.showImageViewer(
-        message: MessageDto,
+        uris: List<String>,
         onDismiss: () -> Unit = { }
     ) {
-        val uris = (if (message.files.isNullOrEmpty()) message.filesLate.value else message.files)
-            .filter { item -> isImageUri(item) && !item.isRemoteUri() }
-        if (uris.isNotEmpty()) {
-            StfalconImageViewer.Builder(this, uris) { view, uriString ->
+        val filteredUris = uris.filter { item -> isImageUri(item) && !item.isRemoteUri() }
+        if (filteredUris.isNotEmpty()) {
+            StfalconImageViewer.Builder(this, filteredUris) { view, uriString ->
                 view.load(uriString.toUri())
             }.withDismissListener {
                 onDismiss.invoke()
             }.show()
         }
+    }
+
+    suspend fun Context.showImageViewer(
+        message: MessageDto,
+        onDismiss: () -> Unit = { }
+    ) {
+        if(message.isNotSent() && message.deliveryStatus.value == WorkInfo.State.FAILED)
+        {
+            return
+        }
+        showImageViewer(
+            uris = if (message.files.isNullOrEmpty()) {
+                message.filesLate.value
+            } else {
+                message.files
+            },
+            onDismiss = onDismiss
+        )
+    }
+
+    suspend fun Context.showImageViewer(
+        article: ArticleDto,
+        onDismiss: () -> Unit = { }
+    ) {
+        if(!article.url.isNullOrBlank()) {
+            return
+        }
+        showImageViewer(
+            uris = article.imageUrls?.mapNotNull { uri -> uri } ?: listOf(),
+            onDismiss = onDismiss
+        )
     }
 
     suspend fun Context.compressImage(image: File): File {
