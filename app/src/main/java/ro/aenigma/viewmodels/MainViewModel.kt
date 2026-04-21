@@ -51,7 +51,6 @@ import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getHttpUri
 import javax.inject.Inject
 import kotlin.collections.filter
-import ro.aenigma.util.Constants.Companion.SERVER_INFO_API_PATH
 import ro.aenigma.util.SerializerExtensions.toJson
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
@@ -611,16 +610,15 @@ class MainViewModel @Inject constructor(
     }
 
     fun fetchArticle(uri: String?) {
-        if (uri.isNullOrBlank()) {
-            return
-        }
         viewModelScope.launch {
             _articleContent.value = RequestState.Loading
             _articleContent.value = try {
                 val result = if (uri.isRemoteUri()) {
                     repository.remote.getText(uri)
-                } else {
+                } else if (!uri.isNullOrBlank()) {
                     repository.local.readText(uri)
+                } else {
+                    null
                 }
                 if (result != null) {
                     RequestState.Success(result)
@@ -645,7 +643,7 @@ class MainViewModel @Inject constructor(
     fun switchServer(serverQuery: String, expectedAddress: String? = null) {
         viewModelScope.launch(ioDispatcher) {
             try {
-                val serverInfoUrl = serverQuery.getHttpUri(SERVER_INFO_API_PATH) ?: return@launch
+                val serverInfoUrl = serverQuery.getHttpUri() ?: return@launch
                 val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
                     ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)

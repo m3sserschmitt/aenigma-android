@@ -87,18 +87,22 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 DeleteAppBarAction(
-                    onDeleteClicked = onDeleteSelectedItemsClicked
+                    onDeleteClicked = onDeleteSelectedItemsClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 EditTopAppBarAction(
                     visible = selectedItemsCount == 1,
-                    onRenameClicked = onRenameSelectedItemClicked
+                    onRenameClicked = onRenameSelectedItemClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 ShareTopAppBarAction(
                     visible = selectedItemsCount == 1,
-                    onClick = onShareSelectedItemsClicked
+                    onClick = onShareSelectedItemsClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 CreateGroupTopAppBarAction(
                     visible = selectedItemsCount > 0,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     onCreateGroupClicked = onCreateGroupClicked
                 )
             }
@@ -111,13 +115,16 @@ fun ContactsAppBar(
             navigateBackVisible = false,
             actions = {
                 ConnectionStatusAppBarAction(
-                    connectionStatus = connectionStatus
+                    connectionStatus = connectionStatus,
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
                 ReloadAppBarAction(
                     visible = connectionStatus is SignalRStatus.Error.Aborted,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onClick = onRetryConnection
                 )
                 ActivateSearchAppBarAction(
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
                 MoreActions(
@@ -132,6 +139,7 @@ fun ContactsAppBar(
             },
             navigateBackAlternative = {
                 ServersListAppBarAction(
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onOpenServersList = onOpenServersList
                 )
             }

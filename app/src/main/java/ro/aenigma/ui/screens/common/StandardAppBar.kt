@@ -25,6 +25,7 @@ fun StandardAppBar(
         navigationIcon = {
             if (navigateBackVisible) {
                 NavigateBackAppBarAction(
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onBackClicked = navigateBack
                 )
             } else {
@@ -42,7 +43,7 @@ fun StandardAppBar(
         },
         colors = TopAppBarDefaults.topAppBarColors().copy(
             containerColor = if (transparent)
-                Color.Companion.Transparent
+                Color.Transparent
             else
                 MaterialTheme.colorScheme.background
         ),

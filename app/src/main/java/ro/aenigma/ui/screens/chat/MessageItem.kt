@@ -254,7 +254,7 @@ fun DisplayLinks(
 
     FilesList(
         uris = links,
-        textColor = textColor,
+        contentColor = textColor,
         okHttpClientProvider = okHttpClientProvider
     )
 }
@@ -315,7 +315,7 @@ fun DisplayFiles(
         val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
         FilesList(
             uris = files,
-            textColor = textColor,
+            contentColor = textColor,
             okHttpClientProvider = okHttpClientProvider
         )
     }

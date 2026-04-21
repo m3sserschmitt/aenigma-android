@@ -25,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,7 +35,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.NewPostSheetStateDto
@@ -44,14 +42,13 @@ import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
-import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import kotlin.collections.forEach
 
 @Composable
 fun FilesList(
     uris: List<String>,
-    textColor: Color = Color.Unspecified,
+    contentColor: Color = Color.Unspecified,
     okHttpClientProvider: IOkHttpClientProvider
 ) {
     if(uris.isNotEmpty()) {
@@ -61,13 +58,14 @@ fun FilesList(
             uris.forEach { uri ->
                 FileItem(
                     uri = uri,
+                    contentColor = contentColor,
                     okHttpClientProvider = okHttpClientProvider
                 )
             }
         }
     } else {
         NoFilesWarning(
-            color = textColor
+            color = contentColor
         )
     }
 }
@@ -122,14 +120,34 @@ fun getUriTitle(uri: String): String {
 @Composable
 fun FileItem(
     uri: String,
+    contentColor: Color = Color.Unspecified,
     okHttpClientProvider: IOkHttpClientProvider
 ) {
     val fileDisplayInfo by rememberFileDisplayInfo(uri)
     if (fileDisplayInfo.isImage) {
-        AsyncImage(
-            uri = uri,
-            okHttpClientProvider = okHttpClientProvider
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AsyncImage(
+                modifier = Modifier.weight(1f),
+                uri = uri,
+                okHttpClientProvider = okHttpClientProvider
+            )
+            Column(
+                verticalArrangement = Arrangement.Center
+            ) {
+                ShareUriButton(
+                    uri = uri,
+                    tint = contentColor
+                )
+                OpenInExternalAppButton(
+                    uri = uri,
+                    tint = contentColor
+                )
+            }
+        }
     } else {
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -161,21 +179,14 @@ fun FileItem(
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.bodyMedium
                     )
-
-                    val context = LocalContext.current
-                    val coroutineScope = rememberCoroutineScope()
-                    IconButton(
-                        onClick = {
-                            coroutineScope.launch { context.openUriInExternalApp(uri.toUri()) }
-                        },
-                    ) {
-                        Icon(
-                            modifier = Modifier.alpha(.75f).size(24.dp),
-                            painter = painterResource(R.drawable.ic_open),
-                            contentDescription = stringResource(id = R.string.open),
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
+                    ShareUriButton(
+                        uri = uri,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                    OpenInExternalAppButton(
+                        uri = uri,
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 } else {
                     IndeterminateCircularIndicator(
                         visible = true,

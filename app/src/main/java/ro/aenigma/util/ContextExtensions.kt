@@ -56,6 +56,7 @@ import ro.aenigma.util.Constants.Companion.ORBOT_STORE_LINK
 import ro.aenigma.util.Constants.Companion.ORBOT_WEB_LINK
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
+import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContentResolverExtensions.getExtension
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import ro.aenigma.util.FileExtensions.lengthSafe
@@ -69,6 +70,7 @@ import ro.aenigma.util.StringExtensions.isPdfMime
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.util.StringExtensions.isTextMime
 import ro.aenigma.util.StringExtensions.isVideoMime
+import ro.aenigma.util.UriExtensions.isRemote
 import java.io.BufferedInputStream
 import java.io.File
 import java.util.UUID
@@ -179,7 +181,7 @@ object ContextExtensions {
             )
 
             mime.isTextMime() -> FileDisplayInfoDto(
-                painterResourceId =R.drawable.ic_text
+                painterResourceId = R.drawable.ic_text
             )
 
             else -> FileDisplayInfoDto(
@@ -495,13 +497,13 @@ object ContextExtensions {
             this.startActivity(
                 Intent.createChooser(
                     intent,
-                    this.getString(R.string.share_via)
+                    getString(R.string.share_via)
                 )
             )
         } catch (_: Exception) {
             Toast.makeText(
                 this,
-                this.getString(R.string.failed_to_share),
+                getString(R.string.failed_to_share),
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -523,6 +525,45 @@ object ContextExtensions {
         }
     }
 
+    suspend fun Context.shareUri(uri: Uri) {
+        try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = getFileType(uri)
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(
+                Intent.createChooser(intent, getString(R.string.share_via))
+            )
+        } catch (_: Exception) {
+            Toast.makeText(
+                this,
+                getString(R.string.failed_to_share),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    suspend fun Context.shareUriOrText(uri: Uri) {
+        if (uri.isRemote()) {
+            shareText(text = uri.toString())
+        } else {
+            shareUri(uri = uri)
+        }
+    }
+
+    suspend fun Context.shareArticleUriOrText(uri: Uri) {
+        if (uri.isRemote()) {
+            shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri.toString())))
+        } else {
+            shareUri(uri)
+        }
+    }
+
+    suspend fun Context.shareArticleUriOrText(uri: String) {
+        shareArticleUriOrText(uri.toUri())
+    }
+
     suspend fun Context.showImageViewer(
         uris: List<String>,
         onDismiss: () -> Unit = { }
@@ -541,8 +582,7 @@ object ContextExtensions {
         message: MessageDto,
         onDismiss: () -> Unit = { }
     ) {
-        if(message.isNotSent() && message.deliveryStatus.value == WorkInfo.State.FAILED)
-        {
+        if (message.isNotSent() && message.deliveryStatus.value == WorkInfo.State.FAILED) {
             return
         }
         showImageViewer(
@@ -559,7 +599,7 @@ object ContextExtensions {
         article: ArticleDto,
         onDismiss: () -> Unit = { }
     ) {
-        if(!article.url.isNullOrBlank()) {
+        if (!article.url.isNullOrBlank()) {
             return
         }
         showImageViewer(

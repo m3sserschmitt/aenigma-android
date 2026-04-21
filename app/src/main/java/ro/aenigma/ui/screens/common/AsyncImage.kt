@@ -22,6 +22,7 @@ import ro.aenigma.util.rememberImageLoader
 
 @Composable
 private fun RemoteAsyncImage(
+    modifier: Modifier = Modifier,
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider,
     contentScale: ContentScale = ContentScale.Fit
@@ -30,7 +31,7 @@ private fun RemoteAsyncImage(
     if(imageLoader != null) {
         val context = LocalContext.current
         AsyncImage(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)
@@ -48,6 +49,7 @@ private fun RemoteAsyncImage(
 
 @Composable
 fun AsyncImage(
+    modifier: Modifier = Modifier,
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider,
     contentScale: ContentScale = ContentScale.Fit
@@ -62,7 +64,7 @@ fun AsyncImage(
     } else {
         val context = LocalContext.current
         AsyncImage(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)

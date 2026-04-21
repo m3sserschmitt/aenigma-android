@@ -122,7 +122,7 @@ fun ArticleCard(
 
             FilesList(
                 uris = article.imageUrls?.mapNotNull { uri -> uri } ?: listOf(),
-                textColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                 okHttpClientProvider = okHttpClientProvider
             )
 

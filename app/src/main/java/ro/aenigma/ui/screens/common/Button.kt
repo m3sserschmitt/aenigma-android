@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.common
 
+import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
@@ -9,40 +10,116 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.util.ContextExtensions.copyToClipboard
+import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.ContextExtensions.shareText
+import ro.aenigma.util.ContextExtensions.shareUriOrText
 
 @Composable
 fun ShareButton(
-    text: String,
-    iconTint: Color
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
 ) {
-    val context = LocalContext.current
     IconButton(
-        onClick = {
-            context.shareText(text)
-        }
+        onClick = onClick
     ) {
         Icon(
             imageVector = Icons.Filled.Share,
-            contentDescription = stringResource(
-                id = R.string.share
-            ),
-            tint = iconTint
+            contentDescription = stringResource(id = R.string.share),
+            tint = tint
         )
     }
 }
 
 @Composable
+fun OpenInExternalAppButton(
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
+) {
+    IconButton(
+        onClick = onClick,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_open),
+            contentDescription = stringResource(id = R.string.open),
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun OpenInExternalAppButton(
+    uri: Uri,
+    tint: Color = Color.Unspecified
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    OpenInExternalAppButton(
+        tint = tint,
+        onClick = { coroutineScope.launch { context.openUriInExternalApp(uri) } }
+    )
+}
+
+@Composable
+fun OpenInExternalAppButton(
+    uri: String,
+    tint: Color = Color.Unspecified,
+) {
+    OpenInExternalAppButton(
+        tint = tint,
+        uri = uri.toUri()
+    )
+}
+
+@Composable
+fun ShareUriButton(
+    uri: String,
+    tint: Color = Color.Unspecified
+) {
+    ShareUriButton(
+        uri = uri.toUri(),
+        tint = tint
+    )
+}
+
+@Composable
+fun ShareUriButton(
+    uri: Uri,
+    tint: Color = Color.Unspecified
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    ShareButton(
+        tint = tint,
+        onClick = { coroutineScope.launch { context.shareUriOrText(uri) } }
+    )
+}
+
+@Composable
+fun ShareTextButton(
+    text: String,
+    tint: Color = Color.Unspecified
+) {
+    val context = LocalContext.current
+    ShareButton(
+        tint = tint,
+        onClick = { context.shareText(text) }
+    )
+}
+
+@Composable
 fun CopyToClipboardButton(
     text: String,
-    iconTint: Color
+    tint: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
     IconButton(
@@ -57,7 +134,7 @@ fun CopyToClipboardButton(
             contentDescription = stringResource(
                 id = R.string.copy
             ),
-            tint = iconTint
+            tint = tint
         )
     }
 }

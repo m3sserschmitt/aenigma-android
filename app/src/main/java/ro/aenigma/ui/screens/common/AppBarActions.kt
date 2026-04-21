@@ -8,7 +8,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +22,7 @@ import ro.aenigma.services.SignalRStatus
 
 @Composable
 fun CloseAppBarAction(
+    tint: Color = Color.Unspecified,
     onCloseClicked: () -> Unit
 ) {
     IconButton(
@@ -33,13 +33,14 @@ fun CloseAppBarAction(
             contentDescription = stringResource(
                 id = R.string.close
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun NavigateBackAppBarAction(
+    tint: Color = Color.Unspecified,
     onBackClicked: () -> Unit
 ) {
     IconButton(
@@ -50,13 +51,14 @@ fun NavigateBackAppBarAction(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(id = R.string.back),
-            tint = MaterialTheme.colorScheme.onBackground
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ServersListAppBarAction(
+    tint: Color = Color.Unspecified,
     onOpenServersList: () -> Unit
 ) {
     IconButton(
@@ -65,13 +67,14 @@ fun ServersListAppBarAction(
         Icon(
             painter = painterResource(id = R.drawable.ic_storage),
             contentDescription = stringResource(id = R.string.servers),
-            tint = MaterialTheme.colorScheme.onBackground
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ComposeNewArticleAppBarAction(
+    tint: Color = Color.Unspecified,
     onComposeNewArticle: () -> Unit,
 ) {
     IconButton(
@@ -80,13 +83,14 @@ fun ComposeNewArticleAppBarAction(
         Icon(
             imageVector = Icons.Filled.Add,
             contentDescription = stringResource(id = R.string.compose_article),
-            tint = MaterialTheme.colorScheme.onBackground
+            tint = tint
         )
     }
 }
 
 @Composable
 fun DeleteAppBarAction(
+    tint: Color = Color.Unspecified,
     onDeleteClicked: () -> Unit
 ) {
     IconButton(
@@ -97,13 +101,14 @@ fun DeleteAppBarAction(
             contentDescription = stringResource(
                 id = R.string.delete
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ReplyToMessageAppBarAction(
+    tint: Color = Color.Unspecified,
     onReplyToMessageClicked: () -> Unit
 ) {
     IconButton(
@@ -114,15 +119,15 @@ fun ReplyToMessageAppBarAction(
             contentDescription = stringResource(
                 id = R.string.delete
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ActivateSearchAppBarAction(
-    onSearchModeTriggered: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.onBackground
+    tint: Color = Color.Unspecified,
+    onSearchModeTriggered: () -> Unit
 ) {
     IconButton(onClick = {
         onSearchModeTriggered()
@@ -139,12 +144,13 @@ fun ActivateSearchAppBarAction(
 
 @Composable
 fun ConnectionStatusAppBarAction(
+    tint: Color = Color.Unspecified,
     connectionStatus: SignalRStatus
 ) {
     IndeterminateCircularIndicator(
         size = 18.dp,
-        color = MaterialTheme.colorScheme.onBackground,
-        textColor = MaterialTheme.colorScheme.onBackground,
+        color = tint,
+        textColor = tint,
         visible = connectionStatus greaterOrEqualThan SignalRStatus.NotConnected
                 && connectionStatus smallerThan SignalRStatus.Authenticated,
         text = stringResource(id = R.string.connecting),
@@ -155,18 +161,19 @@ fun ConnectionStatusAppBarAction(
 @Composable
 fun ReloadAppBarAction(
     visible: Boolean,
+    tint: Color = Color.Unspecified,
     onClick: () -> Unit
 ) {
-    if(visible) {
-        IconButton(onClick = {
-            onClick()
-        }) {
+    if (visible) {
+        IconButton(
+            onClick = onClick
+        ) {
             Icon(
                 imageVector = Icons.Filled.Refresh,
                 contentDescription = stringResource(
                     id = R.string.reload
                 ),
-                tint = MaterialTheme.colorScheme.onBackground
+                tint = tint
             )
         }
     }
@@ -175,6 +182,7 @@ fun ReloadAppBarAction(
 @Composable
 fun CloseSearchTopAppBarAction(
     isEmptySearchQuery: Boolean,
+    tint: Color = Color.Unspecified,
     onClose: () -> Unit,
     onClearSearchQuery: () -> Unit
 ) {
@@ -193,7 +201,7 @@ fun CloseSearchTopAppBarAction(
         Icon(
             imageVector = Icons.Filled.Close,
             contentDescription = stringResource(id = R.string.close),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
@@ -201,6 +209,7 @@ fun CloseSearchTopAppBarAction(
 @Composable
 fun EditTopAppBarAction(
     visible: Boolean,
+    tint: Color = Color.Unspecified,
     onRenameClicked: () -> Unit
 ) {
     if(visible) {
@@ -212,7 +221,7 @@ fun EditTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.rename
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }
@@ -221,27 +230,21 @@ fun EditTopAppBarAction(
 @Composable
 fun ShareTopAppBarAction(
     visible: Boolean,
-    onClick: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
 ) {
     if(visible) {
-        IconButton(
+        ShareButton(
+            tint = tint,
             onClick = onClick
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Share,
-                contentDescription = stringResource(
-                    id = R.string.share
-                ),
-                tint = tint
-            )
-        }
+        )
     }
 }
 
 @Composable
 fun CreateGroupTopAppBarAction(
     visible: Boolean,
+    tint: Color = Color.Unspecified,
     onCreateGroupClicked: () -> Unit
 ) {
     if(visible) {
@@ -253,7 +256,7 @@ fun CreateGroupTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.create_channel
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }

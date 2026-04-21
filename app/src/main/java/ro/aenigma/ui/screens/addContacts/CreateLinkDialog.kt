@@ -25,7 +25,7 @@ import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.ui.screens.common.CopyToClipboardButton
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
-import ro.aenigma.ui.screens.common.ShareButton
+import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
 
@@ -102,13 +102,13 @@ fun CreateLinkDialog(
                                             color = MaterialTheme.colorScheme.onBackground
                                         )
                                         Row {
-                                            ShareButton(
+                                            ShareTextButton(
                                                 text = link,
-                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                                tint = MaterialTheme.colorScheme.onBackground
                                             )
                                             CopyToClipboardButton(
                                                 text = link,
-                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                                tint = MaterialTheme.colorScheme.onBackground
                                             )
                                         }
                                     }

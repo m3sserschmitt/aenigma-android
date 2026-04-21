@@ -20,6 +20,7 @@ fun SelectionModeAppBar(
     TopAppBar(
         navigationIcon = {
             CloseAppBarAction(
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 onCloseClicked = onSelectionModeExited
             )
         },

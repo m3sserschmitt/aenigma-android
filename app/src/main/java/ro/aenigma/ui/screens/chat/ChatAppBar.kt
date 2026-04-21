@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -72,11 +73,13 @@ fun ChatAppBar(
             actions = {
                 if (selectedItemsCount == 1) {
                     ReplyToMessageAppBarAction(
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         onReplyToMessageClicked = onReplyToMessageClicked
                     )
                 }
                 DeleteAppBarAction(
-                    onDeleteClicked = onDeleteClicked
+                    onDeleteClicked = onDeleteClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         )
@@ -96,13 +99,16 @@ fun ChatAppBar(
                 navigateBack = navigateToContactsScreen,
                 actions = {
                     ConnectionStatusAppBarAction(
-                        connectionStatus = connectionStatus
+                        connectionStatus = connectionStatus,
+                        tint = MaterialTheme.colorScheme.onBackground
                     )
                     ReloadAppBarAction(
                         visible = connectionStatus is SignalRStatus.Error.Aborted,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onRetryConnection
                     )
                     ActivateSearchAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onSearchModeTriggered = onSearchModeTriggered
                     )
                     MoreActions(

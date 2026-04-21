@@ -39,7 +39,7 @@ import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.PrimaryButton
-import ro.aenigma.ui.screens.common.ShareButton
+import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleTextInput
 import ro.aenigma.ui.screens.common.selectable
@@ -104,9 +104,9 @@ fun ServerItem(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                ShareButton(
+                ShareTextButton(
                     text = host,
-                    iconTint = MaterialTheme.colorScheme.onBackground
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
         }
@@ -115,12 +115,11 @@ fun ServerItem(
 
 @Composable
 private fun getHost(hostname: String?, onionService: String?): String {
-    var host = hostname?.getHost()
-    if(host.isNullOrBlank()) {
-        host = onionService?.getHost()
+    var host = hostname.getHost()
+    if (host.isNullOrBlank()) {
+        host = onionService.getHost()
     }
-    if(host.isNullOrBlank())
-    {
+    if (host.isNullOrBlank()) {
         host = stringResource(id = R.string.unknown)
     }
     return host

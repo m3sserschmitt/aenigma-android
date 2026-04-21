@@ -4,6 +4,9 @@ import androidx.core.net.toUri
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.erdtman.jcs.JsonCanonicalizer
 import ro.aenigma.util.SerializerExtensions.createJsonMapper
+import ro.aenigma.util.UriExtensions.isRemote
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 object StringExtensions {
 
@@ -50,7 +53,11 @@ object StringExtensions {
         return this?.trim(' ', '/')
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isDomain(): Boolean {
+        contract {
+            returns(true) implies (this@isDomain != null)
+        }
         return try {
             val domainRegex = Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(?::\\d+)?$")
             return domainRegex.matches(this ?: return false)
@@ -59,7 +66,11 @@ object StringExtensions {
         }
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isOnionAddress(): Boolean {
+        contract {
+            returns(true) implies (this@isOnionAddress != null)
+        }
         return try {
             val regex = Regex("^[a-z2-7]{56}\\.onion(?::\\d+)?$")
             return regex.matches(this ?: return false)
@@ -86,12 +97,12 @@ object StringExtensions {
         return this.getQueryParameter("tag")
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isRemoteUri(): Boolean {
-        return try {
-            this?.toUri()?.scheme in listOf("http", "https")
-        } catch (_: Exception) {
-            false
+        contract {
+            returns(true) implies (this@isRemoteUri != null)
         }
+        return this?.toUri()?.isRemote() == true
     }
 
     @JvmStatic
@@ -112,38 +123,66 @@ object StringExtensions {
         }
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isImageMime(): Boolean {
+        contract {
+            returns(true) implies (this@isImageMime != null)
+        }
         return this?.startsWith("image/", ignoreCase = true) == true
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isVideoMime(): Boolean {
+        contract {
+            returns(true) implies (this@isVideoMime != null)
+        }
         return this?.startsWith("video/", ignoreCase = true) == true
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isAudioMime(): Boolean {
+        contract {
+            returns(true) implies (this@isAudioMime != null)
+        }
         return this?.startsWith("audio/", ignoreCase = true) == true
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isPdfMime(): Boolean {
+        contract {
+            returns(true) implies (this@isPdfMime != null)
+        }
         return this?.lowercase() == "application/pdf"
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isMarkdownMime(): Boolean {
+        contract {
+            returns(true) implies (this@isMarkdownMime != null)
+        }
         return this?.lowercase() == "text/markdown"
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isApkMime(): Boolean {
+        contract {
+            returns(true) implies (this@isApkMime != null)
+        }
         return this?.lowercase() == "application/vnd.android.package-archive"
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isArchiveMime(): Boolean {
+        contract {
+            returns(true) implies (this@isArchiveMime != null)
+        }
         return this?.lowercase() in setOf(
             "application/zip",
             "application/x-zip-compressed",
@@ -155,13 +194,21 @@ object StringExtensions {
         )
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isJsonMime(): Boolean {
+        contract {
+            returns(true) implies (this@isJsonMime != null)
+        }
         return this?.lowercase() == "application/json"
     }
 
+    @OptIn(ExperimentalContracts::class)
     @JvmStatic
     fun String?.isTextMime(): Boolean {
+        contract {
+            returns(true) implies (this@isTextMime != null)
+        }
         return this?.startsWith("text/", ignoreCase = true) == true
     }
 }

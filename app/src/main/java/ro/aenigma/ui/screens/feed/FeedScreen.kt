@@ -98,11 +98,13 @@ fun FeedScreen(
                 actions = {
                     ReloadAppBarAction(
                         visible = true,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onReloadFeedClicked
                     )
                 },
                 navigateBackAlternative = {
                     ComposeNewArticleAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onComposeNewArticle = {
                             if (bottomSheetScaffoldState.isNotFullyExpanded()) {
                                 onNewPostSheetStateChanged(newPostSheetState.toExpanded())

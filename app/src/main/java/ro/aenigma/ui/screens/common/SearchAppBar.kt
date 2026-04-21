@@ -101,6 +101,7 @@ fun SearchAppBar(
         actions = {
             CloseSearchTopAppBarAction(
                 isEmptySearchQuery = searchQuery.isEmpty(),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 onClose = onClose,
                 onClearSearchQuery = {
                     onSearchQueryChanged("")

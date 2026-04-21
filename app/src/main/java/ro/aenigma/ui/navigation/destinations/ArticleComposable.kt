@@ -32,7 +32,7 @@ fun NavGraphBuilder.articleComposable (
         }
 
         ArticleScreen(
-            url = url,
+            uri = url,
             mainViewModel = mainViewModel,
             navigateBack = navigateToFeed,
         )

@@ -1,6 +1,5 @@
 package ro.aenigma.ui.screens.feed
 
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -11,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -20,40 +20,36 @@ import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.model.ImageTransformer
 import com.mikepenz.markdown.model.NoOpImageTransformerImpl
 import com.mikepenz.markdown.model.rememberMarkdownState
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
-import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
-import ro.aenigma.util.ContextExtensions.shareText
+import ro.aenigma.util.ContextExtensions.shareArticleUriOrText
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun ArticleScreen(
-    url: String?,
+    uri: String?,
     mainViewModel: MainViewModel,
     navigateBack: () -> Unit
 ) {
-    LaunchedEffect(key1 = url) {
-        mainViewModel.fetchArticle(url)
-    }
+    LaunchedEffect(key1 = uri) { mainViewModel.fetchArticle(uri) }
 
     val articleContent by mainViewModel.articleContent.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
     ArticleScreen(
         content = articleContent,
         imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
         onShareArticle = {
-            if (!url.isNullOrBlank()) {
-                context.shareText(
-                    String.format(
-                        WEB_ARTICLE_URL_TEMPLATE,
-                        Uri.encode(url).toString()
-                    )
-                )
+            coroutineScope.launch {
+                if (!uri.isNullOrBlank()) {
+                    context.shareArticleUriOrText(uri)
+                }
             }
         },
         navigateBack = navigateBack
