@@ -76,7 +76,7 @@ object NewPostSheetStateDtoExtensions {
         @JvmStatic
         fun NewPostSheetStateDto.toArticleDto(): ArticleDto {
             return ArticleDto(
-                id = null,
+                messageId = null,
                 title = title,
                 description = description,
                 imageUrls = fileUris,

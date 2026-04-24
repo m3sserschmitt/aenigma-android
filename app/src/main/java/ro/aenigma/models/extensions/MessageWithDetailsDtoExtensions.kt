@@ -16,7 +16,7 @@ object MessageWithDetailsDtoExtensions {
         metadata: AttachmentsMetadataDto?
     ): ArticleDto {
         return ArticleDto(
-            id = null,
+            messageId = message.id,
             title = metadata?.title,
             author = sender?.name,
             description = metadata?.description,

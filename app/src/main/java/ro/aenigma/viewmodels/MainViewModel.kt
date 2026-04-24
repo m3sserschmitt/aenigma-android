@@ -10,7 +10,6 @@ import ro.aenigma.data.Repository
 import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.util.RequestState
 import ro.aenigma.models.ExportedContactDataDto
-import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -350,7 +349,7 @@ class MainViewModel @Inject constructor(
         _serversQuerySearch.update { searchQuery }
     }
 
-    fun generateCode(profileId: String) {
+    fun generateCode(profileId: String?) {
         viewModelScope.launch(ioDispatcher) {
             _qrCode.value = RequestState.Loading
             generateQrCodeBitmap(profileId).catch { ex ->
@@ -472,9 +471,9 @@ class MainViewModel @Inject constructor(
         }.catch { emit(null) }
     }
 
-    private fun generateQrCodeBitmap(profileId: String): Flow<QrCodeDto?> {
+    private fun generateQrCodeBitmap(profileId: String?): Flow<QrCodeDto?> {
         return when (profileId) {
-            Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE -> {
+            null -> {
                 getMyProfileBitmap()
             }
 
@@ -651,6 +650,33 @@ class MainViewModel @Inject constructor(
                     signalrController.enqueueSyncAndReconnect()
                 }
             } catch (_: Exception) {
+            }
+        }
+    }
+
+    fun redirectAttachments(chatIds: List<String>) {
+        val attachments = attachments.value
+        viewModelScope.launch(ioDispatcher) {
+            chatIds.forEach { chatId ->
+                repository.local.getContact(chatId)?.let { contact ->
+                    val message = MessageDtoFactory.createOutgoing(
+                        chatId = contact.address,
+                        text = null,
+                        type = MessageType.FILES,
+                        actionFor = null,
+                        attachments = attachments
+                    )
+                    messageSaver.saveOutgoingMessage(message)
+                }
+            }
+            setAttachments(listOf())
+        }
+    }
+
+    fun setAttachments(messageId: Long) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.getMessage(messageId)?.let { message ->
+                message.files?.let { files -> setAttachments(files) }
             }
         }
     }

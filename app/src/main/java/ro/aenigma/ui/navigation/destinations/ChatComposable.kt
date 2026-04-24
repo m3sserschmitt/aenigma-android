@@ -15,26 +15,23 @@ import ro.aenigma.viewmodels.ChatViewModel
 
 fun NavGraphBuilder.chatComposable(
     navigationTracker: NavigationTracker,
-    navigateToContactsScreen: () -> Unit,
+    redirectUri: (String) -> Unit,
+    navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
     composable(
-        route = Screens.CHAT_SCREEN_ROUTE_FULL,
+        route = Screens.CHAT_PATH,
         arguments = listOf(
-            navArgument(Screens.CHAT_SCREEN_CHAT_ID_ARG)
-            {
-                type = NavType.StringType
-            })
+            navArgument(Screens.CHAT_ID_ARG) { type = NavType.StringType })
     ) { navBackStackEntry ->
 
-        val chatId = navBackStackEntry.arguments!!.getString(Screens.CHAT_SCREEN_CHAT_ID_ARG)
+        val chatId = navBackStackEntry.arguments?.getString(Screens.CHAT_ID_ARG)?.takeIf { id -> id.isNotBlank() }
         val chatViewModel: ChatViewModel = hiltViewModel(
             key = chatId,
             viewModelStoreOwner = LocalContext.current.findActivity()
         )
 
-        LaunchedEffect(key1 = true)
-        {
+        LaunchedEffect(key1 = true) {
             chatViewModel.init()
             if (!chatId.isNullOrBlank()) {
                 navigationTracker.postCurrentRoute(Screens.getChatScreenRoute(chatId))
@@ -42,10 +39,11 @@ fun NavGraphBuilder.chatComposable(
         }
 
         ChatScreen(
-            navigateToContactsScreen = navigateToContactsScreen,
+            navigateBack = navigateBack,
             navigateToAddContactsScreen = navigateToAddContactsScreen,
+            redirectUri = redirectUri,
             chatViewModel = chatViewModel,
-            chatId = chatId!!
+            chatId = chatId
         )
     }
 }

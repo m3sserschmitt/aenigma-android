@@ -11,19 +11,19 @@ import ro.aenigma.viewmodels.MainViewModel
 fun NavGraphBuilder.licensesComposable (
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
-    navigateToAboutScreen: () -> Unit
+    navigateBack: () -> Unit
 ) {
     composable(
-        route = Screens.LICENSES_SCREEN_ROUTE_FULL
+        route = Screens.LICENSES_SCREEN_PATH
     ) {
         LaunchedEffect(key1 = true)
         {
-            navigationTracker.postCurrentRoute(Screens.LICENSES_SCREEN_ROUTE_FULL)
+            navigationTracker.postCurrentRoute(Screens.LICENSES_SCREEN_PATH)
             mainViewModel.init()
         }
 
         LicensesScreen(
-            navigateBack = navigateToAboutScreen,
+            navigateBack = navigateBack,
         )
     }
 }

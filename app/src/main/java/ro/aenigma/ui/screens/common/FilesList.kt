@@ -49,7 +49,8 @@ import kotlin.collections.forEach
 fun FilesList(
     uris: List<String>,
     contentColor: Color = Color.Unspecified,
-    okHttpClientProvider: IOkHttpClientProvider
+    okHttpClientProvider: IOkHttpClientProvider,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     if(uris.isNotEmpty()) {
         Column(
@@ -59,7 +60,8 @@ fun FilesList(
                 FileItem(
                     uri = uri,
                     contentColor = contentColor,
-                    okHttpClientProvider = okHttpClientProvider
+                    okHttpClientProvider = okHttpClientProvider,
+                    onRedirectUriClicked = onRedirectUriClicked
                 )
             }
         }
@@ -121,7 +123,8 @@ fun getUriTitle(uri: String): String {
 fun FileItem(
     uri: String,
     contentColor: Color = Color.Unspecified,
-    okHttpClientProvider: IOkHttpClientProvider
+    okHttpClientProvider: IOkHttpClientProvider,
+    onRedirectUriClicked: (String) -> Unit = { },
 ) {
     val fileDisplayInfo by rememberFileDisplayInfo(uri)
     if (fileDisplayInfo.isImage) {
@@ -138,6 +141,10 @@ fun FileItem(
             Column(
                 verticalArrangement = Arrangement.Center
             ) {
+                RedirectUriButton(
+                    tint = contentColor,
+                    onClick = { onRedirectUriClicked(uri) }
+                )
                 ShareUriButton(
                     uri = uri,
                     tint = contentColor
@@ -170,7 +177,6 @@ fun FileItem(
                         contentDescription = stringResource(R.string.files),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
-
                     Text(
                         text = getUriTitle(uri),
                         modifier = Modifier.weight(1f),
@@ -178,6 +184,10 @@ fun FileItem(
                         overflow = TextOverflow.MiddleEllipsis,
                         color = MaterialTheme.colorScheme.onPrimary,
                         style = MaterialTheme.typography.bodyMedium
+                    )
+                    RedirectUriButton(
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        onClick = { onRedirectUriClicked(uri) }
                     )
                     ShareUriButton(
                         uri = uri,

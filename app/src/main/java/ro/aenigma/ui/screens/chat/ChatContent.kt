@@ -43,7 +43,7 @@ fun ChatContent(
     messages: RequestState<List<MessageWithDetailsDto>>,
     replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetailsDto>,
+    selectedMessages: Map<Long, MessageWithDetailsDto>,
     messageInputText: String,
     attachments: List<String>,
     onInputTextChanged: (String) -> Unit,
@@ -53,6 +53,7 @@ fun ChatContent(
     onMessageSelected: (MessageWithDetailsDto) -> Unit,
     onMessageDeselected: (MessageWithDetailsDto) -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit
 ) {
     val conversationListState = rememberLazyListState()
@@ -83,6 +84,7 @@ fun ChatContent(
             onItemSelected = onMessageSelected,
             onItemDeselected = onMessageDeselected,
             onMessageClicked = onMessageClicked,
+            onRedirectUriClicked = onRedirectUriClicked,
             loadNextPage = loadNextPage
         )
 
@@ -127,11 +129,12 @@ fun DisplayMessages(
     isSearchMode: Boolean,
     messages: RequestState<List<MessageWithDetailsDto>>,
     nextConversationPageAvailable: Boolean,
-    selectedMessages: List<MessageWithDetailsDto>,
+    selectedMessages: Map<Long, MessageWithDetailsDto>,
     conversationListState: LazyListState = rememberLazyListState(),
     onItemSelected: (MessageWithDetailsDto) -> Unit,
     onItemDeselected: (MessageWithDetailsDto) -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit
 ) {
     when(messages) {
@@ -150,12 +153,13 @@ fun DisplayMessages(
                             message = messageEntity,
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
+                            onRedirectUriClicked = onRedirectUriClicked,
                             onClick = onMessageClicked,
                         )
                         MessageDate(next = next, message = messageEntity)
                     },
                     listState = conversationListState,
-                    itemKeyProvider = { m -> m.message.id },
+                    itemKeySelector = { m -> m.message.id },
                     reversedLayout = true,
                     loadNextPage = loadNextPage
                 )
@@ -235,7 +239,7 @@ fun ChatContentPreview() {
         onSendClicked = {},
         onReplyAborted = {},
         onInputTextChanged = {},
-        selectedMessages = listOf(),
+        selectedMessages = mapOf(),
         onMessageDeselected = { },
         onMessageSelected = { },
         isSearchMode = false,

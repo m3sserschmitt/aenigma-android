@@ -40,6 +40,7 @@ import javax.inject.Inject
 import androidx.core.net.toUri
 import androidx.work.WorkManager
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.workers.SignalRWorkerAction
 import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
@@ -159,7 +160,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun sync() {
-        workManager.invokeClient()
+        workManager.invokeClient(SignalRWorkerAction.connectPullCleanup())
     }
 
     private fun resetClient() {
@@ -236,7 +237,7 @@ class AppActivity : FragmentActivity() {
         val stringUri = uri.toString()
         if(stringUri.lowercase().endsWith(".md")) {
             val screens = Screens(navHostController)
-            screens.article(stringUri)
+            screens.article(stringUri, null, null)
         }
     }
 

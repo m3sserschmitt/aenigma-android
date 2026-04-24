@@ -55,7 +55,7 @@ fun ChatAppBar(
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
     onGroupActionClicked: (MessageType) -> Unit,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -96,7 +96,7 @@ fun ChatAppBar(
         } else if(contact is RequestState.Success){
             StandardAppBar(
                 title = contact.data.contact.name.toString(),
-                navigateBack = navigateToContactsScreen,
+                navigateBack = navigateBack,
                 actions = {
                     ConnectionStatusAppBarAction(
                         connectionStatus = connectionStatus,
@@ -237,7 +237,7 @@ fun DefaultChatAppBarPreview() {
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         onDeleteClicked = {},
         onReplyToMessageClicked = {},
         selectedItemsCount = 0,
@@ -274,7 +274,7 @@ fun SelectionModeChatAppBarPreview() {
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         onDeleteClicked = {},
         onReplyToMessageClicked = {},
         selectedItemsCount = 3,

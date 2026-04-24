@@ -22,7 +22,6 @@ import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.ServerInfoDto
-import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
@@ -32,16 +31,16 @@ import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun AddContactsScreen(
-    profileToShare: String,
+    profileToShare: String?,
     initialScannerState: QrCodeScannerState,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     mainViewModel: MainViewModel
 ) {
     var scannerState by remember { mutableStateOf(value = initialScannerState) }
     val qrCode by mainViewModel.qrCode.collectAsState()
     val sharedDataCreate by mainViewModel.sharedDataCreateResult.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
-    val floatingButtonVisible = profileToShare == Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+    val floatingButtonVisible = profileToShare == null
             && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
     val context = LocalContext.current
 
@@ -66,13 +65,13 @@ fun AddContactsScreen(
         },
         onServerInfoQrCodeFound = { scannedData ->
             mainViewModel.setServerInfoScannedDetails(scannedData)
-            navigateToContactsScreen()
+            navigateBack()
         },
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact(name)
             Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
-            navigateToContactsScreen()
+            navigateBack()
         },
         onSaveContactDismissed = {
             mainViewModel.resetContactChanges()
@@ -84,7 +83,7 @@ fun AddContactsScreen(
         onCreateLinkClicked = { mainViewModel.createContactShareLink() },
         onGetLink = { url -> mainViewModel.openContactSharedData(url) },
         onSharedDataConfirm = { mainViewModel.resetContactChanges() },
-        navigateToContactsScreen = navigateToContactsScreen
+        navigateBack = navigateBack
     )
 }
 
@@ -104,7 +103,7 @@ fun AddContactsScreen(
     onCreateLinkClicked: () -> Unit,
     onGetLink: (String) -> Unit,
     onSharedDataConfirm: () -> Unit,
-    navigateToContactsScreen: () -> Unit
+    navigateBack: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -116,7 +115,7 @@ fun AddContactsScreen(
                 } else {
                     stringResource(R.string.add_contacts)
                 },
-                navigateBack = navigateToContactsScreen,
+                navigateBack = navigateBack,
                 transparent = isScanning
             )
         },
@@ -202,7 +201,7 @@ fun AddContactsScreenPreview() {
         onSaveContact = { },
         onScannerStateChanged = { },
         onSaveContactDismissed = { },
-        navigateToContactsScreen = { },
+        navigateBack = { },
         onCreateLinkClicked = { },
         onGetLink = { },
         onSharedDataConfirm = { }

@@ -60,7 +60,8 @@ class FeedSampler @Inject constructor(
 
                 val outCapacity = sources.sumOf { source -> source.size }
                 val out = mutableListOf<ArticleDto>()
-                var i = 0L
+                val hashes = mutableSetOf<Int>()
+
                 while (out.size < outCapacity) {
 
                     val idx = sampler.sample()
@@ -73,8 +74,10 @@ class FeedSampler @Inject constructor(
                         }
                         continue
                     }
-                    out.add(sources[idx].removeAt(0).copy(id = i))
-                    i++
+                    val item = sources[idx].removeAt(0)
+                    if (hashes.add(item.hashCode())) {
+                        out.add(item)
+                    }
                 }
                 out
             } catch (_: Exception) {

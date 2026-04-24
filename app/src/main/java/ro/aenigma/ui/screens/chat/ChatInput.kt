@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +28,7 @@ import ro.aenigma.R
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.ui.screens.common.FilesCountIndicator
 import ro.aenigma.ui.screens.common.FilesPickerButton
+import ro.aenigma.ui.screens.common.SendButton
 import ro.aenigma.util.RequestState
 
 @Composable
@@ -86,21 +86,11 @@ fun ChatInput(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer
                 ),
             )
-            IconButton(
-                modifier = Modifier
-                    .size(64.dp)
-                    .weight(1f),
-                onClick = onSendClicked,
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(
-                        id = R.string.send
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+            SendButton(
+                modifier = Modifier.size(64.dp).weight(1f),
+                tint = MaterialTheme.colorScheme.onBackground,
+                onClick = onSendClicked
+            )
         }
     }
 }

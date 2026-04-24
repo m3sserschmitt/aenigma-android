@@ -22,11 +22,13 @@ import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
+import ro.aenigma.ui.screens.common.CloseAppBarAction
 import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.DropdownMenuSwitch
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
+import ro.aenigma.ui.screens.common.ForwardAttachmentsAppBarAction
 import ro.aenigma.ui.screens.common.ServersListAppBarAction
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
@@ -43,6 +45,7 @@ fun ContactsAppBar(
     useTor: Boolean,
     useOrbot: Boolean,
     torConnectionCheck: TorConnectionCheck,
+    isForwardMode: Boolean = false,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
     onSearchTriggered: () -> Unit,
@@ -55,6 +58,8 @@ fun ContactsAppBar(
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
     onResetUsernameClicked: () -> Unit,
+    onRemoveAttachments: () -> Unit = { },
+    onForwardAttachments: () -> Unit = { },
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -77,7 +82,7 @@ fun ContactsAppBar(
                 onSearchClicked(searchQuery)
             }
         )
-    } else if (isSelectionMode) {
+    } else if (isSelectionMode && !isForwardMode) {
         SelectionModeAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
@@ -110,7 +115,11 @@ fun ContactsAppBar(
     } else {
         StandardAppBar(
             title = stringResource(
-                id = R.string.contacts
+                id = if (!isForwardMode) {
+                    R.string.contacts
+                } else {
+                    R.string.forward
+                }
             ),
             navigateBackVisible = false,
             actions = {
@@ -127,21 +136,36 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
-                MoreActions(
-                    navigateToAboutScreen = navigateToAboutScreen,
-                    onResetUsernameClicked = onResetUsernameClicked,
-                    useTor = useTor,
-                    useOrbot = useOrbot,
-                    torConnectionCheck = torConnectionCheck,
-                    onTorPreferenceChanged = onTorPreferenceChanged,
-                    onOrbotPreferenceChanged = onOrbotPreferenceChanged
-                )
+                if(isSelectionMode && isForwardMode) {
+                    ForwardAttachmentsAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onForwardAttachments = onForwardAttachments
+                    )
+                }
+                if (!isForwardMode) {
+                    MoreActions(
+                        navigateToAboutScreen = navigateToAboutScreen,
+                        onResetUsernameClicked = onResetUsernameClicked,
+                        useTor = useTor,
+                        useOrbot = useOrbot,
+                        torConnectionCheck = torConnectionCheck,
+                        onTorPreferenceChanged = onTorPreferenceChanged,
+                        onOrbotPreferenceChanged = onOrbotPreferenceChanged
+                    )
+                }
             },
             navigateBackAlternative = {
-                ServersListAppBarAction(
-                    tint = MaterialTheme.colorScheme.onBackground,
-                    onOpenServersList = onOpenServersList
-                )
+                if (!isForwardMode) {
+                    ServersListAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onOpenServersList = onOpenServersList
+                    )
+                } else {
+                    CloseAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onCloseClicked = onRemoveAttachments
+                    )
+                }
             }
         )
     }

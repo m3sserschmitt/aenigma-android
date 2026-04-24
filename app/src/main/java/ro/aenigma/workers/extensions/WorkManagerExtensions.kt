@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit
 object WorkManagerExtensions {
     private const val DEFAULT_DELAY_BETWEEN_RETRY: Long = 2
     private val DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT = TimeUnit.SECONDS
+    private const val SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME = "sync-and-invoke-client-work-chain"
 
     @JvmStatic
     private fun getGenerateFeedRequest(): OneTimeWorkRequest {
@@ -58,7 +59,7 @@ object WorkManagerExtensions {
     }
 
     @JvmStatic
-    fun getClientRequest(
+    fun getInvokeClientRequest(
         actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup()
     ): OneTimeWorkRequest {
         val constraints = Constraints.Builder()
@@ -109,7 +110,11 @@ object WorkManagerExtensions {
             )
             .build()
 
-        beginWith(downloadWorkRequest).then(getGenerateFeedRequest()).enqueue()
+        beginUniqueWork(
+            AttachmentDownloadWorker.getUniqueWorkName(messageId),
+            ExistingWorkPolicy.KEEP,
+            downloadWorkRequest,
+        ).then(getGenerateFeedRequest()).enqueue()
     }
 
     @JvmStatic
@@ -225,25 +230,23 @@ object WorkManagerExtensions {
 
     @JvmStatic
     fun WorkManager.invokeClient(
-        actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup(),
+        actions: SignalRWorkerAction
     ) {
         enqueueUniqueWork(
             SignalRClientWorker.UNIQUE_ONE_TIME_REQUEST,
             ExistingWorkPolicy.REPLACE,
-            getClientRequest(actions)
+            getInvokeClientRequest(actions)
         )
     }
 
     @JvmStatic
     fun WorkManager.syncGraphAndInvokeClient(
-        actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup()
+        actions: SignalRWorkerAction
     ) {
-        beginWith(getSyncGraphRequest())
-            .then(
-                getClientRequest(
-                    actions = actions
-                )
-            )
-            .enqueue()
+        beginUniqueWork(
+            SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            getSyncGraphRequest()
+        ).then(getInvokeClientRequest(actions = actions)).enqueue()
     }
 }

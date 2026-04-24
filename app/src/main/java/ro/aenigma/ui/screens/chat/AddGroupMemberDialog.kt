@@ -10,7 +10,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -97,7 +97,7 @@ fun AddGroupMemberDialog(
 
     val add = action == MessageType.GROUP_MEMBER_ADD
     var searchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
+    val selectedItems = remember { mutableStateMapOf<String, ContactWithLastMessageDto>() }
     val items = getContactsList(
         action = action,
         existentMembers = contactWithGroup.data.group?.groupData?.members,
@@ -121,7 +121,7 @@ fun AddGroupMemberDialog(
             dismissible = true,
             onNegativeButtonClicked = onDismissClicked,
             onPositiveButtonClicked = {
-                onConfirmClicked(selectedItems.map { item -> item.contact.address })
+                onConfirmClicked(selectedItems.keys.toList())
             },
             positiveButtonVisible = isNotEmpty,
             content = {
@@ -155,10 +155,10 @@ fun AddGroupMemberDialog(
                             listItem = { _, entity, isSelected ->
                                 ContactItem(
                                     onItemSelected = { item ->
-                                        selectedItems.add(item)
+                                        selectedItems[item.contact.address] = item
                                     },
                                     onItemDeselected = { item ->
-                                        selectedItems.remove(item)
+                                        selectedItems.remove(item.contact.address)
                                     },
                                     onClick = { },
                                     contact = entity,
@@ -167,7 +167,7 @@ fun AddGroupMemberDialog(
                                 )
                             },
                             selectedItems = selectedItems,
-                            itemKeyProvider = { c -> c.contact.address }
+                            itemKeySelector = { c -> c.contact.address }
                         )
                     }
                 }

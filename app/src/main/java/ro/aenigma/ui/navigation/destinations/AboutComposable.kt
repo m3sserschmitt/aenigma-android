@@ -9,19 +9,19 @@ import ro.aenigma.services.NavigationTracker
 
 fun NavGraphBuilder.aboutComposable (
     navigationTracker: NavigationTracker,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     navigateToLicensesScreen: () -> Unit,
     navigateToPrivacyPolicy: () -> Unit
 ) {
     composable(
-        route = Screens.ABOUT_SCREEN_ROUTE_FULL
+        route = Screens.ABOUT_SCREEN_PATH
     ) {
         LaunchedEffect(key1 = true) {
-            navigationTracker.postCurrentRoute(Screens.ABOUT_SCREEN_ROUTE_FULL)
+            navigationTracker.postCurrentRoute(Screens.ABOUT_SCREEN_PATH)
         }
 
         AboutScreen(
-            navigateBack = navigateToContactsScreen,
+            navigateBack = navigateBack,
             navigateToLicensesScreen = navigateToLicensesScreen,
             navigateToPrivacyPolicy = navigateToPrivacyPolicy
         )

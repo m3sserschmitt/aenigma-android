@@ -36,18 +36,18 @@ fun CheckScrollPercentage(
 }
 
 @Composable
-fun <T> ItemsList(
+fun <K: Any, V> ItemsList(
     modifier: Modifier = Modifier,
-    items: List<T>,
+    items: List<V>,
     nextPageAvailable: Boolean = false,
-    itemKeyProvider: (T) -> Any,
-    selectedItems: List<T> = listOf(),
+    itemKeySelector: (V) -> K,
+    selectedItems: Map<K, V> = mapOf(),
     reversedLayout: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
-    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
+    listItem: @Composable (next: V?, entity: V, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { }
 ) {
-    if(nextPageAvailable) {
+    if (nextPageAvailable) {
         CheckScrollPercentage(
             itemsCount = items.size,
             state = listState,
@@ -62,13 +62,14 @@ fun <T> ItemsList(
     ) {
         itemsIndexed(
             items = items,
-            key = { _, item -> itemKeyProvider(item) }
+            key = { _, item -> itemKeySelector(item) }
         ) { index, element ->
-            val isSelected = selectedItems.any { item -> itemKeyProvider(item) == itemKeyProvider(element) }
-            val nextItem = if(index < items.size - 1)
+            val isSelected = selectedItems.containsKey(itemKeySelector(element))
+            val nextItem = if (index < items.size - 1) {
                 items[index + 1]
-            else
+            } else {
                 null
+            }
 
             listItem(nextItem, element, isSelected)
         }
@@ -76,22 +77,22 @@ fun <T> ItemsList(
 }
 
 @Composable
-fun <T> AutoScrollItemsList(
+fun <K: Any, V> AutoScrollItemsList(
     modifier: Modifier = Modifier,
-    items: List<T>,
+    items: List<V>,
     listState: LazyListState = rememberLazyListState(),
     nextPageAvailable: Boolean = false,
     reversedLayout: Boolean = false,
-    itemKeyProvider: (T) -> Any,
-    selectedItems: List<T>,
-    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
+    itemKeySelector: (V) -> K,
+    selectedItems: Map<K, V> = mapOf(),
+    listItem: @Composable (next: V?, entity: V, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { },
 ) {
     ItemsList(
         modifier = modifier,
         items = items,
         nextPageAvailable = nextPageAvailable,
-        itemKeyProvider = itemKeyProvider,
+        itemKeySelector = itemKeySelector,
         selectedItems = selectedItems,
         listItem = listItem,
         listState = listState,

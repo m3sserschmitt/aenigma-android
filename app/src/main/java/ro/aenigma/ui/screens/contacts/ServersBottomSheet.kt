@@ -243,7 +243,7 @@ fun SheetContent(
                 ItemsList(
                     modifier = modifier,
                     items = servers.data,
-                    itemKeyProvider = { server -> server.address!! },
+                    itemKeySelector = { server -> server.address!! },
                     listItem = { _, server, _ ->
                         Box(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp)

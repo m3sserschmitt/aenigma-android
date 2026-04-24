@@ -21,11 +21,12 @@ abstract class BaseViewModel(
 
     private val _userName = MutableStateFlow("")
 
+    private val _attachments = MutableStateFlow<List<String>>(listOf())
+
+    private val _isForwardMode = MutableStateFlow(false)
+
     init {
-        viewModelScope.launch(ioDispatcher) {
-            repository.local.name.catch { _userName.value = "" }
-                .collect { userName -> _userName.value = userName }
-        }
+        collectUserName()
     }
 
     fun provideOkHttpClientProvider(): OkHttpClientProvider {
@@ -36,11 +37,27 @@ abstract class BaseViewModel(
 
     val userName: StateFlow<String> = _userName
 
+    val attachments: StateFlow<List<String>> = _attachments
+
+    val isForwardMode: StateFlow<Boolean> = _isForwardMode
+
     val clientStatus = signalrController.clientStatus
 
     abstract fun init()
 
+    fun collectUserName() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.name.catch { _userName.value = "" }
+                .collect { userName -> _userName.value = userName }
+        }
+    }
+
     fun retryClientConnection() {
         signalrController.resetClient()
+    }
+
+    fun setAttachments(attachments: List<String>) {
+        _attachments.value = attachments
+        _isForwardMode.value = attachments.isNotEmpty()
     }
 }

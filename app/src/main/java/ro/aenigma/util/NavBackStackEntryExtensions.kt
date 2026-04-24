@@ -8,16 +8,16 @@ import kotlin.sequences.any
 object NavBackStackEntryExtensions {
     fun NavBackStackEntry?.isContactsSelected(): Boolean {
         return this?.destination?.hierarchy?.any { destination ->
-            (destination.route?.startsWith(Screens.CONTACTS_SCREEN_BASE_ROUTE) ?: false)
-                    || (destination.route?.startsWith(Screens.ADD_CONTACTS_BASE_ROUTE) ?: false)
-                    || (destination.route?.startsWith(Screens.CHAT_SCREEN_BASE_ROUTE) ?: false)
+            (destination.route?.startsWith(Screens.CONTACTS_ROOT_PATH) ?: false)
+                    || (destination.route?.startsWith(Screens.ADD_CONTACTS_ROOT_PATH) ?: false)
+                    || (destination.route?.startsWith(Screens.CHAT_ROOT_PATH) ?: false)
         } == true
     }
 
     fun NavBackStackEntry?.isFeedSelected(): Boolean {
         return this?.destination?.hierarchy?.any { destination ->
-            (destination.route?.startsWith(Screens.FEED_SCREEN_ROUTE_FULL) ?: false)
-                    || (destination.route?.startsWith(Screens.ARTICLE_BASE_ROUTE) ?: false)
+            (destination.route?.startsWith(Screens.FEED_SCREEN_PATH) ?: false)
+                    || (destination.route?.startsWith(Screens.ARTICLE_ROOT_PATH) ?: false)
         } == true
     }
 }

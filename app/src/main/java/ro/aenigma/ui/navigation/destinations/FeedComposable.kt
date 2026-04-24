@@ -11,18 +11,20 @@ import ro.aenigma.viewmodels.MainViewModel
 fun NavGraphBuilder.feedComposable (
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
-    navigateToArticle: (String) -> Unit
+    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    redirectUri: (String) -> Unit
 ) {
     composable(
-        route = Screens.FEED_SCREEN_ROUTE_FULL
+        route = Screens.FEED_SCREEN_PATH
     ) {
         LaunchedEffect(key1 = true) {
-            navigationTracker.postCurrentRoute(Screens.FEED_SCREEN_ROUTE_FULL)
+            navigationTracker.postCurrentRoute(Screens.FEED_SCREEN_PATH)
         }
 
         FeedScreen(
             mainViewModel = mainViewModel,
-            navigateToArticle = navigateToArticle
+            navigateToArticle = navigateToArticle,
+            redirectUri = redirectUri
         )
     }
 }

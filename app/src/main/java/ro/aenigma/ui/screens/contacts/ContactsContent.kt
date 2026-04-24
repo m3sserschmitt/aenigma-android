@@ -16,7 +16,7 @@ fun ContactsContent(
     contacts: RequestState<List<ContactWithLastMessageDto>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
-    selectedContacts: List<ContactWithLastMessageDto>,
+    selectedContacts: Map<String, ContactWithLastMessageDto>,
     onItemSelected: (ContactWithLastMessageDto) -> Unit,
     onItemDeselected: (ContactWithLastMessageDto) -> Unit,
     navigateToChatScreen: (chatId: String) -> Unit
@@ -40,7 +40,7 @@ fun ContactsContent(
                         )
                     },
                     selectedItems = selectedContacts,
-                    itemKeyProvider = { c -> c.contact.address }
+                    itemKeySelector = { c -> c.contact.address }
                 )
 
             } else {
@@ -87,17 +87,7 @@ fun ContactsContentPreview() {
         ),
         isSearchMode = false,
         isSelectionMode = true,
-        selectedContacts = listOf(
-            ContactWithLastMessageDto(
-                ContactDtoFactory.createContact(
-                    address = "123",
-                    name = "John",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                ), null
-            )
-        ),
+        selectedContacts = mapOf(),
         onItemSelected = { },
         onItemDeselected = { },
         navigateToChatScreen = {}

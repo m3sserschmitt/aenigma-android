@@ -28,7 +28,7 @@ class SignalRClientWorker @AssistedInject constructor(
     companion object {
         const val ACTION_ARG = "action"
         const val UNIQUE_ONE_TIME_REQUEST = "signalr-client-worker"
-        const val UNIQUE_PERIODIC_WORK_REQUEST = "signal-client-periodic-worker"
+        const val UNIQUE_PERIODIC_WORK_REQUEST = "SIGNALR_PERIODIC_CONNECTION"
         const val PERIODIC_WORK_REPEAT_INTERVAL: Long = 15
         val PERIODIC_WORK_REQUEST_TIME_UNIT = TimeUnit.MINUTES
         private const val MAX_RETRY_COUNT = 3

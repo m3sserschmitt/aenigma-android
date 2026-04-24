@@ -11,40 +11,40 @@ import ro.aenigma.services.NavigationTracker
 import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
 
-fun NavGraphBuilder.addContactComposable(
+fun NavGraphBuilder.addContactsComposable(
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
-    navigateToChatsScreen: () -> Unit
+    navigateBack: () -> Unit
 ) {
     composable(
-        route = Screens.ADD_CONTACT_SCREEN_ROUTE_FULL,
+        route = Screens.ADD_CONTACTS_PATH,
         arguments = listOf(
-            navArgument(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
+            navArgument(Screens.CONTACT_ID_ARG)
             {
                 type = NavType.StringType
+                nullable = true
+                defaultValue = null
             },
-            navArgument(Screens.ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG) {
+            navArgument(Screens.SCANNER_STATE_ARG) {
                 type = NavType.StringType
+                nullable = false
+                defaultValue = QrCodeScannerState.SCAN_CODE.toString()
             })
     ) { navBackStackEntry ->
-        val profileId =
-            navBackStackEntry.arguments?.getString(Screens.ADD_CONTACTS_SCREEN_CONTACT_ID_ARG)
-                ?: Screens.ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
+        val profileId = navBackStackEntry.arguments?.getString(Screens.CONTACT_ID_ARG)?.takeIf { p -> p.isNotBlank() }
         val scanTypeString =
-            navBackStackEntry.arguments?.getString(Screens.ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG)
+            navBackStackEntry.arguments?.getString(Screens.SCANNER_STATE_ARG)
                 ?: QrCodeScannerState.SCAN_CODE.toString()
-        val scannerState = QrCodeScannerState.valueOf(scanTypeString)
 
-        LaunchedEffect(key1 = true)
-        {
-            navigationTracker.postCurrentRoute(Screens.ADD_CONTACT_SCREEN_ROUTE_FULL)
+        LaunchedEffect(key1 = true) {
+            navigationTracker.postCurrentRoute(Screens.ADD_CONTACTS_PATH)
             mainViewModel.init()
         }
 
         AddContactsScreen(
             profileToShare = profileId,
-            initialScannerState = scannerState,
-            navigateToContactsScreen = navigateToChatsScreen,
+            initialScannerState = QrCodeScannerState.valueOf(scanTypeString),
+            navigateBack = navigateBack,
             mainViewModel = mainViewModel
         )
     }

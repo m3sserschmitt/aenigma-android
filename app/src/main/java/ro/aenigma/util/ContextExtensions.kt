@@ -56,7 +56,6 @@ import ro.aenigma.util.Constants.Companion.ORBOT_STORE_LINK
 import ro.aenigma.util.Constants.Companion.ORBOT_WEB_LINK
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
-import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContentResolverExtensions.getExtension
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import ro.aenigma.util.FileExtensions.lengthSafe
@@ -550,18 +549,6 @@ object ContextExtensions {
         } else {
             shareUri(uri = uri)
         }
-    }
-
-    suspend fun Context.shareArticleUriOrText(uri: Uri) {
-        if (uri.isRemote()) {
-            shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri.toString())))
-        } else {
-            shareUri(uri)
-        }
-    }
-
-    suspend fun Context.shareArticleUriOrText(uri: String) {
-        shareArticleUriOrText(uri.toUri())
     }
 
     suspend fun Context.showImageViewer(

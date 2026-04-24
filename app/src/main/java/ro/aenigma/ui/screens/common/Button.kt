@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.common
 
 import android.net.Uri
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,8 +50,24 @@ fun OpenInExternalAppButton(
         onClick = onClick,
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_open),
+            painter = painterResource(id = R.drawable.ic_open),
             contentDescription = stringResource(id = R.string.open),
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun RedirectUriButton(
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
+) {
+    IconButton(
+        onClick = onClick
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_forward),
+            contentDescription = stringResource(id = R.string.forward),
             tint = tint
         )
     }
@@ -123,16 +140,30 @@ fun CopyToClipboardButton(
 ) {
     val context = LocalContext.current
     IconButton(
-        onClick = {
-            context.copyToClipboard(text)
-        }
+        onClick = { context.copyToClipboard(text) }
     ) {
         Icon(
-            painter = painterResource(
-                id = R.drawable.ic_copy
-            ),
+            painter = painterResource(id = R.drawable.ic_copy),
+            contentDescription = stringResource(id = R.string.copy),
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun SendButton(
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
+) {
+    IconButton(
+        modifier = modifier,
+        onClick = onClick,
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.Send,
             contentDescription = stringResource(
-                id = R.string.copy
+                id = R.string.send
             ),
             tint = tint
         )

@@ -1,7 +1,7 @@
 package ro.aenigma.models
 
 data class ArticleDto (
-    val id: Long? = null,
+    val messageId: Long? = null,
     val title: String? = null,
     val author: String? = null,
     val description: String? = null,

@@ -13,19 +13,19 @@ class NavigationTracker @Inject constructor() {
         @JvmStatic
         fun isContactsScreenRoute(route: String): Boolean
         {
-            return route.split("/").first() == Screens.CONTACTS_SCREEN_BASE_ROUTE
+            return route.split("/").first() == Screens.CONTACTS_ROOT_PATH
         }
 
         @JvmStatic
         fun isChatScreenRoute(route: String): Boolean
         {
-            return route.split("/").first() == Screens.CHAT_SCREEN_BASE_ROUTE
+            return route.split("/").first() == Screens.CHAT_ROOT_PATH
         }
 
         @JvmStatic
         fun isAddContactsScreenRoute(route: String): Boolean
         {
-            return route.split("/").first() == Screens.ADD_CONTACTS_BASE_ROUTE
+            return route.split("/").first() == Screens.ADD_CONTACTS_ROOT_PATH
         }
     }
 

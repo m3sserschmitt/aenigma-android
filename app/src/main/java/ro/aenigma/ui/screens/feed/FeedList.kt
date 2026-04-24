@@ -33,17 +33,19 @@ fun FeedList(
     modifier: Modifier = Modifier,
     articles: List<ArticleDto>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (ArticleDto) -> Unit = {}
+    onArticleClicked: (ArticleDto) -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     ItemsList(
         modifier = modifier,
         items = articles,
-        itemKeyProvider = { article -> article.hashCode() },
+        itemKeySelector = { article -> article.hashCode() },
         listItem = { _, item, _ ->
             ArticleCard(
                 article = item,
                 okHttpClientProvider = okHttpClientProvider,
-                onClick = { onArticleClicked(item) }
+                onClick = { onArticleClicked(item) },
+                onRedirectUriClicked = onRedirectUriClicked
             )
         }
     )
@@ -54,7 +56,8 @@ fun ArticleCard(
     modifier: Modifier = Modifier,
     article: ArticleDto,
     okHttpClientProvider: IOkHttpClientProvider,
-    onClick: () -> Unit = { }
+    onClick: () -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -123,7 +126,8 @@ fun ArticleCard(
             FilesList(
                 uris = article.imageUrls?.mapNotNull { uri -> uri } ?: listOf(),
                 contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                okHttpClientProvider = okHttpClientProvider
+                okHttpClientProvider = okHttpClientProvider,
+                onRedirectUriClicked = onRedirectUriClicked
             )
 
             if (!article.description.isNullOrBlank()) {
@@ -145,7 +149,7 @@ fun ArticleCard(
 fun FeedListPreview() {
     val articles = List(1) {
         ArticleDto(
-            id = 1,
+            messageId = 1,
             title = "Article $it",
             description = "A short description for item $it",
             url = "https://picsum.photos/seed/$it/300/300",

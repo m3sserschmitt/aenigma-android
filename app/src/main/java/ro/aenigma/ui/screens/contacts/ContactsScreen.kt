@@ -21,7 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
@@ -72,6 +73,7 @@ fun ContactsScreen(
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
+    navigateToRoot: () -> Unit,
     mainViewModel: MainViewModel
 ) {
     val allContacts by mainViewModel.allContacts.collectAsState()
@@ -81,10 +83,12 @@ fun ContactsScreen(
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
     val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
     val userName by mainViewModel.userName.collectAsState()
+    val nameDialogVisible = remember(key1 = userName) { userName.isBlank() }
     val useTor by mainViewModel.useTor.collectAsState()
     val useOrbot by mainViewModel.useOrbot.collectAsState()
     val torConnectionCheck by mainViewModel.torConnectionCheck.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
+    val isForwardMode by mainViewModel.isForwardMode.collectAsState()
 
     ContactsScreen(
         connectionStatus = connectionStatus,
@@ -94,10 +98,11 @@ fun ContactsScreen(
         serversSheetState = serversSheetState,
         importedContactDetails = importedContactDetails,
         notificationsAllowed = notificationsAllowed,
-        nameDialogVisible = userName.isBlank(),
+        nameDialogVisible = nameDialogVisible,
         useTor = useTor,
         useOrbot = useOrbot,
         torConnectionCheck = torConnectionCheck,
+        isForwardMode = isForwardMode,
         onTorPreferenceChanged = { useTor -> mainViewModel.torPreferenceChanged(useTor) },
         onOrbotPreferenceChanged = { useOrbot -> mainViewModel.orbotPreferenceChanged(useOrbot) },
         onNotificationsPreferenceChanged = { allowed ->
@@ -112,7 +117,14 @@ fun ContactsScreen(
         onServersSheetStateChanged = { newSheetState ->
             mainViewModel.setServersSheetState(newSheetState)
         },
-        navigateToChatScreen = navigateToChatScreen,
+        navigateToChatScreen = { chatId ->
+            if (isForwardMode) {
+                mainViewModel.redirectAttachments(listOf(chatId))
+                navigateToRoot()
+            } else {
+                navigateToChatScreen(chatId)
+            }
+        },
         onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
         navigateToAboutScreen = navigateToAboutScreen,
@@ -124,6 +136,14 @@ fun ContactsScreen(
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
         onResetUserNameClicked = { mainViewModel.resetUserName() },
+        onForwardAttachments = { chatIds ->
+            mainViewModel.redirectAttachments(chatIds)
+            navigateToRoot()
+        },
+        onRemoveAttachments = {
+            mainViewModel.setAttachments(listOf())
+            navigateToRoot()
+        },
         onContactSaveDismissed = { mainViewModel.resetContactChanges() }
     )
 }
@@ -142,6 +162,7 @@ fun ContactsScreen(
     useTor: Boolean,
     useOrbot: Boolean,
     torConnectionCheck: TorConnectionCheck,
+    isForwardMode: Boolean = false,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
@@ -160,6 +181,8 @@ fun ContactsScreen(
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
     onResetUserNameClicked: () -> Unit,
+    onRemoveAttachments: () -> Unit = { },
+    onForwardAttachments: (List<String>) -> Unit = { },
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit
@@ -176,7 +199,7 @@ fun ContactsScreen(
     var isSearchMode by remember { mutableStateOf(false) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var serversSearchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateListOf<ContactWithLastMessageDto>() }
+    val selectedItems = remember { mutableStateMapOf<String, ContactWithLastMessageDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
     val bottomSheetState = rememberStandardBottomSheetState(initialValue = serversSheetState.sheetState)
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
@@ -203,13 +226,6 @@ fun ContactsScreen(
     LaunchedEffect(key1 = bottomSheetScaffoldState.isNotFullyExpanded()) {
         if (serversSheetState.isFullyExpanded() && bottomSheetScaffoldState.isNotFullyExpanded()) {
             onServersSheetStateChanged(serversSheetState.toPartiallyExpanded())
-        }
-    }
-
-    LaunchedEffect(key1 = contacts)
-    {
-        if (contacts is RequestState.Success && !isSearchMode) {
-            selectedItems.removeAll { item -> !contacts.data.contains(item) }
         }
     }
 
@@ -285,7 +301,8 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems.toList())
+            onDeleteSelectedItems(selectedItems.values.toList())
+            isSelectionMode = false
             selectedItems.clear()
         },
         onDismissClicked = {
@@ -297,7 +314,7 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            val contact = selectedItems.singleOrNull()
+            val contact = selectedItems.values.singleOrNull()
             if (contact != null) {
                 onContactRenamed(contact, name)
             }
@@ -343,7 +360,7 @@ fun ContactsScreen(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            onGroupCreated(selectedItems.toList(), name)
+            onGroupCreated(selectedItems.values.toList(), name)
             createGroupDialogVisible = false
             isSelectionMode = false
             selectedItems.clear()
@@ -360,13 +377,15 @@ fun ContactsScreen(
     )
 
     BackHandler(
-        enabled = isSearchMode || isSelectionMode
+        enabled = isSearchMode || isSelectionMode || isForwardMode
     ) {
         if (isSearchMode) {
             isSearchMode = false
         } else if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
+        } else if (isForwardMode) {
+            onRemoveAttachments()
         }
     }
 
@@ -390,29 +409,31 @@ fun ContactsScreen(
 
     BottomSheetScaffold(
         scaffoldState = bottomSheetScaffoldState,
-        sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
+        sheetPeekHeight = if(isForwardMode) { 0.dp } else { BOTTOM_SHEET_PEEK_HEIGHT },
         sheetContent = {
-            ServersBottomSheet(
-                servers = servers,
-                serversHistory = serversHistory,
-                sheetState = serversSheetState,
-                searchQuery = serversSearchQuery,
-                onSearchQueryChanged = { newSearchQuery ->
-                    serversSearchQuery = newSearchQuery
-                    if (serversSearchQuery.isEmpty()) {
-                        onServersSearch(serversSearchQuery)
-                    }
-                },
-                onSearchClicked = { onServersSearch(serversSearchQuery) },
-                onConnectClicked = {
-                    if (!serversSearchQuery.isBlank()) {
-                        onServerConnectClicked(serversSearchQuery)
-                    }
-                },
-                onServerClicked = onServerClicked,
-                onSheetStateChanged = onServersSheetStateChanged,
-                onScanCodeClicked = onScanServerCodeClicked
-            )
+            if(!isForwardMode) {
+                ServersBottomSheet(
+                    servers = servers,
+                    serversHistory = serversHistory,
+                    sheetState = serversSheetState,
+                    searchQuery = serversSearchQuery,
+                    onSearchQueryChanged = { newSearchQuery ->
+                        serversSearchQuery = newSearchQuery
+                        if (serversSearchQuery.isEmpty()) {
+                            onServersSearch(serversSearchQuery)
+                        }
+                    },
+                    onSearchClicked = { onServersSearch(serversSearchQuery) },
+                    onConnectClicked = {
+                        if (!serversSearchQuery.isBlank()) {
+                            onServerConnectClicked(serversSearchQuery)
+                        }
+                    },
+                    onServerClicked = onServerClicked,
+                    onSheetStateChanged = onServersSheetStateChanged,
+                    onScanCodeClicked = onScanServerCodeClicked
+                )
+            }
         },
         sheetContainerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
@@ -430,6 +451,7 @@ fun ContactsScreen(
                 useTor = useTor,
                 useOrbot = useOrbot,
                 torConnectionCheck = torConnectionCheck,
+                isForwardMode = isForwardMode,
                 onTorPreferenceChanged = { activatingTor ->
                     if(activatingTor) {
                         torServiceInfoDialogVisible = true
@@ -472,7 +494,7 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    val selectedItem = selectedItems.singleOrNull()?.contact
+                    val selectedItem = selectedItems.values.singleOrNull()?.contact
                     if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
                         navigateToAddContactScreen(selectedItem.address)
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
@@ -484,7 +506,7 @@ fun ContactsScreen(
                     }
                 },
                 onCreateGroupClicked = {
-                    if (selectedItems.any { item -> item.contact.type == ContactType.GROUP }) {
+                    if (selectedItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
                         Toast.makeText(
                             context,
                             context.getString(R.string.cannot_select_channels_to_create_channel),
@@ -495,6 +517,12 @@ fun ContactsScreen(
                     }
                 },
                 onResetUsernameClicked = onResetUserNameClicked,
+                onForwardAttachments = {
+                    onForwardAttachments(selectedItems.keys.toList())
+                    selectedItems.clear()
+                    isSelectionMode = false
+                },
+                onRemoveAttachments = onRemoveAttachments,
                 onRetryConnection = onRetryConnection,
                 navigateToAboutScreen = navigateToAboutScreen
             )
@@ -506,11 +534,13 @@ fun ContactsScreen(
                 bottom = paddingValues.calculateBottomPadding()
             ),
             floatingActionButton = {
-                ContactsFab(
-                    onFabClicked = {
-                        navigateToAddContactScreen(null)
-                    }
-                )
+                if(!isForwardMode) {
+                    ContactsFab(
+                        onFabClicked = {
+                            navigateToAddContactScreen(null)
+                        }
+                    )
+                }
             }
         ) { paddingValues ->
             ContactsContent(
@@ -526,10 +556,10 @@ fun ContactsScreen(
                         isSelectionMode = true
                     }
 
-                    selectedItems.add(selectedContact)
+                    selectedItems[selectedContact.contact.address] = selectedContact
                 },
                 onItemDeselected = { deselectedContact ->
-                    selectedItems.remove(deselectedContact)
+                    selectedItems.remove(deselectedContact.contact.address)
                 },
                 isSelectionMode = isSelectionMode,
                 selectedContacts = selectedItems

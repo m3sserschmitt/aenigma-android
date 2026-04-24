@@ -37,7 +37,8 @@ import ro.aenigma.viewmodels.MainViewModel
 @Composable
 fun FeedScreen(
     mainViewModel: MainViewModel,
-    navigateToArticle: (String) -> Unit
+    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    redirectUri: (String) -> Unit
 ) {
     val articles by mainViewModel.newsFeed.collectAsState()
     val newPostSheetState by mainViewModel.newPostSheetState.collectAsState()
@@ -47,13 +48,14 @@ fun FeedScreen(
         newPostSheetState = newPostSheetState,
         okHttpClientProvider = mainViewModel.provideOkHttpClientProvider(),
         onArticleClicked = { article ->
-            if (article.url?.isNotBlank() == true) {
-                navigateToArticle(article.url)
+            if (!article.url.isNullOrBlank()) {
+                navigateToArticle(article.url, article.title, article.messageId)
             }
         },
         onNewPostSheetStateChanged = { sheetState -> mainViewModel.setNewPostSheetState(sheetState) },
         onReloadFeedClicked = { mainViewModel.reloadFeed() },
-        onPostClicked = { mainViewModel.postArticle() }
+        onPostClicked = { mainViewModel.postArticle() },
+        onRedirectUriClicked = redirectUri
     )
 }
 
@@ -66,7 +68,8 @@ fun FeedScreen(
     onArticleClicked: (ArticleDto) -> Unit,
     onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
     onReloadFeedClicked: () -> Unit = { },
-    onPostClicked: () -> Unit = { }
+    onPostClicked: () -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val bottomSheetState = rememberStandardBottomSheetState(
         initialValue = newPostSheetState.sheetState
@@ -131,7 +134,8 @@ fun FeedScreen(
             ).fillMaxSize(),
             articles = articles,
             okHttpClientProvider = okHttpClientProvider,
-            onArticleClicked = onArticleClicked
+            onArticleClicked = onArticleClicked,
+            onRedirectUriClicked = onRedirectUriClicked
         )
     }
 }
@@ -141,7 +145,8 @@ fun FeedScreenContent(
     modifier: Modifier,
     articles: RequestState<List<ArticleDto>>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (ArticleDto) -> Unit
+    onArticleClicked: (ArticleDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     when (articles) {
         is RequestState.Success -> {
@@ -150,7 +155,8 @@ fun FeedScreenContent(
                     modifier = modifier,
                     articles = articles.data,
                     okHttpClientProvider = okHttpClientProvider,
-                    onArticleClicked = onArticleClicked
+                    onArticleClicked = onArticleClicked,
+                    onRedirectUriClicked = onRedirectUriClicked
                 )
             } else {
                 EmptyFeedScreen(modifier = modifier)
@@ -172,7 +178,7 @@ fun FeedScreenContent(
 fun FeedScreenPreview() {
     val articles = List(1) {
         ArticleDto(
-            id = 1,
+            messageId = 1,
             title = "Article $it",
             description = "A short description for item $it",
             url = "https://picsum.photos/seed/$it/300/300",

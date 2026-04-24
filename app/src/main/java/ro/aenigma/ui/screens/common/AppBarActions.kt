@@ -143,6 +143,17 @@ fun ActivateSearchAppBarAction(
 }
 
 @Composable
+fun ForwardAttachmentsAppBarAction(
+    tint: Color = Color.Unspecified,
+    onForwardAttachments: () -> Unit
+) {
+    SendButton(
+        tint = tint,
+        onClick = onForwardAttachments
+    )
+}
+
+@Composable
 fun ConnectionStatusAppBarAction(
     tint: Color = Color.Unspecified,
     connectionStatus: SignalRStatus

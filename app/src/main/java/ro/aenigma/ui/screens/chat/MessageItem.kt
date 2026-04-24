@@ -70,6 +70,7 @@ fun MessageItem(
     onItemSelected: (MessageWithDetailsDto) -> Unit,
     onItemDeselected: (MessageWithDetailsDto) -> Unit,
     onClick: (MessageWithDetailsDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val context = LocalContext.current
     val text = if (message.message.text.isNullOrBlank()) {
@@ -170,7 +171,8 @@ fun MessageItem(
                     DisplayFiles(
                         message = message.message,
                         textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider
+                        okHttpClientProvider = okHttpClientProvider,
+                        onRedirectUriClicked = onRedirectUriClicked
                     )
 
                     MessageText(
@@ -181,7 +183,8 @@ fun MessageItem(
                     DisplayLinks(
                         text = text,
                         textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider
+                        okHttpClientProvider = okHttpClientProvider,
+                        onRedirectUriClicked = onRedirectUriClicked
                     )
 
                     Row(
@@ -240,7 +243,8 @@ fun rememberMatchedLinks(text: String): List<String> {
 fun DisplayLinks(
     text: String?,
     textColor: Color = Color.Unspecified,
-    okHttpClientProvider: IOkHttpClientProvider
+    okHttpClientProvider: IOkHttpClientProvider,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     if(text.isNullOrBlank()) {
         return
@@ -255,7 +259,8 @@ fun DisplayLinks(
     FilesList(
         uris = links,
         contentColor = textColor,
-        okHttpClientProvider = okHttpClientProvider
+        okHttpClientProvider = okHttpClientProvider,
+        onRedirectUriClicked = onRedirectUriClicked
     )
 }
 
@@ -291,7 +296,8 @@ fun ClickToRetryMessage(
 fun DisplayFiles(
     message: MessageDto,
     okHttpClientProvider: IOkHttpClientProvider,
-    textColor: Color = Color.Unspecified
+    textColor: Color = Color.Unspecified,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
     if(message.attachmentsNotAvailable() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
@@ -316,7 +322,8 @@ fun DisplayFiles(
         FilesList(
             uris = files,
             contentColor = textColor,
-            okHttpClientProvider = okHttpClientProvider
+            okHttpClientProvider = okHttpClientProvider,
+            onRedirectUriClicked = onRedirectUriClicked
         )
     }
 }
@@ -348,7 +355,6 @@ fun ResponseTo(
     if (message == null) {
         return
     }
-    val context = LocalContext.current
     val actionForSender by message.actionForSender.collectAsState()
     if(message.message.type != MessageType.REPLY) {
         return
@@ -356,10 +362,10 @@ fun ResponseTo(
     val name = if (message.actionFor?.incoming == true) {
         (actionForSender?.name ?: return) + ":"
     } else {
-        context.getString(R.string.you)
+        stringResource(R.string.you)
     }
     val text = if (message.actionFor?.deleted == true) {
-        context.getString(R.string.message_deleted)
+        stringResource(R.string.message_deleted)
     } else {
         message.actionFor?.text ?: return
     }

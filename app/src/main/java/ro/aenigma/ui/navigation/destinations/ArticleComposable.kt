@@ -14,27 +14,46 @@ import ro.aenigma.viewmodels.MainViewModel
 fun NavGraphBuilder.articleComposable (
     navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
-    navigateToFeed: () -> Unit
+    forwardMessage: (Long) -> Unit,
+    navigateBack: () -> Unit
 ) {
     composable(
-        route = Screens.ARTICLE_SCREEN_ROUTE_FULL,
+        route = Screens.ARTICLE_SCREEN_PATH,
         arguments = listOf(
-            navArgument(Screens.ARTICLE_SCREEN_ARTICLE_URL_ARG)
+            navArgument(Screens.URI_ARG)
             {
                 type = NavType.StringType
-            })
+                nullable = true
+                defaultValue = null
+            },
+            navArgument(Screens.TITLE_ARG) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+            navArgument(Screens.MESSAGE_ID_ARG) {
+                type = NavType.LongType
+                defaultValue = Long.MIN_VALUE
+            }
+        )
     ) { navBackStackEntry ->
-        val url = navBackStackEntry.arguments!!.getString(Screens.ARTICLE_SCREEN_ARTICLE_URL_ARG)
+        val uri = navBackStackEntry.arguments?.getString(Screens.URI_ARG)?.takeIf { t -> t.isNotBlank() }
+        val title = navBackStackEntry.arguments?.getString(Screens.TITLE_ARG)?.takeIf { t -> t.isNotBlank() }
+        val messageId = navBackStackEntry.arguments?.getLong(Screens.MESSAGE_ID_ARG)?.takeIf { id -> id > 0 }
+
         LaunchedEffect(key1 = true) {
-            if (!url.isNullOrBlank()) {
-                navigationTracker.postCurrentRoute(getArticleScreenRoute(url))
+            if (!uri.isNullOrBlank()) {
+                navigationTracker.postCurrentRoute(getArticleScreenRoute(uri, title, messageId))
             }
         }
 
         ArticleScreen(
-            uri = url,
+            uri = uri,
+            title = title,
+            messageId = messageId,
             mainViewModel = mainViewModel,
-            navigateBack = navigateToFeed,
+            forwardMessage = forwardMessage,
+            navigateBack = navigateBack,
         )
     }
 }

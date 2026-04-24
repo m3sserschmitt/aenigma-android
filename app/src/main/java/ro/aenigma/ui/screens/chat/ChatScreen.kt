@@ -9,7 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -34,13 +34,15 @@ import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
+import kotlin.collections.listOf
 
 @Composable
 fun ChatScreen(
-    chatId: String,
+    chatId: String?,
     chatViewModel: ChatViewModel,
-    navigateToContactsScreen: () -> Unit,
-    navigateToAddContactsScreen: (String) -> Unit
+    navigateBack: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit,
+    redirectUri: (String) -> Unit
 ) {
     LaunchedEffect(key1 = true)
     {
@@ -60,7 +62,6 @@ fun ChatScreen(
     val isAdmin by chatViewModel.isAdmin.collectAsState()
 
     MarkConversationAsRead(
-        chatId = chatId,
         messages = messages,
         chatViewModel = chatViewModel
     )
@@ -80,24 +81,23 @@ fun ChatScreen(
         onContactSearchQueryChanged = { searchQuery -> chatViewModel.searchContacts(searchQuery) },
         onRetryConnection = { chatViewModel.retryClientConnection() },
         onInputTextChanged = { newInputTextValue ->
-            chatViewModel.setMessageInputText(
-                newInputTextValue
-            )
+            chatViewModel.setMessageInputText(newInputTextValue)
         },
         onAttachmentsSelected = { attachments -> chatViewModel.setAttachments(attachments) },
         onNewContactNameChanged = { name -> name.isNotBlank() },
         onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
         onRenameContactDismissed = { },
         onSendClicked = { chatViewModel.sendMessage() },
-        onDeleteAll = { chatViewModel.clearConversation(chatId) },
+        onDeleteAll = { chatViewModel.clearConversation() },
         onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
         onReplyToMessage = { selectedMessage -> chatViewModel.setReplyTo(selectedMessage) },
         onSearch = { searchQuery -> chatViewModel.searchConversation(searchQuery) },
         onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
         onLeaveGroup = { chatViewModel.leaveGroup() },
         onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
-        loadNextPage = { chatViewModel.loadNextPage(chatId) },
-        navigateToContactsScreen = navigateToContactsScreen,
+        onRedirectUriClicked = { uri -> redirectUri(uri) },
+        loadNextPage = { chatViewModel.loadNextPage() },
+        navigateBack = navigateBack,
         navigateToAddContactsScreen = navigateToAddContactsScreen
     )
 }
@@ -130,8 +130,9 @@ fun ChatScreen(
     onAddGroupMembers: (List<String>, MessageType) -> Unit,
     onLeaveGroup: () -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
@@ -142,7 +143,7 @@ fun ChatScreen(
     var groupAction by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<MessageWithDetailsDto>() }
+    val selectedItems = remember { mutableStateMapOf<Long, MessageWithDetailsDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
@@ -188,6 +189,8 @@ fun ChatScreen(
         visible = clearConversationConfirmationVisible,
         onConfirmClicked = {
             clearConversationConfirmationVisible = false
+            selectedItems.clear()
+            isSelectionMode = false
             onDeleteAll()
         },
         onDismissClicked = {
@@ -198,8 +201,10 @@ fun ChatScreen(
     DeleteSelectedMessagesDialog(
         visible = deleteMessagesConfirmationVisible,
         onConfirmClicked = {
-            onDelete(selectedItems)
+            onDelete(selectedItems.values.toList())
             deleteMessagesConfirmationVisible = false
+            selectedItems.clear()
+            isSelectionMode = false
         },
         onDismissClicked = {
             deleteMessagesConfirmationVisible = false
@@ -238,14 +243,6 @@ fun ChatScreen(
         }
     }
 
-    LaunchedEffect(key1 = messages)
-    {
-        if(messages is RequestState.Success)
-        {
-            selectedItems.removeAll { item -> !messages.data.contains(item) }
-        }
-    }
-
     LaunchedEffect(key1 = isSearchMode) {
         if(!isSearchMode)
         {
@@ -279,14 +276,14 @@ fun ChatScreen(
                     deleteMessagesConfirmationVisible = true
                 },
                 onReplyToMessageClicked = {
-                    val selectedItem = selectedItems.firstOrNull()
+                    val selectedItem = selectedItems.values.firstOrNull()
                     if(selectedItem != null)
                     {
                         onReplyToMessage(selectedItem)
                     }
                     selectedItems.clear()
                 },
-                navigateToContactsScreen = navigateToContactsScreen,
+                navigateBack = navigateBack,
                 isSearchMode = isSearchMode,
                 onSearchModeClosed = {
                     isSearchMode = false
@@ -350,12 +347,13 @@ fun ChatScreen(
                         isSelectionMode = true
                     }
 
-                    selectedItems.add(selectedMessage)
+                    selectedItems[selectedMessage.message.id] = selectedMessage
                 },
                 onMessageDeselected = {
-                    deselectedMessage -> selectedItems.remove(deselectedMessage)
+                    deselectedMessage -> selectedItems.remove(deselectedMessage.message.id)
                 },
                 onMessageClicked = onMessageClicked,
+                onRedirectUriClicked = onRedirectUriClicked,
                 loadNextPage = loadNextPage
             )
         }
@@ -364,7 +362,6 @@ fun ChatScreen(
 
 @Composable
 fun MarkConversationAsRead(
-    chatId: String,
     messages: RequestState<List<MessageWithDetailsDto>>,
     chatViewModel: ChatViewModel
 ) {
@@ -372,7 +369,7 @@ fun MarkConversationAsRead(
     {
         if(messages is RequestState.Success)
         {
-            chatViewModel.markConversationAsRead(chatId)
+            chatViewModel.markConversationAsRead()
         }
     }
 }
@@ -476,7 +473,7 @@ fun ChatScreenPreview() {
         onRenameContactDismissed = {},
         loadNextPage = { },
         onMessageClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         navigateToAddContactsScreen = {}
     )
 }
