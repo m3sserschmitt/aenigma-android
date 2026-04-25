@@ -7,14 +7,14 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import ro.aenigma.services.NotificationService
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.chat.ChatScreen
-import ro.aenigma.services.NavigationTracker
 import ro.aenigma.util.ContextExtensions.findActivity
 import ro.aenigma.viewmodels.ChatViewModel
 
 fun NavGraphBuilder.chatComposable(
-    navigationTracker: NavigationTracker,
+    notificationService: NotificationService,
     redirectUri: (String) -> Unit,
     navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
@@ -33,9 +33,8 @@ fun NavGraphBuilder.chatComposable(
 
         LaunchedEffect(key1 = true) {
             chatViewModel.init()
-            if (!chatId.isNullOrBlank()) {
-                navigationTracker.postCurrentRoute(Screens.getChatScreenRoute(chatId))
-            }
+            notificationService.enableNotifications()
+            notificationService.enterChat(chatId)
         }
 
         ChatScreen(

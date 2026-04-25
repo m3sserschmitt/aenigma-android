@@ -14,7 +14,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -24,7 +23,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import ro.aenigma.data.PreferencesDataStore
 import ro.aenigma.di.DbPassphraseKeeper
-import ro.aenigma.services.NavigationTracker
 import ro.aenigma.services.NotificationService
 import ro.aenigma.services.SignalrController
 import ro.aenigma.services.TorController
@@ -52,9 +50,6 @@ class AppActivity : FragmentActivity() {
 
     @Inject
     lateinit var signalrController: SignalrController
-
-    @Inject
-    lateinit var navigationTracker: NavigationTracker
 
     @Inject
     lateinit var notificationService: NotificationService
@@ -103,14 +98,13 @@ class AppActivity : FragmentActivity() {
                     LaunchedEffect(key1 = true) {
                         observeTorPreference()
                         observeClientConnectivity()
-                        observeNavigation()
                         handleAppLink()
                         schedulePeriodicSync()
                     }
 
                     SetupNavigation(
-                        navigationTracker = navigationTracker,
                         navHostController = navHostController,
+                        notificationService = notificationService,
                         mainViewModel = mainViewModel
                     )
                 }
@@ -133,8 +127,8 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        notificationService.enterForeground()
         resetAuthentication()
-        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
             sync()
@@ -143,7 +137,7 @@ class AppActivity : FragmentActivity() {
 
     override fun onPause() {
         super.onPause()
-        onScreenChanged(Screens.NO_SCREEN)
+        notificationService.enterBackground()
         lastPausedTime.value = System.currentTimeMillis()
     }
 
@@ -177,41 +171,6 @@ class AppActivity : FragmentActivity() {
 
     private fun observeClientConnectivity() {
         return signalrController.observeSignalrConnection(this)
-    }
-
-    private fun observeNavigation() {
-        navigationTracker.currentRoute.observe(this, navigationObserver)
-    }
-
-    private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onScreenChanged(route: String) {
-        if (NavigationTracker.isChatScreenRoute(route)) {
-            val chatId = Screens.getChatIdFromChatRoute(route) ?: return
-
-            disableNotifications(chatId)
-            dismissNotifications(chatId)
-        } else if (NavigationTracker.isContactsScreenRoute(route)) {
-            disableNotifications()
-        } else {
-            enableNotifications()
-        }
-    }
-
-    private fun enableNotifications() {
-        notificationService.enableNotifications()
-    }
-
-    private fun disableNotifications() {
-        notificationService.disableNotifications()
-    }
-
-    private fun disableNotifications(address: String) {
-        notificationService.disableNotifications(address)
-    }
-
-    private fun dismissNotifications(address: String) {
-        notificationService.dismissNotifications(address)
     }
 
     private fun handleAppLink() {

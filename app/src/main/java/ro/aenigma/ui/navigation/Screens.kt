@@ -2,7 +2,6 @@ package ro.aenigma.ui.navigation
 
 import android.net.Uri
 import androidx.navigation.NavController
-import androidx.navigation.NavDirections
 import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import ro.aenigma.util.QrCodeScannerState
 import java.util.Locale
@@ -43,8 +42,7 @@ class Screens(navController: NavController) {
                     "$TITLE_ARG={$TITLE_ARG}&" +
                     "$MESSAGE_ID_ARG={$MESSAGE_ID_ARG}"
 
-        const val STARTING_SCREEN = CONTACTS_ROOT_PATH
-        const val NO_SCREEN = "none"
+        const val ROOT_PATH = CONTACTS_ROOT_PATH
 
         @JvmStatic
         fun getChatScreenRoute(chatId: String): String {
@@ -80,13 +78,6 @@ class Screens(navController: NavController) {
         }
 
         @JvmStatic
-        fun getChatIdFromChatRoute(chatRoute: String): String? {
-            val regex = Regex("chat/([a-fA-F0-9]{64})")
-            val matchResult = regex.find(chatRoute)
-            return matchResult?.groupValues?.get(1)
-        }
-
-        @JvmStatic
         fun getContactsRoute(uri: String?, messageId: Long?): String {
             val builder = Uri.Builder().path(CONTACTS_ROOT_PATH)
             uri?.let { builder.appendQueryParameter(URI_ARG, it) }
@@ -96,7 +87,7 @@ class Screens(navController: NavController) {
     }
 
     val root: () -> Unit = {
-        navController.navigate(STARTING_SCREEN) {
+        navController.navigate(ROOT_PATH) {
             popUpTo(navController.graph.startDestinationId) {
                 inclusive = true
             }

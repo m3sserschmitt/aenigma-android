@@ -19,12 +19,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import ro.aenigma.R
+import ro.aenigma.services.NotificationService
 import ro.aenigma.ui.navigation.destinations.aboutComposable
 import ro.aenigma.ui.navigation.destinations.addContactsComposable
 import ro.aenigma.ui.navigation.destinations.chatComposable
 import ro.aenigma.ui.navigation.destinations.contactsComposable
 import ro.aenigma.ui.navigation.destinations.licensesComposable
-import ro.aenigma.services.NavigationTracker
 import ro.aenigma.ui.navigation.destinations.articleComposable
 import ro.aenigma.ui.navigation.destinations.feedComposable
 import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
@@ -34,7 +34,7 @@ import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun SetupNavigation(
-    navigationTracker: NavigationTracker,
+    notificationService: NotificationService,
     navHostController: NavHostController,
     mainViewModel: MainViewModel
 ) {
@@ -47,7 +47,7 @@ fun SetupNavigation(
         modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            if(!isForwardMode) {
+            if (!isForwardMode) {
                 NavigationBar(
                     modifier = Modifier.height(NAVIGATION_BAR_HEIGHT),
                     containerColor = MaterialTheme.colorScheme.background
@@ -62,7 +62,7 @@ fun SetupNavigation(
                             )
                         },
                         onClick = {
-                            if(!backStackEntry.isContactsSelected()) {
+                            if (!backStackEntry.isContactsSelected()) {
                                 screen.contacts()
                             }
                         }
@@ -77,7 +77,7 @@ fun SetupNavigation(
                             )
                         },
                         onClick = {
-                            if(!backStackEntry.isFeedSelected()) {
+                            if (!backStackEntry.isFeedSelected()) {
                                 screen.feed()
                             }
                         }
@@ -88,11 +88,11 @@ fun SetupNavigation(
     ) { innerPadding ->
         NavHost(
             navHostController,
-            startDestination = Screens.STARTING_SCREEN,
+            startDestination = Screens.ROOT_PATH,
             modifier = Modifier.padding(innerPadding)
         ) {
             contactsComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 navigateToChatScreen = screen.chat,
                 navigateToAddContactScreen = screen.addContacts,
                 navigateToScanServerScreen = screen.scanServerCode,
@@ -101,35 +101,34 @@ fun SetupNavigation(
                 mainViewModel = mainViewModel
             )
             chatComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 navigateBack = screen.back,
                 navigateToAddContactsScreen = screen.addContacts,
                 redirectUri = screen.forwardUri
             )
             addContactsComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 navigateBack = screen.back,
                 mainViewModel = mainViewModel
             )
             aboutComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 navigateBack = screen.back,
                 navigateToLicensesScreen = screen.licenses,
                 navigateToPrivacyPolicy = screen.privacyPolicy
             )
             licensesComposable(
-                navigationTracker = navigationTracker,
-                mainViewModel = mainViewModel,
+                notificationService = notificationService,
                 navigateBack = screen.back
             )
             feedComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 mainViewModel = mainViewModel,
                 navigateToArticle = screen.article,
                 redirectUri = screen.forwardUri
             )
             articleComposable(
-                navigationTracker = navigationTracker,
+                notificationService = notificationService,
                 mainViewModel = mainViewModel,
                 navigateBack = screen.back,
                 forwardMessage = screen.forwardMessage

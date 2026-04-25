@@ -5,14 +5,14 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import ro.aenigma.services.NotificationService
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.contacts.ContactsScreen
-import ro.aenigma.services.NavigationTracker
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.contactsComposable(
-    navigationTracker: NavigationTracker,
     mainViewModel: MainViewModel,
+    notificationService: NotificationService,
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
@@ -43,7 +43,8 @@ fun NavGraphBuilder.contactsComposable(
             if(messageId != null) {
                 mainViewModel.setAttachments(messageId)
             }
-            navigationTracker.postCurrentRoute(Screens.CONTACTS_PATH)
+            notificationService.exitChat()
+            notificationService.disableNotifications()
         }
 
         ContactsScreen(

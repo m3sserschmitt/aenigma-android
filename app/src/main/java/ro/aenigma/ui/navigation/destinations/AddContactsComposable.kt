@@ -5,14 +5,14 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import ro.aenigma.services.NotificationService
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.addContacts.AddContactsScreen
-import ro.aenigma.services.NavigationTracker
 import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.addContactsComposable(
-    navigationTracker: NavigationTracker,
+    notificationService: NotificationService,
     mainViewModel: MainViewModel,
     navigateBack: () -> Unit
 ) {
@@ -37,8 +37,9 @@ fun NavGraphBuilder.addContactsComposable(
                 ?: QrCodeScannerState.SCAN_CODE.toString()
 
         LaunchedEffect(key1 = true) {
-            navigationTracker.postCurrentRoute(Screens.ADD_CONTACTS_PATH)
             mainViewModel.init()
+            notificationService.enableNotifications()
+            notificationService.exitChat()
         }
 
         AddContactsScreen(
