@@ -29,8 +29,8 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
 import ro.aenigma.util.Constants.Companion.PULL_METHOD
 import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_HOSTNAME
+import ro.aenigma.util.Constants.Companion.TOR_SOCKS5_PROXY_PORT
+import ro.aenigma.util.Constants.Companion.TOR_PROXY_HOSTNAME
 import ro.aenigma.util.StringExtensions.getHttpUri
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -46,15 +46,18 @@ class SignalRClient @Inject constructor(
     companion object {
         const val CLIENT_CONNECTION_RETRY_COUNT = 3
 
-        private const val INTERNAL_ERROR = "Internal error occurred."
-
-        private const val MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR =
-            "The maximum number of failed connection attempts has been reached."
+        private const val SIGN_AUTHENTICATION_REQUEST_ERROR = "Could not sign authentication request."
 
         private const val AUTHENTICATION_NONCE_NULL_ERROR = "Authentication nonce was null."
 
+        private const val AUTHENTICATION_NULL_RESPONSE_ERROR = "Authentication request received null response."
+
         private const val PULL_DATA_NULL_ERROR =
             "Data returned from $PULL_METHOD invocation was null."
+
+        private const val CLEANUP_NULL_RESPONSE_ERROR = "Cleanup request received null response."
+
+        private const val ROUTE_MESSAGES_NULL_RESPONSE_ERROR = "Route messages request received null response."
 
         private const val COULD_NOT_CREATE_CONNECTION_ERROR =
             "Could not create connection or invalid URL."
@@ -63,22 +66,20 @@ class SignalRClient @Inject constructor(
         fun createConnection(
             useTor: Boolean,
             useOrbot: Boolean,
-            hostname: String
+            hostname: String?
         ): HubConnectionDto? {
-            val uri = hostname.getHttpUri(ONION_ROUTING_ENDPOINT) ?: return null
+            val uri = hostname?.getHttpUri(ONION_ROUTING_ENDPOINT) ?: return null
             return HubConnectionDto(
                 connection = HubConnectionBuilder
                     .create(uri)
                     .apply {
                         if (useTor || useOrbot) {
                             withTransport(TransportEnum.LONG_POLLING)
-                        }
-                        if (useTor) {
                             setHttpClientBuilderCallback { builder ->
                                 builder.proxy(
                                     Proxy(
                                         Proxy.Type.SOCKS,
-                                        InetSocketAddress(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)
+                                        InetSocketAddress(TOR_PROXY_HOSTNAME, TOR_SOCKS5_PROXY_PORT)
                                     )
                                 )
                             }
@@ -107,7 +108,7 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    suspend fun connect(hostname: String): Boolean {
+    suspend fun connect(hostname: String?): Boolean {
         if (!isConnected()) {
             try {
                 val useTor = repository.local.useTor.firstOrNull() == true
@@ -117,6 +118,7 @@ class SignalRClient @Inject constructor(
                     _hubConnection.value = dto
                     return start()
                 }
+                updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
                 return false
             } catch (_: Exception) {
                 updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
@@ -128,24 +130,21 @@ class SignalRClient @Inject constructor(
     }
 
     suspend fun disconnect(): Boolean {
-        if (isConnected()) {
-            try {
-                _hubConnection.value.stop()
-                _failedAttempts.value = 0
-                updateStatus(SignalRStatus.Error.Disconnected())
-                return true
-            } catch (_: Exception) {
-                return false
-            }
-        } else {
+        try {
+            _hubConnection.value.stop()
+            return true
+        } catch (_: Exception) {
             return false
+        } finally {
+            _failedAttempts.value = 0
+            _status.value = SignalRStatus.NotConnected
         }
     }
 
-    fun resetAborted() {
+    fun reset() {
         if (status.value is SignalRStatus.Error.Aborted) {
             _failedAttempts.value = 0
-            updateStatus(SignalRStatus.NotConnected)
+            _status.value = SignalRStatus.NotConnected
         }
     }
 
@@ -155,13 +154,12 @@ class SignalRClient @Inject constructor(
             _failedAttempts.value = newValue
 
             if (newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
-                _status.value = SignalRStatus.Error.Aborted(
-                    MAXIMUM_NUMBER_OF_CONNECTION_ATTEMPTS_REACHED_ERROR
-                )
+                _status.value = SignalRStatus.Error.Aborted
                 return
             }
+        } else {
+            _failedAttempts.value = 0
         }
-        _failedAttempts.value = 0
         _status.value = status
     }
 
@@ -199,6 +197,7 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.generateNonce()
                 return if(result == null) {
+                    updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
                     false
                 } else {
                     onNonceGenerated(result)
@@ -217,6 +216,7 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.authenticate(publicKey, signedData)
                 return if(result == null) {
+                    updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NULL_RESPONSE_ERROR))
                     false
                 } else {
                     onSuccessAuthentication(result)
@@ -236,6 +236,7 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.pull()
                 return if(result == null) {
+                    updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
                     false
                 } else {
                     onSuccessPull(result)
@@ -255,6 +256,7 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.cleanup()
                 return if(result == null) {
+                    updateStatus(SignalRStatus.Error(_status.value, CLEANUP_NULL_RESPONSE_ERROR))
                     false
                 } else {
                     onSuccessCleanup(result)
@@ -284,7 +286,7 @@ class SignalRClient @Inject constructor(
                 if (signature != null && signature.publicKey != null && signature.signedData != null) {
                     return authenticate(signature.publicKey, signature.signedData)
                 } else {
-                    updateStatus(SignalRStatus.Error(_status.value, INTERNAL_ERROR))
+                    updateStatus(SignalRStatus.Error(_status.value, SIGN_AUTHENTICATION_REQUEST_ERROR))
                     return false
                 }
             } catch (ex: Exception) {
@@ -335,8 +337,10 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.routeMessages(messages)
                 return if(result == null) {
+                    updateStatus(SignalRStatus.Error(_status.value, ROUTE_MESSAGES_NULL_RESPONSE_ERROR))
                     false
                 } else {
+                    updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
                     result.success ?: false
                 }
             } catch (e: Exception) {

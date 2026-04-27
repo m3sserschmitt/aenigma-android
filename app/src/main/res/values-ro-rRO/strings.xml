@@ -164,4 +164,6 @@
     <string name="empty_article_content">Nu există conținut pentru previzualizare</string>
     <string name="post">Postează</string>
     <string name="forward">Redirecționează către…</string>
+    <string name="notification_service">Serviciul de notificări</string>
+    <string name="live_notifications_on">Vei primi notificări în timp real</string>
 </resources>

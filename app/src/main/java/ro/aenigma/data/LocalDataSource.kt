@@ -82,6 +82,18 @@ class LocalDataSource @Inject constructor(
     @Inject
     lateinit var edgesDao: Lazy<EdgesDao>
 
+    val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
+
+    val name: Flow<String> = preferencesDataStore.name
+
+    val useTor: Flow<Boolean> = preferencesDataStore.useTor
+
+    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
+
+    val newsFeedUri: Flow<Uri?> = preferencesDataStore.newsFeedUri
+
+    val notificationServicePreference: Flow<Boolean> = preferencesDataStore.notificationServicePreference
+
     suspend fun saveText(content: String): Uri {
         val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$MARKDOWN_FILE_EXTENSION")
         withContext(Dispatchers.IO) { file.writeText(content) }
@@ -138,6 +150,10 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
+    suspend fun saveNotificationServicePreference(notificationServicePreference: Boolean): Boolean {
+        return preferencesDataStore.saveNotificationServicePreference(notificationServicePreference)
+    }
+
     suspend fun getGuardHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
         val useOrbot = useOrbot.firstOrNull() == true
@@ -155,16 +171,6 @@ class LocalDataSource @Inject constructor(
     suspend fun getGuardHostname(): String? {
         return getGuardHostname(getGuard()?.toServerInfoDto() ?: return null)
     }
-
-    val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
-
-    val name: Flow<String> = preferencesDataStore.name
-
-    val useTor: Flow<Boolean> = preferencesDataStore.useTor
-
-    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
-
-    val newsFeedUri: Flow<Uri?> = preferencesDataStore.newsFeedUri
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
         return contactsDao.get().getWithMessagesFlow()

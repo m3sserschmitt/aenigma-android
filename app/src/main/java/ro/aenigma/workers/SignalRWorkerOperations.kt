@@ -22,6 +22,6 @@ open class SignalRWorkerAction(val value: Int = 0) {
 
     infix fun contains(action: SignalRWorkerAction): Boolean
     {
-        return action.value and value != 0
+        return (action.value and value) != 0
     }
 }

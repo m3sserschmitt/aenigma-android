@@ -1,7 +1,7 @@
 package ro.aenigma.models.enums
 
-enum class TorConnectionCheck {
+enum class TorCircuitState {
     OK,
-    FAILED,
+    NOT_OK,
     UNDEFINED
 }

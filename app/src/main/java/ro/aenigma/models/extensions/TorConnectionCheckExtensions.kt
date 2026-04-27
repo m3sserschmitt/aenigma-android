@@ -1,15 +1,10 @@
 package ro.aenigma.models.extensions
 
-import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.enums.TorCircuitState
 
 object TorConnectionCheckExtensions {
     @JvmStatic
-    fun TorConnectionCheck.isFailed(): Boolean {
-        return this == TorConnectionCheck.FAILED
-    }
-
-    @JvmStatic
-    fun TorConnectionCheck.isOk(): Boolean {
-        return this == TorConnectionCheck.OK
+    fun TorCircuitState.isOk(): Boolean {
+        return this == TorCircuitState.OK
     }
 }

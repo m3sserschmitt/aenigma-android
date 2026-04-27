@@ -60,7 +60,7 @@ object WorkManagerExtensions {
 
     @JvmStatic
     fun getInvokeClientRequest(
-        actions: SignalRWorkerAction = SignalRWorkerAction.connectPullCleanup()
+        actions: SignalRWorkerAction
     ): OneTimeWorkRequest {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -234,7 +234,7 @@ object WorkManagerExtensions {
     ) {
         enqueueUniqueWork(
             SignalRClientWorker.UNIQUE_ONE_TIME_REQUEST,
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             getInvokeClientRequest(actions)
         )
     }

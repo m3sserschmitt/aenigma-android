@@ -5,13 +5,13 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.feed.ArticleScreen
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.articleComposable (
-    notificationService: NotificationService,
+    notifier: Notifier,
     mainViewModel: MainViewModel,
     forwardMessage: (Long) -> Unit,
     navigateBack: () -> Unit
@@ -41,8 +41,8 @@ fun NavGraphBuilder.articleComposable (
         val messageId = navBackStackEntry.arguments?.getLong(Screens.MESSAGE_ID_ARG)?.takeIf { id -> id > 0 }
 
         LaunchedEffect(key1 = true) {
-            notificationService.exitChat()
-            notificationService.enableNotifications()
+            notifier.exitChat()
+            notifier.enableNotifications()
         }
 
         ArticleScreen(

@@ -23,7 +23,7 @@ import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.SignalRStatus
-import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
+import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.models.enums.MessageType
@@ -219,11 +219,10 @@ fun ChatScreen(
         }
     )
 
-    ConnectionStatusSnackBar(
+    SnackBar(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
-        connectionStatus = connectionStatus,
-        targetStatus = SignalRStatus.Error.Aborted::class.java,
+        visible = connectionStatus is SignalRStatus.Error.Aborted,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )

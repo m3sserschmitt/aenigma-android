@@ -29,7 +29,7 @@ import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.enums.TorCircuitState
 import ro.aenigma.models.extensions.ContactDtoExtensions.toExportedContactDataDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.toServerInfoDto
 import ro.aenigma.models.extensions.GuardDtoExtensions.withNoGraphVersion
@@ -43,7 +43,7 @@ import ro.aenigma.services.MarkdownImageTransformer
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrController
-import ro.aenigma.services.TorController
+import ro.aenigma.services.OnionRoutingServiceMonitor
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
@@ -61,7 +61,7 @@ class MainViewModel @Inject constructor(
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
-    torController: TorController,
+    onionRoutingServiceMonitor: OnionRoutingServiceMonitor,
     repository: Repository,
     private val signalrController: SignalrController,
 ) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
@@ -107,6 +107,8 @@ class MainViewModel @Inject constructor(
 
     private val _useOrbot = MutableStateFlow(false)
 
+    private val _notificationServicePreference = MutableStateFlow(false)
+
     val allContacts: StateFlow<RequestState<List<ContactWithLastMessageDto>>> = _allContacts
 
     val qrCode: StateFlow<RequestState<QrCodeDto>> = _qrCode
@@ -123,7 +125,9 @@ class MainViewModel @Inject constructor(
 
     val useOrbot: StateFlow<Boolean> = _useOrbot
 
-    val torConnectionCheck: StateFlow<TorConnectionCheck> = torController.torConnectionCheck
+    val notificationServicePreference: StateFlow<Boolean> = _notificationServicePreference
+
+    val torCircuitState: StateFlow<TorCircuitState> = onionRoutingServiceMonitor.torCircuitState
 
     val newsFeed: StateFlow<RequestState<List<ArticleDto>>> = _newsFeed
 
@@ -142,6 +146,7 @@ class MainViewModel @Inject constructor(
         loadServers()
         collectTorPreference()
         collectOrbotPreference()
+        collectNotificationServicePreference()
         collectNotificationsPreferences()
         collectFeed()
     }
@@ -184,6 +189,16 @@ class MainViewModel @Inject constructor(
             repository.local.useOrbot.catch {
                 _useOrbot.value = false
             }.collect { useOrbot -> _useOrbot.value = useOrbot }
+        }
+    }
+
+    private fun collectNotificationServicePreference() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.notificationServicePreference.catch {
+                _notificationServicePreference.value = false
+            }.collect { notificationServicePreference ->
+                _notificationServicePreference.value = notificationServicePreference
+            }
         }
     }
 
@@ -424,6 +439,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun notificationServicePreferenceChanged(notificationServicePreference: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveNotificationServicePreference(notificationServicePreference)
+        }
+    }
+
     private fun getMyProfileBitmap(): Flow<QrCodeDto?> {
         return flow {
             val guard = repository.local.getGuard()
@@ -646,9 +667,7 @@ class MainViewModel @Inject constructor(
                 val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
                     ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)
-                if (!signalrController.disconnect()) {
-                    signalrController.enqueueSyncAndReconnect()
-                }
+                signalrController.enqueueSyncGraphAndReconnect()
             } catch (_: Exception) {
             }
         }

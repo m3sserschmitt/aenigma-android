@@ -41,6 +41,6 @@ sealed class SignalRStatus(
         class Disconnected(error: String? = null) :
             Error(status = NotConnected, error = error)
 
-        class Aborted(error: String? = null) : SignalRStatus(error = error, level = Int.MIN_VALUE)
+        object Aborted : SignalRStatus(error = null, level = Int.MIN_VALUE)
     }
 }

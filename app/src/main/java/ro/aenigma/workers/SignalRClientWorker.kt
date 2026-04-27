@@ -11,7 +11,7 @@ import ro.aenigma.data.Repository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.SIGNALR_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
@@ -22,7 +22,7 @@ class SignalRClientWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val signalrController: SignalrController,
     private val repository: Repository,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -45,9 +45,7 @@ class SignalRClientWorker @AssistedInject constructor(
         }
 
         if (ok && !signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
-            ok = signalrController.connect(
-                repository.local.getGuardHostname() ?: return Result.failure()
-            )
+            ok = signalrController.connect(repository.local.getGuardHostname())
         }
 
         if (ok && signalrController.isAuthenticated() && action contains SignalRWorkerAction.Pull()) {
@@ -68,12 +66,12 @@ class SignalRClientWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
             SIGNALR_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.connecting_server)),
+            notifier.createWorkerNotification(applicationContext.getString(R.string.connecting_server)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
                 SIGNALR_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.connecting_server))
+                notifier.createWorkerNotification(applicationContext.getString(R.string.connecting_server))
             )
     }
 }

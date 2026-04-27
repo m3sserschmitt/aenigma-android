@@ -39,7 +39,7 @@ import ro.aenigma.services.SignalRStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.enums.ServersSheetSection
-import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.enums.TorCircuitState
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
@@ -47,7 +47,7 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toPartiallyEx
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
-import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
+import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
@@ -86,7 +86,8 @@ fun ContactsScreen(
     val nameDialogVisible = remember(key1 = userName) { userName.isBlank() }
     val useTor by mainViewModel.useTor.collectAsState()
     val useOrbot by mainViewModel.useOrbot.collectAsState()
-    val torConnectionCheck by mainViewModel.torConnectionCheck.collectAsState()
+    val notificationServicePreference by mainViewModel.notificationServicePreference.collectAsState()
+    val torCircuitState by mainViewModel.torCircuitState.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val isForwardMode by mainViewModel.isForwardMode.collectAsState()
 
@@ -101,10 +102,14 @@ fun ContactsScreen(
         nameDialogVisible = nameDialogVisible,
         useTor = useTor,
         useOrbot = useOrbot,
-        torConnectionCheck = torConnectionCheck,
+        notificationServicePreference = notificationServicePreference,
+        torCircuitState = torCircuitState,
         isForwardMode = isForwardMode,
         onTorPreferenceChanged = { useTor -> mainViewModel.torPreferenceChanged(useTor) },
         onOrbotPreferenceChanged = { useOrbot -> mainViewModel.orbotPreferenceChanged(useOrbot) },
+        onNotificationServicePreferenceChanged = { notificationServicePreference ->
+            mainViewModel.notificationServicePreferenceChanged(notificationServicePreference)
+        },
         onNotificationsPreferenceChanged = { allowed ->
             mainViewModel.saveNotificationsPreference(allowed)
         },
@@ -161,10 +166,12 @@ fun ContactsScreen(
     nameDialogVisible: Boolean,
     useTor: Boolean,
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    notificationServicePreference: Boolean = false,
+    torCircuitState: TorCircuitState,
     isForwardMode: Boolean = false,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
     onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
@@ -398,11 +405,10 @@ fun ContactsScreen(
         }
     )
 
-    ConnectionStatusSnackBar(
+    SnackBar(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
-        connectionStatus = connectionStatus,
-        targetStatus = SignalRStatus.Error.Aborted::class.java,
+        visible = connectionStatus is SignalRStatus.Error.Aborted,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
@@ -450,7 +456,8 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 useTor = useTor,
                 useOrbot = useOrbot,
-                torConnectionCheck = torConnectionCheck,
+                notificationServicePreference = notificationServicePreference,
+                torCircuitState = torCircuitState,
                 isForwardMode = isForwardMode,
                 onTorPreferenceChanged = { activatingTor ->
                     if(activatingTor) {
@@ -466,6 +473,7 @@ fun ContactsScreen(
                         onOrbotPreferenceChanged(false)
                     }
                 },
+                onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged,
                 onSearchTriggered = {
                     isSearchMode = true
                 },
@@ -597,7 +605,7 @@ fun ContactsScreenPreview() {
         nameDialogVisible = false,
         useTor = true,
         useOrbot = false,
-        torConnectionCheck = TorConnectionCheck.OK,
+        torCircuitState = TorCircuitState.OK,
         onTorPreferenceChanged = { _ -> },
         onOrbotPreferenceChanged = { },
         onNotificationsPreferenceChanged = {},

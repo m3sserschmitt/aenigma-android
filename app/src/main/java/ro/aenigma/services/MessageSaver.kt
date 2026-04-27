@@ -39,7 +39,7 @@ import javax.inject.Singleton
 class MessageSaver @Inject constructor(
     private val repository: Repository,
     private val onionParsingService: OnionParsingService,
-    private val notificationService: NotificationService,
+    private val notifier: Notifier,
     private val workManager: WorkManager,
     signatureService: SignatureService
 ) {
@@ -235,6 +235,6 @@ class MessageSaver @Inject constructor(
 
     private suspend fun notify(message: MessageDto) {
         val contact = repository.local.getContact(message.chatId) ?: return
-        notificationService.notifyNewMessage(contact, message)
+        notifier.notifyNewMessage(contact, message)
     }
 }

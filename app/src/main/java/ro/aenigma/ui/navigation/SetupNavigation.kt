@@ -19,7 +19,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import ro.aenigma.R
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.destinations.aboutComposable
 import ro.aenigma.ui.navigation.destinations.addContactsComposable
 import ro.aenigma.ui.navigation.destinations.chatComposable
@@ -34,7 +34,7 @@ import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun SetupNavigation(
-    notificationService: NotificationService,
+    notifier: Notifier,
     navHostController: NavHostController,
     mainViewModel: MainViewModel
 ) {
@@ -92,7 +92,7 @@ fun SetupNavigation(
             modifier = Modifier.padding(innerPadding)
         ) {
             contactsComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 navigateToChatScreen = screen.chat,
                 navigateToAddContactScreen = screen.addContacts,
                 navigateToScanServerScreen = screen.scanServerCode,
@@ -101,34 +101,34 @@ fun SetupNavigation(
                 mainViewModel = mainViewModel
             )
             chatComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 navigateBack = screen.back,
                 navigateToAddContactsScreen = screen.addContacts,
                 redirectUri = screen.forwardUri
             )
             addContactsComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 navigateBack = screen.back,
                 mainViewModel = mainViewModel
             )
             aboutComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 navigateBack = screen.back,
                 navigateToLicensesScreen = screen.licenses,
                 navigateToPrivacyPolicy = screen.privacyPolicy
             )
             licensesComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 navigateBack = screen.back
             )
             feedComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 mainViewModel = mainViewModel,
                 navigateToArticle = screen.article,
                 redirectUri = screen.forwardUri
             )
             articleComposable(
-                notificationService = notificationService,
+                notifier = notifier,
                 mainViewModel = mainViewModel,
                 navigateBack = screen.back,
                 forwardMessage = screen.forwardMessage

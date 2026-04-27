@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING"/>
 
     <queries>
         <package android:name="org.torproject.android"/>
@@ -29,14 +30,18 @@
         tools:targetApi="31"
         android:usesCleartextTraffic="true">
         <service
-            android:name="ro.aenigma.services.TorServiceImpl"
-            android:process=":tor"
+            android:name="ro.aenigma.services.OnionRoutingService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="remoteMessaging" />
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="dataSync"
+            android:exported="false" />
+        <service
+            android:name="ro.aenigma.services.NotificationService"
+            android:foregroundServiceType="remoteMessaging"
+            android:enabled="true"
             android:exported="false" />
         <provider
             android:name="androidx.startup.InitializationProvider"

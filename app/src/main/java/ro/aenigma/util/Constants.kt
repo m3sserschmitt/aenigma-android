@@ -65,8 +65,10 @@ class Constants {
 
         const val WEB_ARTICLES_FEED_WEIGHT = 1
 
-        const val SOCKS5_PROXY_HOSTNAME = "127.0.0.1"
-        const val SOCKS5_PROXY_PORT = 9050
+        const val TOR_PROXY_HOSTNAME = "127.0.0.1"
+
+        const val TOR_SOCKS5_PROXY_PORT = 9050
+
         const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 
         const val ENCRYPTION_KEY_SIZE = 32

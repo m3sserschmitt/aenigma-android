@@ -3,9 +3,9 @@ package ro.aenigma.services
 import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.OkHttpClient
 import ro.aenigma.data.LocalDataSource
+import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.OK_HTTP_CLIENT_TIMEOUT
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_HOSTNAME
-import ro.aenigma.util.Constants.Companion.SOCKS5_PROXY_PORT
+import ro.aenigma.util.Constants.Companion.TOR_PROXY_HOSTNAME
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.util.concurrent.TimeUnit
@@ -18,17 +18,17 @@ open class OkHttpClientProvider @Inject constructor(
 ) : IOkHttpClientProvider {
     companion object {
         @JvmStatic
-        fun getInstance(useTor: Boolean, authToken: String? = null): OkHttpClient {
+        fun getInstance(useTor: Boolean, useOrbot: Boolean, authToken: String? = null): OkHttpClient {
             return OkHttpClient.Builder()
                 .readTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
                 .connectTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
                 .writeTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
                 .apply {
-                    if (useTor) {
+                    if (useTor || useOrbot) {
                         proxy(
                             Proxy(
                                 Proxy.Type.SOCKS,
-                                InetSocketAddress(SOCKS5_PROXY_HOSTNAME, SOCKS5_PROXY_PORT)
+                                InetSocketAddress(TOR_PROXY_HOSTNAME, Constants.TOR_SOCKS5_PROXY_PORT)
                             )
                         )
                     }
@@ -48,7 +48,8 @@ open class OkHttpClientProvider @Inject constructor(
     override suspend fun getInstance(): OkHttpClient {
         return try {
             val useTor = localDataSource.useTor.firstOrNull() == true
-            getInstance(useTor)
+            val useOrbot = localDataSource.useOrbot.firstOrNull() == true
+            getInstance(useTor, useOrbot)
         } catch (_: Exception) {
             OkHttpClientProviderDefault().getInstance()
         }

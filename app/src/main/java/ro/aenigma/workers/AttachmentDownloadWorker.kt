@@ -16,7 +16,7 @@ import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.ContextExtensions.createTempCacheFile
@@ -29,7 +29,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
 
     companion object {
@@ -126,12 +126,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
             ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
+            notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
                 ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
+                notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
             )
     }
 }

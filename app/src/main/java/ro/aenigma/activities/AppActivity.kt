@@ -23,9 +23,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import ro.aenigma.data.PreferencesDataStore
 import ro.aenigma.di.DbPassphraseKeeper
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
-import ro.aenigma.services.TorController
+import ro.aenigma.services.OnionRoutingServiceController
 import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
@@ -37,22 +37,28 @@ import ro.aenigma.viewmodels.MainViewModel
 import javax.inject.Inject
 import androidx.core.net.toUri
 import androidx.work.WorkManager
+import ro.aenigma.services.NotificationServiceController
+import ro.aenigma.services.OnionRoutingServiceMonitor
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
-import ro.aenigma.workers.SignalRWorkerAction
-import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
 @AndroidEntryPoint
 class AppActivity : FragmentActivity() {
 
     @Inject
-    lateinit var torController: TorController
+    lateinit var onionRoutingServiceController: OnionRoutingServiceController
+
+    @Inject
+    lateinit var onionRoutingServiceMonitor: OnionRoutingServiceMonitor
 
     @Inject
     lateinit var signalrController: SignalrController
 
     @Inject
-    lateinit var notificationService: NotificationService
+    lateinit var notificationServiceController: NotificationServiceController
+
+    @Inject
+    lateinit var notifier: Notifier
 
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
@@ -97,14 +103,16 @@ class AppActivity : FragmentActivity() {
                 ) {
                     LaunchedEffect(key1 = true) {
                         observeTorPreference()
+                        observeTorProxy()
                         observeClientConnectivity()
+                        observeNotificationServicePreference()
                         handleAppLink()
                         schedulePeriodicSync()
                     }
 
                     SetupNavigation(
                         navHostController = navHostController,
-                        notificationService = notificationService,
+                        notifier = notifier,
                         mainViewModel = mainViewModel
                     )
                 }
@@ -127,17 +135,16 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
-        notificationService.enterForeground()
+        notifier.enterForeground()
         resetAuthentication()
         if (dbPassphraseLoaded.value) {
             resetClient()
-            sync()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        notificationService.enterBackground()
+        notifier.enterBackground()
         lastPausedTime.value = System.currentTimeMillis()
     }
 
@@ -153,10 +160,6 @@ class AppActivity : FragmentActivity() {
         isAuthError.value = false
     }
 
-    private fun sync() {
-        workManager.invokeClient(SignalRWorkerAction.connectPullCleanup())
-    }
-
     private fun resetClient() {
         signalrController.resetClient()
     }
@@ -166,11 +169,19 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun observeTorPreference() {
-        return torController.observeTorPreferences(this)
+        return onionRoutingServiceController.observeTorPreferences(this)
+    }
+
+    private fun observeTorProxy() {
+        return onionRoutingServiceMonitor.observeSocksProxy(this)
     }
 
     private fun observeClientConnectivity() {
         return signalrController.observeSignalrConnection(this)
+    }
+
+    private fun observeNotificationServicePreference() {
+        return notificationServiceController.observeNotificationServicePreference(this)
     }
 
     private fun handleAppLink() {

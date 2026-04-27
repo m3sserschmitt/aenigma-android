@@ -3,6 +3,7 @@ package ro.aenigma.ui.screens.contacts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -16,7 +17,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import ro.aenigma.R
-import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.enums.TorCircuitState
 import ro.aenigma.models.extensions.TorConnectionCheckExtensions.isOk
 import ro.aenigma.services.SignalRStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
@@ -44,7 +45,8 @@ fun ContactsAppBar(
     selectedItemsCount: Int,
     useTor: Boolean,
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    notificationServicePreference: Boolean = false,
+    torCircuitState: TorCircuitState,
     isForwardMode: Boolean = false,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
@@ -60,6 +62,7 @@ fun ContactsAppBar(
     onResetUsernameClicked: () -> Unit,
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: () -> Unit = { },
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -136,7 +139,7 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
-                if(isSelectionMode && isForwardMode) {
+                if (isSelectionMode && isForwardMode) {
                     ForwardAttachmentsAppBarAction(
                         tint = MaterialTheme.colorScheme.onBackground,
                         onForwardAttachments = onForwardAttachments
@@ -148,9 +151,11 @@ fun ContactsAppBar(
                         onResetUsernameClicked = onResetUsernameClicked,
                         useTor = useTor,
                         useOrbot = useOrbot,
-                        torConnectionCheck = torConnectionCheck,
+                        notificationServicePreference = notificationServicePreference,
+                        torCircuitState = torCircuitState,
                         onTorPreferenceChanged = onTorPreferenceChanged,
-                        onOrbotPreferenceChanged = onOrbotPreferenceChanged
+                        onOrbotPreferenceChanged = onOrbotPreferenceChanged,
+                        onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged
                     )
                 }
             },
@@ -175,9 +180,11 @@ fun ContactsAppBar(
 fun MoreActions(
     useTor: Boolean,
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    notificationServicePreference: Boolean,
+    torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit,
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -188,7 +195,7 @@ fun MoreActions(
     ) {
         TorSwitch(
             useTor = useTor,
-            torConnectionCheck = torConnectionCheck,
+            torCircuitState = torCircuitState,
             onTorPreferenceChanged = { activatingTor ->
                 if(useOrbot) {
                     onOrbotPreferenceChanged(false)
@@ -198,13 +205,17 @@ fun MoreActions(
         )
         OrbotSwitch(
             useOrbot = useOrbot,
-            torConnectionCheck = torConnectionCheck,
+            torCircuitState = torCircuitState,
             onOrbotPreferenceChanged = { activatingOrbot ->
                 if(useTor) {
                     onTorPreferenceChanged(false)
                 }
                 onOrbotPreferenceChanged(activatingOrbot)
             }
+        )
+        NotificationServiceSwitch(
+            notificationServicePreference = notificationServicePreference,
+            onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.AccountCircle,
@@ -230,12 +241,12 @@ fun MoreActions(
 @Composable
 fun TorSwitch(
     useTor: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit
 ) {
     DropdownMenuSwitch(
         value = useTor,
-        isActive = useTor && torConnectionCheck.isOk(),
+        isActive = useTor && torCircuitState.isOk(),
         text = stringResource(id = R.string.tor_service),
         icon = {
             Icon(
@@ -252,12 +263,12 @@ fun TorSwitch(
 @Composable
 fun OrbotSwitch(
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    torCircuitState: TorCircuitState,
     onOrbotPreferenceChanged: (Boolean) -> Unit
 ) {
     DropdownMenuSwitch(
         value = useOrbot,
-        isActive = useOrbot && torConnectionCheck.isOk(),
+        isActive = useOrbot && torCircuitState.isOk(),
         text = stringResource(id = R.string.orbot_service),
         icon = {
             Icon(
@@ -270,3 +281,25 @@ fun OrbotSwitch(
         onValueChanged = onOrbotPreferenceChanged
     )
 }
+
+@Composable
+fun NotificationServiceSwitch(
+    notificationServicePreference: Boolean,
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit
+) {
+    DropdownMenuSwitch(
+        value = notificationServicePreference,
+        isActive = notificationServicePreference,
+        text = stringResource(id = R.string.notification_service),
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = stringResource(id = R.string.notification_service),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        onValueChanged = onNotificationServicePreferenceChanged
+    )
+}
+

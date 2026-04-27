@@ -30,6 +30,7 @@ class PreferencesDataStore @Inject constructor(
         private const val ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE = "encrypted-database-passphrase"
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
         private const val NEWS_FEED_URI = "news-feed-file"
+        private const val NOTIFICATION_SERVICE_PREFERENCE = "use-notification-service"
     }
 
     private object PreferenceKeys {
@@ -40,6 +41,7 @@ class PreferencesDataStore @Inject constructor(
         val encryptedDatabasePassphrase =
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
         val newsFeedUri = stringPreferencesKey(NEWS_FEED_URI)
+        val notificationServicePreference = booleanPreferencesKey(NOTIFICATION_SERVICE_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -85,6 +87,13 @@ class PreferencesDataStore @Inject constructor(
         return savePreference(uri.toString(), PreferenceKeys.newsFeedUri)
     }
 
+    suspend fun saveNotificationServicePreference(notificationServicePreference: Boolean): Boolean {
+        return savePreference(
+            notificationServicePreference,
+            PreferenceKeys.notificationServicePreference
+        )
+    }
+
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
             .catch { emit(emptyPreferences()) }
@@ -105,4 +114,7 @@ class PreferencesDataStore @Inject constructor(
 
     val newsFeedUri: Flow<Uri?> = getPreference(PreferenceKeys.newsFeedUri, "")
         .map { uri -> uri.takeIf { value -> value.isNotBlank() }?.toUri() }
+
+    val notificationServicePreference: Flow<Boolean> =
+        getPreference(PreferenceKeys.notificationServicePreference, true)
 }

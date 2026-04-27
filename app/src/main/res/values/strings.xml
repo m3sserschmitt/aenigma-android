@@ -108,8 +108,8 @@
     <string name="reset_username">Reset user name</string>
     <string name="cannot_share_channels">channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
-    <string name="tor_service">The Onion Router service</string>
-    <string name="orbot_service">Orbot service</string>
+    <string name="tor_service">The Onion Router Service</string>
+    <string name="orbot_service">Orbot Service</string>
     <string name="access_aenigma">Access Aenigma</string>
     <string name="authenticate_using_biometrics_or_pin">Authenticate with biometrics or device PIN</string>
     <string name="guard_syncing">Fetch server info</string>
@@ -144,7 +144,7 @@
     <string name="privacy_policy">Privacy policy</string>
     <string name="tor_starting">TOR is starting</string>
     <string name="connected_through_tor">Connected through The Onion Router network</string>
-    <string name="tor_stopped">TOR service stopped</string>
+    <string name="tor_stopped">TOR Service stopped</string>
     <string name="background_work">Background work</string>
     <string name="servers">Available servers</string>
     <string name="history">History</string>
@@ -168,4 +168,6 @@
     <string name="empty_article_content">There is no content to preview yet</string>
     <string name="post">Post</string>
     <string name="forward">Forward to…</string>
+    <string name="notification_service">Notification Service</string>
+    <string name="live_notifications_on">You will receive live notifications</string>
 </resources>

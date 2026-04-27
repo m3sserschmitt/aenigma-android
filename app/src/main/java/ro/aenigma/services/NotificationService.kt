@@ -1,171 +1,97 @@
 package ro.aenigma.services
 
-import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
+import android.app.Service
 import android.content.Intent
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
-import ro.aenigma.R
-import ro.aenigma.activities.AppActivity
-import ro.aenigma.models.ContactDto
-import ro.aenigma.models.MessageDto
-import ro.aenigma.models.enums.MessageType
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.IBinder
+import androidx.work.WorkManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import ro.aenigma.workers.SignalRWorkerAction
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import javax.inject.Inject
-import javax.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
-@Singleton
-class NotificationService @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) {
+@AndroidEntryPoint
+class NotificationService @Inject constructor(): Service() {
+
     companion object {
-        const val TOR_NOTIFICATION_ID = 1371
-        private const val TOR_SERVICE_CHANNEL_ID = "tor-service-channel"
-        private const val TOR_SERVICE_CHANNEL_NAME = "Tor Service Notification"
-        private const val TOR_SERVICE_CHANNEL_DESCRIPTION =
-            "Channel used for Tor Foreground Service"
-        private const val WORKERS_CHANNEL_ID = "workers-service-channel"
-        private const val WORKERS_CHANNEL_NAME = "Background Worker Notification"
-        private const val WORKERS_CHANNEL_DESCRIPTION = "Channel used for Background workers"
-        private const val NEW_MESSAGE_CHANNEL_ID = "new-message-channel"
-        private const val NEW_MESSAGE_CHANNEL_NAME = "New message notifications"
-        private const val NEW_MESSAGE_CHANNEL_DESCRIPTION =
-            "Channel used to display notification related to incoming messages"
+        val SYNC_INTERVAL = 15.minutes
+        const val ACTION_START = "ON"
+        const val ACTION_STOP = "OFF"
     }
 
-    private fun createNotificationChannel(
-        channel: String,
-        name: String,
-        description: String
-    ) {
-        val notificationChannel =
-            NotificationChannel(channel, name, NotificationManager.IMPORTANCE_HIGH).apply {
-                this.description = description
-                lockscreenVisibility = Notification.VISIBILITY_SECRET
-            }
+    @Inject
+    lateinit var notifier: Notifier
 
-        val notificationManager: NotificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(notificationChannel)
-    }
+    @Inject
+    lateinit var workManager: WorkManager
 
-    private fun createChatNavigationIntent(): PendingIntent {
-        val intent = Intent(context, AppActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    private val tickerCoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    private var tickerJob: Job? = null
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START -> start()
+            ACTION_STOP -> stop()
         }
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+        return START_STICKY
     }
 
-    private fun notify(notification: Notification, id: Int) {
-        with(NotificationManagerCompat.from(context)) {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                notify(id, notification)
-            }
+    override fun onDestroy() {
+        stopTimer()
+        super.onDestroy()
+    }
+
+    private fun tickerFlow(interval: Duration) = flow {
+        while (true) {
+            emit(Unit)
+            delay(interval)
         }
     }
 
-    private val _currentChat = MutableStateFlow<String?>(null)
-
-    private val _isBackground = MutableStateFlow(true)
-
-    private val _allChatsBlocked = MutableStateFlow(false)
-
-    fun createTorServiceNotification(text: String): Notification {
-        createNotificationChannel(
-            TOR_SERVICE_CHANNEL_ID, TOR_SERVICE_CHANNEL_NAME, TOR_SERVICE_CHANNEL_DESCRIPTION
-        )
-        return NotificationCompat.Builder(context, TOR_SERVICE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_vpn)
-            .setContentTitle(context.getString(R.string.tor_service))
-            .setContentText(text)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(text)
-            ).setSilent(true)
-            .build()
+    private fun startTimer() {
+        stopTimer()
+        tickerJob = tickerFlow(SYNC_INTERVAL).onEach {
+            workManager.invokeClient(actions = SignalRWorkerAction.connectPullCleanup())
+        }.launchIn(tickerCoroutineScope)
     }
 
-    fun createWorkerNotification(text: String): Notification {
-        createNotificationChannel(
-            WORKERS_CHANNEL_ID, WORKERS_CHANNEL_NAME, WORKERS_CHANNEL_DESCRIPTION
-        )
-        return NotificationCompat.Builder(context, WORKERS_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_api)
-            .setContentTitle(context.getString(R.string.background_work))
-            .setContentText(text)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(text)
-            ).setSilent(true)
-            .build()
+    private fun stopTimer() {
+        tickerJob?.cancel()
     }
 
-    fun notifyTorStatus(text: String) {
-        notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
-    }
-
-    fun notifyNewMessage(contact: ContactDto, messageEntity: MessageDto) {
-        if (!_isBackground.value && (_currentChat.value == contact.address || _allChatsBlocked.value)) {
-            return
-        }
-
-        createNotificationChannel(
-            NEW_MESSAGE_CHANNEL_ID,
-            NEW_MESSAGE_CHANNEL_NAME,
-            NEW_MESSAGE_CHANNEL_DESCRIPTION
-        )
-        val intent = createChatNavigationIntent()
-        val text = if (messageEntity.type == MessageType.FILES) {
-            context.getString(R.string.files_received)
+    private fun start() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                Notifier.NOTIFICATION_SERVICE_NOTIFICATION_ID,
+                notifier.createNotificationServiceNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+            )
         } else {
-            context.getString(R.string.text_message_received)
+            startForeground(
+                Notifier.NOTIFICATION_SERVICE_NOTIFICATION_ID,
+                notifier.createNotificationServiceNotification()
+            )
         }
-        val title = context.getString(R.string.new_message)
-        val notification = NotificationCompat.Builder(context, NEW_MESSAGE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_message)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentIntent(intent)
-            .setAutoCancel(true)
-            .build()
-
-        notify(notification, contact.address.hashCode())
+        startTimer()
     }
 
-    fun enableNotifications() {
-        _allChatsBlocked.value = false
-    }
-
-    fun disableNotifications() {
-        _allChatsBlocked.value = true
-    }
-
-    fun enterChat(chatId: String?) {
-        _currentChat.value = chatId
-    }
-
-    fun exitChat() {
-        _currentChat.value = null
-    }
-
-    fun enterForeground() {
-        _isBackground.value = false
-    }
-
-    fun enterBackground() {
-        _isBackground.value = true
+    private fun stop() {
+        stopTimer()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 }

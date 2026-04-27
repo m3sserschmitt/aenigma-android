@@ -5,14 +5,14 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.addContacts.AddContactsScreen
 import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
 
 fun NavGraphBuilder.addContactsComposable(
-    notificationService: NotificationService,
+    notifier: Notifier,
     mainViewModel: MainViewModel,
     navigateBack: () -> Unit
 ) {
@@ -38,8 +38,8 @@ fun NavGraphBuilder.addContactsComposable(
 
         LaunchedEffect(key1 = true) {
             mainViewModel.init()
-            notificationService.enableNotifications()
-            notificationService.exitChat()
+            notifier.enableNotifications()
+            notifier.exitChat()
         }
 
         AddContactsScreen(

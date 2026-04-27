@@ -28,7 +28,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
@@ -44,7 +44,7 @@ class MessageSenderWorker @AssistedInject constructor(
     private val signalrController: SignalrController,
     private val repository: Repository,
     private val signatureService: SignatureService,
-    private val notificationService: NotificationService,
+    private val notifier: Notifier,
     private val pathFinder: PathFinder
 ) : CoroutineWorker(context, params) {
 
@@ -268,12 +268,12 @@ class MessageSenderWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
             MESSAGE_SENDER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
+            notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
                 MESSAGE_SENDER_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
+                notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message))
             )
     }
 }
