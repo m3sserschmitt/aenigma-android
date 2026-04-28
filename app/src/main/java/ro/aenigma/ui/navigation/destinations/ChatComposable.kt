@@ -25,11 +25,18 @@ fun NavGraphBuilder.chatComposable(
             navArgument(Screens.CHAT_ID_ARG) { type = NavType.StringType })
     ) { navBackStackEntry ->
 
-        val chatId = navBackStackEntry.arguments?.getString(Screens.CHAT_ID_ARG)?.takeIf { id -> id.isNotBlank() }
-        val chatViewModel: ChatViewModel = hiltViewModel(
-            key = chatId,
-            viewModelStoreOwner = LocalContext.current.findActivity()
-        )
+        val chatId = navBackStackEntry.arguments?.getString(Screens.CHAT_ID_ARG)
+            ?.takeIf { id -> id.isNotBlank() }
+        val context = LocalContext.current
+        val activity = context.findActivity()
+        val chatViewModel: ChatViewModel = if (activity == null) {
+            hiltViewModel(key = chatId)
+        } else {
+            hiltViewModel(
+                key = chatId,
+                viewModelStoreOwner = activity
+            )
+        }
 
         LaunchedEffect(key1 = true) {
             chatViewModel.init()

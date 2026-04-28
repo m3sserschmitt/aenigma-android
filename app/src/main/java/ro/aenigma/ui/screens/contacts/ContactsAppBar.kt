@@ -196,22 +196,12 @@ fun MoreActions(
         TorSwitch(
             useTor = useTor,
             torCircuitState = torCircuitState,
-            onTorPreferenceChanged = { activatingTor ->
-                if(useOrbot) {
-                    onOrbotPreferenceChanged(false)
-                }
-                onTorPreferenceChanged(activatingTor)
-            }
+            onTorPreferenceChanged = onTorPreferenceChanged
         )
         OrbotSwitch(
             useOrbot = useOrbot,
             torCircuitState = torCircuitState,
-            onOrbotPreferenceChanged = { activatingOrbot ->
-                if(useTor) {
-                    onTorPreferenceChanged(false)
-                }
-                onOrbotPreferenceChanged(activatingOrbot)
-            }
+            onOrbotPreferenceChanged = onOrbotPreferenceChanged
         )
         NotificationServiceSwitch(
             notificationServicePreference = notificationServicePreference,

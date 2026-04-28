@@ -23,6 +23,8 @@ import ro.aenigma.util.Constants.Companion.CHECK_TOR_URL
 import java.net.InetSocketAddress
 import java.net.Socket
 import javax.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class OnionRoutingServiceMonitor @Inject constructor(
@@ -31,6 +33,9 @@ class OnionRoutingServiceMonitor @Inject constructor(
     private val notifier: Notifier,
 ) {
     companion object {
+        private const val QUERY_TOR_MAX_ATTEMPTS = 30
+        private val QUERY_TOR_DELAY_BETWEEN_ATTEMPTS = 1.5.seconds
+
         @JvmStatic
         fun isHostListening(host: String, port: Int, timeout: Int = 1000): Boolean {
             return try {
@@ -44,9 +49,9 @@ class OnionRoutingServiceMonitor @Inject constructor(
         }
 
         @JvmStatic
-        suspend fun checkProxy(
-            maxAttempts: Int = 10,
-            delayMs: Long = 3000
+        suspend fun isProxyActive(
+            maxAttempts: Int = QUERY_TOR_MAX_ATTEMPTS,
+            delay: Duration = QUERY_TOR_DELAY_BETWEEN_ATTEMPTS
         ): Boolean {
             repeat(maxAttempts) {
                 if (isHostListening(
@@ -56,7 +61,7 @@ class OnionRoutingServiceMonitor @Inject constructor(
                 ) {
                     return true
                 }
-                delay(delayMs)
+                delay(delay)
             }
             return false
         }
@@ -102,7 +107,7 @@ class OnionRoutingServiceMonitor @Inject constructor(
                 torPreference || orbotPreference
             }.distinctUntilChanged().collect { useTor ->
                 if (useTor) {
-                    if (checkProxy()) {
+                    if (isProxyActive()) {
                         _torStatus.value = TorStatus.ON
                         queryTorConnection()
                     }
@@ -114,13 +119,22 @@ class OnionRoutingServiceMonitor @Inject constructor(
         }
     }
 
-    private suspend fun queryTorConnection() {
-        _torCircuitState.value =
-            if (repository.remote.checkTor(CHECK_TOR_URL)?.isTor ?: false) {
+    private suspend fun queryTorConnection(
+        maxAttempts: Int = QUERY_TOR_MAX_ATTEMPTS,
+        delay: Duration = QUERY_TOR_DELAY_BETWEEN_ATTEMPTS
+    ) {
+        repeat(maxAttempts) {
+            val status = if (repository.remote.checkTor(CHECK_TOR_URL)?.isTor ?: false) {
                 TorCircuitState.OK
             } else {
                 TorCircuitState.NOT_OK
             }
+            _torCircuitState.value = status
+            if (status == TorCircuitState.OK) {
+                return
+            }
+            delay(delay)
+        }
     }
 
     init {

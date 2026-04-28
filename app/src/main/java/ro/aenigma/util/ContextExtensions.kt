@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.Intent.normalizeMimeType
-import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
@@ -33,6 +32,7 @@ import com.stfalcon.imageviewer.StfalconImageViewer
 import id.zelory.compressor.Compressor
 import id.zelory.compressor.constraint.format
 import id.zelory.compressor.constraint.quality
+import info.guardianproject.netcipher.proxy.OrbotHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
@@ -52,8 +52,6 @@ import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
-import ro.aenigma.util.Constants.Companion.ORBOT_STORE_LINK
-import ro.aenigma.util.Constants.Companion.ORBOT_WEB_LINK
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 import ro.aenigma.util.ContentResolverExtensions.getExtension
@@ -447,13 +445,13 @@ object ContextExtensions {
         }
     }
 
-    fun Context.findActivity(): AppActivity {
+    fun Context.findActivity(): AppActivity? {
         var context = this
         while (context is ContextWrapper) {
             if (context is Activity) return context as AppActivity
             context = context.baseContext
         }
-        throw IllegalStateException("Permissions should be called in the context of an Activity")
+        return null
     }
 
     fun Context.openApplicationDetails() {
@@ -603,28 +601,26 @@ object ContextExtensions {
     }
 
     fun Context.isOrbotInstalled(): Boolean {
-        try {
-            packageManager.getPackageInfo(ORBOT_PACKAGE, PackageManager.GET_ACTIVITIES)
-            return true
+        return OrbotHelper.isOrbotInstalled(this)
+    }
+
+    fun Context.redirectToOrbotOnPlayStore(): Boolean {
+        return try {
+            OrbotHelper.getOrbotInstallIntent(this).also { startActivity(it) }
+            true
         } catch (_: Exception) {
-            return false
+            false
         }
     }
 
-    fun Context.redirectToOrbotOnPlayStore() {
-        try {
-            startActivity(Intent(Intent.ACTION_VIEW, ORBOT_STORE_LINK.toUri()))
-        } catch (_: Exception) {
-            startActivity(Intent(Intent.ACTION_VIEW, ORBOT_WEB_LINK.toUri()))
-        }
-    }
-
-    fun Context.openOrbot() {
-        val launchIntent = packageManager.getLaunchIntentForPackage(ORBOT_PACKAGE)
-        if (launchIntent != null) {
-            startActivity(launchIntent)
-        } else {
+    fun Context.openOrbot(): Boolean {
+        return if (!isOrbotInstalled()) {
             redirectToOrbotOnPlayStore()
+        } else try {
+            packageManager.getLaunchIntentForPackage(ORBOT_PACKAGE).also { startActivity(it) }
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 }

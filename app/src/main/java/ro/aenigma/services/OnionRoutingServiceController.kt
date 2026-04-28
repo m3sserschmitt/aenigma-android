@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.qualifiers.ApplicationContext
+import info.guardianproject.netcipher.proxy.OrbotHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -16,6 +17,7 @@ import ro.aenigma.models.extensions.TorStatusExtensions.shouldStartTor
 import ro.aenigma.models.extensions.TorStatusExtensions.shouldStopTor
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class OnionRoutingServiceController @Inject constructor(
@@ -33,9 +35,12 @@ class OnionRoutingServiceController @Inject constructor(
                 Triple(torPreference, orbotPreference, torStatus)
             }.distinctUntilChanged().collect { (torPreference, orbotPreference, torStatus) ->
                 if (torStatus.shouldStartTor(torPreference) && !orbotPreference) {
+                    delay(2.seconds)
                     start()
+                } else if (torStatus.shouldStartTor(orbotPreference) && !torPreference) {
+                    delay(2.seconds)
+                    startOrbot()
                 } else if (torStatus.shouldStopTor(torPreference)) {
-                    delay(1000)
                     stop()
                 }
             }
@@ -46,6 +51,10 @@ class OnionRoutingServiceController @Inject constructor(
         val intent = Intent(appContext, OnionRoutingService::class.java)
         intent.action = TorService.ACTION_START
         appContext.startService(intent)
+    }
+
+    fun startOrbot() {
+        OrbotHelper.requestStartTor(appContext)
     }
 
     fun stop() {

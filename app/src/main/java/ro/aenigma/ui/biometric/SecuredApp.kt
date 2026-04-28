@@ -23,12 +23,13 @@ fun SecuredApp(
     onAuthFailed: () -> Unit,
     content: (@Composable () -> Unit)
 ) {
-    val context = LocalContext.current.findActivity()
+    val context = LocalContext.current
+    val activity = context.findActivity()
     var authError by remember { mutableStateOf("") }
 
-    if (!isAuthenticated && !isAuthError && isDeviceSecured) {
+    if (!isAuthenticated && !isAuthError && isDeviceSecured && activity != null) {
         BiometricAuthenticator(
-            context = context,
+            context = activity,
             onAuthSuccess = onAuthSuccess,
             onAuthError = { errorMessage ->
                 authError = errorMessage
@@ -38,11 +39,10 @@ fun SecuredApp(
         )
     } else if (dbPassphraseLoaded && (isAuthenticated || !isDeviceSecured)) {
         content()
-    } else if (isAuthError) {
-        val context = LocalContext.current
+    } else if (isAuthError || activity == null) {
         ErrorScreen(
             modifier = Modifier.fillMaxSize(),
-            text = if(authError.isBlank()) {
+            text = if (authError.isBlank()) {
                 context.getString(R.string.restart_app_to_retry)
             } else {
                 "$authError - ${context.getString(R.string.restart_app_to_retry)}"

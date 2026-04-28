@@ -269,7 +269,9 @@ fun ContactsScreen(
         },
         onConfirmClicked = {
             orbotInfoDialogVisible = false
-            onOrbotPreferenceChanged(true)
+            if(!useTor) {
+                onOrbotPreferenceChanged(true)
+            }
         }
     )
 
@@ -281,7 +283,9 @@ fun ContactsScreen(
         },
         onConfirmClicked = {
             torServiceInfoDialogVisible = false
-            onTorPreferenceChanged(true)
+            if(!useOrbot) {
+                onTorPreferenceChanged(true)
+            }
         }
     )
 
@@ -468,7 +472,11 @@ fun ContactsScreen(
                 },
                 onOrbotPreferenceChanged = { activatingOrbot ->
                     if(activatingOrbot) {
-                        orbotInfoDialogVisible = true
+                        if(!context.isOrbotInstalled()) {
+                            installOrbotDialogVisible = true
+                        } else {
+                            orbotInfoDialogVisible = true
+                        }
                     } else {
                         onOrbotPreferenceChanged(false)
                     }
