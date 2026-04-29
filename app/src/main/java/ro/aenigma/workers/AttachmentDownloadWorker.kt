@@ -17,7 +17,6 @@ import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.services.Notifier
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.ContextExtensions.createTempCacheFile
 import ro.aenigma.util.ContextExtensions.extractZip
@@ -44,17 +43,23 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     private suspend fun downloadEncryptedFile(url: String): File? {
         val tempFile = applicationContext.createTempCacheFile(null)
-        if (repository.remote.getFile(url, tempFile)) {
-            repository.remote.incrementFileAccessCount(url)
-            return tempFile
+        return if (repository.remote.getFile(url, tempFile)) {
+            tempFile
         } else {
-            return null
+            null
         }
     }
 
     private fun decryptArchive(file: File, passphrase: String?): File? {
         val key = CryptoProvider.base64Decode(passphrase ?: return null) ?: return null
         return CryptoProvider.decrypt(file, key)
+    }
+
+    suspend fun downloadAndDecryptArchive(attachment: AttachmentDto): File? {
+        val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
+        val decrypted = decryptArchive(downloaded, attachment.passphrase) ?: return null
+        downloaded.delete()
+        return decrypted
     }
 
     private suspend fun storeAttachment(message: MessageWithAttachmentsDto, archive: File) {
@@ -70,17 +75,25 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     private suspend fun resolveAttachments(message: MessageWithAttachmentsDto): File? {
         val attachment = message.attachment ?: return null
-        val archive = if (attachment.path.isNullOrBlank()) {
-            val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
-            val decrypted = decryptArchive(downloaded, attachment.passphrase) ?: return null
-            downloaded.delete()
-            decrypted
+        val archive = if (!attachment.path.isNullOrBlank()) {
+            val cachedArchive = applicationContext.getCacheFile(attachment.path)
+            if (!cachedArchive.exists()) {
+                downloadAndDecryptArchive(attachment)
+            } else {
+                cachedArchive
+            }
         } else {
-            applicationContext.getCacheFile(attachment.path)
-        }
+            downloadAndDecryptArchive(attachment)
+        } ?: return null
 
         storeAttachment(message, archive)
         return archive
+    }
+
+    private suspend fun incrementFileAccessCount(messageWithAttachments: MessageWithAttachmentsDto) {
+        if (!messageWithAttachments.attachment?.url.isNullOrBlank()) {
+            repository.remote.incrementFileAccessCount(messageWithAttachments.attachment.url)
+        }
     }
 
     private suspend fun resolveFiles(
@@ -103,7 +116,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
                 ?: return Result.failure()).takeIf { !it?.message?.senderAddress.isNullOrBlank() }
                 ?: return Result.failure()
 
-            if (message.message.type != MessageType.FILES) return Result.failure()
+            if (message.message.type != MessageType.FILES) return Result.success()
             if (message.message.files?.isNotEmpty() == true) return Result.success()
 
             setForeground(getForegroundInfo())
@@ -114,7 +127,7 @@ class AttachmentDownloadWorker @AssistedInject constructor(
                 message.message.chatId
             )
             resolveFiles(message.message, files)
-
+            incrementFileAccessCount(message)
             archive.delete()
 
             Result.success()
@@ -125,12 +138,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
+            id.hashCode(),
             notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
             )
     }

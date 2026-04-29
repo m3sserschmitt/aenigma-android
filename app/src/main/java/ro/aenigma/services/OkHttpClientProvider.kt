@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.OkHttpClient
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.util.Constants
-import ro.aenigma.util.Constants.Companion.OK_HTTP_CLIENT_TIMEOUT
+import ro.aenigma.util.Constants.Companion.OK_HTTP_CONNECT_TIMEOUT
 import ro.aenigma.util.Constants.Companion.TOR_PROXY_HOSTNAME
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -20,9 +20,9 @@ open class OkHttpClientProvider @Inject constructor(
         @JvmStatic
         fun getInstance(useTor: Boolean, useOrbot: Boolean, authToken: String? = null): OkHttpClient {
             return OkHttpClient.Builder()
-                .readTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
-                .connectTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
-                .writeTimeout(OK_HTTP_CLIENT_TIMEOUT, TimeUnit.SECONDS)
+                .readTimeout(0, TimeUnit.SECONDS)
+                .connectTimeout(OK_HTTP_CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                .writeTimeout(0, TimeUnit.SECONDS)
                 .apply {
                     if (useTor || useOrbot) {
                         proxy(

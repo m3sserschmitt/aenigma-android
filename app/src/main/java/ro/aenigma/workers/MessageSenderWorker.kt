@@ -14,6 +14,7 @@ import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import ro.aenigma.R
 import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.ContactDto
@@ -32,7 +33,6 @@ import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
-import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
 import ro.aenigma.util.ContextExtensions.createZip
 import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
@@ -139,7 +139,13 @@ class MessageSenderWorker @AssistedInject constructor(
         setForeground(getForegroundInfo())
 
         val archive = if (!messageWithAttachment.attachment?.path.isNullOrBlank()) {
-            applicationContext.getCacheFile(messageWithAttachment.attachment.path)
+            val cachedArchive =
+                applicationContext.getCacheFile(messageWithAttachment.attachment.path)
+            if (!cachedArchive.exists()) {
+                applicationContext.createZip(uris = messageWithAttachment.message.files)
+            } else {
+                cachedArchive
+            }
         } else {
             applicationContext.createZip(uris = messageWithAttachment.message.files)
         } ?: return null
@@ -154,7 +160,12 @@ class MessageSenderWorker @AssistedInject constructor(
 
         val passphrase = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
         val encryptedFile = CryptoProvider.encrypt(archive, passphrase) ?: return null
-        val createdSharedData = repository.remote.postFile(encryptedFile, accessCount)
+        val useTor = repository.local.useTor.firstOrNull() == true
+        val useOrbot = repository.local.useOrbot.firstOrNull() == true
+        val createdSharedData =
+            repository.remote.postFile(encryptedFile, accessCount, useOrbot || useTor) { progress ->
+                notifier.notifyUploadProgress(progress, id.hashCode())
+            }
         encryptedFile.delete()
         createdSharedData?.resourceUrl ?: return null
         archive.delete()
@@ -211,10 +222,6 @@ class MessageSenderWorker @AssistedInject constructor(
             return Result.failure()
         }
 
-        if (!signalrController.isConnected()) {
-            return Result.retry()
-        }
-
         if (!pathFinder.load()) {
             return Result.retry()
         }
@@ -267,12 +274,12 @@ class MessageSenderWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            MESSAGE_SENDER_NOTIFICATION_ID,
+            id.hashCode(),
             notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                MESSAGE_SENDER_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message))
             )
     }

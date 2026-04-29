@@ -47,6 +47,7 @@ interface EnigmaApi {
     @GET(VERTEX_API_PATH)
     suspend fun getVertex(@Query("Address") address: String): Response<VertexDto?>
 
+    @Streaming
     @Multipart
     @POST(FILE_API_PATH)
     suspend fun postFile(

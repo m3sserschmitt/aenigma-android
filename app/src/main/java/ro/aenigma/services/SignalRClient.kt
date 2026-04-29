@@ -29,6 +29,8 @@ import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
 import ro.aenigma.util.Constants.Companion.PULL_METHOD
 import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
+import ro.aenigma.util.Constants.Companion.SIGNALR_SERVER_TIMEOUT
+import ro.aenigma.util.Constants.Companion.SIGNAL_KEEP_ALIVE
 import ro.aenigma.util.Constants.Companion.TOR_SOCKS5_PROXY_PORT
 import ro.aenigma.util.Constants.Companion.TOR_PROXY_HOSTNAME
 import ro.aenigma.util.StringExtensions.getHttpUri
@@ -83,6 +85,8 @@ class SignalRClient @Inject constructor(
                                     )
                                 )
                             }
+                            withServerTimeout(SIGNALR_SERVER_TIMEOUT)
+                            withKeepAliveInterval(SIGNAL_KEEP_ALIVE)
                         }
                     }.build()
             )
@@ -339,9 +343,11 @@ class SignalRClient @Inject constructor(
                 return if(result == null) {
                     updateStatus(SignalRStatus.Error(_status.value, ROUTE_MESSAGES_NULL_RESPONSE_ERROR))
                     false
+                } else if (result.success == true){
+                    true
                 } else {
                     updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
-                    result.success ?: false
+                    false
                 }
             } catch (e: Exception) {
                 updateStatus(SignalRStatus.Error(_status.value, e.message))

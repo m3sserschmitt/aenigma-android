@@ -18,11 +18,15 @@ class Constants {
         const val CONTACTS_TABLE = "Contacts"
         const val MESSAGES_TABLE = "Messages"
         const val CONVERSATION_PAGE_SIZE = 50
-        const val SERVERS_LIST_MAX_COUNT = 150
+        const val SERVERS_LIST_SIZE = 150
         const val NEWS_FEED_SIZE = 1000
         const val SEND_MESSAGES_CHUNK_SIZE = 15
-        const val CONTACTS_LIST_MAX_COUNT = 150
-        const val OK_HTTP_CLIENT_TIMEOUT: Long = 15
+        const val CONTACTS_LIST_SIZE = 150
+        const val OK_HTTP_CONNECT_TIMEOUT: Long = 60
+        const val SIGNALR_SERVER_TIMEOUT: Long = 40_000
+        const val SIGNAL_KEEP_ALIVE: Long = 20_000
+        const val REQUEST_BODY_BUFFER_SIZE_OVER_TOR = 262_144
+        const val REQUEST_BODY_DEFAULT_BUFFER_SIZE = 1_048_576
         const val GUARDS_TABLE = "Guards"
         const val VERTICES_TABLE = "Vertices"
         const val EDGES_TABLE = "Edges"
@@ -51,12 +55,6 @@ class Constants {
 
         const val ORBOT_PACKAGE = "org.torproject.android"
 
-        const val ORBOT_STORE_LINK = "market://details?id=$ORBOT_PACKAGE"
-
-        const val ORBOT_WEB_LINK = "https://play.google.com/store/apps/details?id=$ORBOT_PACKAGE"
-
-        const val COIL_MEMORY_CACHE_PERCENTAGE = .25
-
         const val PRIVATE_KEY_FILE = "private-key.locked"
 
         const val PUBLIC_KEY_FILE = "public-key.pem"
@@ -73,27 +71,15 @@ class Constants {
 
         const val ENCRYPTION_KEY_SIZE = 32
 
-        const val ATTACHMENT_DOWNLOAD_NOTIFICATION_ID = 105
+        const val ATTACHMENTS_CHUNK_PACKING_SIZE = 26_214_400L
 
-        const val GRAPH_READER_NOTIFICATION_ID = 100
-
-        const val GROUP_DOWNLOAD_NOTIFICATION_ID = 101
-
-        const val GROUP_UPLOAD_NOTIFICATION_ID = 102
-
-        const val MESSAGE_SENDER_NOTIFICATION_ID = 103
-
-        const val SIGNALR_NOTIFICATION_ID = 104
-
-        const val ATTACHMENTS_CHUNK_PACKING_SIZE = 15L * 1024 * 1024
-
-        const val ATTACHMENTS_MAX_COUNT = 3
+        const val ATTACHMENTS_MAX_COUNT = 25
 
         const val AUTHENTICATION_DEADLINE = 60_000L
 
         const val IMAGE_COMPRESSION_QUALITY = 50
 
-        const val GUARDS_HISTORY_MAX_COUNT = 150
+        const val GUARDS_HISTORY_SIZE = 150
 
         val NAVIGATION_BAR_HEIGHT = IntrinsicSize.Min
 

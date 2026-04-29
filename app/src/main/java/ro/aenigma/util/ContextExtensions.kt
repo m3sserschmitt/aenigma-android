@@ -26,7 +26,6 @@ import coil3.disk.directory
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.load
-import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.stfalcon.imageviewer.StfalconImageViewer
 import id.zelory.compressor.Compressor
@@ -48,7 +47,6 @@ import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
-import ro.aenigma.util.Constants.Companion.COIL_MEMORY_CACHE_PERCENTAGE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
@@ -77,21 +75,15 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.
 object ContextExtensions {
 
     fun Context.createImageLoader(client: OkHttpClient): ImageLoader {
-        return ImageLoader.Builder(this).memoryCache {
-            MemoryCache.Builder()
-                .maxSizePercent(this, COIL_MEMORY_CACHE_PERCENTAGE)
-                .build()
-        }.diskCache {
+        return ImageLoader.Builder(this).diskCache {
             DiskCache.Builder()
                 .directory(getImagesCacheDirectory())
                 .build()
         }.components {
             add(
                 OkHttpNetworkFetcherFactory(
-                    callFactory = {
-                        client
-                    }
-                ))
+                callFactory = { client }
+            ))
             if (Build.VERSION.SDK_INT >= 28) {
                 add(AnimatedImageDecoder.Factory())
             } else {

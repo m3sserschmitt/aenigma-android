@@ -136,6 +136,10 @@ class Notifier @Inject constructor(
             .build()
     }
 
+    fun notifyUploadProgress(progress: Int, id: Int) {
+        notify(createWorkerNotification(context.getString(R.string.uploading).format(progress)), id)
+    }
+
     fun notifyTorStatus(text: String) {
         notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
     }

@@ -5,7 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
-import ro.aenigma.util.Constants.Companion.SERVERS_LIST_MAX_COUNT
+import ro.aenigma.util.Constants.Companion.SERVERS_LIST_SIZE
 import ro.aenigma.util.Constants.Companion.VERTICES_TABLE
 
 @Dao
@@ -20,16 +20,16 @@ interface VerticesDao {
     @Query("SELECT * FROM $VERTICES_TABLE")
     suspend fun getAll(): List<VertexEntity>
 
-    @Query("SELECT * FROM $VERTICES_TABLE LIMIT $SERVERS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $VERTICES_TABLE LIMIT $SERVERS_LIST_SIZE")
     suspend fun get(): List<VertexEntity>
 
-    @Query("SELECT * FROM $VERTICES_TABLE LIMIT $SERVERS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $VERTICES_TABLE LIMIT $SERVERS_LIST_SIZE")
     fun getFlow(): Flow<List<VertexEntity>>
 
     @Query("SELECT * FROM $VERTICES_TABLE " +
             "WHERE :searchQuery = '' " +
             "OR hostname LIKE '%' || :searchQuery || '%' " +
             "OR onionService LIKE '%' || :searchQuery || '%' " +
-            "LIMIT $SERVERS_LIST_MAX_COUNT")
+            "LIMIT $SERVERS_LIST_SIZE")
     suspend fun search(searchQuery: String): List<VertexEntity>
 }

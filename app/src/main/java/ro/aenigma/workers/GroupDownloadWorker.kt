@@ -20,7 +20,6 @@ import ro.aenigma.models.extensions.ContactDtoExtensions.withName
 import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.Notifier
-import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
 
 @HiltWorker
 class GroupDownloadWorker @AssistedInject constructor(
@@ -108,12 +107,12 @@ class GroupDownloadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info)),
                 FOREGROUND_SERVICE_TYPE_DATA_SYNC
             ) else
             ForegroundInfo(
-                GROUP_DOWNLOAD_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
             )
     }

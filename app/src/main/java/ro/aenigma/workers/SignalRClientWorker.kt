@@ -13,7 +13,6 @@ import dagger.assisted.AssistedInject
 import ro.aenigma.R
 import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
-import ro.aenigma.util.Constants.Companion.SIGNALR_NOTIFICATION_ID
 import java.util.concurrent.TimeUnit
 
 @HiltWorker
@@ -65,12 +64,12 @@ class SignalRClientWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            SIGNALR_NOTIFICATION_ID,
+            id.hashCode(),
             notifier.createWorkerNotification(applicationContext.getString(R.string.connecting_server)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                SIGNALR_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.connecting_server))
             )
     }

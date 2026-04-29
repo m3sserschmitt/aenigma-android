@@ -166,4 +166,6 @@
     <string name="forward">Redirecționează către…</string>
     <string name="notification_service">Serviciul de notificări</string>
     <string name="live_notifications_on">Vei primi notificări în timp real</string>
+    <string name="generate_feed">Se generează conținutul feed-ului</string>
+    <string name="uploading">Se încarcă: %s%%</string>
 </resources>

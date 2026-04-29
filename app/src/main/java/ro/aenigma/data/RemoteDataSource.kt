@@ -1,8 +1,8 @@
 package ro.aenigma.data
 
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
@@ -27,6 +27,7 @@ import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.DEFAULT_LANGUAGE_CODE
+import ro.aenigma.util.FileExtensions.asBufferedRequestBody
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getBaseUrl
@@ -260,12 +261,17 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun postFile(file: File, accessCount: Int = 1): CreatedSharedDataDto? {
+    suspend fun postFile(
+        file: File,
+        accessCount: Int = 1,
+        usingTor: Boolean,
+        onProgress: (Int) -> Unit = { }
+    ): CreatedSharedDataDto? {
         return try {
             val filePart = MultipartBody.Part.createFormData(
                 name = "file",
                 filename = file.name,
-                body = file.asRequestBody("application/octet-stream".toMediaType())
+                body = file.asBufferedRequestBody("application/octet-stream", usingTor, onProgress)
             )
             val countPart = accessCount
                 .toString()

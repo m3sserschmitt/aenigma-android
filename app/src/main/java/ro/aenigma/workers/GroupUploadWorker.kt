@@ -32,7 +32,6 @@ import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.Notifier
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
-import ro.aenigma.util.Constants.Companion.GROUP_UPLOAD_NOTIFICATION_ID
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 
 @HiltWorker
@@ -264,12 +263,12 @@ class GroupUploadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GROUP_UPLOAD_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info)),
                 FOREGROUND_SERVICE_TYPE_DATA_SYNC
             ) else
             ForegroundInfo(
-                GROUP_UPLOAD_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
             )
     }

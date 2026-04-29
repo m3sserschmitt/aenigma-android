@@ -3,7 +3,7 @@ package ro.aenigma.data.database
 import androidx.room.*
 import ro.aenigma.util.Constants.Companion.CONTACTS_TABLE
 import kotlinx.coroutines.flow.Flow
-import ro.aenigma.util.Constants.Companion.CONTACTS_LIST_MAX_COUNT
+import ro.aenigma.util.Constants.Companion.CONTACTS_LIST_SIZE
 
 @Dao
 interface ContactsDao {
@@ -13,15 +13,15 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE")
     suspend fun getAll(): List<ContactEntity>
 
-    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_SIZE")
     fun getFlow(): Flow<List<ContactEntity>>
 
     @Transaction
-    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_SIZE")
     suspend fun getWithMessages(): List<ContactWithLastMessage>
 
     @Transaction
-    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $CONTACTS_TABLE ORDER BY lastMessageId DESC LIMIT $CONTACTS_LIST_SIZE")
     fun getWithMessagesFlow(): Flow<List<ContactWithLastMessage>>
 
     @Transaction
@@ -32,7 +32,7 @@ interface ContactsDao {
     @Query("SELECT * FROM $CONTACTS_TABLE WHERE address = :address")
     fun getWithGroupFlow(address: String): Flow<ContactWithGroup?>
 
-    @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%' LIMIT $CONTACTS_LIST_MAX_COUNT")
+    @Query("SELECT * FROM $CONTACTS_TABLE WHERE :searchQuery = '' OR name LIKE '%' || :searchQuery || '%' LIMIT $CONTACTS_LIST_SIZE")
     suspend fun search(searchQuery: String): List<ContactEntity>
 
     @Query("UPDATE $CONTACTS_TABLE SET hasNewMessage = 1 WHERE address = :address")

@@ -16,7 +16,6 @@ import ro.aenigma.models.EdgeDto
 import ro.aenigma.models.GuardDto
 import ro.aenigma.models.factories.VertexDtoFactory
 import ro.aenigma.services.Notifier
-import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
@@ -106,12 +105,12 @@ class GraphReaderWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GRAPH_READER_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.guard_syncing)),
                 FOREGROUND_SERVICE_TYPE_DATA_SYNC
             ) else
             ForegroundInfo(
-                GRAPH_READER_NOTIFICATION_ID,
+                id.hashCode(),
                 notifier.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
             )
     }

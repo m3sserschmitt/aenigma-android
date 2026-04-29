@@ -170,4 +170,6 @@
     <string name="forward">Forward to…</string>
     <string name="notification_service">Notification Service</string>
     <string name="live_notifications_on">You will receive live notifications</string>
+    <string name="generate_feed">Generate feed content</string>
+    <string name="uploading">Uploading: %s%%</string>
 </resources>
