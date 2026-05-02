@@ -46,7 +46,7 @@ import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_CHUNK_PACKING_SIZE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
@@ -380,28 +380,30 @@ object ContextExtensions {
         return isTextUri(uri.toUri())
     }
 
-    private fun Context.sizeOf(uri: String): Long {
-        val parsedUri = uri.toUri()
-
+    fun Context.sizeOf(uri: Uri): Long {
         return when {
-            parsedUri.scheme?.equals(ContentResolver.SCHEME_CONTENT, true) == true ->
-                contentResolver.querySize(parsedUri)
+            uri.scheme?.equals(ContentResolver.SCHEME_CONTENT, true) == true ->
+                contentResolver.querySize(uri)
 
-            parsedUri.scheme?.equals(ContentResolver.SCHEME_FILE, true) == true ->
-                File(parsedUri.path ?: return -1).lengthSafe()
+            uri.scheme?.equals(ContentResolver.SCHEME_FILE, true) == true ->
+                File(uri.path ?: return -1).lengthSafe()
 
-            parsedUri.scheme == null -> File(uri).lengthSafe()
+            uri.scheme == null -> File(uri.toString()).lengthSafe()
 
             else -> -1L
         }
     }
 
+    fun Context.sizeOf(uri: String): Long {
+        return sizeOf(uri.toUri())
+    }
+
     fun Context.splitFilesFirstFitDecreasing(
-        uriStrings: List<String>,
-        limitBytes: Long = ATTACHMENTS_CHUNK_PACKING_SIZE
+        uris: List<String>,
+        limitBytes: Long = ATTACHMENT_MAX_SIZE
     ): List<List<String>> {
 
-        val entries = uriStrings.map { Entry(it, sizeOf(it)) }
+        val entries = uris.map { Entry(it, sizeOf(it)) }
 
         if (entries.any { entry -> entry.size < 0 }) {
             return listOf()

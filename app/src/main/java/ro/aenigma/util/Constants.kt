@@ -71,7 +71,7 @@ class Constants {
 
         const val ENCRYPTION_KEY_SIZE = 32
 
-        const val ATTACHMENTS_CHUNK_PACKING_SIZE = 26_214_400L
+        const val ATTACHMENT_MAX_SIZE = 26_214_400L
 
         const val ATTACHMENTS_MAX_COUNT = 25
 

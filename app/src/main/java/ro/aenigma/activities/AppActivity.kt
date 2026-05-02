@@ -37,8 +37,12 @@ import ro.aenigma.viewmodels.MainViewModel
 import javax.inject.Inject
 import androidx.core.net.toUri
 import androidx.work.WorkManager
+import ro.aenigma.R
+import ro.aenigma.data.LocalDataSource
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.NotificationServiceController
 import ro.aenigma.services.OnionRoutingServiceMonitor
+import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
@@ -62,6 +66,9 @@ class AppActivity : FragmentActivity() {
 
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var localDataSource: LocalDataSource
 
     @Inject
     lateinit var workManager: WorkManager
@@ -106,6 +113,7 @@ class AppActivity : FragmentActivity() {
                         observeTorProxy()
                         observeClientConnectivity()
                         observeNotificationServicePreference()
+                        createBroadcastContact()
                         handleAppLink()
                         schedulePeriodicSync()
                     }
@@ -182,6 +190,19 @@ class AppActivity : FragmentActivity() {
 
     private fun observeNotificationServicePreference() {
         return notificationServiceController.observeNotificationServicePreference(this)
+    }
+
+    private fun createBroadcastContact() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val broadcastContact = ContactDtoFactory.createContact(
+                address = Constants.BROADCAST_CONTACT_ADDRESS,
+                name = applicationContext.getString(R.string.broadcast),
+                publicKey = null,
+                guardAddress = null,
+                guardHostname = null
+            )
+            localDataSource.insertOrIgnoreContact(broadcastContact)
+        }
     }
 
     private fun handleAppLink() {

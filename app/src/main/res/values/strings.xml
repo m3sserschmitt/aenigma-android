@@ -172,4 +172,6 @@
     <string name="live_notifications_on">You will receive live notifications</string>
     <string name="generate_feed">Generate feed content</string>
     <string name="uploading">Uploading: %s%%</string>
+    <string name="broadcast" translatable="false">Broadcast</string>
+    <string name="files_too_large">Some files exceed the limit of %.2f MB</string>
 </resources>

@@ -168,4 +168,5 @@
     <string name="live_notifications_on">Vei primi notificări în timp real</string>
     <string name="generate_feed">Se generează conținutul feed-ului</string>
     <string name="uploading">Se încarcă: %s%%</string>
+    <string name="files_too_large">Unele fișiere depășesc limita a %.2f MB</string>
 </resources>

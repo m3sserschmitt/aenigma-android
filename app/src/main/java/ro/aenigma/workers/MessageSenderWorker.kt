@@ -189,6 +189,10 @@ class MessageSenderWorker @AssistedInject constructor(
         val addressesSet = hashSetOf<String>()
         val results = mutableListOf<ContactDto>()
         when {
+            isBroadcast -> {
+                return repository.local.getAllContacts()
+            }
+
             contactWithGroup?.contact?.type == ContactType.CONTACT -> {
                 addressesSet.add(contactWithGroup.contact.address)
                 results.add(contactWithGroup.contact)
@@ -202,10 +206,6 @@ class MessageSenderWorker @AssistedInject constructor(
                         repository.local.getContact(item.address)?.let { c -> results.add(c) }
                     }
                 }
-            }
-
-            isBroadcast -> {
-                return repository.local.getAllContacts()
             }
         }
 

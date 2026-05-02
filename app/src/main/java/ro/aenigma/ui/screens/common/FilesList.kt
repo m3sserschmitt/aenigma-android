@@ -41,7 +41,9 @@ import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
+import ro.aenigma.util.ContextExtensions.sizeOf
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import kotlin.collections.forEach
 
@@ -214,31 +216,43 @@ fun FileItem(
 
 @Composable
 fun rememberFilesPicker(
-    onFilesSelected: (List<String>) -> Unit
+    onFilesSelected: (List<String>) -> Unit,
+    maxCount: Int = ATTACHMENTS_MAX_COUNT,
+    maxSizeBytes: Long = ATTACHMENT_MAX_SIZE
 ): ManagedActivityResultLauncher<Array<String>, List<@JvmSuppressWildcards Uri>> {
     val context = LocalContext.current
+    val contentResolver = context.contentResolver
+    val tooManyAttachmentsString =
+        stringResource(id = R.string.attachment_files_limit, ATTACHMENTS_MAX_COUNT)
+    val fileTooLargeString =
+        stringResource(id = R.string.files_too_large, maxSizeBytes / (1024.0 * 1024.0))
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
-        val contentResolver = context.contentResolver
-        val takeFlags =
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-
-        uris.forEach { uri ->
+        var fileTooLarge = false
+        val filteredUris = uris.filter { uri ->
             try {
-                contentResolver.takePersistableUriPermission(uri, takeFlags)
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                if (context.sizeOf(uri) > maxSizeBytes) {
+                    fileTooLarge = true
+                    false
+                } else {
+                    true
+                }
             } catch (_: SecurityException) {
+                false
             }
         }
-        if (uris.size > ATTACHMENTS_MAX_COUNT) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.attachment_files_limit).format(ATTACHMENTS_MAX_COUNT),
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            onFilesSelected(uris.map { it.toString() })
+        if (fileTooLarge) {
+            Toast.makeText(context, fileTooLargeString, Toast.LENGTH_LONG).show()
         }
+        if (filteredUris.size > maxCount) {
+            Toast.makeText(context, tooManyAttachmentsString, Toast.LENGTH_LONG).show()
+        }
+        onFilesSelected(filteredUris.map { it.toString() })
     }
 }
 
