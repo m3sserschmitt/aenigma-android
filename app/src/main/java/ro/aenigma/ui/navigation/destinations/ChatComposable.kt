@@ -7,6 +7,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.navigation.navDeepLink
 import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.screens.chat.ChatScreen
@@ -22,7 +23,11 @@ fun NavGraphBuilder.chatComposable(
     composable(
         route = Screens.CHAT_PATH,
         arguments = listOf(
-            navArgument(Screens.CHAT_ID_ARG) { type = NavType.StringType })
+            navArgument(Screens.CHAT_ID_ARG) { type = NavType.StringType }
+        ),
+        deepLinks = listOf(
+            navDeepLink { uriPattern = Screens.CHAT_DEEP_LINK }
+        )
     ) { navBackStackEntry ->
 
         val chatId = navBackStackEntry.arguments?.getString(Screens.CHAT_ID_ARG)

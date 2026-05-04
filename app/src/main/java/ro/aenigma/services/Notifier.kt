@@ -18,6 +18,7 @@ import ro.aenigma.activities.AppActivity
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.ui.navigation.Screens
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -63,11 +64,18 @@ class Notifier @Inject constructor(
         notificationManager.createNotificationChannel(notificationChannel)
     }
 
-    private fun createChatNavigationIntent(): PendingIntent {
-        val intent = Intent(context, AppActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+    private fun createChatNavigationIntent(chatId: String): PendingIntent {
+        return PendingIntent.getActivity(
+            context,
+            0,
+            Intent(
+                Intent.ACTION_VIEW,
+                Screens.getChatDeepLink(chatId),
+                context,
+                AppActivity::class.java
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun notify(notification: Notification, id: Int) {
@@ -155,7 +163,6 @@ class Notifier @Inject constructor(
             NEW_MESSAGE_CHANNEL_DESCRIPTION,
             NotificationManager.IMPORTANCE_HIGH
         )
-        val intent = createChatNavigationIntent()
         val text = if (messageEntity.type == MessageType.FILES) {
             context.getString(R.string.files_received)
         } else {
@@ -168,7 +175,7 @@ class Notifier @Inject constructor(
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentIntent(intent)
+            .setContentIntent(createChatNavigationIntent(contact.address))
             .setAutoCancel(true)
             .build()
 
@@ -185,6 +192,7 @@ class Notifier @Inject constructor(
 
     fun enterChat(chatId: String?) {
         _currentChat.value = chatId
+        NotificationManagerCompat.from(context).cancel(chatId.hashCode())
     }
 
     fun exitChat() {

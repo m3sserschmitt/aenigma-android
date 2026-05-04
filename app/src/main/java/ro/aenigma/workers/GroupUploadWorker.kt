@@ -10,6 +10,7 @@ import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
@@ -32,7 +33,6 @@ import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.Notifier
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
-import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 
 @HiltWorker
 class GroupUploadWorker @AssistedInject constructor(
@@ -108,17 +108,20 @@ class GroupUploadWorker @AssistedInject constructor(
         existingGroupDataDto: GroupDataDto,
         memberAddresses: List<String>
     ): GroupDataDto? {
-        val members = existingGroupDataDto.members?.toHashSet() ?: return null
+        val existingAddresses = mutableSetOf<String>()
+        existingGroupDataDto.members?.mapNotNullTo(existingAddresses) { m -> m.address }
+            ?: return null
+        val result = existingGroupDataDto.members.toMutableList()
         memberAddresses.forEach { address ->
-            if (!members.contains(ExportedContactDataFactory.create(address))) {
+            if (!existingAddresses.contains(address)) {
                 repository.local.getContact(address)?.let { c ->
                     c.toExportedContactDataDto().let { ecd ->
-                        members.add(ecd)
+                        result.add(ecd)
                     }
                 }
             }
         }
-        return existingGroupDataDto.withMembers(members.toList()).incrementNonce()
+        return existingGroupDataDto.withMembers(result).incrementNonce()
     }
 
     private suspend fun createGroupData(
@@ -191,8 +194,7 @@ class GroupUploadWorker @AssistedInject constructor(
         return messageSaver.saveOutgoingMessage(
             MessageDtoFactory.createOutgoing(
                 chatId = groupDataDto.address,
-                text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
-                // to null in the future;
+                text = null,
                 type = actionType,
                 actionFor = null
             ),
@@ -241,17 +243,18 @@ class GroupUploadWorker @AssistedInject constructor(
             guard = guard
         ) ?: return Result.failure()
         groupData.members ?: return Result.failure()
-        val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
-            ?: return Result.failure()
+
         val destinations = calculateDestinations(groupData, existingGroupData)
-        val destinationsCount = destinations.count()
-        if (destinationsCount <= 0) {
+        val accessCount = destinations.count()
+        if (accessCount <= 0) {
             return Result.failure()
         }
         val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val response =
-            repository.remote.createSharedData(serializedGroupData, key, destinationsCount)
-                ?: return Result.retry()
+        val torPreference = repository.local.useTor.firstOrNull() == true
+        val orbotPreference = repository.local.useOrbot.firstOrNull() == true
+        val usingTor = torPreference || orbotPreference
+        val response = repository.remote.postGroupData(groupData, accessCount, key, usingTor)
+            ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 
         saveGroupEntity(groupData, response.resourceUrl)

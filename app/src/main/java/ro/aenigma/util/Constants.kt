@@ -33,6 +33,8 @@ class Constants {
         const val GROUPS_TABLE = "Groups"
         const val ATTACHMENTS_TABLE = "Attachments"
 
+        const val APP_DEEP_LINK_SCHEME = "aenigma"
+
         const val APP_DOMAIN = "aenigma.ro"
 
         const val ARTICLES_DOMAIN = "articles.$APP_DOMAIN"

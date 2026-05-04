@@ -41,25 +41,16 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private suspend fun downloadEncryptedFile(url: String): File? {
-        val tempFile = applicationContext.createTempCacheFile(null)
-        return if (repository.remote.getFile(url, tempFile)) {
-            tempFile
+    suspend fun downloadArchive(attachment: AttachmentDto): File? {
+        val url = attachment.url ?: return null
+        val key = CryptoProvider.base64Decode(attachment.passphrase ?: return null) ?: return null
+        val archive = applicationContext.createTempCacheFile(null)
+        return if (repository.remote.getEncryptedFile(url, key, archive)) {
+            archive
         } else {
+            archive.delete()
             null
         }
-    }
-
-    private fun decryptArchive(file: File, passphrase: String?): File? {
-        val key = CryptoProvider.base64Decode(passphrase ?: return null) ?: return null
-        return CryptoProvider.decrypt(file, key)
-    }
-
-    suspend fun downloadAndDecryptArchive(attachment: AttachmentDto): File? {
-        val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
-        val decrypted = decryptArchive(downloaded, attachment.passphrase) ?: return null
-        downloaded.delete()
-        return decrypted
     }
 
     private suspend fun storeAttachment(message: MessageWithAttachmentsDto, archive: File) {
@@ -78,12 +69,12 @@ class AttachmentDownloadWorker @AssistedInject constructor(
         val archive = if (!attachment.path.isNullOrBlank()) {
             val cachedArchive = applicationContext.getCacheFile(attachment.path)
             if (!cachedArchive.exists()) {
-                downloadAndDecryptArchive(attachment)
+                downloadArchive(attachment)
             } else {
                 cachedArchive
             }
         } else {
-            downloadAndDecryptArchive(attachment)
+            downloadArchive(attachment)
         } ?: return null
 
         storeAttachment(message, archive)

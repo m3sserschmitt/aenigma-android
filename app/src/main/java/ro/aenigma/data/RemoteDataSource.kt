@@ -1,6 +1,7 @@
 package ro.aenigma.data
 
-import okhttp3.MediaType
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -10,7 +11,6 @@ import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.publicKeyMatchAddress
-import ro.aenigma.crypto.extensions.SignatureExtensions.getDataFromSignature
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.network.EnigmaApi
@@ -27,8 +27,10 @@ import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.DEFAULT_LANGUAGE_CODE
+import ro.aenigma.util.ContextExtensions.createTempCacheFile
 import ro.aenigma.util.FileExtensions.asBufferedRequestBody
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getBaseUrl
 import ro.aenigma.util.StringExtensions.getTagQueryParameter
@@ -38,6 +40,7 @@ import javax.inject.Singleton
 
 @Singleton
 class RemoteDataSource @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val retrofitProvider: RetrofitProvider,
     private val signatureService: SignatureService
 ) {
@@ -232,32 +235,48 @@ class RemoteDataSource @Inject constructor(
         return getSharedData(retrofitProvider.getApi(baseUrl), tag, expectedPublisherAddress)
     }
 
-    private suspend fun getSharedData(
-        url: String,
-        passphrase: ByteArray?,
-        expectedPublisherAddress: String?
-    ): ByteArray? {
-        val response = getSharedData(url, expectedPublisherAddress) ?: return null
-        val data = response.data.getDataFromSignature(response.publicKey ?: return null)
-        return if (passphrase != null) {
-            CryptoProvider.decrypt(data ?: return null, passphrase)
-        } else {
-            data
-        }
-    }
-
     suspend fun getGroupData(
         url: String,
         existentGroup: GroupDataDto?,
-        passphrase: ByteArray,
+        key: ByteArray,
         expectedPublisherAddress: String
     ): GroupDataDto? {
-        try {
-            val data = getSharedData(url, passphrase, expectedPublisherAddress) ?: return null
-            val groupDataDto = String(data).fromJson<GroupDataDto>() ?: return null
-            return validateGroupData(groupDataDto, existentGroup, expectedPublisherAddress)
+        var groupDataFile: File? = null
+        return try {
+            groupDataFile = context.createTempCacheFile(null)
+            if (getEncryptedFile(url, key, groupDataFile)) {
+                val groupData = groupDataFile.readText().fromJson<GroupDataDto>() ?: return null
+                validateGroupData(groupData, existentGroup, expectedPublisherAddress)
+            } else {
+                null
+            }
         } catch (_: Exception) {
-            return null
+            null
+        } finally {
+            groupDataFile?.delete()
+        }
+    }
+
+    suspend fun postGroupData(
+        groupData: GroupDataDto,
+        accessCount: Int,
+        key: ByteArray,
+        usingTor: Boolean,
+        onProgress: (Int) -> Unit = { }
+    ): CreatedSharedDataDto? {
+        var groupDataFile: File? = null
+        return try {
+            val serializedGroupData = groupData.toCanonicalJson()?.toByteArray() ?: return null
+
+            groupDataFile = context.createTempCacheFile(null)
+            groupDataFile.outputStream().buffered()
+                .use { outputStream -> outputStream.write(serializedGroupData) }
+
+            return postEncryptedFile(groupDataFile, accessCount, key, usingTor, onProgress)
+        } catch (_: Exception) {
+            null
+        } finally {
+            groupDataFile?.delete()
         }
     }
 
@@ -286,6 +305,22 @@ class RemoteDataSource @Inject constructor(
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    suspend fun postEncryptedFile(file: File, accessCount: Int, key: ByteArray, usingTor: Boolean, onProgress: (Int) -> Unit = { }): CreatedSharedDataDto? {
+        var encryptedFile: File? = null
+        return try {
+            encryptedFile = context.createTempCacheFile(null)
+            if (CryptoProvider.encrypt(file, encryptedFile, key)) {
+                postFile(encryptedFile, accessCount, usingTor, onProgress)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        } finally {
+            encryptedFile?.delete()
         }
     }
 
@@ -322,6 +357,18 @@ class RemoteDataSource @Inject constructor(
             }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    suspend fun getEncryptedFile(url: String, key: ByteArray, outFile: File): Boolean {
+        var encryptedFile: File? = null
+        return try {
+            encryptedFile = context.createTempCacheFile(null)
+            getFile(url, encryptedFile) && CryptoProvider.decrypt(encryptedFile, outFile, key)
+        } catch (_: Exception) {
+            false
+        } finally {
+            encryptedFile?.delete()
         }
     }
 

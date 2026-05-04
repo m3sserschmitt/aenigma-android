@@ -37,11 +37,7 @@ object CryptoProvider {
 
     private external fun initSignature(privateKey: String, passphrase: String): Boolean
 
-    private external fun encrypt(publicKey: String, plaintext: ByteArray): ByteArray?
-
     private external fun encryptSymmetric(key: ByteArray, plaintext: ByteArray): ByteArray?
-
-    private external fun decrypt(ciphertext: ByteArray): ByteArray?
 
     private external fun decryptSymmetric(key: ByteArray, ciphertext: ByteArray): ByteArray?
 
@@ -95,23 +91,6 @@ object CryptoProvider {
     }
 
     @JvmStatic
-    fun encryptEx(publicKey: String, plaintext: ByteArray): String? {
-        if (!publicKey.isValidPublicKey()) {
-            return null
-        }
-        val encryptedData = encrypt(publicKey, plaintext) ?: return null
-        return base64Encode(encryptedData)
-    }
-
-    @JvmStatic
-    fun decryptEx(ciphertext: String): ByteArray? {
-        if (!ciphertext.isValidBase64()) {
-            return null
-        }
-        return decrypt(base64Decode(ciphertext) ?: return null)
-    }
-
-    @JvmStatic
     fun signEx(data: ByteArray): String? {
         val signature = sign(data)
         return base64Encode(signature ?: return null)
@@ -151,38 +130,35 @@ object CryptoProvider {
     }
 
     @JvmStatic
-    fun encrypt(file: File, key: ByteArray): File? {
+    fun encrypt(file: File, outFile: File, key: ByteArray): Boolean {
         var encryptedData: ByteArray? = null
         return try {
-            encryptedData = encrypt(file.readBytes(), key) ?: return null
-            val outFile = File(file.parentFile, "${file.name}_encrypted")
-            outFile.outputStream().use { output ->
-                output.write(encryptedData)
-            }
-            outFile
+            encryptedData = encrypt(file.readBytes(), key) ?: return false
+            outFile.outputStream().buffered().use { output -> output.write(encryptedData) }
+            true
         } catch (_: Exception) {
-            null
+            false
         } finally {
             encryptedData?.fill(0)
         }
     }
 
     @JvmStatic
-    fun decrypt(file: File, key: ByteArray): File? {
+    fun decrypt(file: File, outFile: File, key: ByteArray): Boolean {
+        var decryptedData: ByteArray? = null
         return try {
-            val decryptedData = decrypt(file.readBytes(), key) ?: return null
-            val outFile = File(file.parentFile, "${file.name}_decrypted")
-            outFile.outputStream().use { output ->
-                output.write(decryptedData)
-            }
-            outFile
+            decryptedData = decrypt(file.readBytes(), key) ?: return false
+            outFile.outputStream().buffered().use { output -> output.write(decryptedData) }
+            true
         } catch (_: Exception) {
-            null
+            false
+        } finally {
+            decryptedData?.fill(0)
         }
     }
 
     @JvmStatic
-    fun decrypt(ciphertext: ByteArray, key: ByteArray, ): ByteArray? {
+    fun decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray? {
         return decryptSymmetric(key, ciphertext)
     }
 
@@ -256,16 +232,6 @@ object CryptoProvider {
         } catch (_: Exception) {
             return null
         }
-    }
-
-    @JvmStatic
-    fun masterKeyEncryptEx(plaintext: ByteArray): String? {
-        return base64Encode(masterKeyEncrypt(plaintext) ?: return null)
-    }
-
-    @JvmStatic
-    fun masterKeyDecryptEx(ciphertext: String): ByteArray? {
-        return masterKeyDecrypt(base64Decode(ciphertext) ?: return null)
     }
 
     @JvmStatic

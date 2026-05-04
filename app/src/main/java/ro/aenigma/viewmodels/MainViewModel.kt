@@ -563,7 +563,7 @@ class MainViewModel @Inject constructor(
                 val metadata = newPostSheetState.value.toAttachmentsMetadata()
                 val metadataUri = repository.local.saveMetadata(metadata).toString()
                 val articleUri =
-                    repository.local.saveText(newPostSheetState.value.content).toString()
+                    repository.local.saveBroadcastText(newPostSheetState.value.content).toString()
                 val attachments = newPostSheetState.value.fileUris + metadataUri + articleUri
                 val message = MessageDtoFactory.createOutgoing(
                     chatId = BROADCAST_CONTACT_ADDRESS,

@@ -158,21 +158,20 @@ class MessageSenderWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateAttachment(attachment)
 
-        val passphrase = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val encryptedFile = CryptoProvider.encrypt(archive, passphrase) ?: return null
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
         val useTor = repository.local.useTor.firstOrNull() == true
         val useOrbot = repository.local.useOrbot.firstOrNull() == true
+        val usingTor = useOrbot || useTor
         val createdSharedData =
-            repository.remote.postFile(encryptedFile, accessCount, useOrbot || useTor) { progress ->
+            repository.remote.postEncryptedFile(archive, accessCount, key, usingTor) { progress ->
                 notifier.notifyUploadProgress(progress, id.hashCode())
             }
-        encryptedFile.delete()
         createdSharedData?.resourceUrl ?: return null
         archive.delete()
 
         attachment = attachment.copy(
             url = createdSharedData.resourceUrl,
-            passphrase = CryptoProvider.base64Encode(passphrase)
+            passphrase = CryptoProvider.base64Encode(key)
         )
         repository.local.insertOrUpdateAttachment(attachment)
 

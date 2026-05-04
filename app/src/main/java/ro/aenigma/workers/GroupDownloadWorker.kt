@@ -86,8 +86,7 @@ class GroupDownloadWorker @AssistedInject constructor(
             repository.local.getMessageWithAttachments(messageId)
         else return Result.failure()
         message?.attachment?.url ?: return Result.failure()
-        val passphrase =
-            (message.attachment.passphrase ?: message.message.text) ?: return Result.failure()
+        val passphrase = message.attachment.passphrase ?: return Result.failure()
         message.message.senderAddress ?: return Result.failure()
 
         val existentGroup =
@@ -95,11 +94,10 @@ class GroupDownloadWorker @AssistedInject constructor(
         val groupData = repository.remote.getGroupData(
             url = message.attachment.url,
             existentGroup = existentGroup,
-            passphrase = CryptoProvider.base64Decode(passphrase)
-                ?: return Result.failure(),
+            key = CryptoProvider.base64Decode(passphrase) ?: return Result.failure(),
             expectedPublisherAddress = message.message.senderAddress
         ) ?: return Result.retry()
-        repository.remote.incrementSharedDataAccessCount(message.attachment.url)
+        repository.remote.incrementFileAccessCount(message.attachment.url)
         createContactEntities(groupData, message.attachment.url)
         return Result.success()
     }

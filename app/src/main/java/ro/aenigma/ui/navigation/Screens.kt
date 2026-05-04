@@ -2,6 +2,7 @@ package ro.aenigma.ui.navigation
 
 import android.net.Uri
 import androidx.navigation.NavController
+import ro.aenigma.util.Constants.Companion.APP_DEEP_LINK_SCHEME
 import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import ro.aenigma.util.QrCodeScannerState
 import java.util.Locale
@@ -29,6 +30,7 @@ class Screens(navController: NavController) {
                     "$URI_ARG={$URI_ARG}&" +
                     "$MESSAGE_ID_ARG={$MESSAGE_ID_ARG}"
         const val CHAT_PATH = "$CHAT_ROOT_PATH/{$CHAT_ID_ARG}"
+        const val CHAT_DEEP_LINK = "$APP_DEEP_LINK_SCHEME://$CHAT_PATH"
         const val ADD_CONTACTS_PATH =
             "$ADD_CONTACTS_ROOT_PATH?" +
                     "$CONTACT_ID_ARG={$CONTACT_ID_ARG}&" +
@@ -47,6 +49,11 @@ class Screens(navController: NavController) {
         @JvmStatic
         fun getChatScreenRoute(chatId: String): String {
             return Uri.Builder().path(CHAT_ROOT_PATH).appendPath(chatId).build().toString()
+        }
+
+        @JvmStatic
+        fun getChatDeepLink(chatId: String): Uri {
+            return Uri.Builder().scheme(APP_DEEP_LINK_SCHEME).authority(CHAT_ROOT_PATH).appendPath(chatId).build()
         }
 
         @JvmStatic
