@@ -6,6 +6,8 @@ import ro.aenigma.data.database.MessageEntity
 import ro.aenigma.models.ArtifactDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.MessageTypeExtensions.isGroupCreateOrUpdate
+import ro.aenigma.models.extensions.MessageTypeExtensions.isGroupMemberLeave
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
@@ -31,7 +33,7 @@ object MessageDtoExtensions {
     }
 
     @JvmStatic
-    fun MessageDto.getMessageTextByAction(context: Context): String {
+    fun MessageDto.getMessageTextByAction(context: Context): String? {
         return when (type) {
             MessageType.DELETE -> context.getString(R.string.message_deleted)
             MessageType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
@@ -40,8 +42,12 @@ object MessageDtoExtensions {
             MessageType.GROUP_MEMBER_REMOVE -> context.getString(R.string.removed_channel_members)
             MessageType.GROUP_MEMBER_LEAVE -> context.getString(R.string.channel_member_left)
             MessageType.GROUP_RENAMED -> context.getString(R.string.channel_renamed)
-            MessageType.FILES -> if (text.isNullOrBlank()) context.getString(R.string.files) else text
-            MessageType.TEXT, MessageType.REPLY, null -> text.toString()
+            MessageType.FILES -> context.getString(R.string.files)
+            MessageType.TEXT, MessageType.REPLY, null -> if (text.isNullOrBlank()) {
+                null
+            } else {
+                text
+            }
         }
     }
 
@@ -66,16 +72,28 @@ object MessageDtoExtensions {
     }
 
     @JvmStatic
-    fun MessageDto.isGroupUpdate(): Boolean {
-        return type == MessageType.GROUP_CREATE
-                || type == MessageType.GROUP_RENAMED
-                || type == MessageType.GROUP_MEMBER_ADD
-                || type == MessageType.GROUP_MEMBER_REMOVE
+    fun MessageDto.isGroupCreateOrUpdate(): Boolean {
+        return type.isGroupCreateOrUpdate()
+    }
+
+    @JvmStatic
+    fun MessageDto.isGroupMemberLeave(): Boolean {
+        return type.isGroupMemberLeave()
+    }
+
+    @JvmStatic
+    fun MessageDto.isDeleteAll(): Boolean {
+        return type == MessageType.DELETE_ALL
     }
 
     @JvmStatic
     fun MessageDto.isDelete(): Boolean {
-        return type == MessageType.DELETE || type == MessageType.DELETE_ALL
+        return type == MessageType.DELETE
+    }
+
+    @JvmStatic
+    fun MessageDto.isDeleteOrDeleteAll(): Boolean {
+        return isDeleteAll() || isDelete()
     }
 
     @JvmStatic

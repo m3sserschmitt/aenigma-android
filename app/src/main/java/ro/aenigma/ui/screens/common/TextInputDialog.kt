@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -85,7 +86,7 @@ fun DialogContentTemplate(
     modifier: Modifier = Modifier,
     title: String,
     body: String = "",
-    content: @Composable () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
     dismissible: Boolean = true,
     positiveButtonVisible: Boolean = true,
     negativeButtonText: String = stringResource(id = R.string.dismiss),

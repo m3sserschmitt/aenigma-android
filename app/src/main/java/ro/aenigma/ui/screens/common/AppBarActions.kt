@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 
 @Composable
 fun CloseAppBarAction(
@@ -156,14 +156,14 @@ fun ForwardAttachmentsAppBarAction(
 @Composable
 fun ConnectionStatusAppBarAction(
     tint: Color = Color.Unspecified,
-    connectionStatus: SignalRStatus
+    connectionStatus: ClientStatus
 ) {
     IndeterminateCircularIndicator(
         size = 18.dp,
         color = tint,
         textColor = tint,
-        visible = connectionStatus greaterOrEqualThan SignalRStatus.NotConnected
-                && connectionStatus smallerThan SignalRStatus.Authenticated,
+        visible = connectionStatus greaterOrEqualThan ClientStatus.NotConnected
+                && connectionStatus smallerThan ClientStatus.Authenticated,
         text = stringResource(id = R.string.connecting),
         textStyle = MaterialTheme.typography.bodyMedium
     )

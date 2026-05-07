@@ -10,6 +10,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,6 +23,7 @@ import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.ContactDtoExtensions.withName
+import ro.aenigma.models.extensions.GroupDtoExtensions.removeMember
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.factories.MessageDtoFactory
@@ -56,6 +58,8 @@ class ChatViewModel @Inject constructor(
         sortedSetOf(_conversationSupportListComparator)
 
     private val _messageSearchQuery = MutableStateFlow("")
+
+    private val _contactsSearchQuery = MutableStateFlow<String?>(null)
 
     private val _contacts =
         MutableStateFlow<RequestState<List<ContactDto>>>(RequestState.Idle)
@@ -93,21 +97,17 @@ class ChatViewModel @Inject constructor(
 
     val contacts: StateFlow<RequestState<List<ContactDto>>> = _contacts
 
-    fun searchContacts(searchQuery: String) {
-        viewModelScope.launch(ioDispatcher) {
-            _contacts.value = RequestState.Loading
-            try {
-                _contacts.value = RequestState.Success(
-                    repository.local.searchContacts(searchQuery))
-            } catch (ex: Exception) {
-                _contacts.value = RequestState.Error(ex)
-            }
-        }
+    init {
+        collectSearches()
+        collectContactsSearches()
     }
 
     fun collectSelectedContact(chatId: String?) {
-        if(chatId.isNullOrBlank()) {
-            _conversation.value = RequestState.Error(Exception())
+        if (chatId.isNullOrBlank()) {
+            _selectedContact.value = RequestState.Error(Exception())
+            return
+        }
+        if (_selectedContact.value !is RequestState.Idle) {
             return
         }
         viewModelScope.launch(ioDispatcher) {
@@ -145,8 +145,8 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun collectLastDeletedMessage(chatId: String?) {
-        if(chatId.isNullOrBlank()) {
+    private fun collectLastDeletedMessage(chatId: String?) {
+        if (chatId.isNullOrBlank()) {
             _conversation.value = RequestState.Error(Exception())
             return
         }
@@ -168,7 +168,6 @@ class ChatViewModel @Inject constructor(
 
     fun loadConversation(chatId: String?) {
         collectConversation(chatId)
-        collectSearches(chatId)
         collectLastDeletedMessage(chatId)
     }
 
@@ -189,17 +188,17 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun loadAttachmentDownloadStatus(message: MessageWithDetailsDto) {
-        if(message.message.type == MessageType.FILES && message.message.files.isNullOrEmpty()) {
+        if (message.message.type == MessageType.FILES && message.message.files.isNullOrEmpty()) {
             viewModelScope.launch(ioDispatcher) {
                 workManager.getWorkInfosForUniqueWorkFlow(
                     uniqueWorkName = AttachmentDownloadWorker.getUniqueWorkName(message.message.id)
                 ).collect { workInfos ->
-                    if(workInfos.isNotEmpty()) {
+                    if (workInfos.isNotEmpty()) {
                         val state = workInfos.last().state
                         message.message.attachmentDownloadStatus.value = state
-                        if(state == WorkInfo.State.SUCCEEDED) {
+                        if (state == WorkInfo.State.SUCCEEDED) {
                             val m = repository.local.getMessage(message.message.id)
-                            if(m != null && m.files != null) {
+                            if (m != null && m.files != null) {
                                 message.message.filesLate.value = m.files
                             }
                         }
@@ -277,8 +276,11 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun collectConversation(chatId: String?) {
-        if(chatId.isNullOrBlank()) {
+        if (chatId.isNullOrBlank()) {
             _conversation.value = RequestState.Error(Exception())
+            return
+        }
+        if (_conversation.value != RequestState.Idle) {
             return
         }
         viewModelScope.launch(ioDispatcher) {
@@ -302,24 +304,41 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun collectSearches(chatId: String?) {
-        if(chatId.isNullOrBlank()) {
-            _conversation.value = RequestState.Error(Exception())
-            return
-        }
+    private fun collectSearches() {
         viewModelScope.launch(ioDispatcher) {
-            _messageSearchQuery.collect { query ->
+            _messageSearchQuery.drop(1).collect { query ->
                 _conversation.value = RequestState.Loading
                 try {
-                    val searchResult =
-                        repository.local.getConversationPage(chatId, getLastMessageId(), query)
-                    synchronized(_conversationSortedSet) {
-                        clearConversationSet()
-                        addItemsToConversation(searchResult)
-                        setConversationReadSuccess()
+                    val chatId = getSelectedContactEntity()?.address
+                    if (!chatId.isNullOrBlank()) {
+                        val searchResult =
+                            repository.local.getConversationPage(chatId, getLastMessageId(), query)
+                        synchronized(_conversationSortedSet) {
+                            clearConversationSet()
+                            addItemsToConversation(searchResult)
+                            setConversationReadSuccess()
+                        }
                     }
                 } catch (ex: Exception) {
                     _conversation.value = RequestState.Error(ex)
+                }
+            }
+        }
+    }
+
+    private fun collectContactsSearches() {
+        viewModelScope.launch(ioDispatcher) {
+            _contactsSearchQuery.drop(1).collect { query ->
+                try {
+                    _contacts.value = RequestState.Loading
+                    _contacts.value = RequestState.Success(
+                        repository.local.searchContacts(
+                            searchQuery = query ?: "",
+                            type = ContactType.CONTACT.toString()
+                        )
+                    )
+                } catch (ex: Exception) {
+                    _contacts.value = RequestState.Error(ex)
                 }
             }
         }
@@ -352,6 +371,10 @@ class ChatViewModel @Inject constructor(
 
     fun searchConversation(searchQuery: String) {
         _messageSearchQuery.update { searchQuery }
+    }
+
+    fun searchContacts(searchQuery: String) {
+        _contactsSearchQuery.update { searchQuery }
     }
 
     fun markConversationAsRead() {
@@ -407,9 +430,9 @@ class ChatViewModel @Inject constructor(
     }
 
     fun onMessageClicked(message: MessageWithDetailsDto) {
-        if(message.message.isNotSent()) {
+        if (message.message.isNotSent()) {
             resendMessage(message)
-        } else if(message.message.attachmentsNotAvailable()) {
+        } else if (message.message.attachmentsNotAvailable()) {
             retryAttachmentDownload(message)
         }
     }
@@ -424,12 +447,12 @@ class ChatViewModel @Inject constructor(
         workManager.downloadAttachment(messageId = message.message.id)
     }
 
-    fun editGroupMembers(members: List<String>, action: MessageType) {
+    fun editGroupMembers(members: List<ContactDto>, action: MessageType) {
         val group = getSelectedGroupEntity()
         if (group != null && group.groupData.name != null) {
             workManager.createOrUpdateGroup(
                 groupName = group.groupData.name,
-                members = members,
+                members = members.map { member -> member.address },
                 existingGroupAddress = group.address,
                 actionType = action
             )
@@ -438,6 +461,11 @@ class ChatViewModel @Inject constructor(
 
     fun leaveGroup() {
         viewModelScope.launch(ioDispatcher) {
+            localAddress?.let { localAddress ->
+                getSelectedContactWithGroup()?.group?.let { group ->
+                    repository.local.insertOrUpdateGroup(group.removeMember(localAddress))
+                }
+            }
             postToDatabase(MessageType.GROUP_MEMBER_LEAVE, null, null)
         }
     }

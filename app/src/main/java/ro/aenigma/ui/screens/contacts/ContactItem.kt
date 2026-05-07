@@ -1,6 +1,7 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithLastMessageDto
+import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
@@ -40,12 +42,13 @@ import java.time.ZonedDateTime
 
 @Composable
 fun ContactItem(
-    onItemSelected: (ContactWithLastMessageDto) -> Unit,
-    onItemDeselected: (ContactWithLastMessageDto) -> Unit,
-    onClick: (ContactWithLastMessageDto) -> Unit,
-    contact: ContactWithLastMessageDto,
-    isSelectionMode: Boolean,
-    isSelected: Boolean
+    contact: ContactDto,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onItemSelected: (ContactDto) -> Unit = { },
+    onItemDeselected: (ContactDto) -> Unit = { },
+    onClick: (ContactDto) -> Unit = { },
+    additionalInfo: @Composable ColumnScope.() -> Unit = { }
 ) {
     Surface(
         modifier = Modifier
@@ -86,7 +89,7 @@ fun ContactItem(
                 }
             }
 
-            if(contact.contact.type == ContactType.CONTACT)
+            if(contact.type == ContactType.CONTACT)
             {
                 Icon(
                     modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
@@ -107,7 +110,7 @@ fun ContactItem(
                 )
             }
 
-            val contactNameTextWeight = if (contact.contact.hasNewMessage) 8f else 9f
+            val contactNameTextWeight = if (contact.hasNewMessage) 8f else 9f
 
             Column(
                 modifier = Modifier
@@ -115,27 +118,50 @@ fun ContactItem(
                     .padding(start = 8.dp)
             ) {
                 Text(
-                    text = contact.contact.name.toString(),
+                    text = contact.name.toString(),
                     style = MaterialTheme.typography.headlineSmall,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 ContactGuardHost(
-                    contact = contact.contact
-                )
-                ConversationPreview(
                     contact = contact
                 )
+                additionalInfo()
             }
 
-            if (contact.contact.hasNewMessage) {
+            if (contact.hasNewMessage) {
                 Icon(
                     modifier = Modifier.weight(1f).alpha(.5f),
                     imageVector = Icons.Filled.Notifications,
-                    contentDescription = stringResource(id = R.string.contact),
+                    contentDescription = stringResource(id = R.string.new_message),
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun ContactWithChatPreviewItem(
+    contact: ContactWithLastMessageDto,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onItemSelected: (ContactWithLastMessageDto) -> Unit = { },
+    onItemDeselected: (ContactWithLastMessageDto) -> Unit = { },
+    onClick: (ContactWithLastMessageDto) -> Unit = { },
+) {
+    ContactItem(
+        contact = contact.contact,
+        isSelectionMode = isSelectionMode,
+        isSelected = isSelected,
+        onItemSelected = { onItemSelected(contact) },
+        onItemDeselected = { onItemDeselected(contact) },
+        onClick = { onClick(contact) }
+    ) {
+        if(contact.lastMessage != null) {
+            ConversationPreview(
+                message = contact.lastMessage
+            )
         }
     }
 }
@@ -159,33 +185,35 @@ fun ContactGuardHost(
 
 @Composable
 fun ConversationPreview(
-    contact: ContactWithLastMessageDto
+    message: MessageDto
 ) {
-    if (contact.lastMessage != null && !contact.lastMessage.deleted) {
+    if (!message.deleted) {
         val context = LocalContext.current
-        val messagePreview = remember(key1 = contact.lastMessage) {
-            if (!contact.lastMessage.incoming) {
-                context.getString(R.string.you) + " " +
-                        contact.lastMessage.getMessageTextByAction(context)
+        val youString = stringResource(id = R.string.you)
+        val text = remember(key1 = message) {
+            if (!message.incoming) {
+                "$youString ${message.getMessageTextByAction(context)}"
             } else {
-                contact.lastMessage.getMessageTextByAction(context)
+                message.getMessageTextByAction(context)
             }
         }
-        Text(
-            modifier = Modifier.alpha(.75f),
-            text = messagePreview,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        if (!text.isNullOrBlank()) {
+            Text(
+                modifier = Modifier.alpha(.75f),
+                text = text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
     }
 }
 
 @Composable
 @Preview
-fun ContactItemPreview() {
-    ContactItem(
+fun ContactWithChatPreviewItemPreview() {
+    ContactWithChatPreviewItem(
         contact = ContactWithLastMessageDto(
             ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",
@@ -210,9 +238,9 @@ fun ContactItemPreview() {
 
 @Composable
 @Preview
-fun ContactItemSelectedPreview()
+fun ContactWithChatPreviewItemSelectedPreview()
 {
-    ContactItem(
+    ContactWithChatPreviewItem(
         contact = ContactWithLastMessageDto(
             ContactDtoFactory.createContact(
                 address = "12345-5678-5678-12345",

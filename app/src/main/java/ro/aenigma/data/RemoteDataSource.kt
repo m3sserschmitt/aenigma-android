@@ -78,11 +78,12 @@ class RemoteDataSource @Inject constructor(
             existentGroup: GroupDataDto?,
             expectedPublisherAddress: String
         ): GroupDataDto? {
-            if (groupDataDto.name == null || groupDataDto.address == null || groupDataDto.members == null
-                || groupDataDto.nonce == null
-                || groupDataDto.members.isEmpty()
-                || groupDataDto.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
+            if (groupDataDto.name.isNullOrBlank()
+                || groupDataDto.address.isNullOrBlank()
+                || groupDataDto.members.isNullOrEmpty()
                 || groupDataDto.admins.isNullOrEmpty()
+                || groupDataDto.nonce == null
+                || groupDataDto.members.any { item -> item.address != item.publicKey.getAddressFromPublicKey() }
                 || groupDataDto.admins.any { item -> !item.isValidAddress() }
             ) {
                 return null
@@ -92,10 +93,9 @@ class RemoteDataSource @Inject constructor(
             val newGroup = existentGroup == null
             val nonceIsGreaterThanPrevious =
                 !newGroup && groupDataDto.nonce > (existentGroup.nonce ?: Long.MAX_VALUE)
-            val adminModifiesGroup =
-                !newGroup && groupDataDto.admins.contains(expectedPublisherAddress) && nonceIsGreaterThanPrevious
-            return when {
-                publisherIsAdmin && (newGroup || adminModifiesGroup) -> groupDataDto
+            val adminModifiesGroup = !newGroup && publisherIsAdmin && nonceIsGreaterThanPrevious
+            return when (publisherIsAdmin && (newGroup || adminModifiesGroup)) {
+                true -> groupDataDto
                 else -> null
             }
         }
@@ -308,7 +308,13 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun postEncryptedFile(file: File, accessCount: Int, key: ByteArray, usingTor: Boolean, onProgress: (Int) -> Unit = { }): CreatedSharedDataDto? {
+    suspend fun postEncryptedFile(
+        file: File,
+        accessCount: Int,
+        key: ByteArray,
+        usingTor: Boolean,
+        onProgress: (Int) -> Unit = { }
+    ): CreatedSharedDataDto? {
         var encryptedFile: File? = null
         return try {
             encryptedFile = context.createTempCacheFile(null)

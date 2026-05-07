@@ -25,7 +25,7 @@ import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.GuardDtoExtensions.getHostname
-import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDeleteOrDeleteAll
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
@@ -94,7 +94,13 @@ class MessageSenderWorker @AssistedInject constructor(
 
     private suspend fun saveAsSent(message: MessageDto) {
         repository.local.updateMessage(
-            message.markAsSent().run { if (isDelete()) markAsDeleted() else this })
+            message.markAsSent().run {
+                if (isDeleteOrDeleteAll()) {
+                    markAsDeleted()
+                } else {
+                    this
+                }
+            })
     }
 
     private suspend fun sendMessage(

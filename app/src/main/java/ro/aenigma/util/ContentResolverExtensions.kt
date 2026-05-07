@@ -27,6 +27,6 @@ object ContentResolverExtensions {
             ?.substringAfter('.', "")
             ?.takeIf { ext ->
                 ext.isNotBlank()
-            }
+            }?.lowercase()
     }
 }

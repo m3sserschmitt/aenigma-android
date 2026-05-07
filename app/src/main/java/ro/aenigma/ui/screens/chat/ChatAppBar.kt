@@ -19,7 +19,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.factories.ContactDtoFactory
@@ -41,7 +41,7 @@ fun ChatAppBar(
     contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -103,7 +103,7 @@ fun ChatAppBar(
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                     ReloadAppBarAction(
-                        visible = connectionStatus is SignalRStatus.Error.Aborted,
+                        visible = connectionStatus is ClientStatus.Error.Aborted,
                         tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onRetryConnection
                     )
@@ -220,7 +220,7 @@ fun DefaultChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = false,
-        connectionStatus = SignalRStatus.NotConnected,
+        connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroupDto(
                 ContactDtoFactory.createContact(
@@ -257,7 +257,7 @@ fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = true,
-        connectionStatus = SignalRStatus.NotConnected,
+        connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroupDto(
                 ContactDtoFactory.createContact(

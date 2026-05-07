@@ -12,6 +12,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.ClientAction
 import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.GenerateNewsfeedWorker
 import ro.aenigma.workers.GraphReaderWorker
@@ -19,7 +20,6 @@ import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
-import ro.aenigma.workers.SignalRWorkerAction
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -60,7 +60,7 @@ object WorkManagerExtensions {
 
     @JvmStatic
     fun getInvokeClientRequest(
-        actions: SignalRWorkerAction
+        actions: ClientAction
     ): OneTimeWorkRequest {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -210,7 +210,7 @@ object WorkManagerExtensions {
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val actions = SignalRWorkerAction.Connect() and SignalRWorkerAction.Pull()
+        val actions = ClientAction.Connect and ClientAction.Pull
         val parameters =
             Data.Builder().putInt(SignalRClientWorker.ACTION_ARG, actions.value).build()
 
@@ -230,7 +230,7 @@ object WorkManagerExtensions {
 
     @JvmStatic
     fun WorkManager.invokeClient(
-        actions: SignalRWorkerAction
+        actions: ClientAction
     ) {
         enqueueUniqueWork(
             SignalRClientWorker.UNIQUE_ONE_TIME_REQUEST,
@@ -241,7 +241,7 @@ object WorkManagerExtensions {
 
     @JvmStatic
     fun WorkManager.syncGraphAndInvokeClient(
-        actions: SignalRWorkerAction
+        actions: ClientAction
     ) {
         beginUniqueWork(
             SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME,

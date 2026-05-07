@@ -126,46 +126,21 @@ private fun getHost(hostname: String?, onionService: String?): String {
 }
 
 @Composable
-fun SheetPlaceholderContainer(
-    content: @Composable () -> Unit
+fun SheetEmptySearchResult(
+    modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = Modifier.fillMaxWidth()
-            .height(IntrinsicSize.Min)
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun SheetLoadingScreen() {
-    SheetPlaceholderContainer {
-        LoadingScreen()
-    }
-}
-
-@Composable
-fun SheetErrorScreen() {
-    SheetPlaceholderContainer {
-        GenericErrorScreen()
-    }
-}
-
-@Composable
-fun SheetEmptySearchResult() {
-    SheetPlaceholderContainer {
-        SimpleInfoScreen(
-            message = stringResource(
-                id = R.string.no_server_found
-            ),
-            icon = painterResource(
-                id = R.drawable.ic_storage
-            ),
-            contentDescription = stringResource(
-                id = R.string.no_server_found
-            )
+    SimpleInfoScreen(
+        modifier = modifier,
+        message = stringResource(
+            id = R.string.no_server_found
+        ),
+        icon = painterResource(
+            id = R.drawable.ic_storage
+        ),
+        contentDescription = stringResource(
+            id = R.string.no_server_found
         )
-    }
+    )
 }
 
 @Composable
@@ -256,17 +231,17 @@ fun SheetContent(
                     },
                 )
             } else {
-                SheetEmptySearchResult()
+                SheetEmptySearchResult(modifier = modifier)
             }
         }
 
         is RequestState.Idle,
         is RequestState.Loading -> {
-            SheetLoadingScreen()
+            LoadingScreen(modifier = modifier)
         }
 
         is RequestState.Error -> {
-            SheetErrorScreen()
+            GenericErrorScreen(modifier = modifier)
         }
     }
 }

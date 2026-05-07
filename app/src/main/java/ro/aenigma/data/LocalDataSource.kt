@@ -181,8 +181,8 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get().getWithMessages().map { item -> item.toDto() }
     }
 
-    suspend fun searchContacts(searchQuery: String = ""): List<ContactDto> {
-        return contactsDao.get().search(searchQuery).map { item -> item.toDto() }
+    suspend fun searchContacts(searchQuery: String = "", type: String = ""): List<ContactDto> {
+        return contactsDao.get().search(searchQuery, type).map { item -> item.toDto() }
     }
 
     suspend fun getContact(address: String): ContactDto? {

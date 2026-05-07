@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.contacts
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -35,7 +36,7 @@ import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.ServersSheetStateDto
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.enums.ServersSheetSection
@@ -156,7 +157,7 @@ fun ContactsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
     contacts: RequestState<List<ContactWithLastMessageDto>>,
     servers: RequestState<List<ServerInfoDto>>,
     serversHistory: RequestState<List<ServerInfoDto>>,
@@ -412,12 +413,13 @@ fun ContactsScreen(
     SnackBar(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
-        visible = connectionStatus is SignalRStatus.Error.Aborted,
+        visible = connectionStatus is ClientStatus.Error.Aborted,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
 
     BottomSheetScaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         scaffoldState = bottomSheetScaffoldState,
         sheetPeekHeight = if(isForwardMode) { 0.dp } else { BOTTOM_SHEET_PEEK_HEIGHT },
         sheetContent = {
@@ -608,7 +610,7 @@ fun ContactsFab(
 @Composable
 fun ContactsScreenPreview() {
     ContactsScreen(
-        connectionStatus = SignalRStatus.Connected,
+        connectionStatus = ClientStatus.Connected,
         notificationsAllowed = true,
         nameDialogVisible = false,
         useTor = true,

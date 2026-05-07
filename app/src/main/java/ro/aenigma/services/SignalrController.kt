@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import ro.aenigma.models.enums.TorStatus
-import ro.aenigma.workers.SignalRWorkerAction
 import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.syncGraphAndInvokeClient
 import javax.inject.Inject
@@ -24,36 +23,36 @@ class SignalrController @Inject constructor(
 
     fun enqueueSyncGraphAndReconnect() {
         workManager.syncGraphAndInvokeClient(
-            actions = SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
+            actions = ClientAction.Disconnect and ClientAction.connectPullCleanup()
         )
     }
 
     fun enqueueDisconnect() {
         workManager.invokeClient(
-            actions = SignalRWorkerAction.Disconnect()
+            actions = ClientAction.Disconnect
         )
     }
 
-    private fun enqueue(clientStatus: SignalRStatus) {
+    private fun enqueue(clientStatus: ClientStatus) {
         when (clientStatus) {
-            is SignalRStatus.Error.Aborted -> {
+            is ClientStatus.Error.Aborted -> {
             }
 
-            SignalRStatus.NotConnected,
-            is SignalRStatus.Error.ConnectionRefused,
-            is SignalRStatus.Error.Disconnected,
-            is SignalRStatus.Error -> {
+            ClientStatus.NotConnected,
+            is ClientStatus.Error.ConnectionRefused,
+            is ClientStatus.Error.Disconnected,
+            is ClientStatus.Error -> {
                 enqueueSyncGraphAndReconnect()
             }
 
-            SignalRStatus.Authenticated,
-            SignalRStatus.Authenticating,
-            SignalRStatus.Clean,
-            SignalRStatus.Cleaning,
-            SignalRStatus.Connected,
-            SignalRStatus.Connecting,
-            SignalRStatus.Pulling,
-            SignalRStatus.Synchronized -> {
+            ClientStatus.Authenticated,
+            ClientStatus.Authenticating,
+            ClientStatus.Clean,
+            ClientStatus.Cleaning,
+            ClientStatus.Connected,
+            ClientStatus.Connecting,
+            ClientStatus.Pulling,
+            ClientStatus.Synchronized -> {
             }
         }
     }

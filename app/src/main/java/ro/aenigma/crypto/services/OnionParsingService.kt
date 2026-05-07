@@ -50,13 +50,13 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
                 if (decryptedData.size < Constants.ADDRESS_SIZE_BYTES + 1) {
                     return null
                 }
-                val address =
+                val chatId =
                     HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE_BYTES))
                 val content =
                     String(decryptedData.sliceArray(Constants.ADDRESS_SIZE_BYTES until decryptedData.size))
                 val dateReceivedOnServer = ZonedDateTime.parse(pendingMessageDto.dateReceived)
                     .withZoneSameInstant(ZoneId.systemDefault())
-                ParsedMessageDto(address, content, dateReceivedOnServer, pendingMessageDto.uuid)
+                ParsedMessageDto(chatId, content, dateReceivedOnServer, pendingMessageDto.uuid)
             } catch (_: Exception) {
                 null
             }

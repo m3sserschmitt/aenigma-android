@@ -36,7 +36,7 @@
     <string name="delete_selected_contacts">Delete selected contacts?</string>
     <string name="no_message_found">We could not find any message out there</string>
     <string name="something_went_wrong">Something went wrong</string>
-    <string name="no_contacts_found">We could not found any contact out there</string>
+    <string name="no_contacts_found">We could not find any contact out there</string>
     <string name="no_contact_available">You do not have any contacts yet</string>
     <string name="connecting">Connecting…</string>
     <string name="connection_failed">Connection failed</string>
@@ -97,13 +97,12 @@
     <string name="created_channel">Created the channel</string>
     <string name="added_channel_members">Added new channel members</string>
     <string name="removed_channel_members">Removed channel members</string>
-    <string name="channel_member_left">Left the channel</string>
+    <string name="channel_member_left">Requested to leave the channel</string>
     <string name="channel_renamed">Renamed the channel</string>
     <string name="add_channel_member">Add channel member</string>
     <string name="remove_channel_member">Remove channel member</string>
-    <string name="select_contacts_to_add">Select contacts to add</string>
     <string name="select_members_to_remove">Select members to remove</string>
-    <string name="leave_channel">Leave channel</string>
+    <string name="leave_channel">Request to leave channel</string>
     <string name="are_you_sure_leave_channel">Do you want to leave the channel? This action is irreversible.</string>
     <string name="reset_username">Reset user name</string>
     <string name="cannot_share_channels">channels cannot be shared.</string>

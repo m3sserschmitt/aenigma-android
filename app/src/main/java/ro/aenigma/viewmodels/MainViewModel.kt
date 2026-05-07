@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -310,16 +311,17 @@ class MainViewModel @Inject constructor(
     }
 
     private fun collectContactSearches() {
-        viewModelScope.launch(defaultDispatcher) {
-            _contactsSearchQuery.collect { query ->
+        viewModelScope.launch(ioDispatcher) {
+            _contactsSearchQuery.drop(1).collect { query ->
                 _allContacts.value = RequestState.Loading
                 try {
-                    val searchResult = if (query.isBlank())
+                    val searchResult = if (query.isBlank()) {
                         repository.local.getContactWithMessages()
-                    else
-                        repository.local.searchContacts(query).map { item ->
+                    } else {
+                        repository.local.searchContacts(searchQuery = query).map { item ->
                             ContactWithLastMessageDto(item, null)
                         }
+                    }
                     _allContacts.value = RequestState.Success(searchResult)
                 } catch (ex: Exception) {
                     _allContacts.value = RequestState.Error(ex)
@@ -329,8 +331,8 @@ class MainViewModel @Inject constructor(
     }
 
     private fun collectServerSearches() {
-        viewModelScope.launch(defaultDispatcher) {
-            _serversQuerySearch.collect { query ->
+        viewModelScope.launch(ioDispatcher) {
+            _serversQuerySearch.drop(1).collect { query ->
                 _servers.value = RequestState.Loading
                 _serversHistory.value = RequestState.Loading
                 try {
@@ -581,7 +583,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun createContactShareLink() {
-        viewModelScope.launch(defaultDispatcher) {
+        viewModelScope.launch(ioDispatcher) {
             _sharedDataCreateResult.value = RequestState.Loading
             try {
                 val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
@@ -610,7 +612,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun openContactSharedData(url: String) {
-        viewModelScope.launch(defaultDispatcher) {
+        viewModelScope.launch(ioDispatcher) {
             _importedContactDetails.value = RequestState.Loading
             try {
                 val response = repository.remote.getSharedData(url, null)

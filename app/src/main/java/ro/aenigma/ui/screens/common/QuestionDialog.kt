@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.common
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -12,7 +13,7 @@ import ro.aenigma.R
 fun QuestionDialog(
     title: String,
     question: String,
-    content: @Composable () -> Unit = { },
+    content: @Composable ColumnScope.() -> Unit = { },
     negativeButtonText: String = stringResource(id = R.string.dismiss),
     positiveButtonText: String = stringResource(id = R.string.confirm),
     onPositiveButtonClicked: () -> Unit = { },

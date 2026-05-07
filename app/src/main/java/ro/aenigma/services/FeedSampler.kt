@@ -16,8 +16,11 @@ import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.isWithinNews
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
+import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
+import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
+import ro.aenigma.util.ContextExtensions.getFileExtension
 import ro.aenigma.util.ContextExtensions.isJsonUri
 import ro.aenigma.util.ContextExtensions.isMarkdownUri
 import ro.aenigma.util.ContextExtensions.isTextUri
@@ -90,9 +93,15 @@ class FeedSampler @Inject constructor(
         return try {
             val metadataFile = message.message.files?.firstOrNull { file ->
                 context.isJsonUri(file) || context.isTextUri(file)
+            } ?: message.message.files?.firstOrNull { file ->
+                context.getFileExtension(file) == JSON_FILE_EXTENSION
             }
-            val markdownFile =
-                message.message.files?.firstOrNull { file -> context.isMarkdownUri(file) }
+            val markdownFile = message.message.files?.firstOrNull { file ->
+                context.isMarkdownUri(file)
+            } ?: message.message.files?.firstOrNull { file ->
+                context.getFileExtension(file) == MARKDOWN_FILE_EXTENSION
+            }
+
             val files = message.message.files?.minus(setOf(metadataFile, markdownFile))
                 ?.mapNotNull { uri -> uri }
             val metadata = if (!metadataFile.isNullOrBlank()) {

@@ -30,7 +30,7 @@ fun ContactsContent(
                     modifier = modifier,
                     items = contacts.data,
                     listItem = { _, contact, isSelected ->
-                        ContactItem(
+                        ContactWithChatPreviewItem(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = { item -> navigateToChatScreen(item.contact.address) },

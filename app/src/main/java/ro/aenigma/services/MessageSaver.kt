@@ -14,6 +14,8 @@ import ro.aenigma.models.AttachmentDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.SignatureDto
 import ro.aenigma.models.enums.MessageType
+import ro.aenigma.models.extensions.ArtifactDtoExtensions.isGroupCreate
+import ro.aenigma.models.extensions.ArtifactDtoExtensions.isGroupUpdate
 import ro.aenigma.models.extensions.ArtifactDtoExtensions.toMessageDto
 import ro.aenigma.models.extensions.ContactDtoExtensions.withGuardAddress
 import ro.aenigma.models.extensions.ContactDtoExtensions.withGuardHostname
@@ -21,8 +23,11 @@ import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
 import ro.aenigma.models.extensions.GroupDataExtensions.iAmAdmin
 import ro.aenigma.models.extensions.GroupDtoExtensions.removeMember
 import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDeleteOrDeleteAll
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDeleteAll
 import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
-import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupUpdate
+import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupCreateOrUpdate
+import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupMemberLeave
 import ro.aenigma.models.extensions.MessageDtoExtensions.isText
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.withSenderAddress
@@ -31,6 +36,7 @@ import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadGroupData
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -55,7 +61,7 @@ class MessageSaver @Inject constructor(
             }
 
             when {
-                messageEntity.type == MessageType.DELETE -> {
+                messageEntity.isDelete() -> {
                     messageEntity.markAsDeleted().let { deletedMessage ->
                         repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
                             messageEntity.actionFor?.let { refId ->
@@ -65,7 +71,7 @@ class MessageSaver @Inject constructor(
                     }
                 }
 
-                messageEntity.type == MessageType.DELETE_ALL -> {
+                messageEntity.isDeleteAll() -> {
                     messageEntity.markAsDeleted().let { deletedMessage ->
                         repository.local.insertOrIgnoreMessage(deletedMessage)?.let {
                             repository.local.clearConversationSoft(messageEntity.chatId)
@@ -73,7 +79,7 @@ class MessageSaver @Inject constructor(
                     }
                 }
 
-                messageEntity.type == MessageType.GROUP_MEMBER_LEAVE -> {
+                messageEntity.isGroupMemberLeave() -> {
                     repository.local.insertOrIgnoreMessage(messageEntity)?.let {
                         repository.local.getContactWithGroup(messageEntity.chatId)
                             ?.let { contactWithGroup ->
@@ -98,7 +104,7 @@ class MessageSaver @Inject constructor(
                     }
                 }
 
-                messageEntity.isGroupUpdate() -> {
+                messageEntity.isGroupCreateOrUpdate() -> {
                     repository.local.insertOrIgnoreMessage(messageEntity)?.let { id ->
                         downloadGroupData(artifact, id)
                         notify(messageEntity)
@@ -125,16 +131,59 @@ class MessageSaver @Inject constructor(
         }
     }
 
-    private fun parseArtifact(message: ParsedMessageDto): Triple<SignatureDto, ArtifactDto, MessageDto>? {
+    private suspend fun parseArtifact(message: ParsedMessageDto): Triple<SignatureDto, ArtifactDto, MessageDto>? {
         return try {
             val signedData = message.content.fromJson<SignatureDto>() ?: return null
-            val artifactDto = signedData.jsonVerify<ArtifactDto>() ?: return null
+            val artifact = verifyArtifact(message.chatId, signedData) ?: return null
             val message =
-                artifactDto.toMessageDto(message.uuid ?: return null, message.dateReceivedOnServer)
+                artifact.toMessageDto(message.uuid ?: return null, message.dateReceivedOnServer)
                     ?: return null
-            Triple(signedData, artifactDto, message)
+            Triple(signedData, artifact, message)
         } catch (_: Exception) {
             null
+        }
+    }
+
+    private suspend fun verifyArtifact(chatId: String?, signedData: SignatureDto): ArtifactDto? {
+        if (chatId.isNullOrBlank()) {
+            return null
+        }
+        val artifact = signedData.jsonVerify<ArtifactDto>() ?: return null
+        val publicKeyMatch =
+            signedData.publicKey.getAddressFromPublicKey() == artifact.senderAddress
+        return when (publicKeyMatch && chatId == artifact.senderAddress) {
+            true -> artifact
+            false -> when (publicKeyMatch) {
+                true -> {
+                    if (artifact.isGroupCreate()) {
+                        artifact
+                    } else if (artifact.isGroupUpdate()) {
+                        val contactWithGroup = repository.local.getContactWithGroup(chatId)
+                        if (contactWithGroup == null
+                            || contactWithGroup.group?.groupData?.admins?.contains(artifact.senderAddress) == true
+                        ) {
+                            artifact
+                        } else {
+                            null
+                        }
+                    } else {
+                        val contactWithGroup = repository.local.getContactWithGroup(chatId)
+                        val currentMemberAddresses = contactWithGroup?.group?.groupData?.members
+                            ?.mapNotNullTo(mutableSetOf()) { member -> member.address } ?: setOf()
+                        if (currentMemberAddresses.contains(artifact.senderAddress)
+                            && currentMemberAddresses.contains(localAddress)
+                        ) {
+                            artifact
+                        } else {
+                            null
+                        }
+                    }
+                }
+
+                false -> {
+                    null
+                }
+            }
         }
     }
 
@@ -142,13 +191,15 @@ class MessageSaver @Inject constructor(
         val parsedMessage = onionParsingService.parse(routingRequest)
         val messageEntity = parsedMessage.mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntity)
+        workManager.invokeClient(actions = ClientAction.Cleanup)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessageDto>) {
         val messageEntities = messages
             .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item -> parseArtifact(item) }
-        return saveIncomingMessages(messageEntities)
+        saveIncomingMessages(messageEntities)
+        workManager.invokeClient(actions = ClientAction.Cleanup)
     }
 
     suspend fun saveOutgoingMessage(
@@ -158,7 +209,7 @@ class MessageSaver @Inject constructor(
     ): Boolean {
         try {
             val entity = message.withSenderAddress(localAddress).run {
-                if (isDelete()) {
+                if (isDeleteOrDeleteAll()) {
                     markAsDeleted()
                 } else {
                     this

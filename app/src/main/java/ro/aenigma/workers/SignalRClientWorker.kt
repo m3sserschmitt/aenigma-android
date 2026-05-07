@@ -11,6 +11,7 @@ import ro.aenigma.data.Repository
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import ro.aenigma.R
+import ro.aenigma.services.ClientAction
 import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import java.util.concurrent.TimeUnit
@@ -37,21 +38,21 @@ class SignalRClientWorker @AssistedInject constructor(
         if (runAttemptCount >= MAX_RETRY_COUNT) {
             return Result.failure()
         }
-        val action = SignalRWorkerAction(inputData.getInt(ACTION_ARG, 0))
+        val action = ClientAction(inputData.getInt(ACTION_ARG, 0))
         var ok = true
-        if (signalrController.isConnected() && action contains SignalRWorkerAction.Disconnect()) {
+        if (signalrController.isConnected() && action contains ClientAction.Disconnect) {
             ok = signalrController.disconnect()
         }
 
-        if (ok && !signalrController.isConnected() && action contains SignalRWorkerAction.Connect()) {
+        if (ok && !signalrController.isConnected() && action contains ClientAction.Connect) {
             ok = signalrController.connect(repository.local.getGuardHostname())
         }
 
-        if (ok && signalrController.isAuthenticated() && action contains SignalRWorkerAction.Pull()) {
+        if (ok && signalrController.isAuthenticated() && action contains ClientAction.Pull) {
             ok = signalrController.pull()
         }
 
-        if (ok && signalrController.isAuthenticated() && action contains SignalRWorkerAction.Cleanup()) {
+        if (ok && signalrController.isAuthenticated() && action contains ClientAction.Cleanup) {
             ok = signalrController.cleanup()
         }
 

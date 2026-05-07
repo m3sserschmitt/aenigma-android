@@ -73,11 +73,7 @@ fun MessageItem(
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val context = LocalContext.current
-    val text = if (message.message.text.isNullOrBlank()) {
-        null
-    } else {
-        message.message.getMessageTextByAction(context)
-    }
+    val text = message.message.getMessageTextByAction(context)
     val paddingStart = if (message.message.incoming) 0.dp else 50.dp
     val paddingEnd = if (message.message.incoming) 50.dp else 0.dp
     val contentColor = if (message.message.incoming)
@@ -177,6 +173,7 @@ fun MessageItem(
 
                     MessageText(
                         text = text,
+                        isFiles = message.message.type == MessageType.FILES,
                         contentColor = contentColor
                     )
 
@@ -395,10 +392,10 @@ fun ResponseTo(
 @Composable
 fun MessageText(
     text: String?,
+    isFiles: Boolean = false,
     contentColor: Color
 ) {
-    if(text.isNullOrBlank())
-    {
+    if (text.isNullOrBlank() || isFiles) {
         return
     }
     Text(

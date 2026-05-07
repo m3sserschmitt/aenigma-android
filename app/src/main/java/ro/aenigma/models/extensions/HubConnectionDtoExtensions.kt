@@ -1,8 +1,5 @@
 package ro.aenigma.models.extensions
 
-import io.reactivex.rxjava3.core.Completable
-import io.reactivex.rxjava3.core.Single
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx3.await
 import ro.aenigma.models.HubConnectionDto
 import ro.aenigma.models.hubInvocation.AuthenticateResult
@@ -12,7 +9,6 @@ import ro.aenigma.models.hubInvocation.GenerateTokenResult
 import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
-import ro.aenigma.services.SignalRStatus
 import ro.aenigma.util.Constants.Companion.AUTHENTICATE_METHOD
 import ro.aenigma.util.Constants.Companion.CLEANUP_METHOD
 import ro.aenigma.util.Constants.Companion.GENERATE_NONCE_METHOD

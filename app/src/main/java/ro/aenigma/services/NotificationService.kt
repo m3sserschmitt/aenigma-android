@@ -15,7 +15,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import ro.aenigma.workers.SignalRWorkerAction
 import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import javax.inject.Inject
 import kotlin.time.Duration
@@ -65,7 +64,7 @@ class NotificationService @Inject constructor(): Service() {
     private fun startTimer() {
         stopTimer()
         tickerJob = tickerFlow(SYNC_INTERVAL).onEach {
-            workManager.invokeClient(actions = SignalRWorkerAction.connectPullCleanup())
+            workManager.invokeClient(actions = ClientAction.connectPullCleanup())
         }.launchIn(tickerCoroutineScope)
     }
 

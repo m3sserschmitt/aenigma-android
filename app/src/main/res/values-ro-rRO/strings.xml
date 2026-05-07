@@ -95,13 +95,12 @@
     <string name="created_channel">A creat canalul</string>
     <string name="added_channel_members">A adăugat noi membri</string>
     <string name="removed_channel_members">A eliminat persoane</string>
-    <string name="channel_member_left">A părăsit canalul</string>
+    <string name="channel_member_left">A solicitat să părăsească canalul</string>
     <string name="channel_renamed">A redenumit canalul</string>
     <string name="add_channel_member">Adăugați un nou membru</string>
     <string name="remove_channel_member">Eliminați un membru</string>
-    <string name="select_contacts_to_add">Adăugați contacte</string>
     <string name="select_members_to_remove">Eliminați membri</string>
-    <string name="leave_channel">Părăsiți canalul</string>
+    <string name="leave_channel">Solicitați părăsirea canalului</string>
     <string name="are_you_sure_leave_channel">Părăsiți canalul? Această acțiune este ireversibilă.</string>
     <string name="reset_username">Resetați numele de utilizator</string>
     <string name="cannot_share_channels">Nu puteți distribui canale</string>

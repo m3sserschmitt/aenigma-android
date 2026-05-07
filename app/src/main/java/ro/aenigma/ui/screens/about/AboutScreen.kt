@@ -67,6 +67,7 @@ fun AboutScreen(
 
     Scaffold(
         modifier = Modifier.background(MaterialTheme.colorScheme.background),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StandardAppBar(
                 title = stringResource(id = R.string.about_app),

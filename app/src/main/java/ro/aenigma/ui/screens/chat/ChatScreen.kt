@@ -2,6 +2,7 @@ package ro.aenigma.ui.screens.chat
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -22,7 +23,7 @@ import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
@@ -95,10 +96,19 @@ fun ChatScreen(
         onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
         onLeaveGroup = { chatViewModel.leaveGroup() },
         onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
-        onRedirectUriClicked = { uri -> redirectUri(uri) },
+        onRedirectUriClicked = { uri ->
+            chatViewModel.markConversationAsRead()
+            redirectUri(uri)
+        },
         loadNextPage = { chatViewModel.loadNextPage() },
-        navigateBack = navigateBack,
-        navigateToAddContactsScreen = navigateToAddContactsScreen
+        navigateBack = {
+            chatViewModel.markConversationAsRead()
+            navigateBack()
+        },
+        navigateToAddContactsScreen = { address ->
+            chatViewModel.markConversationAsRead()
+            navigateToAddContactsScreen(address)
+        }
     )
 }
 
@@ -109,7 +119,7 @@ fun ChatScreen(
     isMember: Boolean,
     isAdmin: Boolean,
     contacts: RequestState<List<ContactDto>>,
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
     messages: RequestState<List<MessageWithDetailsDto>>,
     replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
@@ -127,7 +137,7 @@ fun ChatScreen(
     onDelete: (List<MessageWithDetailsDto>) -> Unit,
     onReplyToMessage: (MessageWithDetailsDto?) -> Unit,
     onSearch: (String) -> Unit,
-    onAddGroupMembers: (List<String>, MessageType) -> Unit,
+    onAddGroupMembers: (List<ContactDto>, MessageType) -> Unit = { _, _ -> },
     onLeaveGroup: () -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
     onRedirectUriClicked: (String) -> Unit = { },
@@ -222,21 +232,23 @@ fun ChatScreen(
     SnackBar(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
-        visible = connectionStatus is SignalRStatus.Error.Aborted,
+        visible = connectionStatus is ClientStatus.Error.Aborted,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
 
     BackHandler(
-        enabled = isSearchMode || isSelectionMode
+        enabled = true
     ) {
-        if(isSearchMode)
-        {
+        if(!isSelectionMode && !isSearchMode) {
+            navigateBack()
+        }
+
+        if (isSearchMode) {
             isSearchMode = false
         }
 
-        if(isSelectionMode)
-        {
+        if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
         }
@@ -250,6 +262,7 @@ fun ChatScreen(
     }
 
     Scaffold (
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
             SnackbarHost(hostState = snackBarHostState)
         },
@@ -366,8 +379,7 @@ fun MarkConversationAsRead(
 ) {
     LaunchedEffect(key1 = messages)
     {
-        if(messages is RequestState.Success)
-        {
+        if (messages is RequestState.Success) {
             chatViewModel.markConversationAsRead()
         }
     }
@@ -448,7 +460,7 @@ fun ChatScreenPreview() {
         isMember = true,
         isAdmin = false,
         contacts = RequestState.Success(listOf()),
-        connectionStatus = SignalRStatus.Authenticated,
+        connectionStatus = ClientStatus.Authenticated,
         replyToMessage = RequestState.Idle,
         messages = RequestState.Success(
             listOf(message1, message2, message3)
@@ -467,7 +479,6 @@ fun ChatScreenPreview() {
         onDelete = {},
         onReplyToMessage = {},
         onSearch = {},
-        onAddGroupMembers = { _: List<String>, _: MessageType -> },
         onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },

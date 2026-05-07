@@ -97,14 +97,14 @@ class SignalRClient @Inject constructor(
 
     private val _hubConnection = MutableStateFlow(HubConnectionDto())
 
-    private val _status = MutableStateFlow<SignalRStatus>(SignalRStatus.NotConnected)
+    private val _status = MutableStateFlow<ClientStatus>(ClientStatus.NotConnected)
 
     private val _failedAttempts = MutableStateFlow(0)
 
-    val status: StateFlow<SignalRStatus> = _status
+    val status: StateFlow<ClientStatus> = _status
 
     private fun configureConnection(dto: HubConnectionDto) {
-        dto.onClosed { updateStatus(SignalRStatus.Error.Disconnected()) }
+        dto.onClosed { updateStatus(ClientStatus.Error.Disconnected()) }
         dto.onRouteMessage { data ->
             _routingScope.launch {
                 messageSaver.handleRoutingRequest(data)
@@ -122,10 +122,10 @@ class SignalRClient @Inject constructor(
                     _hubConnection.value = dto
                     return start()
                 }
-                updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
+                updateStatus(ClientStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
                 return false
             } catch (_: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
+                updateStatus(ClientStatus.Error(_status.value, COULD_NOT_CREATE_CONNECTION_ERROR))
                 return false
             }
         } else {
@@ -141,24 +141,24 @@ class SignalRClient @Inject constructor(
             return false
         } finally {
             _failedAttempts.value = 0
-            _status.value = SignalRStatus.NotConnected
+            _status.value = ClientStatus.NotConnected
         }
     }
 
     fun reset() {
-        if (status.value is SignalRStatus.Error.Aborted) {
+        if (status.value is ClientStatus.Error.Aborted) {
             _failedAttempts.value = 0
-            _status.value = SignalRStatus.NotConnected
+            _status.value = ClientStatus.NotConnected
         }
     }
 
-    private fun updateStatus(status: SignalRStatus) {
-        if (status is SignalRStatus.Error) {
+    private fun updateStatus(status: ClientStatus) {
+        if (status is ClientStatus.Error) {
             val newValue = _failedAttempts.value.plus(1)
             _failedAttempts.value = newValue
 
             if (newValue >= CLIENT_CONNECTION_RETRY_COUNT) {
-                _status.value = SignalRStatus.Error.Aborted
+                _status.value = ClientStatus.Error.Aborted
                 return
             }
         } else {
@@ -168,26 +168,26 @@ class SignalRClient @Inject constructor(
     }
 
     fun isConnected(): Boolean {
-        return _status.value greaterOrEqualThan SignalRStatus.Connected
+        return _status.value greaterOrEqualThan ClientStatus.Connected
     }
 
     fun nonceGenerated(): Boolean {
-        return _status.value greaterOrEqualThan SignalRStatus.Authenticating
+        return _status.value greaterOrEqualThan ClientStatus.Authenticating
     }
 
     fun isAuthenticated(): Boolean {
-        return _status.value greaterOrEqualThan SignalRStatus.Authenticated
+        return _status.value greaterOrEqualThan ClientStatus.Authenticated
     }
 
     private suspend fun start(): Boolean {
         if (!isConnected()) {
-            updateStatus(SignalRStatus.Connecting)
+            updateStatus(ClientStatus.Connecting)
             try {
                 _hubConnection.value.start()
-                updateStatus(SignalRStatus.Connected)
+                updateStatus(ClientStatus.Connected)
                 return generateNonce()
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error.ConnectionRefused(e.message))
+                updateStatus(ClientStatus.Error.ConnectionRefused(e.message))
                 return false
             }
         } else {
@@ -197,17 +197,17 @@ class SignalRClient @Inject constructor(
 
     private suspend fun generateNonce(): Boolean {
         if (!nonceGenerated()) {
-            updateStatus(SignalRStatus.Authenticating)
+            updateStatus(ClientStatus.Authenticating)
             try {
                 val result = _hubConnection.value.generateNonce()
                 return if(result == null) {
-                    updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
                     false
                 } else {
                     onNonceGenerated(result)
                 }
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, e.message))
+                updateStatus(ClientStatus.Error(_status.value, e.message))
                 return false
             }
         } else {
@@ -220,13 +220,13 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.authenticate(publicKey, signedData)
                 return if(result == null) {
-                    updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NULL_RESPONSE_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, AUTHENTICATION_NULL_RESPONSE_ERROR))
                     false
                 } else {
                     onSuccessAuthentication(result)
                 }
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, e.message))
+                updateStatus(ClientStatus.Error(_status.value, e.message))
                 return false
             }
         } else {
@@ -236,17 +236,17 @@ class SignalRClient @Inject constructor(
 
     suspend fun pull(): Boolean {
         if (isAuthenticated()) {
-            updateStatus(SignalRStatus.Pulling)
+            updateStatus(ClientStatus.Pulling)
             try {
                 val result = _hubConnection.value.pull()
                 return if(result == null) {
-                    updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
                     false
                 } else {
                     onSuccessPull(result)
                 }
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, e.message))
+                updateStatus(ClientStatus.Error(_status.value, e.message))
                 return false
             }
         } else {
@@ -256,17 +256,17 @@ class SignalRClient @Inject constructor(
 
     suspend fun cleanup(): Boolean {
         if (isAuthenticated()) {
-            updateStatus(SignalRStatus.Cleaning)
+            updateStatus(ClientStatus.Cleaning)
             try {
                 val result = _hubConnection.value.cleanup()
                 return if(result == null) {
-                    updateStatus(SignalRStatus.Error(_status.value, CLEANUP_NULL_RESPONSE_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, CLEANUP_NULL_RESPONSE_ERROR))
                     false
                 } else {
                     onSuccessCleanup(result)
                 }
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, e.message))
+                updateStatus(ClientStatus.Error(_status.value, e.message))
                 return false
             }
         } else {
@@ -276,10 +276,10 @@ class SignalRClient @Inject constructor(
 
     private suspend fun onNonceGenerated(result: GenerateTokenResult): Boolean {
         if (result.success != true) {
-            updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            updateStatus(ClientStatus.Error(_status.value, result.errorsToString()))
             return false
         } else if (result.data == null) {
-            updateStatus(SignalRStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
+            updateStatus(ClientStatus.Error(_status.value, AUTHENTICATION_NONCE_NULL_ERROR))
             return false
         } else {
             try {
@@ -290,11 +290,11 @@ class SignalRClient @Inject constructor(
                 if (signature != null && signature.publicKey != null && signature.signedData != null) {
                     return authenticate(signature.publicKey, signature.signedData)
                 } else {
-                    updateStatus(SignalRStatus.Error(_status.value, SIGN_AUTHENTICATION_REQUEST_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, SIGN_AUTHENTICATION_REQUEST_ERROR))
                     return false
                 }
             } catch (ex: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, ex.message))
+                updateStatus(ClientStatus.Error(_status.value, ex.message))
                 return false
             }
         }
@@ -302,25 +302,25 @@ class SignalRClient @Inject constructor(
 
     private fun onSuccessAuthentication(result: AuthenticateResult): Boolean {
         if (result.success != true) {
-            updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            updateStatus(ClientStatus.Error(_status.value, result.errorsToString()))
             return false
         } else {
-            updateStatus(SignalRStatus.Authenticated)
+            updateStatus(ClientStatus.Authenticated)
             return true
         }
     }
 
     private fun onSuccessPull(result: PullResult): Boolean {
         if (result.success != true) {
-            updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            updateStatus(ClientStatus.Error(_status.value, result.errorsToString()))
             return false
         } else if (result.data == null) {
-            updateStatus(SignalRStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
+            updateStatus(ClientStatus.Error(_status.value, PULL_DATA_NULL_ERROR))
             return false
         } else {
             _routingScope.launch {
                 messageSaver.handlePendingMessages(result.data)
-                updateStatus(SignalRStatus.Synchronized)
+                updateStatus(ClientStatus.Synchronized)
             }
             return true
         }
@@ -328,10 +328,10 @@ class SignalRClient @Inject constructor(
 
     private fun onSuccessCleanup(result: CleanupResult): Boolean {
         if (result.success != true) {
-            updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+            updateStatus(ClientStatus.Error(_status.value, result.errorsToString()))
             return false
         } else {
-            updateStatus(SignalRStatus.Clean)
+            updateStatus(ClientStatus.Clean)
             return true
         }
     }
@@ -341,16 +341,16 @@ class SignalRClient @Inject constructor(
             try {
                 val result = _hubConnection.value.routeMessages(messages)
                 return if(result == null) {
-                    updateStatus(SignalRStatus.Error(_status.value, ROUTE_MESSAGES_NULL_RESPONSE_ERROR))
+                    updateStatus(ClientStatus.Error(_status.value, ROUTE_MESSAGES_NULL_RESPONSE_ERROR))
                     false
                 } else if (result.success == true){
                     true
                 } else {
-                    updateStatus(SignalRStatus.Error(_status.value, result.errorsToString()))
+                    updateStatus(ClientStatus.Error(_status.value, result.errorsToString()))
                     false
                 }
             } catch (e: Exception) {
-                updateStatus(SignalRStatus.Error(_status.value, e.message))
+                updateStatus(ClientStatus.Error(_status.value, e.message))
                 return false
             }
         } else {

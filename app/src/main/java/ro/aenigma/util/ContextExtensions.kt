@@ -123,6 +123,10 @@ object ContextExtensions {
         return contentResolver.getExtension(uri)
     }
 
+    fun Context.getFileExtension(uri: String): String? {
+        return getFileExtension(uri.toUri())
+    }
+
     suspend fun Context.getFileType(uri: String): String? {
         return getFileType(uri.toUri())
     }

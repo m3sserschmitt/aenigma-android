@@ -1,5 +1,6 @@
 package ro.aenigma.ui.screens.feed
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.BottomSheetScaffold
@@ -91,6 +92,7 @@ fun FeedScreen(
     }
 
     BottomSheetScaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         scaffoldState = bottomSheetScaffoldState,
         sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
         sheetContainerColor = MaterialTheme.colorScheme.background,

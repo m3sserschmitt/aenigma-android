@@ -19,7 +19,7 @@ import androidx.compose.ui.res.stringResource
 import ro.aenigma.R
 import ro.aenigma.models.enums.TorCircuitState
 import ro.aenigma.models.extensions.TorConnectionCheckExtensions.isOk
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
@@ -39,7 +39,7 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 
 @Composable
 fun ContactsAppBar(
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -131,7 +131,7 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onBackground
                 )
                 ReloadAppBarAction(
-                    visible = connectionStatus is SignalRStatus.Error.Aborted,
+                    visible = connectionStatus is ClientStatus.Error.Aborted,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = onRetryConnection
                 )
