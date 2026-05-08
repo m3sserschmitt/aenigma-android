@@ -2,7 +2,6 @@ package ro.aenigma.ui.screens.contacts
 
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -47,14 +46,12 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
-import ro.aenigma.ui.screens.common.SaveNewContactDialog
 import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.InstallOrbotDialog
 import ro.aenigma.ui.screens.common.OrbotInfoDialog
-import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.ui.screens.common.TorInfoDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
@@ -138,7 +135,6 @@ fun ContactsScreen(
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
         onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
-        onContactSaved = { name -> mainViewModel.saveNewContact(name) },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
         onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
         onResetUserNameClicked = { mainViewModel.resetUserName() },
@@ -184,7 +180,6 @@ fun ContactsScreen(
     onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
     onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
-    onContactSaved: (String) -> Unit,
     onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
     onNameConfirmed: (String) -> Unit,
@@ -199,8 +194,6 @@ fun ContactsScreen(
     var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
-    var getContactDataLoadingDialogVisible by remember { mutableStateOf(true) }
-    var saveContactDialogVisible by remember { mutableStateOf(false) }
     var installOrbotDialogVisible by remember { mutableStateOf(false) }
     var orbotInfoDialogVisible by remember { mutableStateOf(false) }
     var torServiceInfoDialogVisible by remember { mutableStateOf(false) }
@@ -211,6 +204,8 @@ fun ContactsScreen(
     val snackBarHostState = remember { SnackbarHostState() }
     val bottomSheetState = rememberStandardBottomSheetState(initialValue = serversSheetState.sheetState)
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
+    val cannotShareChannelsString = stringResource(id = R.string.cannot_share_channels)
+    val couldNotSelectChannelString = stringResource(id = R.string.cannot_select_channels_to_create_channel)
     val context = LocalContext.current
 
     LaunchedEffect(key1 = useOrbot) {
@@ -336,35 +331,6 @@ fun ContactsScreen(
         },
         onDismiss = {
             renameContactDialogVisible = false
-        }
-    )
-
-    LoadingDialog(
-        visible = getContactDataLoadingDialogVisible,
-        state = importedContactDetails,
-        onConfirmButtonClicked = {
-            if (importedContactDetails is RequestState.Error) {
-                onContactSaveDismissed()
-            } else {
-                saveContactDialogVisible = true
-            }
-            getContactDataLoadingDialogVisible = false
-        }
-    )
-
-    val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
-    SaveNewContactDialog(
-        visible = requestSuccessful && saveContactDialogVisible,
-        initialName = initialName,
-        onContactNameChanged = onNewContactNameChanged,
-        onConfirmClicked = { name ->
-            onContactSaved(name)
-            saveContactDialogVisible = false
-        },
-        onDismissClicked = {
-            onContactSaveDismissed()
-            saveContactDialogVisible = false
         }
     )
 
@@ -516,20 +482,14 @@ fun ContactsScreen(
                     if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
                         navigateToAddContactScreen(selectedItem.address)
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.cannot_share_channels),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, cannotShareChannelsString, Toast.LENGTH_SHORT)
+                            .show()
                     }
                 },
                 onCreateGroupClicked = {
                     if (selectedItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.cannot_select_channels_to_create_channel),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, couldNotSelectChannelString, Toast.LENGTH_SHORT)
+                            .show()
                     } else {
                         createGroupDialogVisible = true
                     }
@@ -675,7 +635,6 @@ fun ContactsScreenPreview() {
         onResetUserNameClicked = {},
         navigateToChatScreen = {},
         navigateToAddContactScreen = {},
-        onContactSaved = {},
         onContactSaveDismissed = {},
         importedContactDetails = RequestState.Idle,
         navigateToAboutScreen = { },

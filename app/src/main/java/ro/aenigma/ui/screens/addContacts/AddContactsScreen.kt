@@ -1,6 +1,5 @@
 package ro.aenigma.ui.screens.addContacts
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -14,7 +13,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -33,8 +31,10 @@ import ro.aenigma.viewmodels.MainViewModel
 @Composable
 fun AddContactsScreen(
     profileToShare: String?,
+    uri: String? = null,
     initialScannerState: QrCodeScannerState,
     navigateBack: () -> Unit,
+    onForwardUri: (String) -> Unit = { },
     mainViewModel: MainViewModel
 ) {
     var scannerState by remember { mutableStateOf(value = initialScannerState) }
@@ -43,11 +43,16 @@ fun AddContactsScreen(
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val floatingButtonVisible = profileToShare == null
             && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
-    val context = LocalContext.current
+    var isContactImport by remember(key1 = uri) { mutableStateOf(uri.isNullOrBlank()) }
 
-    LaunchedEffect(key1 = true)
-    {
+    LaunchedEffect(key1 = true) {
         mainViewModel.generateCode(profileToShare)
+    }
+
+    LaunchedEffect(key1 = uri) {
+        if (!uri.isNullOrBlank()) {
+            mainViewModel.openContactSharedData(uri)
+        }
     }
 
     AddContactsScreen(
@@ -55,12 +60,12 @@ fun AddContactsScreen(
         qrCode = qrCode,
         sharedDataCreate = sharedDataCreate,
         importedContactDetails = importedContactDetails,
+        isContactImport = isContactImport,
         floatingButtonVisible = floatingButtonVisible,
-        onScannerStateChanged = {
-            newState -> scannerState = newState
+        onScannerStateChanged = { newState ->
+            scannerState = newState
         },
-        onQrCodeFound = {
-            scannedData ->
+        onQrCodeFound = { scannedData ->
             mainViewModel.setScannedContactDetails(scannedData)
             scannerState = QrCodeScannerState.SAVE
         },
@@ -71,19 +76,19 @@ fun AddContactsScreen(
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact(name)
-            Toast.makeText(context, context.getString(R.string.saved), Toast.LENGTH_SHORT).show()
             navigateBack()
         },
         onSaveContactDismissed = {
             mainViewModel.resetContactChanges()
             scannerState = QrCodeScannerState.SHARE_CODE
         },
-        onNewContactNameChanged = {
-            newContactName -> newContactName.isNotBlank()
+        onNewContactNameChanged = { newContactName ->
+            newContactName.isNotBlank()
         },
         onCreateLinkClicked = { mainViewModel.createContactShareLink() },
         onGetLink = { url -> mainViewModel.openContactSharedData(url) },
         onSharedDataConfirm = { mainViewModel.resetContactChanges() },
+        onForwardUri = onForwardUri,
         navigateBack = navigateBack
     )
 }
@@ -94,6 +99,7 @@ fun AddContactsScreen(
     qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedDataDto>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
+    isContactImport: Boolean = false,
     floatingButtonVisible: Boolean,
     onScannerStateChanged: (QrCodeScannerState) -> Unit,
     onQrCodeFound: (ExportedContactDataDto) -> Unit,
@@ -104,6 +110,7 @@ fun AddContactsScreen(
     onCreateLinkClicked: () -> Unit,
     onGetLink: (String) -> Unit,
     onSharedDataConfirm: () -> Unit,
+    onForwardUri: (String) -> Unit = { },
     navigateBack: () -> Unit
 ) {
     Scaffold(
@@ -132,6 +139,7 @@ fun AddContactsScreen(
                 qrCode = qrCode,
                 sharedDataCreate = sharedDataCreate,
                 importedContactDetails = importedContactDetails,
+                isContactImport = isContactImport,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
@@ -139,7 +147,8 @@ fun AddContactsScreen(
                 onNewContactNameChanged = onNewContactNameChanged,
                 onCreateLinkClicked = onCreateLinkClicked,
                 onGetLink = onGetLink,
-                onSharedDataConfirm = onSharedDataConfirm
+                onSharedDataConfirm = onSharedDataConfirm,
+                onForwardUri = onForwardUri
             )
         },
         floatingActionButton = {

@@ -42,6 +42,22 @@ fun ShareButton(
 }
 
 @Composable
+fun LinkButton(
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
+) {
+    IconButton(
+        onClick = onClick
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_link),
+            contentDescription = stringResource(id = R.string.link),
+            tint = tint
+        )
+    }
+}
+
+@Composable
 fun OpenInExternalAppButton(
     tint: Color = Color.Unspecified,
     onClick: () -> Unit = { }

@@ -105,7 +105,7 @@
     <string name="leave_channel">Request to leave channel</string>
     <string name="are_you_sure_leave_channel">Do you want to leave the channel? This action is irreversible.</string>
     <string name="reset_username">Reset user name</string>
-    <string name="cannot_share_channels">channels cannot be shared.</string>
+    <string name="cannot_share_channels">Channels cannot be shared.</string>
     <string name="cannot_select_channels_to_create_channel">Channels cannot be selected while creating new channel.</string>
     <string name="tor_service">The Onion Router Service</string>
     <string name="orbot_service">Orbot Service</string>

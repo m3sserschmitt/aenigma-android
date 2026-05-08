@@ -41,7 +41,7 @@ fun SetupNavigation(
     val backStackEntry by navHostController.currentBackStackEntryAsState()
     val isForwardMode by mainViewModel.isForwardMode.collectAsState()
     val screen = remember(navHostController) {
-        Screens(navController = navHostController)
+        Screens(navController = navHostController, mainViewModel = mainViewModel)
     }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -109,6 +109,7 @@ fun SetupNavigation(
             addContactsComposable(
                 notifier = notifier,
                 navigateBack = screen.back,
+                onForwardUri = screen.forwardUri,
                 mainViewModel = mainViewModel
             )
             aboutComposable(

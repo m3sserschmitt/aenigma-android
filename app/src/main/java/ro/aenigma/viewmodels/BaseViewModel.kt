@@ -17,7 +17,7 @@ abstract class BaseViewModel(
     private val okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>
 ): ViewModel() {
 
-    protected var ioDispatcher = Dispatchers.IO
+    val ioDispatcher = Dispatchers.IO
 
     private val _userName = MutableStateFlow("")
 
@@ -33,7 +33,7 @@ abstract class BaseViewModel(
         return okHttpClientProviderLazy.get()
     }
 
-    protected var defaultDispatcher = Dispatchers.Default
+    val mainDispatcher = Dispatchers.Main
 
     val userName: StateFlow<String> = _userName
 

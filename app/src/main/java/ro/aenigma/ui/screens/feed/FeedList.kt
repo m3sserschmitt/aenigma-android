@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,11 +35,13 @@ fun FeedList(
     modifier: Modifier = Modifier,
     articles: List<ArticleDto>,
     okHttpClientProvider: IOkHttpClientProvider,
+    listState: LazyListState = rememberLazyListState(),
     onArticleClicked: (ArticleDto) -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
     ItemsList(
         modifier = modifier,
+        listState = listState,
         items = articles,
         itemKeySelector = { article -> article.hashCode() },
         listItem = { _, item, _ ->

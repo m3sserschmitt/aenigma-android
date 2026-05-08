@@ -1,8 +1,9 @@
 package ro.aenigma.ui.screens.feed
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ fun FeedScreen(
     FeedScreen(
         articles = articles,
         newPostSheetState = newPostSheetState,
+        feedListState = mainViewModel.feedListState,
         okHttpClientProvider = mainViewModel.provideOkHttpClientProvider(),
         onArticleClicked = { article ->
             if (!article.url.isNullOrBlank()) {
@@ -66,6 +68,7 @@ fun FeedScreen(
     articles: RequestState<List<ArticleDto>>,
     newPostSheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     okHttpClientProvider: IOkHttpClientProvider,
+    feedListState: LazyListState = rememberLazyListState(),
     onArticleClicked: (ArticleDto) -> Unit,
     onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
     onReloadFeedClicked: () -> Unit = { },
@@ -134,6 +137,7 @@ fun FeedScreen(
                 top = padding.calculateTopPadding(),
                 bottom = BOTTOM_SHEET_PEEK_HEIGHT
             ).fillMaxSize(),
+            feedListState = feedListState,
             articles = articles,
             okHttpClientProvider = okHttpClientProvider,
             onArticleClicked = onArticleClicked,
@@ -147,6 +151,7 @@ fun FeedScreenContent(
     modifier: Modifier,
     articles: RequestState<List<ArticleDto>>,
     okHttpClientProvider: IOkHttpClientProvider,
+    feedListState: LazyListState = rememberLazyListState(),
     onArticleClicked: (ArticleDto) -> Unit,
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
@@ -155,6 +160,7 @@ fun FeedScreenContent(
             if (articles.data.isNotEmpty()) {
                 FeedList(
                     modifier = modifier,
+                    listState = feedListState,
                     articles = articles.data,
                     okHttpClientProvider = okHttpClientProvider,
                     onArticleClicked = onArticleClicked,

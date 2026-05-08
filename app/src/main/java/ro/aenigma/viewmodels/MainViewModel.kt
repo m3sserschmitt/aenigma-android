@@ -1,5 +1,6 @@
 package ro.aenigma.viewmodels
 
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkManager
@@ -141,6 +142,8 @@ class MainViewModel @Inject constructor(
     val newPostSheetState: StateFlow<NewPostSheetStateDto> = _newPostSheetState
 
     val serversHistory: StateFlow<RequestState<List<ServerInfoDto>>> = _serversHistory
+
+    val feedListState: LazyListState = LazyListState()
 
     init {
         loadContacts()
@@ -677,17 +680,32 @@ class MainViewModel @Inject constructor(
 
     fun redirectAttachments(chatIds: List<String>) {
         val attachments = attachments.value
+        val remoteUris = attachments.filterTo(mutableSetOf()) { uri -> uri.isRemoteUri() }
+        val contentUris = attachments.minus(remoteUris)
         viewModelScope.launch(ioDispatcher) {
             chatIds.forEach { chatId ->
                 repository.local.getContact(chatId)?.let { contact ->
-                    val message = MessageDtoFactory.createOutgoing(
-                        chatId = contact.address,
-                        text = null,
-                        type = MessageType.FILES,
-                        actionFor = null,
-                        attachments = attachments
-                    )
-                    messageSaver.saveOutgoingMessage(message)
+                    if (contentUris.isNotEmpty()) {
+                        messageSaver.saveOutgoingMessage(
+                            MessageDtoFactory.createOutgoing(
+                                chatId = contact.address,
+                                text = null,
+                                type = MessageType.FILES,
+                                actionFor = null,
+                                attachments = contentUris
+                            )
+                        )
+                    }
+                    for (remoteUri in remoteUris) {
+                        messageSaver.saveOutgoingMessage(
+                            MessageDtoFactory.createOutgoing(
+                                chatId = contact.address,
+                                text = remoteUri,
+                                type = MessageType.TEXT,
+                                actionFor = null
+                            )
+                        )
+                    }
                 }
             }
             setAttachments(listOf())
@@ -699,6 +717,12 @@ class MainViewModel @Inject constructor(
             repository.local.getMessage(messageId)?.let { message ->
                 message.files?.let { files -> setAttachments(files) }
             }
+        }
+    }
+
+    fun resetFeedScroll() {
+        viewModelScope.launch(mainDispatcher) {
+            feedListState.scrollToItem(0)
         }
     }
 

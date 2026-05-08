@@ -5,9 +5,10 @@ import androidx.navigation.NavController
 import ro.aenigma.util.Constants.Companion.APP_DEEP_LINK_SCHEME
 import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import ro.aenigma.util.QrCodeScannerState
+import ro.aenigma.viewmodels.MainViewModel
 import java.util.Locale
 
-class Screens(navController: NavController) {
+class Screens(navController: NavController, mainViewModel: MainViewModel) {
 
     companion object {
         const val URI_ARG = "uri"
@@ -34,6 +35,7 @@ class Screens(navController: NavController) {
         const val ADD_CONTACTS_PATH =
             "$ADD_CONTACTS_ROOT_PATH?" +
                     "$CONTACT_ID_ARG={$CONTACT_ID_ARG}&" +
+                    "$URI_ARG={$URI_ARG}&" +
                     "$SCANNER_STATE_ARG={$SCANNER_STATE_ARG}"
         const val ABOUT_SCREEN_PATH = ABOUT_ROOT_PATH
         const val LICENSES_SCREEN_PATH = LICENSES_ROOT_PATH
@@ -59,12 +61,14 @@ class Screens(navController: NavController) {
         @JvmStatic
         fun getAddContactsScreenRoute(
             contactId: String?,
+            uri: String?,
             scannerState: QrCodeScannerState
         ): String {
             val builder = Uri.Builder()
                 .path(ADD_CONTACTS_ROOT_PATH)
                 .appendQueryParameter(SCANNER_STATE_ARG, scannerState.toString())
             contactId?.let { builder.appendQueryParameter(CONTACT_ID_ARG, it) }
+            uri?.let { builder.appendQueryParameter(URI_ARG, it) }
             return builder.build().toString()
         }
 
@@ -115,10 +119,21 @@ class Screens(navController: NavController) {
     val chat: (chatId: String) -> Unit =
         { chatId -> navController.navigate(getChatScreenRoute(chatId)) }
 
-    val addContacts: (String?) -> Unit = { contactId ->
+    val addContacts: (contactId: String?) -> Unit = { contactId ->
         navController.navigate(
             getAddContactsScreenRoute(
                 contactId = contactId,
+                uri = null,
+                scannerState = QrCodeScannerState.SHARE_CODE
+            )
+        )
+    }
+
+    val getSharedContact: (uri: String) -> Unit = { uri ->
+        navController.navigate(
+            getAddContactsScreenRoute(
+                contactId = null,
+                uri = uri,
                 scannerState = QrCodeScannerState.SHARE_CODE
             )
         )
@@ -128,6 +143,7 @@ class Screens(navController: NavController) {
         navController.navigate(
             getAddContactsScreenRoute(
                 contactId = null,
+                uri = null,
                 scannerState = QrCodeScannerState.SCAN_SERVER_INFO_CODE
             )
         )
@@ -137,7 +153,10 @@ class Screens(navController: NavController) {
 
     val licenses: () -> Unit = { navController.navigate(LICENSES_SCREEN_PATH) }
 
-    val feed: () -> Unit = { navController.navigate(FEED_SCREEN_PATH) }
+    val feed: () -> Unit = {
+        mainViewModel.resetFeedScroll()
+        navController.navigate(FEED_SCREEN_PATH)
+    }
 
     val article: (uri: String, title: String?, messageId: Long?) -> Unit =
         { uri, title, messageId ->

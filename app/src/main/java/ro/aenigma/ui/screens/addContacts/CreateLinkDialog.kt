@@ -25,6 +25,7 @@ import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.ui.screens.common.CopyToClipboardButton
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
+import ro.aenigma.ui.screens.common.RedirectUriButton
 import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.PrettyDateFormatter
@@ -33,7 +34,8 @@ import ro.aenigma.util.PrettyDateFormatter
 @Composable
 fun CreateLinkDialog(
     sharedData: RequestState<CreatedSharedDataDto>,
-    onConfirmButtonClick: () -> Unit
+    onConfirmButtonClick: () -> Unit,
+    onForwardUri: (String) -> Unit = { }
 ) {
     if (sharedData !is RequestState.Idle) {
         val title = when (sharedData) {
@@ -110,6 +112,10 @@ fun CreateLinkDialog(
                                                 text = link,
                                                 tint = MaterialTheme.colorScheme.onBackground
                                             )
+                                            RedirectUriButton(
+                                                tint = MaterialTheme.colorScheme.onBackground,
+                                                onClick = { onForwardUri(link) }
+                                            )
                                         }
                                     }
                                 }
@@ -158,13 +164,15 @@ fun CreateLinkDialog(
 fun CreateLinkDialog(
     visible: Boolean,
     sharedData: RequestState<CreatedSharedDataDto>,
-    onConfirmButtonClick: () -> Unit
+    onConfirmButtonClick: () -> Unit,
+    onForwardUri: (String) -> Unit = { }
 ) {
     if(visible)
     {
         CreateLinkDialog(
             sharedData = sharedData,
-            onConfirmButtonClick = onConfirmButtonClick
+            onConfirmButtonClick = onConfirmButtonClick,
+            onForwardUri = onForwardUri
         )
     }
 }

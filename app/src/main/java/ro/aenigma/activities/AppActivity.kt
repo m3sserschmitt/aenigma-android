@@ -35,7 +35,6 @@ import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
 import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
 import javax.inject.Inject
-import androidx.core.net.toUri
 import androidx.work.WorkManager
 import ro.aenigma.R
 import ro.aenigma.data.LocalDataSource
@@ -44,6 +43,8 @@ import ro.aenigma.services.NotificationServiceController
 import ro.aenigma.services.OnionRoutingServiceMonitor
 import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.util.UriExtensions.getArticleUri
+import ro.aenigma.util.UriExtensions.isSharedData
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
 @AndroidEntryPoint
@@ -211,33 +212,26 @@ class AppActivity : FragmentActivity() {
         if (intent.action != Intent.ACTION_VIEW) {
             return
         }
-        when(domain) {
+        when (domain) {
             APP_DOMAIN -> handleAppDomain(appLinkData)
             ARTICLES_DOMAIN -> handleArticlesDomain(appLinkData)
-            WEB_DOMAIN -> handleWebLink(appLinkData)
+            WEB_DOMAIN -> handleWebDomain(appLinkData)
         }
     }
 
     private fun handleAppDomain(uri: Uri) {
-        if(uri.path?.lowercase() == "/share") {
-            mainViewModel.openContactSharedData(uri.toString())
+        if (uri.isSharedData()) {
+            val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
+            screens.getSharedContact(uri.toString())
         }
     }
 
     private fun handleArticlesDomain(uri: Uri) {
-        val stringUri = uri.toString()
-        if(stringUri.lowercase().endsWith(".md")) {
-            val screens = Screens(navHostController)
-            screens.article(stringUri, null, null)
-        }
+        val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
+        screens.article(uri.toString(), null, null)
     }
 
-    private fun handleWebLink(uri: Uri) {
-        val regex = Regex("[?&]url=([^&#]+)")
-        val match = regex.find(uri.toString().lowercase())
-        val encodedValue = match?.groups?.get(1)?.value
-        val decodedValue = encodedValue?.let { Uri.decode(it) }
-        val finalUri = decodedValue?.toUri() ?: return
-        handleArticlesDomain(finalUri)
+    private fun handleWebDomain(uri: Uri) {
+        handleArticlesDomain(uri.getArticleUri() ?: return)
     }
 }
