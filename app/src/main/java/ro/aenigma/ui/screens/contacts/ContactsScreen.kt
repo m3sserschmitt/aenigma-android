@@ -48,8 +48,6 @@ import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
-import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
-import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.InstallOrbotDialog
 import ro.aenigma.ui.screens.common.OrbotInfoDialog
 import ro.aenigma.ui.screens.common.RenameContactDialog
@@ -58,7 +56,6 @@ import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.ContextExtensions.isOrbotInstalled
-import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.ContextExtensions.openOrbot
 import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
 import ro.aenigma.util.RequestState
@@ -79,9 +76,7 @@ fun ContactsScreen(
     val serversHistory by mainViewModel.serversHistory.collectAsState()
     val serversSheetState by mainViewModel.serversSheetState.collectAsState()
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
-    val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
-    val userName by mainViewModel.userName.collectAsState()
-    val nameDialogVisible = remember(key1 = userName) { userName.isBlank() }
+    val isClientRunning by mainViewModel.isClientRunning.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
     val useOrbot by mainViewModel.useOrbot.collectAsState()
     val notificationServicePreference by mainViewModel.notificationServicePreference.collectAsState()
@@ -91,13 +86,12 @@ fun ContactsScreen(
 
     ContactsScreen(
         connectionStatus = connectionStatus,
+        isClientRunning = isClientRunning,
         contacts = allContacts,
         servers = servers,
         serversHistory = serversHistory,
         serversSheetState = serversSheetState,
         importedContactDetails = importedContactDetails,
-        notificationsAllowed = notificationsAllowed,
-        nameDialogVisible = nameDialogVisible,
         useTor = useTor,
         useOrbot = useOrbot,
         notificationServicePreference = notificationServicePreference,
@@ -108,10 +102,7 @@ fun ContactsScreen(
         onNotificationServicePreferenceChanged = { notificationServicePreference ->
             mainViewModel.notificationServicePreferenceChanged(notificationServicePreference)
         },
-        onNotificationsPreferenceChanged = { allowed ->
-            mainViewModel.saveNotificationsPreference(allowed)
-        },
-        onRetryConnection = { mainViewModel.retryClientConnection() },
+        onRetryConnection = { mainViewModel.syncAndReconnect() },
         onSearch = { searchQuery -> mainViewModel.searchContacts(searchQuery) },
         onServersSearch = { searchQuery -> mainViewModel.searchServers(searchQuery) },
         onServerClicked = { server -> mainViewModel.switchServer(server) },
@@ -136,7 +127,6 @@ fun ContactsScreen(
         },
         onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
-        onNameConfirmed = { nameValue -> mainViewModel.setupName(nameValue) },
         onResetUserNameClicked = { mainViewModel.resetUserName() },
         onForwardAttachments = { chatIds ->
             mainViewModel.redirectAttachments(chatIds)
@@ -154,13 +144,12 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: ClientStatus,
+    isClientRunning: Boolean = false,
     contacts: RequestState<List<ContactWithLastMessageDto>>,
     servers: RequestState<List<ServerInfoDto>>,
     serversHistory: RequestState<List<ServerInfoDto>>,
     serversSheetState: ServersSheetStateDto,
     importedContactDetails: RequestState<ExportedContactDataDto>,
-    notificationsAllowed: Boolean,
-    nameDialogVisible: Boolean,
     useTor: Boolean,
     useOrbot: Boolean,
     notificationServicePreference: Boolean = false,
@@ -169,7 +158,6 @@ fun ContactsScreen(
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
-    onNotificationsPreferenceChanged: (Boolean) -> Unit,
     onRetryConnection: () -> Unit,
     onSearch: (String) -> Unit,
     onServersSearch: (String) -> Unit,
@@ -182,7 +170,6 @@ fun ContactsScreen(
     onNewContactNameChanged: (String) -> Boolean,
     onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
     onContactSaveDismissed: () -> Unit,
-    onNameConfirmed: (String) -> Unit,
     onResetUserNameClicked: () -> Unit,
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: (List<String>) -> Unit = { },
@@ -191,7 +178,6 @@ fun ContactsScreen(
     navigateToChatScreen: (String) -> Unit
 ) {
     var createGroupDialogVisible by remember { mutableStateOf(false) }
-    var permissionRequiredDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var deleteContactsConfirmationVisible by remember { mutableStateOf(false) }
     var installOrbotDialogVisible by remember { mutableStateOf(false) }
@@ -285,25 +271,6 @@ fun ContactsScreen(
         }
     )
 
-    CheckNotificationsPermission(
-        onPermissionGranted = { granted ->
-            permissionRequiredDialogVisible = !granted && notificationsAllowed
-            if (granted) onNotificationsPreferenceChanged(true)
-        }
-    )
-
-    NotificationsPermissionRequiredDialog(
-        visible = permissionRequiredDialogVisible,
-        onPositiveButtonClicked = {
-            permissionRequiredDialogVisible = false
-            context.openApplicationDetails()
-        },
-        onNegativeButtonClicked = { rememberDecision ->
-            if (rememberDecision) onNotificationsPreferenceChanged(false)
-            permissionRequiredDialogVisible = false
-        }
-    )
-
     DeleteSelectedContactsDialog(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
@@ -347,11 +314,6 @@ fun ContactsScreen(
             onContactSaveDismissed()
             createGroupDialogVisible = false
         }
-    )
-
-    SetupUserNameDialog(
-        visible = nameDialogVisible,
-        onConfirmClicked = onNameConfirmed
     )
 
     BackHandler(
@@ -425,6 +387,7 @@ fun ContactsScreen(
         topBar = {
             ContactsAppBar(
                 connectionStatus = connectionStatus,
+                isClientRunning = isClientRunning,
                 isSearchMode = isSearchMode,
                 useTor = useTor,
                 useOrbot = useOrbot,
@@ -571,14 +534,11 @@ fun ContactsFab(
 fun ContactsScreenPreview() {
     ContactsScreen(
         connectionStatus = ClientStatus.Connected,
-        notificationsAllowed = true,
-        nameDialogVisible = false,
         useTor = true,
         useOrbot = false,
         torCircuitState = TorCircuitState.OK,
         onTorPreferenceChanged = { _ -> },
         onOrbotPreferenceChanged = { },
-        onNotificationsPreferenceChanged = {},
         onRetryConnection = {},
         onContactRenamed = { _, _ -> },
         onNewContactNameChanged = { true },
@@ -638,7 +598,6 @@ fun ContactsScreenPreview() {
         onContactSaveDismissed = {},
         importedContactDetails = RequestState.Idle,
         navigateToAboutScreen = { },
-        onNameConfirmed = {}
     )
 }
 

@@ -42,6 +42,7 @@ fun ChatAppBar(
     isMember: Boolean,
     isAdmin: Boolean,
     connectionStatus: ClientStatus,
+    isClientRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -100,10 +101,11 @@ fun ChatAppBar(
                 actions = {
                     ConnectionStatusAppBarAction(
                         connectionStatus = connectionStatus,
+                        isClientRunning = isClientRunning,
                         tint = MaterialTheme.colorScheme.onBackground
                     )
                     ReloadAppBarAction(
-                        visible = connectionStatus is ClientStatus.Error.Aborted,
+                        visible = connectionStatus is ClientStatus.Error.Aborted || !isClientRunning,
                         tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onRetryConnection
                     )

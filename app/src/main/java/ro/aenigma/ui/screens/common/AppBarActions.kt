@@ -156,15 +156,16 @@ fun ForwardAttachmentsAppBarAction(
 @Composable
 fun ConnectionStatusAppBarAction(
     tint: Color = Color.Unspecified,
-    connectionStatus: ClientStatus
+    connectionStatus: ClientStatus,
+    isClientRunning: Boolean
 ) {
     IndeterminateCircularIndicator(
         size = 18.dp,
         color = tint,
         textColor = tint,
         visible = connectionStatus greaterOrEqualThan ClientStatus.NotConnected
-                && connectionStatus smallerThan ClientStatus.Authenticated,
-        text = stringResource(id = R.string.connecting),
+                && connectionStatus smallerThan ClientStatus.Authenticated || isClientRunning,
+        text = stringResource(id = R.string.working),
         textStyle = MaterialTheme.typography.bodyMedium
     )
 }

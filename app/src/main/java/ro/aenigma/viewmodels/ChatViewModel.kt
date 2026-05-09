@@ -1,5 +1,6 @@
 package ro.aenigma.viewmodels
 
+import androidx.concurrent.futures.await
 import androidx.lifecycle.*
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -34,20 +35,20 @@ import ro.aenigma.workers.AttachmentDownloadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
-import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
+import ro.aenigma.workers.extensions.WorkManagerExtensions.resendMessage
 import java.util.SortedSet
 import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
-    private val workManager: WorkManager,
     private val uriBatcher: UriBatcher,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     signatureService: SignatureService,
     signalrController: SignalrController,
     repository: Repository,
-) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
+    workManager: WorkManager,
+) : BaseViewModel(repository, workManager, signalrController, okHttpClientProviderLazy) {
 
     private val localAddress = signatureService.address
 
@@ -100,6 +101,7 @@ class ChatViewModel @Inject constructor(
     init {
         collectSearches()
         collectContactsSearches()
+        collectClientWork()
     }
 
     fun collectSelectedContact(chatId: String?) {
@@ -174,13 +176,14 @@ class ChatViewModel @Inject constructor(
     private fun loadMessageDeliveryStatus(message: MessageWithDetailsDto) {
         if (!message.message.sent) {
             viewModelScope.launch(ioDispatcher) {
-                workManager.getWorkInfosForUniqueWorkFlow(
-                    MessageSenderWorker.getUniqueWorkRequestName(
-                        message.message.id
-                    )
-                ).collect { workInfo ->
-                    if (workInfo.isNotEmpty()) {
-                        message.message.deliveryStatus.value = workInfo.last().state
+                workManager.getWorkInfosByTagFlow(
+                    MessageSenderWorker.getTag(message.message.id)
+                ).collect { workInfos ->
+                    val workInfoSet = workInfos.mapTo(mutableSetOf()) { workInfo -> workInfo.state }
+                    if (workInfoSet.contains(WorkInfo.State.FAILED)) {
+                        message.message.deliveryStatus.value = WorkInfo.State.FAILED
+                    } else if (workInfoSet.singleOrNull() == WorkInfo.State.SUCCEEDED) {
+                        message.message.deliveryStatus.value = WorkInfo.State.SUCCEEDED
                     }
                 }
             }
@@ -438,9 +441,15 @@ class ChatViewModel @Inject constructor(
     }
 
     fun resendMessage(message: MessageWithDetailsDto) {
-        workManager.sendMessage(
-            messageId = message.message.id
-        )
+        viewModelScope.launch(ioDispatcher) {
+            val workInfos =
+                workManager.getWorkInfosByTag(MessageSenderWorker.getTag(message.message.id))
+                    .await()
+            workInfos.filter { workInfo -> workInfo.state == WorkInfo.State.FAILED }
+                .forEach { workInfo ->
+                    workManager.resendMessage(workInfo.outputData)
+                }
+        }
     }
 
     fun retryAttachmentDownload(message: MessageWithDetailsDto) {

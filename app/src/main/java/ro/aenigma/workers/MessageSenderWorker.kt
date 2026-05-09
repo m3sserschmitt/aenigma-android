@@ -6,7 +6,9 @@ import android.os.Build
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -33,9 +35,11 @@ import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.ContextExtensions.createZip
 import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
+import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 
 @HiltWorker
 class MessageSenderWorker @AssistedInject constructor(
@@ -51,10 +55,21 @@ class MessageSenderWorker @AssistedInject constructor(
     companion object {
         const val MESSAGE_ID_ARG = "message-id"
         const val ADDITIONAL_DESTINATIONS_ARG = "additional-destinations"
+        const val DESTINATIONS_ARG = "destinations"
         const val UNIQUE_WORK_REQUEST_NAME = "message-sender-worker"
         private const val MAX_RETRY_COUNT = 3
 
-        fun getUniqueWorkRequestName(messageId: Long): String {
+        fun getUniqueWorkRequestName(messageId: Long, destinations: List<String>): String {
+            return if (destinations.isNotEmpty()) {
+                "$UNIQUE_WORK_REQUEST_NAME-$messageId-${
+                    destinations.toTypedArray().contentHashCode()
+                }"
+            } else {
+                "$UNIQUE_WORK_REQUEST_NAME-$messageId"
+            }
+        }
+
+        fun getTag(messageId: Long): String {
             return "$UNIQUE_WORK_REQUEST_NAME-$messageId"
         }
     }
@@ -188,12 +203,21 @@ class MessageSenderWorker @AssistedInject constructor(
 
     private suspend fun getDestinationContacts(
         contactWithGroup: ContactWithGroupDto?,
-        additionalDestinations: Array<String>?,
+        destinations: Array<String>,
+        additionalDestinations: Array<String>,
         isBroadcast: Boolean
     ): List<ContactDto> {
-        val addressesSet = hashSetOf<String>()
+        val addressesSet = mutableSetOf<String>()
         val results = mutableListOf<ContactDto>()
         when {
+            destinations.isNotEmpty() -> {
+                destinations.forEach { address ->
+                    if (addressesSet.add(address)) {
+                        repository.local.getContact(address)?.let { c -> results.add(c) }
+                    }
+                }
+            }
+
             isBroadcast -> {
                 return repository.local.getAllContacts()
             }
@@ -205,8 +229,9 @@ class MessageSenderWorker @AssistedInject constructor(
 
             contactWithGroup?.contact?.type == ContactType.GROUP -> {
                 contactWithGroup.group?.groupData?.members?.forEach { item ->
-                    if (item.address != null && item.address != signatureService.address &&
-                        addressesSet.add(item.address)
+                    if (!item.address.isNullOrBlank()
+                        && item.address != signatureService.address
+                        && addressesSet.add(item.address)
                     ) {
                         repository.local.getContact(item.address)?.let { c -> results.add(c) }
                     }
@@ -214,7 +239,7 @@ class MessageSenderWorker @AssistedInject constructor(
             }
         }
 
-        additionalDestinations?.forEach { address ->
+        additionalDestinations.forEach { address ->
             if (!addressesSet.contains(address)) {
                 repository.local.getContact(address)?.let { c -> results.add(c) }
             }
@@ -222,24 +247,57 @@ class MessageSenderWorker @AssistedInject constructor(
         return results
     }
 
+    private fun scheduleChildWorkers(
+        messageId: Long,
+        contacts: List<ContactDto>,
+        destinations: Array<String>
+    ): Boolean {
+        return if (destinations.isEmpty()) {
+            val workManager = WorkManager.getInstance(applicationContext)
+            contacts.chunked(SEND_MESSAGES_CHUNK_SIZE).forEach { chunk ->
+                workManager.sendMessage(
+                    messageId = messageId,
+                    destinations = chunk.mapTo(mutableSetOf()) { item -> item.address }
+                )
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    private fun getFailureOutputData(messageId: Long, destinations: Array<String>): Result {
+        return Result.failure(
+            workDataOf(
+                MESSAGE_ID_ARG to messageId,
+                DESTINATIONS_ARG to destinations
+            )
+        )
+    }
+
     override suspend fun doWork(): Result {
+        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
+        val destinations = inputData.getStringArray(DESTINATIONS_ARG) ?: arrayOf()
+
         if (runAttemptCount >= MAX_RETRY_COUNT) {
-            return Result.failure()
+            return getFailureOutputData(messageId, destinations)
         }
 
         if (!pathFinder.load()) {
             return Result.retry()
         }
 
-        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
-        val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
+        val additionalDestinations =
+            inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG) ?: arrayOf()
+
         val userName = repository.local.name.first()
         val messageToBeSent = if (messageId > 0) {
             repository.local.getMessageWithAttachments(messageId)
         } else {
             null
         }
-        val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
+        val chatId =
+            messageToBeSent?.message?.chatId ?: return getFailureOutputData(messageId, destinations)
         if (messageToBeSent.message.sent) {
             return Result.success()
         }
@@ -247,18 +305,26 @@ class MessageSenderWorker @AssistedInject constructor(
         val isBroadcast = chatId == BROADCAST_CONTACT_ADDRESS
         val contactWithGroup = repository.local.getContactWithGroup(chatId)
             ?: if (!isBroadcast) {
-                return Result.failure()
+                return getFailureOutputData(messageId, destinations)
             } else {
                 null
             }
-        val contacts = getDestinationContacts(contactWithGroup, additionalDestinations, isBroadcast)
+        val contacts = getDestinationContacts(
+            contactWithGroup,
+            destinations,
+            additionalDestinations,
+            isBroadcast
+        )
 
-        val messageWithAttachments = (
-                if (!contacts.isEmpty()) {
-                    resolveAttachments(messageToBeSent, contacts.size)
-                } else {
-                    messageToBeSent
-                }) ?: return Result.retry()
+        val messageWithAttachments = if (!contacts.isEmpty()) {
+            resolveAttachments(messageToBeSent, contacts.size)
+        } else {
+            messageToBeSent
+        } ?: return Result.retry()
+
+        if (scheduleChildWorkers(messageId, contacts, destinations)) {
+            return Result.success()
+        }
 
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,

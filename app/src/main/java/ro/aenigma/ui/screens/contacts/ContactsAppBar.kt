@@ -40,6 +40,7 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 @Composable
 fun ContactsAppBar(
     connectionStatus: ClientStatus,
+    isClientRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -127,11 +128,12 @@ fun ContactsAppBar(
             navigateBackVisible = false,
             actions = {
                 ConnectionStatusAppBarAction(
+                    isClientRunning = isClientRunning,
                     connectionStatus = connectionStatus,
                     tint = MaterialTheme.colorScheme.onBackground
                 )
                 ReloadAppBarAction(
-                    visible = connectionStatus is ClientStatus.Error.Aborted,
+                    visible = connectionStatus is ClientStatus.Error.Aborted || !isClientRunning,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = onRetryConnection
                 )

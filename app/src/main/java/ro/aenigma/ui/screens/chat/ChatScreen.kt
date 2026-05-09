@@ -57,6 +57,7 @@ fun ChatScreen(
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val attachments by chatViewModel.attachments.collectAsState()
     val connectionStatus by chatViewModel.clientStatus.collectAsState()
+    val isClientRunning by chatViewModel.isClientRunning.collectAsState()
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val contacts by chatViewModel.contacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
@@ -74,13 +75,14 @@ fun ChatScreen(
         isAdmin = isAdmin,
         contacts = contacts,
         connectionStatus = connectionStatus,
+        isClientRunning = isClientRunning,
         replyToMessage = replyToMessage,
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         attachments = attachments,
         onContactSearchQueryChanged = { searchQuery -> chatViewModel.searchContacts(searchQuery) },
-        onRetryConnection = { chatViewModel.retryClientConnection() },
+        onRetryConnection = { chatViewModel.syncAndReconnect() },
         onInputTextChanged = { newInputTextValue ->
             chatViewModel.setMessageInputText(newInputTextValue)
         },
@@ -120,6 +122,7 @@ fun ChatScreen(
     isAdmin: Boolean,
     contacts: RequestState<List<ContactDto>>,
     connectionStatus: ClientStatus,
+    isClientRunning: Boolean = false,
     messages: RequestState<List<MessageWithDetailsDto>>,
     replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
@@ -273,6 +276,7 @@ fun ChatScreen(
                 isMember = isMember,
                 isAdmin = isAdmin,
                 connectionStatus = connectionStatus,
+                isClientRunning = isClientRunning,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
                     renameContactDialogVisible = true

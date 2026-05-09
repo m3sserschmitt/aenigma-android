@@ -173,4 +173,5 @@
     <string name="uploading">Uploading: %s%%</string>
     <string name="broadcast" translatable="false">Broadcast</string>
     <string name="files_too_large">Some files exceed the limit of %.2f MB</string>
+    <string name="working">Working…</string>
 </resources>

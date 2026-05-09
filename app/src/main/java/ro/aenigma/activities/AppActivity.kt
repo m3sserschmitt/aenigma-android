@@ -12,6 +12,10 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -41,8 +45,12 @@ import ro.aenigma.data.LocalDataSource
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.NotificationServiceController
 import ro.aenigma.services.OnionRoutingServiceMonitor
+import ro.aenigma.ui.screens.common.CheckNotificationsPermission
+import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
+import ro.aenigma.ui.screens.contacts.SetupUserNameDialog
 import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.UriExtensions.getArticleUri
 import ro.aenigma.util.UriExtensions.isSharedData
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
@@ -100,6 +108,11 @@ class AppActivity : FragmentActivity() {
                 val auth by isAuthenticated.collectAsState()
                 val authError by isAuthError.collectAsState()
                 val passphraseLoaded by dbPassphraseLoaded.collectAsState()
+                val userName by mainViewModel.userName.collectAsState()
+                val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
+                val context = LocalContext.current
+                var notificationPermissionDialogVisible by remember { mutableStateOf(false) }
+
                 navHostController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
@@ -118,6 +131,34 @@ class AppActivity : FragmentActivity() {
                         handleAppLink()
                         schedulePeriodicSync()
                     }
+
+                    SetupUserNameDialog(
+                        visible = userName.isBlank(),
+                        onConfirmClicked = { userName -> mainViewModel.setupName(userName) }
+                    )
+
+                    CheckNotificationsPermission(
+                        onPermissionGranted = { granted ->
+                            notificationPermissionDialogVisible = !granted && notificationsAllowed
+                            if (granted) {
+                                mainViewModel.saveNotificationsPreference(true)
+                            }
+                        }
+                    )
+
+                    NotificationsPermissionRequiredDialog(
+                        visible = notificationPermissionDialogVisible,
+                        onPositiveButtonClicked = {
+                            notificationPermissionDialogVisible = false
+                            context.openApplicationDetails()
+                        },
+                        onNegativeButtonClicked = { rememberDecision ->
+                            if (rememberDecision) {
+                                mainViewModel.saveNotificationsPreference(false)
+                            }
+                            notificationPermissionDialogVisible = false
+                        }
+                    )
 
                     SetupNavigation(
                         navHostController = navHostController,

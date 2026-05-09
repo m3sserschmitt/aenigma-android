@@ -168,4 +168,5 @@
     <string name="generate_feed">Se generează conținutul feed-ului</string>
     <string name="uploading">Se încarcă: %s%%</string>
     <string name="files_too_large">Unele fișiere depășesc limita a %.2f MB</string>
+    <string name="working">Lucrează…</string>
 </resources>

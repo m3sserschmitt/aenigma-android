@@ -77,7 +77,7 @@ class SignalrController @Inject constructor(
     }
 
     suspend fun sendMessages(messages: List<String>): Boolean {
-        return signalRClient.sendChunkedMessages(messages)
+        return signalRClient.sendMessages(messages)
     }
 
     fun isConnected(): Boolean {

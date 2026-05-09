@@ -28,7 +28,6 @@ import ro.aenigma.models.hubInvocation.GenerateTokenResult
 import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
 import ro.aenigma.util.Constants.Companion.PULL_METHOD
-import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.Constants.Companion.SIGNALR_SERVER_TIMEOUT
 import ro.aenigma.util.Constants.Companion.SIGNAL_KEEP_ALIVE
 import ro.aenigma.util.Constants.Companion.TOR_SOCKS5_PROXY_PORT
@@ -336,7 +335,7 @@ class SignalRClient @Inject constructor(
         }
     }
 
-    private suspend fun sendMessages(messages: List<String>): Boolean {
+    suspend fun sendMessages(messages: List<String>): Boolean {
         if (isAuthenticated()) {
             try {
                 val result = _hubConnection.value.routeMessages(messages)
@@ -356,13 +355,5 @@ class SignalRClient @Inject constructor(
         } else {
             return false
         }
-    }
-
-    suspend fun sendChunkedMessages(messages: List<String>): Boolean {
-        var success = true
-        for(chunk in messages.chunked(SEND_MESSAGES_CHUNK_SIZE)) {
-            success = success && sendMessages(chunk)
-        }
-        return success
     }
 }

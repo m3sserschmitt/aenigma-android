@@ -62,14 +62,12 @@ class MainViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
+    signalrController: SignalrController,
+    workManager: WorkManager,
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     onionRoutingServiceMonitor: OnionRoutingServiceMonitor,
     repository: Repository,
-    private val signalrController: SignalrController,
-) : BaseViewModel(repository, signalrController, okHttpClientProviderLazy) {
-
-    @Inject
-    lateinit var workManager: WorkManager
+) : BaseViewModel(repository, workManager, signalrController, okHttpClientProviderLazy, ) {
 
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
@@ -153,6 +151,8 @@ class MainViewModel @Inject constructor(
         collectNotificationServicePreference()
         collectNotificationsPreferences()
         collectFeed()
+        collectUserName()
+        collectClientWork()
     }
 
     fun provideMarkdownImageTransformer(): ImageTransformer {

@@ -20,13 +20,12 @@ import ro.aenigma.workers.GroupDownloadWorker
 import ro.aenigma.workers.GroupUploadWorker
 import ro.aenigma.workers.MessageSenderWorker
 import ro.aenigma.workers.SignalRClientWorker
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 object WorkManagerExtensions {
     private const val DEFAULT_DELAY_BETWEEN_RETRY: Long = 2
     private val DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT = TimeUnit.SECONDS
-    private const val SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME = "sync-and-invoke-client-work-chain"
+    const val SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME = "sync-and-invoke-client-work-chain"
 
     @JvmStatic
     private fun getGenerateFeedRequest(): OneTimeWorkRequest {
@@ -173,35 +172,57 @@ object WorkManagerExtensions {
     }
 
     @JvmStatic
-    fun WorkManager.sendMessage(
-        messageId: Long,
-        additionalDestinations: Set<String> = hashSetOf()
-    ): UUID {
-        val parameters = Data.Builder()
-            .putLong(MessageSenderWorker.MESSAGE_ID_ARG, messageId)
-            .putStringArray(
-                MessageSenderWorker.ADDITIONAL_DESTINATIONS_ARG,
-                additionalDestinations.toTypedArray()
-            )
-            .build()
+    private fun WorkManager.sendMessage(inputData: Data, tag: String, uniqueWorkName: String) {
         val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
         val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setConstraints(constraints)
-            .setInputData(parameters)
+            .setInputData(inputData)
             .setBackoffCriteria(
                 BackoffPolicy.LINEAR,
                 DEFAULT_DELAY_BETWEEN_RETRY,
                 DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
             )
+            .addTag(tag)
             .build()
-        enqueueUniqueWork(
-            MessageSenderWorker.getUniqueWorkRequestName(messageId),
-            ExistingWorkPolicy.KEEP,
-            workRequest
+        enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
+    }
+
+    @JvmStatic
+    fun WorkManager.resendMessage(inputData: Data) {
+        val messageId = inputData.getLong(MessageSenderWorker.MESSAGE_ID_ARG, 0)
+        val destinations =
+            inputData.getStringArray(MessageSenderWorker.DESTINATIONS_ARG) ?: arrayOf()
+        val tag = MessageSenderWorker.getTag(messageId)
+        val uniqueWorkName =
+            MessageSenderWorker.getUniqueWorkRequestName(messageId, destinations.sorted())
+        return sendMessage(inputData, tag, uniqueWorkName)
+    }
+
+    @JvmStatic
+    fun WorkManager.sendMessage(
+        messageId: Long,
+        destinations: Set<String> = hashSetOf(),
+        additionalDestinations: Set<String> = hashSetOf()
+    ) {
+        val parameters = Data.Builder()
+            .putLong(MessageSenderWorker.MESSAGE_ID_ARG, messageId)
+            .putStringArray(
+                MessageSenderWorker.ADDITIONAL_DESTINATIONS_ARG,
+                additionalDestinations.toTypedArray()
+            ).putStringArray(
+                MessageSenderWorker.DESTINATIONS_ARG,
+                destinations.toTypedArray<String?>()
+            ).build()
+        return sendMessage(
+            parameters,
+            MessageSenderWorker.getTag(messageId),
+            MessageSenderWorker.getUniqueWorkRequestName(
+                messageId,
+                destinations.sorted()
+            )
         )
-        return workRequest.id
     }
 
     @JvmStatic
