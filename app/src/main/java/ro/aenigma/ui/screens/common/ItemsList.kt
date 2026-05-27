@@ -100,7 +100,7 @@ fun <K: Any, V> AutoScrollItemsList(
         loadNextPage = loadNextPage
     )
 
-    LaunchedEffect(key1 = items.size)
+    LaunchedEffect(key1 = items)
     {
         if (items.isNotEmpty() && (listState.firstVisibleItemIndex < 2)) {
             listState.scrollToItem(0)

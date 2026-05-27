@@ -4,14 +4,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,6 +35,7 @@ import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.ui.screens.common.SelectionModeBullet
 import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.util.StringExtensions.getHost
 import java.time.ZonedDateTime
@@ -71,28 +71,18 @@ fun ContactItem(
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (isSelectionMode) {
-                if (isSelected) {
-                    Icon(
-                        modifier = Modifier.alpha(.5f),
-                        imageVector = Icons.Rounded.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                } else {
-                    Icon(
-                        modifier = Modifier.alpha(.5f),
-                        painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-            }
+            SelectionModeBullet(
+                isSelectionMode = isSelectionMode,
+                isSelected = isSelected,
+                contentColor = MaterialTheme.colorScheme.onBackground
+            )
 
             if(contact.type == ContactType.CONTACT)
             {
                 Icon(
-                    modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
+                    modifier = Modifier.weight(1f)
+                        .size(36.dp)
+                        .alpha(.75f),
                     imageVector = Icons.Filled.AccountCircle,
                     contentDescription = stringResource(
                         id = R.string.contact
@@ -101,7 +91,9 @@ fun ContactItem(
                 )
             } else {
                 Icon(
-                    modifier = Modifier.weight(1f).fillMaxSize().alpha(.75f),
+                    modifier = Modifier.weight(1f)
+                        .size(36.dp)
+                        .alpha(.75f),
                     painter = painterResource(id = R.drawable.ic_group),
                     contentDescription = stringResource(
                         id = R.string.contact

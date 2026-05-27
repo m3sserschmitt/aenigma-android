@@ -36,7 +36,6 @@ import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadGroupData
-import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -191,7 +190,6 @@ class MessageSaver @Inject constructor(
         val parsedMessage = onionParsingService.parse(routingRequest)
         val messageEntity = parsedMessage.mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntity)
-        workManager.invokeClient(actions = ClientAction.Cleanup)
     }
 
     suspend fun handlePendingMessages(messages: List<PendingMessageDto>) {
@@ -199,7 +197,6 @@ class MessageSaver @Inject constructor(
             .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntities)
-        workManager.invokeClient(actions = ClientAction.Cleanup)
     }
 
     suspend fun saveOutgoingMessage(

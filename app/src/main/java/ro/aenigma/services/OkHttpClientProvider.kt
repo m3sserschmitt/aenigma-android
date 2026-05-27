@@ -5,9 +5,6 @@ import okhttp3.OkHttpClient
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.OK_HTTP_CONNECT_TIMEOUT
-import ro.aenigma.util.Constants.Companion.TOR_PROXY_HOSTNAME
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -21,16 +18,12 @@ open class OkHttpClientProvider @Inject constructor(
         fun getInstance(useTor: Boolean, useOrbot: Boolean, authToken: String? = null): OkHttpClient {
             return OkHttpClient.Builder()
                 .readTimeout(0, TimeUnit.SECONDS)
-                .connectTimeout(OK_HTTP_CONNECT_TIMEOUT, TimeUnit.SECONDS)
+                .connectTimeout(OK_HTTP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)
                 .writeTimeout(0, TimeUnit.SECONDS)
                 .apply {
                     if (useTor || useOrbot) {
-                        proxy(
-                            Proxy(
-                                Proxy.Type.SOCKS,
-                                InetSocketAddress(TOR_PROXY_HOSTNAME, Constants.TOR_SOCKS5_PROXY_PORT)
-                            )
-                        )
+                        proxy(Constants.TOR_PROXY)
+                        dns(Constants.TOR_DNS)
                     }
                     if (!authToken.isNullOrBlank()) {
                         addInterceptor { chain ->

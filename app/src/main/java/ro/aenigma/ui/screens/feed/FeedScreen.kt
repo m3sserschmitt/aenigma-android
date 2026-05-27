@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.NewPostSheetStateDto
@@ -135,7 +136,9 @@ fun FeedScreen(
         FeedScreenContent(
             modifier = Modifier.padding(
                 top = padding.calculateTopPadding(),
-                bottom = BOTTOM_SHEET_PEEK_HEIGHT
+                bottom = BOTTOM_SHEET_PEEK_HEIGHT,
+                start = 8.dp,
+                end = 8.dp
             ).fillMaxSize(),
             feedListState = feedListState,
             articles = articles,

@@ -19,6 +19,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
@@ -43,10 +44,10 @@ fun ChatScreen(
     chatViewModel: ChatViewModel,
     navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit,
+    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
     redirectUri: (String) -> Unit
 ) {
-    LaunchedEffect(key1 = true)
-    {
+    LaunchedEffect(key1 = true) {
         chatViewModel.collectSelectedContact(chatId)
         chatViewModel.loadConversation(chatId)
     }
@@ -98,6 +99,11 @@ fun ChatScreen(
         onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
         onLeaveGroup = { chatViewModel.leaveGroup() },
         onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
+        onArticleClicked = { article ->
+            if (!article.url.isNullOrBlank()) {
+                navigateToArticle(article.url, article.title, article.messageId)
+            }
+        },
         onRedirectUriClicked = { uri ->
             chatViewModel.markConversationAsRead()
             redirectUri(uri)
@@ -143,6 +149,7 @@ fun ChatScreen(
     onAddGroupMembers: (List<ContactDto>, MessageType) -> Unit = { _, _ -> },
     onLeaveGroup: () -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onArticleClicked: (ArticleDto) -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit,
     navigateBack: () -> Unit,
@@ -335,8 +342,8 @@ fun ChatScreen(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding(),
-                    start = 4.dp,
-                    end = 4.dp
+                    start = 8.dp,
+                    end = 8.dp
                 ),
                 okHttpClientProvider = okHttpClientProvider,
                 isMember = isMember,
@@ -369,6 +376,7 @@ fun ChatScreen(
                     deselectedMessage -> selectedItems.remove(deselectedMessage.message.id)
                 },
                 onMessageClicked = onMessageClicked,
+                onArticleClicked = onArticleClicked,
                 onRedirectUriClicked = onRedirectUriClicked,
                 loadNextPage = loadNextPage
             )

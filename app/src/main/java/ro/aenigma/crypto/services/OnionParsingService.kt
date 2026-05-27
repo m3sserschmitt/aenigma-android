@@ -1,5 +1,7 @@
 package ro.aenigma.crypto.services
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.models.ParsedMessageDto
 import ro.aenigma.models.PendingMessageDto
 import ro.aenigma.models.hubInvocation.RoutingRequest
@@ -15,7 +17,7 @@ import javax.inject.Singleton
 @Singleton
 class OnionParsingService @Inject constructor(keysManager: KeysManager) {
 
-    private val lock = Any()
+    private val mutex = Mutex()
 
     private var ready = false
 
@@ -24,26 +26,26 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
         ready = key != null && CryptoProvider.initDecryptionEx(key)
     }
 
-    fun parse(routingRequest: RoutingRequest): List<ParsedMessageDto> {
+    suspend fun parse(routingRequest: RoutingRequest): List<ParsedMessageDto> {
         return routingRequest.payloads?.mapNotNull { item ->
             parse(
                 PendingMessageDto(
-                    routingRequest.uuid,
-                    null,
-                    item,
-                    ZonedDateTime.now().toString(),
-                    false
+                    id = null,
+                    uuid = routingRequest.uuid,
+                    destination = null,
+                    content = item,
+                    dateReceived = ZonedDateTime.now().toString(),
+                    sent = false
                 )
             )
         } ?: listOf()
     }
 
-    fun parse(pendingMessageDto: PendingMessageDto): ParsedMessageDto? {
+    suspend fun parse(pendingMessageDto: PendingMessageDto): ParsedMessageDto? {
         if (!ready || pendingMessageDto.content == null) {
             return null
         }
-        synchronized(lock)
-        {
+        mutex.withLock {
             return try {
                 val decryptedData =
                     CryptoProvider.unsealOnionEx(pendingMessageDto.content) ?: return null

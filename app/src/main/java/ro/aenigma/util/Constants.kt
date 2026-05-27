@@ -2,6 +2,10 @@ package ro.aenigma.util
 
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.ui.unit.dp
+import okhttp3.Dns
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.net.Proxy
 import java.time.Duration
 
 class Constants {
@@ -22,9 +26,11 @@ class Constants {
         const val NEWS_FEED_SIZE = 1000
         const val SEND_MESSAGES_CHUNK_SIZE = 15
         const val CONTACTS_LIST_SIZE = 150
-        const val OK_HTTP_CONNECT_TIMEOUT: Long = 60
-        const val SIGNALR_SERVER_TIMEOUT: Long = 40_000
-        const val SIGNAL_KEEP_ALIVE: Long = 20_000
+        const val OK_HTTP_CONNECT_TIMEOUT: Long = 30_000
+        const val SIGNALR_SERVER_TIMEOUT_INTERVAL: Long = 90_000
+        const val SIGNALR_KEEP_ALIVE_INTERVAL: Long = 20_000
+        const val SIGNALR_HANDSHAKE_TIMEOUT: Long = 15_000
+        const val CLIENT_METHOD_INVOCATION_TIMEOUT: Long = 20_000
         const val REQUEST_BODY_BUFFER_SIZE_OVER_TOR = 262_144
         const val REQUEST_BODY_DEFAULT_BUFFER_SIZE = 1_048_576
         const val GUARDS_TABLE = "Guards"
@@ -69,6 +75,17 @@ class Constants {
 
         const val TOR_SOCKS5_PROXY_PORT = 9050
 
+        val TOR_PROXY = Proxy(
+            Proxy.Type.SOCKS,
+            InetSocketAddress.createUnresolved(TOR_PROXY_HOSTNAME, TOR_SOCKS5_PROXY_PORT)
+        )
+
+        val TOR_DNS = object : Dns {
+            override fun lookup(hostname: String): List<InetAddress> {
+                return listOf(InetAddress.getByAddress(hostname, byteArrayOf(0, 0, 0, 0)))
+            }
+        }
+
         const val CHECK_TOR_URL = "https://check.torproject.org/api/ip"
 
         const val ENCRYPTION_KEY_SIZE = 32
@@ -111,7 +128,7 @@ class Constants {
 
         const val ROUTE_MESSAGE_METHOD = "RouteMessage"
 
-        const val PULL_METHOD = "Pull"
+        const val PULL_METHOD = "PullPaged"
 
         const val CLEANUP_METHOD = "Cleanup"
 

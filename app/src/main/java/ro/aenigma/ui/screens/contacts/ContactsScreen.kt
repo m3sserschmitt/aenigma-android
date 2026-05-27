@@ -32,7 +32,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithLastMessageDto
-import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.models.ServersSheetStateDto
 import ro.aenigma.services.ClientStatus
@@ -55,6 +54,7 @@ import ro.aenigma.ui.screens.common.TorInfoDialog
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openOrbot
 import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
@@ -81,7 +81,6 @@ fun ContactsScreen(
     val useOrbot by mainViewModel.useOrbot.collectAsState()
     val notificationServicePreference by mainViewModel.notificationServicePreference.collectAsState()
     val torCircuitState by mainViewModel.torCircuitState.collectAsState()
-    val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val isForwardMode by mainViewModel.isForwardMode.collectAsState()
 
     ContactsScreen(
@@ -91,7 +90,6 @@ fun ContactsScreen(
         servers = servers,
         serversHistory = serversHistory,
         serversSheetState = serversSheetState,
-        importedContactDetails = importedContactDetails,
         useTor = useTor,
         useOrbot = useOrbot,
         notificationServicePreference = notificationServicePreference,
@@ -149,7 +147,6 @@ fun ContactsScreen(
     servers: RequestState<List<ServerInfoDto>>,
     serversHistory: RequestState<List<ServerInfoDto>>,
     serversSheetState: ServersSheetStateDto,
-    importedContactDetails: RequestState<ExportedContactDataDto>,
     useTor: Boolean,
     useOrbot: Boolean,
     notificationServicePreference: Boolean = false,
@@ -192,6 +189,7 @@ fun ContactsScreen(
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val cannotShareChannelsString = stringResource(id = R.string.cannot_share_channels)
     val couldNotSelectChannelString = stringResource(id = R.string.cannot_select_channels_to_create_channel)
+    val couldNotSelectBroadcastString = stringResource(id = R.string.cannot_select_broadcast_to_create_channel)
     val context = LocalContext.current
 
     LaunchedEffect(key1 = useOrbot) {
@@ -221,12 +219,6 @@ fun ContactsScreen(
     LaunchedEffect(key1 = isSearchMode) {
         if (!isSearchMode) {
             onSearch("")
-        }
-    }
-
-    LaunchedEffect(key1 = importedContactDetails) {
-        if (importedContactDetails is RequestState.Error) {
-            Toast.makeText(context, "Request completed with errors.", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -453,6 +445,9 @@ fun ContactsScreen(
                     if (selectedItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
                         Toast.makeText(context, couldNotSelectChannelString, Toast.LENGTH_SHORT)
                             .show()
+                    } else if (selectedItems.any { item -> item.value.contact.address == BROADCAST_CONTACT_ADDRESS }) {
+                        Toast.makeText(context, couldNotSelectBroadcastString, Toast.LENGTH_SHORT)
+                            .show()
                     } else {
                         createGroupDialogVisible = true
                     }
@@ -596,7 +591,6 @@ fun ContactsScreenPreview() {
         navigateToChatScreen = {},
         navigateToAddContactScreen = {},
         onContactSaveDismissed = {},
-        importedContactDetails = RequestState.Idle,
         navigateToAboutScreen = { },
     )
 }

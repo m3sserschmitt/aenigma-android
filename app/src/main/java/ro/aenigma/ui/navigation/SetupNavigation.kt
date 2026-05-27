@@ -104,7 +104,8 @@ fun SetupNavigation(
                 notifier = notifier,
                 navigateBack = screen.back,
                 navigateToAddContactsScreen = screen.addContacts,
-                redirectUri = screen.forwardUri
+                redirectUri = screen.forwardUri,
+                navigateToArticle = screen.article
             )
             addContactsComposable(
                 notifier = notifier,

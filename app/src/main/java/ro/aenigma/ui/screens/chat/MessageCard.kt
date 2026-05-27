@@ -2,7 +2,6 @@ package ro.aenigma.ui.screens.chat
 
 import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -14,7 +13,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,21 +48,26 @@ import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
-import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.getDateTime
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
+import ro.aenigma.ui.screens.common.SelectionModeBullet
 import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 import ro.aenigma.util.ContextExtensions.showImageViewer
 
 @Composable
-fun MessageItem(
+fun MessageCard(
+    modifier: Modifier = Modifier,
     message: MessageWithDetailsDto,
     okHttpClientProvider: IOkHttpClientProvider,
+    isOutgoingFailed: Boolean = false,
+    isOutgoingSent: Boolean = false,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     onItemSelected: (MessageWithDetailsDto) -> Unit,
@@ -74,150 +77,120 @@ fun MessageItem(
 ) {
     val context = LocalContext.current
     val text = message.message.getMessageTextByAction(context)
-    val paddingStart = if (message.message.incoming) 0.dp else 50.dp
-    val paddingEnd = if (message.message.incoming) 50.dp else 0.dp
-    val contentColor = if (message.message.incoming)
-        MaterialTheme.colorScheme.onSecondaryContainer
-    else
-        MaterialTheme.colorScheme.onPrimaryContainer
-    val containerColor = if (message.message.incoming)
-        MaterialTheme.colorScheme.secondaryContainer
-    else
-        MaterialTheme.colorScheme.primaryContainer
     val sender =
-        if (message.message.chatId != message.message.senderAddress && message.message.incoming)
+        if (message.message.chatId != message.message.senderAddress && message.message.incoming) {
             message.sender
-        else null
-    val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isOutgoingSent =
-        !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
-    val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
+        } else {
+            null
+        }
     val coroutineScope = rememberCoroutineScope()
 
-    Box(
-        modifier = Modifier.fillMaxWidth()
-            .padding(paddingStart, 8.dp, paddingEnd, 0.dp),
-        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd,
-    ) {
-        Card(
-            modifier = Modifier
-                .selectable(
-                    item = message,
-                    isSelectionMode = isSelectionMode,
-                    isSelected = isSelected,
-                    onItemSelected = onItemSelected,
-                    onItemDeselected = onItemDeselected,
-                    onClick = { item ->
-                        onClick(item)
-                        coroutineScope.launch {
-                            context.showImageViewer(
-                                message = message.message
-                            )
-                        }
-                    }
-                ),
-            colors = CardDefaults.cardColors().copy(
-                containerColor = containerColor,
-                contentColor = contentColor
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isSelectionMode) {
-                    if (isSelected) {
-                        Icon(
-                            modifier = Modifier.alpha(.5f),
-                            imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = stringResource(R.string.message_selection),
-                            tint = contentColor,
-                        )
-                    } else {
-                        Icon(
-                            modifier = Modifier.alpha(.5f),
-                            painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
-                            contentDescription = stringResource(R.string.message_selection),
-                            tint = contentColor,
-                        )
-                    }
+    Card(
+        modifier = modifier.selectable(
+            item = message,
+            isSelectionMode = isSelectionMode,
+            isSelected = isSelected,
+            onItemSelected = onItemSelected,
+            onItemDeselected = onItemDeselected,
+            onClick = { item ->
+                onClick(item)
+                coroutineScope.launch {
+                    context.showImageViewer(
+                        message = message.message
+                    )
                 }
+            }
+        ),
+        colors = CardDefaults.cardColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SelectionModeBullet(
+                isSelectionMode = isSelectionMode,
+                isSelected = isSelected,
+                contentColor = contentColor
+            )
 
-                Column(
-                    modifier = Modifier.padding(8.dp).run {
-                        if (message.message.type == MessageType.FILES) {
-                            fillMaxWidth()
-                        } else {
-                            width(IntrinsicSize.Max)
-                        }
-                    },
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier.padding(8.dp).run {
+                    if (message.message.type == MessageType.FILES) {
+                        fillMaxWidth()
+                    } else {
+                        width(IntrinsicSize.Max)
+                    }
+                },
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SenderName(
+                    contact = sender,
+                    color = contentColor
+                )
+
+                ResponseTo(
+                    message = message,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+
+                DisplayFiles(
+                    message = message.message,
+                    textColor = contentColor,
+                    okHttpClientProvider = okHttpClientProvider,
+                    onRedirectUriClicked = onRedirectUriClicked
+                )
+
+                MessageText(
+                    text = text,
+                    isFiles = message.message.type == MessageType.FILES,
+                    contentColor = contentColor
+                )
+
+                DisplayLinks(
+                    text = text,
+                    textColor = contentColor,
+                    okHttpClientProvider = okHttpClientProvider,
+                    onRedirectUriClicked = onRedirectUriClicked
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SenderName(
-                        contact = sender,
-                        color = contentColor
-                    )
-
-                    ResponseTo(
-                        message = message,
-                        contentColor = MaterialTheme.colorScheme.onSecondary,
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-
-                    DisplayFiles(
-                        message = message.message,
-                        textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider,
-                        onRedirectUriClicked = onRedirectUriClicked
-                    )
-
-                    MessageText(
-                        text = text,
-                        isFiles = message.message.type == MessageType.FILES,
-                        contentColor = contentColor
-                    )
-
-                    DisplayLinks(
-                        text = text,
-                        textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider,
-                        onRedirectUriClicked = onRedirectUriClicked
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (isOutgoingSent) {
-                            Icon(
-                                modifier = Modifier.size(12.dp).alpha(.5f),
-                                imageVector = Icons.Outlined.Done,
-                                contentDescription = stringResource(R.string.message_delivery_status),
-                                tint = contentColor
-                            )
-                        } else if (isOutgoingFailed) {
-                            ClickToRetryMessage(
-                                iconSize = 16.dp,
-                                textColor = contentColor,
-                                textStyle = MaterialTheme.typography.bodySmall
-                            )
-                        } else if (!message.message.incoming) {
-                            Icon(
-                                modifier = Modifier.size(16.dp).alpha(.5f),
-                                painter = painterResource(R.drawable.ic_timer),
-                                contentDescription = stringResource(R.string.message_delivery_status),
-                                tint = contentColor
-                            )
-                        }
-                        Text(
-                            modifier = Modifier.alpha(0.5f),
-                            textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.messageCardStyleFormat(message.getDateTime()),
-                            color = contentColor,
-                            style = MaterialTheme.typography.bodySmall
+                    if (isOutgoingSent) {
+                        Icon(
+                            modifier = Modifier.size(12.dp).alpha(.5f),
+                            imageVector = Icons.Outlined.Done,
+                            contentDescription = stringResource(R.string.message_delivery_status),
+                            tint = contentColor
+                        )
+                    } else if (isOutgoingFailed) {
+                        ClickToRetryMessage(
+                            iconSize = 16.dp,
+                            textColor = contentColor,
+                            textStyle = MaterialTheme.typography.bodySmall
+                        )
+                    } else if (!message.message.incoming) {
+                        Icon(
+                            modifier = Modifier.size(16.dp).alpha(.5f),
+                            painter = painterResource(R.drawable.ic_timer),
+                            contentDescription = stringResource(R.string.message_delivery_status),
+                            tint = contentColor
                         )
                     }
+                    Text(
+                        modifier = Modifier.alpha(0.5f),
+                        textAlign = TextAlign.End,
+                        text = PrettyDateFormatter.messageCardStyleFormat(message.getDateTime()),
+                        color = contentColor,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
@@ -410,7 +383,7 @@ fun MessageText(
 @Composable
 @Preview
 fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = false,
@@ -435,7 +408,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
 @Composable
 @Preview
 fun GroupSelectionModeIncomingMessageSelectedPreview() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = true,
@@ -460,7 +433,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
 @Composable
 @Preview
 fun MessagePending() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
@@ -481,7 +454,7 @@ fun MessagePending() {
 @Composable
 @Preview
 fun MessageSent() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,

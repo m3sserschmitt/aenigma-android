@@ -1,12 +1,18 @@
 package ro.aenigma.util
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
 import java.io.File
 
 object FileExtensions {
-    fun File.lengthSafe(): Long = runCatching { length() }.getOrDefault(-1L)
+    suspend fun File.lengthSafe(): Long {
+        return withContext(Dispatchers.IO) {
+            runCatching { length() }.getOrDefault(-1L)
+        }
+    }
 
     fun File.asBufferedRequestBody(
         mediaType: MediaType,

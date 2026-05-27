@@ -1,11 +1,11 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -61,7 +61,7 @@ fun ServerItem(
             onItemDeselected = { }
         ).border(
             width = 4.dp,
-            color = MaterialTheme.colorScheme.primaryContainer
+            color = MaterialTheme.colorScheme.primary
         ).padding(12.dp)
             .fillMaxWidth(),
         colors = CardDefaults.cardColors().copy(
@@ -83,13 +83,12 @@ fun ServerItem(
                     tint = MaterialTheme.colorScheme.onBackground
                 )
             }
-            val host = getHost(
-                hostname = server.hostname,
-                onionService = server.onionService
-            )
-            Box(
+            val host = getHost(server = server)
+            val onionService = getOnionService(server = server)
+            Column(
                 modifier = Modifier.weight(8f),
-                contentAlignment = Alignment.CenterStart
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.Start
             ) {
                 Text(
                     text = host,
@@ -99,6 +98,15 @@ fun ServerItem(
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold
                 )
+                if(!onionService.isNullOrBlank()) {
+                    Text(
+                        text = onionService,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.MiddleEllipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             }
             Box(
                 modifier = Modifier.weight(1f),
@@ -114,15 +122,26 @@ fun ServerItem(
 }
 
 @Composable
-private fun getHost(hostname: String?, onionService: String?): String {
-    var host = hostname.getHost()
+private fun getHost(server: ServerInfoDto): String {
+    var host = server.hostname.getHost()
     if (host.isNullOrBlank()) {
-        host = onionService.getHost()
+        host = server.onionService.getHost()
     }
     if (host.isNullOrBlank()) {
         host = stringResource(id = R.string.unknown)
     }
     return host
+}
+
+@Composable
+private fun getOnionService(server: ServerInfoDto): String? {
+    return if(server.hostname.isNullOrBlank() && !server.onionService.isNullOrBlank()) {
+        null
+    } else if(!server.onionService.isNullOrBlank()) {
+        server.onionService.getHost()
+    } else {
+        stringResource(id = R.string.no_onion_service)
+    }
 }
 
 @Composable
@@ -316,7 +335,7 @@ fun ServersBottomSheet(
     ) {
         SheetContent(
             modifier = Modifier.fillMaxWidth()
-                .weight(7.5f),
+                .weight(8f),
             sheetState = sheetState,
             serversHistory = serversHistory,
             servers = servers,
@@ -325,7 +344,7 @@ fun ServersBottomSheet(
         )
         SearchBar(
             modifier = Modifier.fillMaxWidth()
-                .weight(.75f),
+                .weight(1f),
             value = searchQuery,
             placeholder = stringResource(id = R.string.server_query),
             onValueChanged = { newSearchQuery -> onSearchQueryChanged(newSearchQuery) },
@@ -334,7 +353,7 @@ fun ServersBottomSheet(
         PrimaryButton(
             modifier = Modifier.fillMaxWidth()
                 .padding(top = 4.dp)
-                .weight(.75f),
+                .weight(1f),
             text = stringResource(id = R.string.connect),
             onClick = onConnectClicked
         )

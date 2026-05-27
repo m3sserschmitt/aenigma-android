@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.models.enums.TorStatus
 import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import ro.aenigma.workers.extensions.WorkManagerExtensions.syncGraphAndInvokeClient
@@ -19,6 +21,10 @@ class SignalrController @Inject constructor(
     private val onionRoutingServiceMonitor: OnionRoutingServiceMonitor,
     private val signalRClient: SignalRClient
 ) {
+    private val sendMutex = Mutex()
+
+    private val connectMutex = Mutex()
+
     val clientStatus = signalRClient.status
 
     fun enqueueSyncGraphAndReconnect() {
@@ -76,7 +82,7 @@ class SignalrController @Inject constructor(
         return signalRClient.reset()
     }
 
-    suspend fun sendMessages(messages: List<String>): Boolean {
+    suspend fun sendMessages(messages: List<String>): Boolean = sendMutex.withLock {
         return signalRClient.sendMessages(messages)
     }
 
@@ -92,7 +98,7 @@ class SignalrController @Inject constructor(
         return signalRClient.pull()
     }
 
-    suspend fun connect(host: String?): Boolean {
+    suspend fun connect(host: String?): Boolean = connectMutex.withLock {
         return signalRClient.connect(host)
     }
 

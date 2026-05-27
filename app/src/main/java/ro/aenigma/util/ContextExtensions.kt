@@ -43,18 +43,25 @@ import org.apache.tika.Tika
 import ro.aenigma.R
 import ro.aenigma.activities.AppActivity
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
+import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
+import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
+import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.ORBOT_PACKAGE
 import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_FILE
 import ro.aenigma.util.Constants.Companion.PUBLIC_KEY_FILE
 import ro.aenigma.util.ContentResolverExtensions.getExtension
 import ro.aenigma.util.ContentResolverExtensions.querySize
 import ro.aenigma.util.FileExtensions.lengthSafe
+import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.isApkMime
 import ro.aenigma.util.StringExtensions.isArchiveMime
 import ro.aenigma.util.StringExtensions.isAudioMime
@@ -82,8 +89,9 @@ object ContextExtensions {
         }.components {
             add(
                 OkHttpNetworkFetcherFactory(
-                callFactory = { client }
-            ))
+                    callFactory = { client }
+                )
+            )
             if (Build.VERSION.SDK_INT >= 28) {
                 add(AnimatedImageDecoder.Factory())
             } else {
@@ -97,8 +105,9 @@ object ContextExtensions {
         return withContext(Dispatchers.IO) {
             try {
                 normalizeMimeType(
-                    resolver.getType(uri) ?: getFileTypeByExtension(uri)
-                    ?: getFileTypeByParsing(uri)
+                    resolver.getType(uri)
+                        ?: getFileTypeByExtension(uri)
+                        ?: getFileTypeByParsing(uri)
                 )
             } catch (_: Exception) {
                 null
@@ -106,24 +115,30 @@ object ContextExtensions {
         }
     }
 
-    fun Context.getFileTypeByParsing(uri: Uri): String? {
-        return contentResolver.openInputStream(uri)?.use { input ->
-            BufferedInputStream(input).use { buffered ->
-                Tika().detect(buffered)
+    suspend fun Context.getFileTypeByParsing(uri: Uri): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                contentResolver.openInputStream(uri)?.use { input ->
+                    BufferedInputStream(input).use { buffered ->
+                        Tika().detect(buffered)
+                    }
+                }
+            } catch (_: Exception) {
+                null
             }
         }
     }
 
-    fun Context.getFileTypeByExtension(uri: Uri): String? {
+    suspend fun Context.getFileTypeByExtension(uri: Uri): String? {
         return MimeTypeMap.getSingleton()
             .getMimeTypeFromExtension(getFileExtension(uri)?.lowercase() ?: return null)
     }
 
-    fun Context.getFileExtension(uri: Uri): String? {
+    suspend fun Context.getFileExtension(uri: Uri): String? {
         return contentResolver.getExtension(uri)
     }
 
-    fun Context.getFileExtension(uri: String): String? {
+    suspend fun Context.getFileExtension(uri: String): String? {
         return getFileExtension(uri.toUri())
     }
 
@@ -244,7 +259,7 @@ object ContextExtensions {
         return FileProvider.getUriForFile(this, "${this.packageName}.fileprovider", file)
     }
 
-    suspend fun Context.readTextFromUri(uri: Uri): String? {
+    suspend fun Context.readText(uri: Uri): String? {
         return withContext(Dispatchers.IO) {
             try {
                 contentResolver.openInputStream(uri)?.use { input ->
@@ -256,8 +271,16 @@ object ContextExtensions {
         }
     }
 
-    suspend fun Context.readTextFromUri(uri: String): String? {
-        return readTextFromUri(uri.toUri())
+    suspend fun Context.readText(uri: String): String? {
+        return readText(uri.toUri())
+    }
+
+    suspend fun Context.readMetadata(uri: String): AttachmentsMetadataDto? {
+        return readText(uri).fromJson<AttachmentsMetadataDto>()
+    }
+
+    suspend fun Context.readNewsFeed(uri: Uri): List<ArticleDto>? {
+        return readText(uri).fromJson<List<ArticleDto>>()
     }
 
     suspend fun Context.extractZip(zipFile: File, directory: String): List<File> {
@@ -384,7 +407,7 @@ object ContextExtensions {
         return isTextUri(uri.toUri())
     }
 
-    fun Context.sizeOf(uri: Uri): Long {
+    suspend fun Context.sizeOf(uri: Uri): Long {
         return when {
             uri.scheme?.equals(ContentResolver.SCHEME_CONTENT, true) == true ->
                 contentResolver.querySize(uri)
@@ -398,11 +421,11 @@ object ContextExtensions {
         }
     }
 
-    fun Context.sizeOf(uri: String): Long {
+    suspend fun Context.sizeOf(uri: String): Long {
         return sizeOf(uri.toUri())
     }
 
-    fun Context.splitFilesFirstFitDecreasing(
+    suspend fun Context.splitFilesFirstFitDecreasing(
         uris: List<String>,
         limitBytes: Long = ATTACHMENT_MAX_SIZE
     ): List<List<String>> {
@@ -619,6 +642,37 @@ object ContextExtensions {
             true
         } catch (_: Exception) {
             false
+        }
+    }
+
+    suspend fun Context.getArticle(
+        message: MessageWithDetailsDto
+    ): ArticleDto? {
+        if(!message.message.isFile()) {
+            return null
+        }
+        return try {
+            val metadataFile = message.message.files?.firstOrNull { file ->
+                isJsonUri(file) || isTextUri(file)
+            } ?: message.message.files?.firstOrNull { file ->
+                getFileExtension(file) == JSON_FILE_EXTENSION
+            }
+            val markdownFile = message.message.files?.firstOrNull { file ->
+                isMarkdownUri(file)
+            } ?: message.message.files?.firstOrNull { file ->
+                getFileExtension(file) == MARKDOWN_FILE_EXTENSION
+            }
+
+            val files = message.message.files?.minus(setOf(metadataFile, markdownFile))
+                ?.mapNotNull { uri -> uri }
+            val metadata = if (!metadataFile.isNullOrBlank()) {
+                readMetadata(metadataFile)
+            } else {
+                null
+            }
+            message.toArticleDto(uri = markdownFile, files, metadata)
+        } catch (_: Exception) {
+            null
         }
     }
 }

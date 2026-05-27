@@ -10,20 +10,13 @@ import org.apache.commons.rng.sampling.distribution.SharedStateDiscreteSampler
 import org.apache.commons.rng.simple.RandomSource
 import ro.aenigma.data.Repository
 import ro.aenigma.models.ArticleDto
-import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.extensions.ArticleDtoExtensions.prettyFormat
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.isWithinNewsfeedPeriod
-import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
-import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
-import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
-import ro.aenigma.util.ContextExtensions.getFileExtension
-import ro.aenigma.util.ContextExtensions.isJsonUri
-import ro.aenigma.util.ContextExtensions.isMarkdownUri
-import ro.aenigma.util.ContextExtensions.isTextUri
+import ro.aenigma.util.ContextExtensions.getArticle
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -89,32 +82,6 @@ class FeedSampler @Inject constructor(
         }
     }
 
-    private suspend fun getLocalArticle(message: MessageWithDetailsDto): ArticleDto? {
-        return try {
-            val metadataFile = message.message.files?.firstOrNull { file ->
-                context.isJsonUri(file) || context.isTextUri(file)
-            } ?: message.message.files?.firstOrNull { file ->
-                context.getFileExtension(file) == JSON_FILE_EXTENSION
-            }
-            val markdownFile = message.message.files?.firstOrNull { file ->
-                context.isMarkdownUri(file)
-            } ?: message.message.files?.firstOrNull { file ->
-                context.getFileExtension(file) == MARKDOWN_FILE_EXTENSION
-            }
-
-            val files = message.message.files?.minus(setOf(metadataFile, markdownFile))
-                ?.mapNotNull { uri -> uri }
-            val metadata = if (!metadataFile.isNullOrBlank()) {
-                repository.local.readMetadata(metadataFile)
-            } else {
-                null
-            }
-            message.toArticleDto(uri = markdownFile, files, metadata)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
     private suspend fun getLocalArticles(): List<ArticleDto> {
         val results = mutableListOf<ArticleDto>()
         return try {
@@ -123,7 +90,7 @@ class FeedSampler @Inject constructor(
                 val messages = repository.local.getSharedFiles(lastIndex)
 
                 for (message in messages) {
-                    results.add(getLocalArticle(message) ?: continue)
+                    results.add(context.getArticle(message) ?: continue)
                 }
 
                 val last = messages.lastOrNull() ?: break

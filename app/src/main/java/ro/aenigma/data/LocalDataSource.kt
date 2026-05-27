@@ -57,10 +57,10 @@ import ro.aenigma.util.Constants.Companion.NEWS_FEED_DIRECTORY
 import ro.aenigma.util.ContextExtensions.deleteUri
 import ro.aenigma.util.ContextExtensions.createAppFilesDirectory
 import ro.aenigma.util.ContextExtensions.getAppFile
-import ro.aenigma.util.ContextExtensions.readTextFromUri
+import ro.aenigma.util.ContextExtensions.readNewsFeed
+import ro.aenigma.util.ContextExtensions.readText
 import ro.aenigma.util.ContextExtensions.toContentUri
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import ro.aenigma.util.StringExtensions.fromJson
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -101,7 +101,7 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun readText(uri: Uri): String? {
-        return context.readTextFromUri(uri)
+        return context.readText(uri)
     }
 
     suspend fun readText(uri: String): String? {
@@ -113,10 +113,6 @@ class LocalDataSource @Inject constructor(
         val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$JSON_FILE_EXTENSION")
         withContext(Dispatchers.IO) { file.writeText(jsonMetadata) }
         return context.toContentUri(file)
-    }
-
-    suspend fun readMetadata(uri: String): AttachmentsMetadataDto? {
-        return context.readTextFromUri(uri).fromJson<AttachmentsMetadataDto>()
     }
 
     suspend fun saveNewsFeed(feed: List<ArticleDto>): Uri? {
@@ -131,7 +127,7 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun readNewsFeed(uri: Uri): List<ArticleDto>? {
-        return context.readTextFromUri(uri).fromJson<List<ArticleDto>>()
+        return context.readNewsFeed(uri)
     }
 
     suspend fun saveName(name: String): Boolean {

@@ -3,6 +3,7 @@ package ro.aenigma.ui.screens.about
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -18,11 +19,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -158,6 +161,22 @@ fun AboutScreen(
                 url = stringResource(id = R.string.privacy_policy),
                 action = navigateToPrivacyPolicy
             )
+            VerticalDivider(
+                modifier = Modifier.weight(1f)
+                    .background(color = MaterialTheme.colorScheme.background),
+                color = MaterialTheme.colorScheme.background
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .background(color = MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Text(
+                    text = stringResource(R.string.made_with_love),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
     }
 }

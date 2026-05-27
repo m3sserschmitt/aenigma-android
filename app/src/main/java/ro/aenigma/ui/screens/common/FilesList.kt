@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.NewPostSheetStateDto
@@ -226,33 +228,36 @@ fun rememberFilesPicker(
         stringResource(id = R.string.attachment_files_limit, ATTACHMENTS_MAX_COUNT)
     val fileTooLargeString =
         stringResource(id = R.string.files_too_large, maxSizeBytes / (1024.0 * 1024.0))
+    val coroutineScope = rememberCoroutineScope()
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
-        var fileTooLarge = false
-        val filteredUris = uris.filter { uri ->
-            try {
-                contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-                if (context.sizeOf(uri) > maxSizeBytes) {
-                    fileTooLarge = true
+        coroutineScope.launch {
+            var fileTooLarge = false
+            val filteredUris = uris.filter { uri ->
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    if (context.sizeOf(uri) > maxSizeBytes) {
+                        fileTooLarge = true
+                        false
+                    } else {
+                        true
+                    }
+                } catch (_: SecurityException) {
                     false
-                } else {
-                    true
                 }
-            } catch (_: SecurityException) {
-                false
             }
+            if (fileTooLarge) {
+                Toast.makeText(context, fileTooLargeString, Toast.LENGTH_LONG).show()
+            }
+            if (filteredUris.size > maxCount) {
+                Toast.makeText(context, tooManyAttachmentsString, Toast.LENGTH_LONG).show()
+            }
+            onFilesSelected(filteredUris.map { it.toString() })
         }
-        if (fileTooLarge) {
-            Toast.makeText(context, fileTooLargeString, Toast.LENGTH_LONG).show()
-        }
-        if (filteredUris.size > maxCount) {
-            Toast.makeText(context, tooManyAttachmentsString, Toast.LENGTH_LONG).show()
-        }
-        onFilesSelected(filteredUris.map { it.toString() })
     }
 }
 
