@@ -50,6 +50,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.util.Constants.Companion.API_BASE_URL
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
@@ -150,7 +151,7 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationServicePreference(notificationServicePreference)
     }
 
-    suspend fun getGuardHostname(guard: ServerInfoDto): String? {
+    suspend fun getHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
         val useOrbot = useOrbot.firstOrNull() == true
         return if (useTor || useOrbot) {
@@ -165,7 +166,8 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun getGuardHostname(): String? {
-        return getGuardHostname(getGuard()?.toServerInfoDto() ?: return null)
+        val guard = getGuard() ?: return API_BASE_URL
+        return getHostname(guard.toServerInfoDto())
     }
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
@@ -300,6 +302,9 @@ class LocalDataSource @Inject constructor(
 
     suspend fun removeMessageSoft(refId: String) {
         val message = messagesDao.get().getByRefId(refId)?.toDto() ?: return
+        if (message.chatId == BROADCAST_CONTACT_ADDRESS) {
+            return
+        }
         messagesDao.get().removeSoft(refId)
         removeFiles(message)
         updateContactLastMessageId(message.chatId)

@@ -46,7 +46,6 @@ import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrController
 import ro.aenigma.services.OnionRoutingServiceMonitor
-import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getHttpUri
@@ -67,7 +66,7 @@ class MainViewModel @Inject constructor(
     okHttpClientProviderLazy: dagger.Lazy<OkHttpClientProvider>,
     onionRoutingServiceMonitor: OnionRoutingServiceMonitor,
     repository: Repository,
-) : BaseViewModel(repository, workManager, signalrController, okHttpClientProviderLazy, ) {
+) : BaseViewModel(repository, workManager, signalrController, okHttpClientProviderLazy) {
 
     private val _contactsSearchQuery: MutableStateFlow<String> = MutableStateFlow("")
 
@@ -404,6 +403,7 @@ class MainViewModel @Inject constructor(
         )
         viewModelScope.launch(ioDispatcher) {
             repository.local.insertOrUpdateContact(newContact)
+            messageSaver.saveOutgoingHelloMessage(newContact.address)
         }
         resetContactChanges()
     }
@@ -570,8 +570,7 @@ class MainViewModel @Inject constructor(
                 val articleUri =
                     repository.local.saveBroadcastText(newPostSheetState.value.content).toString()
                 val attachments = newPostSheetState.value.fileUris + metadataUri + articleUri
-                val message = MessageDtoFactory.createOutgoing(
-                    chatId = BROADCAST_CONTACT_ADDRESS,
+                val message = MessageDtoFactory.createOutgoingBroadcast(
                     text = null,
                     type = MessageType.FILES,
                     actionFor = null,
@@ -659,7 +658,7 @@ class MainViewModel @Inject constructor(
     fun switchServer(server: ServerInfoDto) {
         viewModelScope.launch(ioDispatcher) {
             switchServer(
-                serverQuery = repository.local.getGuardHostname(server) ?: return@launch,
+                serverQuery = repository.local.getHostname(server) ?: return@launch,
                 expectedAddress = server.address
             )
         }
@@ -675,6 +674,12 @@ class MainViewModel @Inject constructor(
                 signalrController.enqueueSyncGraphAndReconnect()
             } catch (_: Exception) {
             }
+        }
+    }
+
+    fun broadcastNewServerLocation() {
+        viewModelScope.launch(ioDispatcher) {
+            messageSaver.saveOutgoingBroadcastHelloMessage()
         }
     }
 

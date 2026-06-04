@@ -13,6 +13,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,7 @@ import kotlinx.coroutines.launch
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.util.ContextExtensions.showImageViewer
+import ro.aenigma.util.ZonedDateTimeExtensions.messageCardStyleFormat
 
 @Composable
 fun ArticleCard(
@@ -38,6 +40,9 @@ fun ArticleCard(
     onClick: (ArticleDto) -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
+    val date = remember(key1 = article.date) {
+        article.date?.messageCardStyleFormat()
+    }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     Card(
@@ -103,10 +108,10 @@ fun ArticleCard(
                             color = contentColor
                         )
                     }
-                    if (!article.date.isNullOrEmpty()) {
+                    if (!date.isNullOrEmpty()) {
                         Text(
                             modifier = Modifier.padding(bottom = 4.dp),
-                            text = article.date,
+                            text = date,
                             style = MaterialTheme.typography.bodySmall,
                             color = contentColor
                         )

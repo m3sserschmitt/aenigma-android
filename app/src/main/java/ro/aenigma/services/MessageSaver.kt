@@ -28,10 +28,13 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.isDeleteAll
 import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
 import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupCreateOrUpdate
 import ro.aenigma.models.extensions.MessageDtoExtensions.isGroupMemberLeave
+import ro.aenigma.models.extensions.MessageDtoExtensions.isHello
 import ro.aenigma.models.extensions.MessageDtoExtensions.isText
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.withSenderAddress
 import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
 import ro.aenigma.workers.extensions.WorkManagerExtensions.downloadAttachment
@@ -110,7 +113,7 @@ class MessageSaver @Inject constructor(
                     }
                 }
 
-                messageEntity.isText() -> {
+                messageEntity.isText() || messageEntity.isHello() -> {
                     repository.local.insertOrIgnoreMessage(messageEntity)?.let {
                         createOrUpdateContact(artifact, signedData.publicKey ?: return)
                         notify(messageEntity)
@@ -144,10 +147,13 @@ class MessageSaver @Inject constructor(
     }
 
     private suspend fun verifyArtifact(chatId: String?, signedData: SignatureDto): ArtifactDto? {
-        if (chatId.isNullOrBlank()) {
+        if (chatId.isNullOrBlank() || chatId == BROADCAST_CONTACT_ADDRESS) {
             return null
         }
         val artifact = signedData.jsonVerify<ArtifactDto>() ?: return null
+        if(artifact.chatId == BROADCAST_CONTACT_ADDRESS || artifact.chatId != chatId) {
+            return null
+        }
         val publicKeyMatch =
             signedData.publicKey.getAddressFromPublicKey() == artifact.senderAddress
         return when (publicKeyMatch && chatId == artifact.senderAddress) {
@@ -197,6 +203,14 @@ class MessageSaver @Inject constructor(
             .mapNotNull { message -> onionParsingService.parse(message) }
             .mapNotNull { item -> parseArtifact(item) }
         saveIncomingMessages(messageEntities)
+    }
+
+    suspend fun saveOutgoingHelloMessage(chatId: String): Boolean {
+        return saveOutgoingMessage(MessageDtoFactory.createOutgoingHelloMessage(chatId))
+    }
+
+    suspend fun saveOutgoingBroadcastHelloMessage(): Boolean {
+        return saveOutgoingHelloMessage(BROADCAST_CONTACT_ADDRESS)
     }
 
     suspend fun saveOutgoingMessage(

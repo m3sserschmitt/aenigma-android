@@ -20,12 +20,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.ui.screens.common.FilesCountIndicator
 import ro.aenigma.ui.screens.common.FilesPickerButton
 import ro.aenigma.ui.screens.common.SendButton
@@ -104,13 +106,14 @@ fun ReplyToMessage(
         return
     }
     val name = if (message.data.message.incoming && message.data.sender?.name != null) {
-        stringResource(id = R.string.they_said).format(message.data.sender.name)
+        message.data.sender.name
     } else if(!message.data.message.incoming) {
-        stringResource(id = R.string.you_said)
+        stringResource(id = R.string.you)
     } else {
         return
     }
-    val text = message.data.message.text ?: return
+    val context = LocalContext.current
+    val text = message.data.message.getMessageTextByAction(context)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -127,7 +130,7 @@ fun ReplyToMessage(
             )
             Text(
                 modifier = Modifier.padding(start = 4.dp),
-                text = text,
+                text = text ?: "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f),
                 maxLines = 3,

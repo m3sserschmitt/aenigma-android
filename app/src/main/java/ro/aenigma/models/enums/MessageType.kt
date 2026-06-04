@@ -1,6 +1,7 @@
 package ro.aenigma.models.enums
 
 enum class MessageType {
+    HELLO,
     TEXT,
     REPLY,
     FILES,

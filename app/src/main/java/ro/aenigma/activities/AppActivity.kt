@@ -211,7 +211,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun resetClient() {
-        signalrController.resetClient()
+        lifecycleScope.launch { signalrController.resetClient() }
     }
 
     private fun schedulePeriodicSync() {

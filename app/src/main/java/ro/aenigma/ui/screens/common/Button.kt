@@ -3,6 +3,7 @@ package ro.aenigma.ui.screens.common
 import android.net.Uri
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -203,6 +204,24 @@ fun PrimaryButton(
             text = text,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onPrimary
+        )
+    }
+}
+
+@Composable
+fun ReloadButton (
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit = { }
+) {
+    IconButton(
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Refresh,
+            contentDescription = stringResource(
+                id = R.string.reload
+            ),
+            tint = tint
         )
     }
 }

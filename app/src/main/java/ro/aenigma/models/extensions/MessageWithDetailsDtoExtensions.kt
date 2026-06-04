@@ -5,7 +5,6 @@ import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.models.extensions.MessageDtoExtensions.getDateTime
 import ro.aenigma.util.Constants.Companion.NEWS_FEED_TIME_PERIOD
-import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 
 object MessageWithDetailsDtoExtensions {
@@ -22,17 +21,17 @@ object MessageWithDetailsDtoExtensions {
             description = metadata?.description,
             url = uri,
             imageUrls = files,
-            date = PrettyDateFormatter.format(getDateTime())
+            date = getDateTime().toString()
         )
     }
 
     @JvmStatic
-    fun MessageWithDetailsDto.getDateTime(): ZonedDateTime {
+    fun MessageWithDetailsDto.getDateTime(): ZonedDateTime? {
         return message.getDateTime()
     }
 
     @JvmStatic
     fun MessageWithDetailsDto.isWithinNewsfeedPeriod(): Boolean {
-        return getDateTime().isAfter(ZonedDateTime.now().minus(NEWS_FEED_TIME_PERIOD))
+        return getDateTime()?.isAfter(ZonedDateTime.now().minus(NEWS_FEED_TIME_PERIOD)) == true
     }
 }

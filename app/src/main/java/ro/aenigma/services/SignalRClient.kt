@@ -130,14 +130,23 @@ class SignalRClient @Inject constructor(
             return false
         } finally {
             _failedAttempts.value = 0
-            _status.value = ClientStatus.NotConnected
+            _status.value = ClientStatus.DisconnectedByClient
         }
     }
 
-    fun reset() {
-        if (status.value is ClientStatus.Error.Aborted) {
-            _failedAttempts.value = 0
-            _status.value = ClientStatus.NotConnected
+    suspend fun reset(): Boolean {
+        return if (status.value is ClientStatus.Error.Aborted) {
+            try {
+                _hubConnection.value.stop()
+                true
+            } catch (_: Exception) {
+                false
+            } finally {
+                _failedAttempts.value = 0
+                _status.value = ClientStatus.NotConnected
+            }
+        } else {
+            false
         }
     }
 

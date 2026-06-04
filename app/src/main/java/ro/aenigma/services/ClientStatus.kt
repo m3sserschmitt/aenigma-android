@@ -18,6 +18,8 @@ sealed class ClientStatus(
 
     object NotConnected : ClientStatus(null, 0)
 
+    object DisconnectedByClient : ClientStatus(null, 0)
+
     object Connecting : ClientStatus(null, 1)
 
     object Connected : ClientStatus(null, 2)

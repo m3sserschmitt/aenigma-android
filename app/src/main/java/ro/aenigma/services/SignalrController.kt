@@ -27,15 +27,27 @@ class SignalrController @Inject constructor(
 
     val clientStatus = signalRClient.status
 
+    fun enqueueSyncAndConnect() {
+        workManager.syncGraphAndInvokeClient(
+            actions = ClientAction.connectPullCleanup()
+        )
+    }
+
     fun enqueueSyncGraphAndReconnect() {
         workManager.syncGraphAndInvokeClient(
             actions = ClientAction.Disconnect and ClientAction.connectPullCleanup()
         )
     }
 
-    fun enqueueDisconnect() {
+    fun enqueueReconnect() {
         workManager.invokeClient(
-            actions = ClientAction.Disconnect
+            actions = ClientAction.Disconnect and ClientAction.connectPullCleanup()
+        )
+    }
+
+    fun enqueueConnect() {
+        workManager.invokeClient(
+            actions = ClientAction.connectPullCleanup()
         )
     }
 
@@ -44,13 +56,20 @@ class SignalrController @Inject constructor(
             is ClientStatus.Error.Aborted -> {
             }
 
-            ClientStatus.NotConnected,
-            is ClientStatus.Error.ConnectionRefused,
-            is ClientStatus.Error.Disconnected,
-            is ClientStatus.Error -> {
-                enqueueSyncGraphAndReconnect()
+            ClientStatus.NotConnected -> {
+                enqueueSyncAndConnect()
             }
 
+            is ClientStatus.Error.ConnectionRefused,
+            is ClientStatus.Error.Disconnected -> {
+                enqueueConnect()
+            }
+
+            is ClientStatus.Error -> {
+                enqueueReconnect()
+            }
+
+            ClientStatus.DisconnectedByClient,
             ClientStatus.Authenticated,
             ClientStatus.Authenticating,
             ClientStatus.Clean,
@@ -72,13 +91,13 @@ class SignalrController @Inject constructor(
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             onionRoutingServiceMonitor.torStatus.drop(1).distinctUntilChanged().collect { status ->
                 if (status == TorStatus.ON || status == TorStatus.OFF) {
-                    enqueueDisconnect()
+                    enqueueReconnect()
                 }
             }
         }
     }
 
-    fun resetClient() {
+    suspend fun resetClient(): Boolean {
         return signalRClient.reset()
     }
 

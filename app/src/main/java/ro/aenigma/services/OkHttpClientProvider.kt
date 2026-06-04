@@ -38,13 +38,13 @@ open class OkHttpClientProvider @Inject constructor(
         }
     }
 
-    override suspend fun getInstance(): OkHttpClient {
+    override suspend fun getInstance(): OkHttpClient? {
         return try {
             val useTor = localDataSource.useTor.firstOrNull() == true
             val useOrbot = localDataSource.useOrbot.firstOrNull() == true
             getInstance(useTor, useOrbot)
         } catch (_: Exception) {
-            OkHttpClientProviderDefault().getInstance()
+            null
         }
     }
 }

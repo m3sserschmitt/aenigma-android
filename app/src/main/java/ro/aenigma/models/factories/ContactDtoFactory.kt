@@ -26,6 +26,23 @@ object ContactDtoFactory {
     }
 
     @JvmStatic
+    fun createContact(name: String): ContactDto {
+        val dateCreated = ZonedDateTime.now()
+        return ContactDto(
+            address = "",
+            name = name,
+            publicKey = null,
+            guardHostname = null,
+            guardAddress = null,
+            type = ContactType.CONTACT,
+            hasNewMessage = false,
+            lastMessageId = null,
+            dateCreated = dateCreated,
+            dateUpdated = dateCreated
+        )
+    }
+
+    @JvmStatic
     fun createGroup(address: String, name: String?): ContactDto {
         val dateCreated = ZonedDateTime.now()
         return ContactDto(

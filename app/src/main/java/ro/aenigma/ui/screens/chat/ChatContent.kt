@@ -42,7 +42,8 @@ import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.ArticleCard
 import ro.aenigma.util.ContextExtensions.getArticle
 import ro.aenigma.util.RequestState
-import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.util.ZonedDateTimeExtensions
+import ro.aenigma.util.ZonedDateTimeExtensions.chatroomStyleFormat
 import java.time.ZonedDateTime
 
 @Composable
@@ -122,17 +123,20 @@ fun ChatContent(
 @Composable
 fun MessageDate(next: MessageWithDetailsDto?, message: MessageWithDetailsDto) {
     val localDate1 = next?.getDateTime()?.toLocalDate()
-    val localDate2 = message.getDateTime().toLocalDate()
+    val localDate2 = message.getDateTime()?.toLocalDate()
 
     if (localDate1 == null || localDate1 != localDate2) {
-        Text(
-            modifier = Modifier.fillMaxWidth()
-                .padding(vertical = 8.dp),
-            color = MaterialTheme.colorScheme.onBackground,
-            textAlign = TextAlign.Center,
-            text = PrettyDateFormatter.chatroomStyleFormat(message.message.date),
-            style = MaterialTheme.typography.bodyLarge
-        )
+        val text = message.message.date.chatroomStyleFormat()
+        if(!text.isNullOrBlank()) {
+            Text(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center,
+                text = text,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }
 
@@ -197,11 +201,14 @@ fun ChatItem(
         },
     ) {
         if (article?.url.isNullOrBlank() || isOutgoingFailed) {
+            val senderVisible =
+                message.message.chatId != message.message.senderAddress && message.message.incoming
             MessageCard(
                 okHttpClientProvider = okHttpClientProvider,
                 isSelectionMode = isSelectionMode,
                 isSelected = isSelected,
                 message = message,
+                senderVisible = senderVisible,
                 isOutgoingSent = isOutgoingSent,
                 contentColor = contentColor,
                 containerColor = containerColor,

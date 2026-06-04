@@ -255,7 +255,7 @@ object WorkManagerExtensions {
     ) {
         enqueueUniqueWork(
             SignalRClientWorker.UNIQUE_ONE_TIME_REQUEST,
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            ExistingWorkPolicy.REPLACE,
             getInvokeClientRequest(actions)
         )
     }

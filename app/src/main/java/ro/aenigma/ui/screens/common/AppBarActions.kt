@@ -1,18 +1,20 @@
 package ro.aenigma.ui.screens.common
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -154,20 +156,36 @@ fun ForwardAttachmentsAppBarAction(
 }
 
 @Composable
-fun ConnectionStatusAppBarAction(
+private fun AppBarConnectionStatusIndicator(
     tint: Color = Color.Unspecified,
     connectionStatus: ClientStatus,
-    isClientRunning: Boolean
+    isClientWorkerRunning: Boolean
 ) {
-    IndeterminateCircularIndicator(
-        size = 18.dp,
-        color = tint,
-        textColor = tint,
-        visible = connectionStatus greaterOrEqualThan ClientStatus.NotConnected
-                && connectionStatus smallerThan ClientStatus.Authenticated || isClientRunning,
-        text = stringResource(id = R.string.working),
-        textStyle = MaterialTheme.typography.bodyMedium
-    )
+    val isError = connectionStatus is ClientStatus.Error
+    val clientIsInitializing = connectionStatus greaterOrEqualThan ClientStatus.Connecting
+            && connectionStatus smallerThan ClientStatus.Authenticated && !isError
+    val isProgress = clientIsInitializing || isClientWorkerRunning
+    val isAuthenticated = connectionStatus greaterOrEqualThan ClientStatus.Authenticated && !isError
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IndeterminateCircularIndicator(
+            size = 18.dp,
+            color = tint,
+            textColor = tint,
+            visible = isProgress,
+            text = stringResource(id = R.string.working),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        if (!isAuthenticated) {
+            Text(
+                text = stringResource(id = R.string.disconnected),
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
 }
 
 @Composable
@@ -177,17 +195,32 @@ fun ReloadAppBarAction(
     onClick: () -> Unit
 ) {
     if (visible) {
-        IconButton(
+        ReloadButton(
+            tint = tint,
             onClick = onClick
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = stringResource(
-                    id = R.string.reload
-                ),
-                tint = tint
-            )
-        }
+        )
+    }
+}
+
+@Composable
+fun ReloadClientAppBarAction(
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean,
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppBarConnectionStatusIndicator(
+            tint = tint,
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning
+        )
+        ReloadButton(
+            tint = tint,
+            onClick = onClick
+        )
     }
 }
 

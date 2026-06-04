@@ -76,7 +76,7 @@ fun ContactsScreen(
     val serversHistory by mainViewModel.serversHistory.collectAsState()
     val serversSheetState by mainViewModel.serversSheetState.collectAsState()
     val connectionStatus by mainViewModel.clientStatus.collectAsState()
-    val isClientRunning by mainViewModel.isClientRunning.collectAsState()
+    val isClientWorkerRunning by mainViewModel.isClientWorkerRunning.collectAsState()
     val useTor by mainViewModel.useTor.collectAsState()
     val useOrbot by mainViewModel.useOrbot.collectAsState()
     val notificationServicePreference by mainViewModel.notificationServicePreference.collectAsState()
@@ -85,7 +85,7 @@ fun ContactsScreen(
 
     ContactsScreen(
         connectionStatus = connectionStatus,
-        isClientRunning = isClientRunning,
+        isClientWorkerRunning = isClientWorkerRunning,
         contacts = allContacts,
         servers = servers,
         serversHistory = serversHistory,
@@ -106,6 +106,7 @@ fun ContactsScreen(
         onServerClicked = { server -> mainViewModel.switchServer(server) },
         onServerConnectClicked = { serverQuery -> mainViewModel.switchServer(serverQuery) },
         onScanServerCodeClicked = navigateToScanServerScreen,
+        onConnectPeopleClicked = { mainViewModel.broadcastNewServerLocation() },
         onServersSheetStateChanged = { newSheetState ->
             mainViewModel.setServersSheetState(newSheetState)
         },
@@ -142,7 +143,7 @@ fun ContactsScreen(
 @Composable
 fun ContactsScreen(
     connectionStatus: ClientStatus,
-    isClientRunning: Boolean = false,
+    isClientWorkerRunning: Boolean = false,
     contacts: RequestState<List<ContactWithLastMessageDto>>,
     servers: RequestState<List<ServerInfoDto>>,
     serversHistory: RequestState<List<ServerInfoDto>>,
@@ -161,6 +162,7 @@ fun ContactsScreen(
     onServerConnectClicked: (String) -> Unit,
     onServerClicked: (ServerInfoDto) -> Unit,
     onScanServerCodeClicked: () -> Unit,
+    onConnectPeopleClicked: () -> Unit = { },
     onServersSheetStateChanged: (ServersSheetStateDto) -> Unit,
     onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
     onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
@@ -349,6 +351,9 @@ fun ContactsScreen(
                     serversHistory = serversHistory,
                     sheetState = serversSheetState,
                     searchQuery = serversSearchQuery,
+                    connectionStatus = connectionStatus,
+                    isClientWorkerRunning = isClientWorkerRunning,
+                    onRetryConnection = onRetryConnection,
                     onSearchQueryChanged = { newSearchQuery ->
                         serversSearchQuery = newSearchQuery
                         if (serversSearchQuery.isEmpty()) {
@@ -363,7 +368,8 @@ fun ContactsScreen(
                     },
                     onServerClicked = onServerClicked,
                     onSheetStateChanged = onServersSheetStateChanged,
-                    onScanCodeClicked = onScanServerCodeClicked
+                    onScanCodeClicked = onScanServerCodeClicked,
+                    onConnectPeopleClicked = onConnectPeopleClicked
                 )
             }
         },
@@ -379,7 +385,7 @@ fun ContactsScreen(
         topBar = {
             ContactsAppBar(
                 connectionStatus = connectionStatus,
-                isClientRunning = isClientRunning,
+                isClientWorkerRunning = isClientWorkerRunning,
                 isSearchMode = isSearchMode,
                 useTor = useTor,
                 useOrbot = useOrbot,

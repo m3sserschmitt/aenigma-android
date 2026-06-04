@@ -174,7 +174,7 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun getServerInfo(): GuardDto? {
         return try {
-            verifyServerInfo(retrofitProvider.getApi())
+            verifyServerInfo(retrofitProvider.getApi() ?: return null)
         } catch (_: Exception) {
             null
         }
@@ -182,7 +182,7 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun getVertices(): List<VertexDto> {
         return try {
-            val response = retrofitProvider.getApi().getVertices()
+            val response = retrofitProvider.getApi()?.getVertices() ?: return listOf()
             val body = response.body()
 
             if (response.code() != 200 || body == null) {
@@ -208,7 +208,8 @@ class RemoteDataSource @Inject constructor(
             signature.publicKey ?: return null
             val sharedDataCreate =
                 SharedDataCreate(signature.publicKey, signature.signedData, accessCount)
-            val response = retrofitProvider.getApi().createSharedData(sharedDataCreate)
+            val response =
+                retrofitProvider.getApi()?.createSharedData(sharedDataCreate) ?: return null
             val body = response.body()
             if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
                 return null
@@ -222,8 +223,8 @@ class RemoteDataSource @Inject constructor(
     suspend fun incrementSharedDataAccessCount(url: String): Boolean {
         try {
             return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
-                .incrementSharedDataAccessCount(url.getTagQueryParameter() ?: return false)
-                .code() == 200
+                ?.incrementSharedDataAccessCount(url.getTagQueryParameter() ?: return false)
+                ?.code() == 200
         } catch (_: Exception) {
             return false
         }
@@ -232,7 +233,11 @@ class RemoteDataSource @Inject constructor(
     suspend fun getSharedData(url: String, expectedPublisherAddress: String?): SharedDataDto? {
         val tag = url.getTagQueryParameter() ?: return null
         val baseUrl = url.getBaseUrl() ?: return null
-        return getSharedData(retrofitProvider.getApi(baseUrl), tag, expectedPublisherAddress)
+        return getSharedData(
+            retrofitProvider.getApi(baseUrl) ?: return null,
+            tag,
+            expectedPublisherAddress
+        )
     }
 
     suspend fun getGroupData(
@@ -296,7 +301,8 @@ class RemoteDataSource @Inject constructor(
                 .toString()
                 .toRequestBody("text/plain".toMediaType())
             val response =
-                retrofitProvider.getApi().postFile(file = filePart, maxAccessCount = countPart)
+                retrofitProvider.getApi()?.postFile(file = filePart, maxAccessCount = countPart)
+                    ?: return null
             val body = response.body()
             if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
                 null
@@ -333,8 +339,8 @@ class RemoteDataSource @Inject constructor(
     suspend fun incrementFileAccessCount(url: String): Boolean {
         try {
             return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
-                .incrementFileAccessCount(url.getTagQueryParameter() ?: return false)
-                .code() == 200
+                ?.incrementFileAccessCount(url.getTagQueryParameter() ?: return false)
+                ?.code() == 200
         } catch (_: Exception) {
             return false
         }
@@ -343,7 +349,7 @@ class RemoteDataSource @Inject constructor(
     suspend fun getServerInfo(url: String, expectedAddress: String? = null): GuardDto? {
         return try {
             val baseUrl = url.getBaseUrl() ?: return null
-            val api = retrofitProvider.getApi(baseUrl)
+            val api = retrofitProvider.getApi(baseUrl) ?: return null
             verifyServerInfo(api, expectedAddress)
         } catch (_: Exception) {
             null
@@ -353,7 +359,8 @@ class RemoteDataSource @Inject constructor(
     suspend fun getFile(url: String, outFile: File): Boolean {
         return try {
             val tag = url.getTagQueryParameter() ?: return false
-            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return false).getFile(tag)
+            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return false)?.getFile(tag)
+                ?: return false
             val body = response.body()
             if (response.code() != 200 || body == null) {
                 false
@@ -381,7 +388,8 @@ class RemoteDataSource @Inject constructor(
     private suspend fun requestArticles(url: String): List<ArticleDto> {
         return try {
             val response =
-                retrofitProvider.getApi(url.getBaseUrl() ?: return listOf()).getArticlesIndex(url)
+                retrofitProvider.getApi(url.getBaseUrl() ?: return listOf())?.getArticlesIndex(url)
+                    ?: return listOf()
             val body = response.body()
             if (response.code() != 200 || body == null) {
                 listOf()
@@ -406,7 +414,8 @@ class RemoteDataSource @Inject constructor(
     suspend fun getText(url: String): String? {
         return try {
             val response =
-                retrofitProvider.getApi(url.getBaseUrl() ?: return null).getText(url)
+                retrofitProvider.getApi(url.getBaseUrl() ?: return null)?.getText(url)
+                    ?: return null
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null
@@ -420,7 +429,8 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun checkTor(url: String): TorCheckDto? {
         return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return null).checkTor(url)
+            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return null)?.checkTor(url)
+                ?: return null
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null

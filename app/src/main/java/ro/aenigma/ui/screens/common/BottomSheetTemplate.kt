@@ -14,6 +14,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
 
@@ -25,6 +26,8 @@ fun BottomSheetTitle(
     Text(
         modifier = modifier.padding(bottom = 4.dp),
         text = title,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
         style = MaterialTheme.typography.headlineSmall,
         color = MaterialTheme.colorScheme.onBackground
     )

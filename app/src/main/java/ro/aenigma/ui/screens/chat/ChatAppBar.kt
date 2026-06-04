@@ -26,10 +26,9 @@ import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
-import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
-import ro.aenigma.ui.screens.common.ReloadAppBarAction
+import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
@@ -42,7 +41,7 @@ fun ChatAppBar(
     isMember: Boolean,
     isAdmin: Boolean,
     connectionStatus: ClientStatus,
-    isClientRunning: Boolean = false,
+    isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -99,13 +98,9 @@ fun ChatAppBar(
                 title = contact.data.contact.name.toString(),
                 navigateBack = navigateBack,
                 actions = {
-                    ConnectionStatusAppBarAction(
+                    ReloadClientAppBarAction(
+                        isClientWorkerRunning = isClientWorkerRunning,
                         connectionStatus = connectionStatus,
-                        isClientRunning = isClientRunning,
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                    ReloadAppBarAction(
-                        visible = connectionStatus is ClientStatus.Error.Aborted || !isClientRunning,
                         tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onRetryConnection
                     )

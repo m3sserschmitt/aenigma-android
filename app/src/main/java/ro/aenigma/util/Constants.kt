@@ -128,7 +128,7 @@ class Constants {
 
         const val ROUTE_MESSAGE_METHOD = "RouteMessage"
 
-        const val PULL_METHOD = "PullPaged"
+        const val PULL_METHOD = "Pull2"
 
         const val CLEANUP_METHOD = "Cleanup"
 

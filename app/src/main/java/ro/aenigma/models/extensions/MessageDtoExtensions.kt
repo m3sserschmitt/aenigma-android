@@ -8,7 +8,7 @@ import ro.aenigma.models.MessageDto
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageTypeExtensions.isGroupCreateOrUpdate
 import ro.aenigma.models.extensions.MessageTypeExtensions.isGroupMemberLeave
-import java.time.ZoneId
+import ro.aenigma.util.ZonedDateTimeExtensions.normalize
 import java.time.ZonedDateTime
 
 object MessageDtoExtensions {
@@ -35,6 +35,7 @@ object MessageDtoExtensions {
     @JvmStatic
     fun MessageDto.getMessageTextByAction(context: Context): String? {
         return when (type) {
+            MessageType.HELLO -> context.getString(R.string.new_connection_created)
             MessageType.DELETE -> context.getString(R.string.message_deleted)
             MessageType.DELETE_ALL -> context.getString(R.string.conversation_deleted)
             MessageType.GROUP_CREATE -> context.getString(R.string.created_channel)
@@ -64,6 +65,11 @@ object MessageDtoExtensions {
     @JvmStatic
     fun MessageDto.isText(): Boolean {
         return type == MessageType.TEXT || type == MessageType.REPLY
+    }
+
+    @JvmStatic
+    fun MessageDto.isHello(): Boolean {
+        return type == MessageType.HELLO
     }
 
     @JvmStatic
@@ -136,7 +142,7 @@ object MessageDtoExtensions {
     }
 
     @JvmStatic
-    fun MessageDto.getDateTime(): ZonedDateTime {
-        return (dateReceivedOnServer ?: date).withZoneSameInstant(ZoneId.systemDefault())
+    fun MessageDto.getDateTime(): ZonedDateTime? {
+        return (dateReceivedOnServer ?: date).normalize()
     }
 }

@@ -24,14 +24,13 @@ import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.CloseAppBarAction
-import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.DropdownMenuSwitch
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
 import ro.aenigma.ui.screens.common.ForwardAttachmentsAppBarAction
 import ro.aenigma.ui.screens.common.ServersListAppBarAction
-import ro.aenigma.ui.screens.common.ReloadAppBarAction
+import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
@@ -40,7 +39,7 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 @Composable
 fun ContactsAppBar(
     connectionStatus: ClientStatus,
-    isClientRunning: Boolean = false,
+    isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -127,13 +126,9 @@ fun ContactsAppBar(
             ),
             navigateBackVisible = false,
             actions = {
-                ConnectionStatusAppBarAction(
-                    isClientRunning = isClientRunning,
+                ReloadClientAppBarAction(
+                    isClientWorkerRunning = isClientWorkerRunning,
                     connectionStatus = connectionStatus,
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-                ReloadAppBarAction(
-                    visible = connectionStatus is ClientStatus.Error.Aborted || !isClientRunning,
                     tint = MaterialTheme.colorScheme.onBackground,
                     onClick = onRetryConnection
                 )

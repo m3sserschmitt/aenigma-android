@@ -17,7 +17,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,40 +48,38 @@ import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.getDateTime
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
 import ro.aenigma.ui.screens.common.SelectionModeBullet
-import ro.aenigma.util.PrettyDateFormatter
 import java.time.ZonedDateTime
 import ro.aenigma.util.ContextExtensions.showImageViewer
+import ro.aenigma.util.ZonedDateTimeExtensions.messageCardStyleFormat
 
 @Composable
 fun MessageCard(
     modifier: Modifier = Modifier,
     message: MessageWithDetailsDto,
-    okHttpClientProvider: IOkHttpClientProvider,
+    okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     isOutgoingFailed: Boolean = false,
     isOutgoingSent: Boolean = false,
     contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
-    isSelectionMode: Boolean,
-    isSelected: Boolean,
-    onItemSelected: (MessageWithDetailsDto) -> Unit,
-    onItemDeselected: (MessageWithDetailsDto) -> Unit,
-    onClick: (MessageWithDetailsDto) -> Unit,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    deliveryStatusVisible: Boolean = true,
+    senderVisible: Boolean = true,
+    dateFormatter: (ZonedDateTime) -> String = { date -> date.messageCardStyleFormat() ?: "" },
+    onItemSelected: (MessageWithDetailsDto) -> Unit = { },
+    onItemDeselected: (MessageWithDetailsDto) -> Unit = { },
+    onClick: (MessageWithDetailsDto) -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val context = LocalContext.current
     val text = message.message.getMessageTextByAction(context)
-    val sender =
-        if (message.message.chatId != message.message.senderAddress && message.message.incoming) {
-            message.sender
-        } else {
-            null
-        }
     val coroutineScope = rememberCoroutineScope()
 
     Card(
@@ -128,14 +125,16 @@ fun MessageCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 SenderName(
-                    contact = sender,
+                    visible = senderVisible,
+                    contact = message.sender,
                     color = contentColor
                 )
 
                 ResponseTo(
                     message = message,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    onRedirectUriClicked = onRedirectUriClicked
                 )
 
                 DisplayFiles(
@@ -163,34 +162,39 @@ fun MessageCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (isOutgoingSent) {
-                        Icon(
-                            modifier = Modifier.size(12.dp).alpha(.5f),
-                            imageVector = Icons.Outlined.Done,
-                            contentDescription = stringResource(R.string.message_delivery_status),
-                            tint = contentColor
-                        )
-                    } else if (isOutgoingFailed) {
-                        ClickToRetryMessage(
-                            iconSize = 16.dp,
-                            textColor = contentColor,
-                            textStyle = MaterialTheme.typography.bodySmall
-                        )
-                    } else if (!message.message.incoming) {
-                        Icon(
-                            modifier = Modifier.size(16.dp).alpha(.5f),
-                            painter = painterResource(R.drawable.ic_timer),
-                            contentDescription = stringResource(R.string.message_delivery_status),
-                            tint = contentColor
+                    if(deliveryStatusVisible) {
+                        if (isOutgoingSent) {
+                            Icon(
+                                modifier = Modifier.size(12.dp).alpha(.5f),
+                                imageVector = Icons.Outlined.Done,
+                                contentDescription = stringResource(R.string.message_delivery_status),
+                                tint = contentColor
+                            )
+                        } else if (isOutgoingFailed) {
+                            ClickToRetryMessage(
+                                iconSize = 16.dp,
+                                textColor = contentColor,
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                        } else if (!message.message.incoming) {
+                            Icon(
+                                modifier = Modifier.size(16.dp).alpha(.5f),
+                                painter = painterResource(R.drawable.ic_timer),
+                                contentDescription = stringResource(R.string.message_delivery_status),
+                                tint = contentColor
+                            )
+                        }
+                    }
+                    val dateTime = message.getDateTime()
+                    if(dateTime != null) {
+                        Text(
+                            modifier = Modifier.alpha(0.5f),
+                            textAlign = TextAlign.End,
+                            text = dateFormatter(dateTime),
+                            color = contentColor,
+                            style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    Text(
-                        modifier = Modifier.alpha(0.5f),
-                        textAlign = TextAlign.End,
-                        text = PrettyDateFormatter.messageCardStyleFormat(message.getDateTime()),
-                        color = contentColor,
-                        style = MaterialTheme.typography.bodySmall
-                    )
                 }
             }
         }
@@ -300,10 +304,11 @@ fun DisplayFiles(
 
 @Composable
 fun SenderName(
+    visible: Boolean,
     contact: ContactDto?,
     color: Color
 ) {
-    if(contact == null)
+    if(contact == null || !visible)
     {
         return
     }
@@ -319,47 +324,27 @@ fun SenderName(
 @Composable
 fun ResponseTo(
     message: MessageWithDetailsDto?,
-    contentColor: Color,
-    containerColor: Color
+    contentColor: Color = Color.Unspecified,
+    containerColor: Color = Color.Unspecified,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
-    if (message == null) {
+    if (message == null || message.message.type != MessageType.REPLY || message.actionFor == null
+        || message.actionFor.deleted) {
         return
     }
     val actionForSender by message.actionForSender.collectAsState()
-    if(message.message.type != MessageType.REPLY) {
-        return
-    }
-    val name = if (message.actionFor?.incoming == true) {
-        (actionForSender?.name ?: return) + ":"
+    val sender = if (message.actionFor.incoming) {
+        actionForSender
     } else {
-        stringResource(R.string.you)
+        ContactDtoFactory.createContact(name = stringResource(R.string.you))
     }
-    val text = if (message.actionFor?.deleted == true) {
-        stringResource(R.string.message_deleted)
-    } else {
-        message.actionFor?.text ?: return
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = containerColor,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(4.dp)
-        ) {
-            Text(
-                text = name,
-                color = contentColor,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = text,
-                color = contentColor.copy(alpha = .75f),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
+    MessageCard(
+        message = MessageWithDetailsDto(message.actionFor, sender, null),
+        deliveryStatusVisible = false,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        onRedirectUriClicked = onRedirectUriClicked
+    )
 }
 
 @Composable

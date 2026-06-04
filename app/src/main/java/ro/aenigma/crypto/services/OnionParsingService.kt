@@ -9,7 +9,7 @@ import ro.aenigma.util.Constants
 import ro.aenigma.util.HexConverter
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
-import java.time.ZoneId
+import ro.aenigma.util.ZonedDateTimeExtensions.normalize
 import java.time.ZonedDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -56,8 +56,7 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
                     HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE_BYTES))
                 val content =
                     String(decryptedData.sliceArray(Constants.ADDRESS_SIZE_BYTES until decryptedData.size))
-                val dateReceivedOnServer = ZonedDateTime.parse(pendingMessageDto.dateReceived)
-                    .withZoneSameInstant(ZoneId.systemDefault())
+                val dateReceivedOnServer = pendingMessageDto.dateReceived?.normalize()
                 ParsedMessageDto(chatId, content, dateReceivedOnServer, pendingMessageDto.uuid)
             } catch (_: Exception) {
                 null

@@ -28,7 +28,7 @@ import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.RedirectUriButton
 import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.util.RequestState
-import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.util.ZonedDateTimeExtensions.socialMediaStyleFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,9 +81,7 @@ fun CreateLinkDialog(
                             when (sharedData) {
                                 is RequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        val validUntil = PrettyDateFormatter.format(
-                                            sharedData.data.validUntil
-                                        )
+                                        val validUntil = sharedData.data.validUntil?.socialMediaStyleFormat()
                                         if (validUntil != null) {
                                             Text(
                                                 text = stringResource(

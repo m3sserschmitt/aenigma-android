@@ -172,4 +172,7 @@
     <string name="files_too_large">Unele fișiere depășesc limita a %.2f MB</string>
     <string name="working">Lucrează…</string>
     <string name="made_with_love">Făcut cu ❤️ în România</string>
+    <string name="new_connection_created">S-a creat o nouă conexiune</string>
+    <string name="broadcast_new_location">Distribuie noua locație a serverului pentru a te conecta cu ceilalți</string>
+    <string name="disconnected">Deconectat</string>
 </resources>

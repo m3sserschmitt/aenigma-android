@@ -33,12 +33,14 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isServersHist
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.isServersSection
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toServersHistorySection
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toServersSection
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.ui.screens.common.BottomSheetTemplate
 import ro.aenigma.ui.screens.common.BottomSheetTitle
 import ro.aenigma.ui.screens.common.GenericErrorScreen
 import ro.aenigma.ui.screens.common.ItemsList
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.PrimaryButton
+import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleTextInput
@@ -196,7 +198,11 @@ fun SearchBar(
 @Composable
 fun SheetTitleBar(
     title: String,
-    onScanCodeClicked: () -> Unit = { }
+    connectionStatus: ClientStatus = ClientStatus.NotConnected,
+    isClientWorkerRunning: Boolean = false,
+    onRetryConnection: () -> Unit = { },
+    onScanCodeClicked: () -> Unit = { },
+    onConnectPeopleClicked: () -> Unit = { }
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -206,6 +212,21 @@ fun SheetTitleBar(
             modifier = Modifier.weight(1f),
             title = title
         )
+        ReloadClientAppBarAction(
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning,
+            tint = MaterialTheme.colorScheme.onBackground,
+            onClick = onRetryConnection
+        )
+        IconButton(
+            onClick = onConnectPeopleClicked
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_connect_people),
+                contentDescription = stringResource(id = R.string.broadcast_new_location),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
+        }
         IconButton(
             onClick = onScanCodeClicked
         ) {
@@ -223,12 +244,20 @@ fun SheetContent(
     modifier: Modifier = Modifier,
     title: String,
     servers: RequestState<List<ServerInfoDto>>,
+    connectionStatus: ClientStatus = ClientStatus.NotConnected,
+    isClientWorkerRunning: Boolean = false,
+    onRetryConnection: () -> Unit = { },
     onServerClicked: (ServerInfoDto) -> Unit = { },
-    onScanCodeClicked: () -> Unit = { }
+    onScanCodeClicked: () -> Unit = { },
+    onConnectPeopleClicked: () -> Unit = { }
 ) {
     SheetTitleBar(
         title = title,
-        onScanCodeClicked = onScanCodeClicked
+        connectionStatus = connectionStatus,
+        isClientWorkerRunning = isClientWorkerRunning,
+        onRetryConnection = onRetryConnection,
+        onScanCodeClicked = onScanCodeClicked,
+        onConnectPeopleClicked = onConnectPeopleClicked
     )
 
     when (servers) {
@@ -271,24 +300,36 @@ fun SheetContent(
     sheetState: ServersSheetStateDto,
     servers: RequestState<List<ServerInfoDto>>,
     serversHistory: RequestState<List<ServerInfoDto>>,
+    connectionStatus: ClientStatus = ClientStatus.NotConnected,
+    isClientWorkerRunning: Boolean = false,
+    onRetryConnection: () -> Unit = { },
     onServerClicked: (ServerInfoDto) -> Unit = { },
-    onScanCodeClicked: () -> Unit = { }
+    onScanCodeClicked: () -> Unit = { },
+    onConnectPeopleClicked: () -> Unit = { }
 ) {
     when (sheetState.selectedSection) {
         ServersSheetSection.SERVERS -> SheetContent(
             modifier = modifier,
             title = stringResource(id = R.string.servers),
             servers = servers,
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning,
+            onRetryConnection = onRetryConnection,
             onServerClicked = onServerClicked,
-            onScanCodeClicked = onScanCodeClicked
+            onScanCodeClicked = onScanCodeClicked,
+            onConnectPeopleClicked = onConnectPeopleClicked,
         )
 
         ServersSheetSection.HISTORY -> SheetContent(
             modifier = modifier,
             title = stringResource(id = R.string.history),
             servers = serversHistory,
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning,
+            onRetryConnection = onRetryConnection,
             onServerClicked = onServerClicked,
-            onScanCodeClicked = onScanCodeClicked
+            onScanCodeClicked = onScanCodeClicked,
+            onConnectPeopleClicked = onConnectPeopleClicked
         )
     }
 }
@@ -300,12 +341,16 @@ fun ServersBottomSheet(
     serversHistory: RequestState<List<ServerInfoDto>>,
     searchQuery: String = "",
     sheetState: ServersSheetStateDto,
+    connectionStatus: ClientStatus = ClientStatus.NotConnected,
+    isClientWorkerRunning: Boolean = false,
+    onRetryConnection: () -> Unit = { },
     onSheetStateChanged: (ServersSheetStateDto) -> Unit = { },
     onSearchQueryChanged: (String) -> Unit = { },
     onSearchClicked: () -> Unit = { },
     onServerClicked: (ServerInfoDto) -> Unit = { },
     onConnectClicked: () -> Unit = { },
-    onScanCodeClicked: () -> Unit = { }
+    onScanCodeClicked: () -> Unit = { },
+    onConnectPeopleClicked: () -> Unit = { }
 ) {
     BottomSheetTemplate(
         navigationBarItems = {
@@ -339,8 +384,12 @@ fun ServersBottomSheet(
             sheetState = sheetState,
             serversHistory = serversHistory,
             servers = servers,
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning,
+            onRetryConnection = onRetryConnection,
             onServerClicked = onServerClicked,
-            onScanCodeClicked = onScanCodeClicked
+            onScanCodeClicked = onScanCodeClicked,
+            onConnectPeopleClicked = onConnectPeopleClicked
         )
         SearchBar(
             modifier = Modifier.fillMaxWidth()

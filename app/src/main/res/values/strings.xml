@@ -177,4 +177,7 @@
     <string name="files_too_large">Some files exceed the limit of %.2f MB</string>
     <string name="working">Working…</string>
     <string name="made_with_love">Made with ❤️ in Romania</string>
+    <string name="new_connection_created">New connection created</string>
+    <string name="broadcast_new_location">Broadcast new server location to connect with others</string>
+    <string name="disconnected">Disconnected</string>
 </resources>

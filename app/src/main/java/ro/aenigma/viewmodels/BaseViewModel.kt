@@ -29,7 +29,7 @@ abstract class BaseViewModel(
 
     private val _isForwardMode = MutableStateFlow(false)
 
-    private val _isClientRunning = MutableStateFlow(false)
+    private val _isClientWorkerRunning = MutableStateFlow(false)
 
     fun provideOkHttpClientProvider(): OkHttpClientProvider {
         return okHttpClientProviderLazy.get()
@@ -47,7 +47,7 @@ abstract class BaseViewModel(
 
     val clientStatus = signalrController.clientStatus
 
-    val isClientRunning: StateFlow<Boolean> = _isClientRunning
+    val isClientWorkerRunning: StateFlow<Boolean> = _isClientWorkerRunning
 
     abstract fun init()
 
@@ -70,7 +70,7 @@ abstract class BaseViewModel(
                     val clientWorkStatesSet =
                         clientWork.mapTo(mutableSetOf()) { workInfo -> workInfo.state }
                     val unionWorkStatesSet = syncWorkStatesSet.union(clientWorkStatesSet)
-                    _isClientRunning.value = setOf(
+                    _isClientWorkerRunning.value = setOf(
                         WorkInfo.State.ENQUEUED,
                         WorkInfo.State.RUNNING,
                         WorkInfo.State.BLOCKED

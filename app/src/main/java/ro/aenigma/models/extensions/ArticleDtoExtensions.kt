@@ -1,7 +1,7 @@
 package ro.aenigma.models.extensions
 
 import ro.aenigma.models.ArticleDto
-import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.util.ZonedDateTimeExtensions.normalize
 
 object ArticleDtoExtensions {
     @JvmStatic
@@ -12,7 +12,7 @@ object ArticleDtoExtensions {
             author = author?.takeIf { it.isNotBlank() },
             description = description?.takeIf { it.isNotBlank() },
             imageUrls = imageUrls?.filterNotNull(),
-            date = date?.let { PrettyDateFormatter.format(it) }
+            date = date?.normalize()?.toString()
         )
     }
 }
