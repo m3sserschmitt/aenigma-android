@@ -57,19 +57,20 @@ class KeysManager @Inject constructor(
                     keyPairDto.privateKey?.toByteArray() ?: return false
                 ) ?: return false
             writeKey(context.getPrivateKeyFile(), encryptedPrivateKey)
-            writeKey(context.getPublicKeyFile(), keyPairDto.publicKey?.toByteArray() ?: return false)
+            writeKey(
+                context.getPublicKeyFile(),
+                keyPairDto.publicKey?.toByteArray() ?: return false
+            )
             true
         } catch (_: Exception) {
             false
         }
     }
 
-    fun readPrivateKey(): String? {
+    fun readPrivateKey(): ByteArray? {
         return try {
-            String(
-                CryptoProvider.masterKeyDecrypt(readKey(context.getPrivateKeyFile()) ?: return null)
-                    ?: return null
-            )
+            CryptoProvider.masterKeyDecrypt(readKey(context.getPrivateKeyFile()) ?: return null)
+                ?: return null
         } catch (_: Exception) {
             null
         }

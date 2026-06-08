@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.isFullPage
 import ro.aenigma.models.ContactDto
@@ -54,6 +56,8 @@ class ChatViewModel @Inject constructor(
 
     private val _conversationSupportListComparator =
         compareByDescending<MessageWithDetailsDto> { item -> item.message.id }
+
+    private val _conversationSetMutex = Mutex()
 
     private val _conversationSortedSet: SortedSet<MessageWithDetailsDto> =
         sortedSetOf(_conversationSupportListComparator)
@@ -155,14 +159,16 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch(ioDispatcher) {
             repository.local.getLastDeletedMessage(chatId).filter { message ->
                 message?.type == MessageType.DELETE_ALL
-            }.catch { }.collect { clearConversationSet() }
+            }.catch { }.collect { _conversationSetMutex.withLock { clearConversationSet() } }
         }
         viewModelScope.launch(ioDispatcher) {
             repository.local.getLastDeletedMessage(chatId).filter { message ->
                 message?.type == MessageType.DELETE
             }.catch { }.collect { message ->
-                if (message?.actionFor != null) {
-                    removeItemFromConversation(message.actionFor)
+                _conversationSetMutex.withLock {
+                    if (message?.actionFor != null) {
+                        removeItemFromConversationSet(message.actionFor)
+                    }
                 }
             }
         }
@@ -236,7 +242,7 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun addItemsToConversation(messages: List<MessageWithDetailsDto>) {
+    private fun addItemsToConversationSet(messages: List<MessageWithDetailsDto>) {
         messages.forEach { item ->
             if (searchFilterMatched(item)) {
                 loadMessageDeliveryStatus(item)
@@ -248,7 +254,7 @@ class ChatViewModel @Inject constructor(
         _nextPageAvailable.value = messages.isFullPage()
     }
 
-    private fun removeItemFromConversation(refId: String) {
+    private fun removeItemFromConversationSet(refId: String) {
         try {
             val itemToBeRemoved = _conversationSortedSet.find { m -> m.message.refId == refId }
             if (itemToBeRemoved != null) {
@@ -258,11 +264,15 @@ class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun removeItemsFromConversationSet(messages: List<MessageWithDetailsDto>) {
+        _conversationSortedSet.removeAll(messages.toSet())
+    }
+
     private fun clearConversationSet() {
         _conversationSortedSet.clear()
     }
 
-    private fun addNewItemToConversation(messages: List<MessageWithDetailsDto>) {
+    private fun addNewItemToConversationSet(messages: List<MessageWithDetailsDto>) {
         val message = messages.firstOrNull()
         message ?: return
         if (searchFilterMatched(message) && _conversationSortedSet.add(message)) {
@@ -272,10 +282,8 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun setConversationReadSuccess() {
-        _conversation.value = RequestState.Success(
-            ArrayList(_conversationSortedSet)
-        )
+    private fun setConversationSuccess() {
+        _conversation.value = RequestState.Success(ArrayList(_conversationSortedSet))
     }
 
     private fun collectConversation(chatId: String?) {
@@ -291,14 +299,14 @@ class ChatViewModel @Inject constructor(
             repository.local.getConversationFlow(chatId)
                 .catch { ex -> _conversation.value = RequestState.Error(ex) }
                 .collect { messages ->
-                    synchronized(_conversationSortedSet) {
+                    _conversationSetMutex.withLock {
                         try {
                             if (_conversationSortedSet.isEmpty()) {
-                                addItemsToConversation(messages)
+                                addItemsToConversationSet(messages)
                             } else {
-                                addNewItemToConversation(messages)
+                                addNewItemToConversationSet(messages)
                             }
-                            setConversationReadSuccess()
+                            setConversationSuccess()
                         } catch (ex: Exception) {
                             _conversation.value = RequestState.Error(ex)
                         }
@@ -316,10 +324,10 @@ class ChatViewModel @Inject constructor(
                     if (!chatId.isNullOrBlank()) {
                         val searchResult =
                             repository.local.getConversationPage(chatId, getLastMessageId(), query)
-                        synchronized(_conversationSortedSet) {
+                        _conversationSetMutex.withLock {
                             clearConversationSet()
-                            addItemsToConversation(searchResult)
-                            setConversationReadSuccess()
+                            addItemsToConversationSet(searchResult)
+                            setConversationSuccess()
                         }
                     }
                 } catch (ex: Exception) {
@@ -351,19 +359,18 @@ class ChatViewModel @Inject constructor(
         val chatId = getSelectedContactEntity()?.address ?: return
         viewModelScope.launch(ioDispatcher) {
             try {
-                val lastIndex = _conversationSortedSet.last().message.id
-                val nextPage =
-                    repository.local.getConversationPage(
+                _conversationSetMutex.withLock {
+                    val lastIndex = _conversationSortedSet.last().message.id
+                    val nextPage = repository.local.getConversationPage(
                         chatId,
                         lastIndex,
                         _messageSearchQuery.value
                     )
-                synchronized(_conversationSortedSet) {
                     if (nextPage.isEmpty()) {
                         _nextPageAvailable.value = false
                     } else {
-                        addItemsToConversation(nextPage)
-                        setConversationReadSuccess()
+                        addItemsToConversationSet(nextPage)
+                        setConversationSuccess()
                     }
                 }
             } catch (ex: Exception) {
@@ -386,17 +393,17 @@ class ChatViewModel @Inject constructor(
     }
 
     fun clearConversation() {
-        val chatId = getSelectedContactEntity()?.address ?: return
-        synchronized(_conversationSortedSet) { _conversationSortedSet.clear() }
         viewModelScope.launch(ioDispatcher) {
+            val chatId = getSelectedContactEntity()?.address ?: return@launch
+            _conversationSetMutex.withLock { clearConversationSet() }
             repository.local.clearConversationSoft(chatId)
             postToDatabase(MessageType.DELETE_ALL, null, null)
         }
     }
 
     fun removeMessages(messages: List<MessageWithDetailsDto>) {
-        synchronized(_conversationSortedSet) { _conversationSortedSet.removeAll(messages.toSet()) }
         viewModelScope.launch(ioDispatcher) {
+            _conversationSetMutex.withLock { removeItemsFromConversationSet(messages) }
             val textMessagesWithRefs = messages.filter { item -> item.message.refId != null }
             repository.local.removeMessagesSoft(messages.map { item -> item.message })
             textMessagesWithRefs.forEach { item ->

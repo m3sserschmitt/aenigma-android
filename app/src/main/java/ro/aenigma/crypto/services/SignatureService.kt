@@ -1,5 +1,7 @@
 package ro.aenigma.crypto.services
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
@@ -11,7 +13,7 @@ import javax.inject.Singleton
 @Singleton
 class SignatureService @Inject constructor(keysManager: KeysManager) {
 
-    private val lock = Any()
+    private val _mutex = Mutex()
 
     private var _publicKey: String? = null
 
@@ -33,27 +35,24 @@ class SignatureService @Inject constructor(keysManager: KeysManager) {
         _publicKey = keysManager.readPublicKey()
         _address = _publicKey.getAddressFromPublicKey()
         val privateKey = keysManager.readPrivateKey()
-        ready =
-            _publicKey != null && _address != null && privateKey != null && CryptoProvider.initSignatureEx(
-                privateKey
-            )
+        ready = _publicKey != null && _address != null && privateKey != null
+                && CryptoProvider.initSignatureEx(privateKey)
     }
 
-    fun sign(data: ByteArray): SignatureDto {
+    suspend fun sign(data: ByteArray): SignatureDto = _mutex.withLock {
         if (!ready) {
             return SignatureDto(_publicKey, null)
         }
-        synchronized(lock)
-        {
-            return try {
-                SignatureDto(_publicKey, CryptoProvider.signEx(data))
-            } catch (_: Exception) {
-                SignatureDto(_publicKey, null)
-            }
+
+        return try {
+            SignatureDto(_publicKey, CryptoProvider.signEx(data))
+        } catch (_: Exception) {
+            SignatureDto(_publicKey, null)
         }
+
     }
 
-    inline fun <reified T> jsonSign(data: T): SignatureDto? {
+    suspend inline fun <reified T> jsonSign(data: T): SignatureDto? {
         return data.jsonSign(this)
     }
 }

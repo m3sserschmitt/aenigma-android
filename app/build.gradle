@@ -79,12 +79,12 @@ dependencies {
 
     // Room
     implementation "androidx.room:room-runtime:2.8.4"
-    implementation 'androidx.compose.runtime:runtime:1.11.1'
+    implementation 'androidx.compose.runtime:runtime:1.11.2'
     ksp "androidx.room:room-compiler:2.8.4"
     implementation "androidx.room:room-ktx:2.8.4"
 
     // SQLCipher
-    implementation 'net.zetetic:sqlcipher-android:4.15.0@aar'
+    implementation 'net.zetetic:sqlcipher-android:4.16.0@aar'
     implementation 'androidx.sqlite:sqlite-ktx:2.6.2'
 
     // AndroidX Biometric
@@ -104,7 +104,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.10.0'
 
     // SignalR
-    implementation 'com.microsoft.signalr:signalr:10.0.7'
+    implementation 'com.microsoft.signalr:signalr:10.0.8'
 
     // Retrofit
     implementation 'com.squareup.retrofit2:retrofit:3.0.0'
@@ -125,8 +125,8 @@ dependencies {
     implementation "androidx.camera:camera-view:1.6.1"
 
     // Serializer
-    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.21.3"
-    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.21.3"
+    implementation "com.fasterxml.jackson.module:jackson-module-kotlin:2.22.0"
+    implementation "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.0"
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
 
     // Bouncy Castle - Crypto
@@ -138,9 +138,9 @@ dependencies {
     implementation "org.apache.commons:commons-rng-simple:1.7"
 
     // Markdown renderer
-    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.40.2"
-    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.40.2"
-    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.40.2"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-android:0.41.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-m3-android:0.41.0"
+    implementation "com.mikepenz:multiplatform-markdown-renderer-coil3-android:0.41.0"
 
     // JGraph
     implementation 'org.jgrapht:jgrapht-core:1.5.3'
@@ -149,17 +149,17 @@ dependencies {
     implementation "androidx.datastore:datastore-preferences:1.2.1"
 
     // Material3
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.material:material:1.14.0'
     implementation "androidx.compose.material3:material3:1.4.0"
     implementation 'androidx.compose.material3:material3-android:1.4.0'
     implementation "androidx.compose.material:material-icons-extended:1.7.8"
 
     // Compose
-    implementation "androidx.compose.ui:ui:1.11.1"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.11.1"
-    debugImplementation 'androidx.compose.ui:ui-tooling:1.11.1'
+    implementation "androidx.compose.ui:ui:1.11.2"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.11.2"
+    debugImplementation 'androidx.compose.ui:ui-tooling:1.11.2'
     implementation 'androidx.activity:activity-compose:1.13.0'
-    implementation 'androidx.compose.runtime:runtime-livedata:1.11.1'
+    implementation 'androidx.compose.runtime:runtime-livedata:1.11.2'
 
     // Compose Navigation
     implementation "androidx.navigation:navigation-compose:2.9.8"
@@ -168,10 +168,10 @@ dependencies {
     implementation 'org.ocpsoft.prettytime:prettytime:5.0.4.Final'
 
     // Kotlin
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
     implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.10.2"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-rx3:1.11.0"
     implementation "androidx.concurrent:concurrent-futures-ktx:1.3.0"
 
     // JUnit
@@ -181,15 +181,15 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.7.0'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'tools.fastlane:screengrab:2.1.1'
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.11.1"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:1.11.1"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:1.11.2"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:1.11.2"
 
     // open source libraries page
-    implementation "com.mikepenz:aboutlibraries:14.2.0"
-    implementation "com.mikepenz:aboutlibraries-compose-m3:14.2.0"
+    implementation "com.mikepenz:aboutlibraries:14.2.1"
+    implementation "com.mikepenz:aboutlibraries-compose-m3:14.2.1"
 
     // TOR
-    implementation 'info.guardianproject:tor-android:0.4.9.5'
+    implementation 'info.guardianproject:tor-android:0.4.9.6'
     implementation 'info.guardianproject:jtorctl:0.4.5.7'
     implementation "info.guardianproject.netcipher:netcipher:2.1.0"
 
@@ -202,5 +202,5 @@ dependencies {
     // Image compressor
     implementation 'id.zelory:compressor:3.0.1'
 
-    implementation 'org.apache.tika:tika-core:3.3.0'
+    implementation 'org.apache.tika:tika-core:3.3.1'
 }

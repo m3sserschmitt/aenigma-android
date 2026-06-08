@@ -37,7 +37,7 @@ object SignatureExtensions {
     }
 
     @JvmStatic
-    inline fun <reified T> T.jsonSign(signatureService: SignatureService): SignatureDto? {
+    suspend inline fun <reified T> T.jsonSign(signatureService: SignatureService): SignatureDto? {
         return try {
             val serializedArtifact = this.toCanonicalJson() ?: return null
             val signature = signatureService.sign(serializedArtifact.toByteArray())

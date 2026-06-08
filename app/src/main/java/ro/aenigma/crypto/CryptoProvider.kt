@@ -5,7 +5,6 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPrivateKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import java.io.File
 import java.security.KeyStore
@@ -33,9 +32,9 @@ object CryptoProvider {
 
     private const val IV_BYTES_SIZE = 12
 
-    private external fun initDecryption(privateKey: String, passphrase: String): Boolean
+    private external fun initDecryption(privateKey: ByteArray, passphrase: ByteArray): Boolean
 
-    private external fun initSignature(privateKey: String, passphrase: String): Boolean
+    private external fun initSignature(privateKey: ByteArray, passphrase: ByteArray): Boolean
 
     private external fun encryptSymmetric(key: ByteArray, plaintext: ByteArray): ByteArray?
 
@@ -43,57 +42,60 @@ object CryptoProvider {
 
     private external fun sign(data: ByteArray): ByteArray?
 
-    private external fun verify(publicKey: String, signedData: ByteArray): Boolean
+    private external fun verify(publicKey: ByteArray, signedData: ByteArray): Boolean
 
     private external fun unsealOnion(onion: ByteArray): ByteArray?
 
     private external fun sealOnion(
         plaintext: ByteArray,
-        keys: Array<String>,
-        addresses: Array<String>
+        keys: Array<ByteArray>,
+        addresses: Array<ByteArray>
     ): ByteArray?
 
-    private external fun getPKeySize(publicKey: String): Int
+    private external fun getPKeySize(publicKey: ByteArray): Int
 
     @JvmStatic
     fun getPublicKeySize(publicKey: String): Int {
         return if (publicKey.isValidPublicKey()) {
-            getPKeySize(publicKey)
+            getPKeySize(publicKey.toByteArray())
         } else {
             -1
         }
     }
 
     @JvmStatic
-    fun initDecryptionEx(privateKey: String, passphrase: String): Boolean {
-        if (!privateKey.isValidPrivateKey()) {
-            return false
+    fun initDecryptionEx(privateKey: ByteArray, passphrase: ByteArray): Boolean {
+        return try {
+            initDecryption(privateKey, passphrase)
+        } finally {
+            privateKey.fill(0)
+            passphrase.fill(0)
         }
-        return initDecryption(privateKey, passphrase)
     }
 
     @JvmStatic
-    fun initDecryptionEx(privateKey: String): Boolean {
-        return initDecryptionEx(privateKey, "")
+    fun initDecryptionEx(privateKey: ByteArray): Boolean {
+        return initDecryptionEx(privateKey, ByteArray(0))
     }
 
     @JvmStatic
-    fun initSignatureEx(privateKey: String, passphrase: String): Boolean {
-        if (!privateKey.isValidPrivateKey()) {
-            return false
+    fun initSignatureEx(privateKey: ByteArray, passphrase: ByteArray): Boolean {
+        return try {
+            initSignature(privateKey, passphrase)
+        } finally {
+            privateKey.fill(0)
+            passphrase.fill(0)
         }
-        return initSignature(privateKey, passphrase)
     }
 
     @JvmStatic
-    fun initSignatureEx(privateKey: String): Boolean {
-        return initSignatureEx(privateKey, "")
+    fun initSignatureEx(privateKey: ByteArray): Boolean {
+        return initSignatureEx(privateKey, ByteArray(0))
     }
 
     @JvmStatic
     fun signEx(data: ByteArray): String? {
-        val signature = sign(data)
-        return base64Encode(signature ?: return null)
+        return base64Encode(sign(data) ?: return null)
     }
 
     @JvmStatic
@@ -101,7 +103,7 @@ object CryptoProvider {
         if (!publicKey.isValidPublicKey() || !signedData.isValidBase64()) {
             return false
         }
-        return verify(publicKey, base64Decode(signedData) ?: return false)
+        return verify(publicKey.toByteArray(), base64Decode(signedData) ?: return false)
     }
 
     @JvmStatic
@@ -110,10 +112,17 @@ object CryptoProvider {
         keys: Array<String>,
         addresses: Array<String>
     ): String? {
-        if (keys.size != addresses.size || keys.any { item -> !item.isValidPublicKey() } || addresses.any { item -> !item.isValidAddress() }) {
+        if (keys.size != addresses.size || keys.any { item -> !item.isValidPublicKey() }
+            || addresses.any { item -> !item.isValidAddress() }) {
             return null
         }
-        return base64Encode(sealOnion(plaintext, keys, addresses) ?: return null)
+        return base64Encode(
+            sealOnion(
+                plaintext,
+                keys.map { key -> key.toByteArray() }.toTypedArray(),
+                addresses.map { addresses -> addresses.toByteArray() }.toTypedArray()
+            ) ?: return null
+        )
     }
 
     @JvmStatic
