@@ -76,7 +76,9 @@ class GraphReaderWorker @AssistedInject constructor(
             val serverInfo = repository.remote.getServerInfo() ?: return false
             val currentGuard = repository.local.getGuard()
 
-            if (currentGuard == null || serverInfo.graphVersion != currentGuard.graphVersion) {
+            if (currentGuard == null || serverInfo.graphVersion != currentGuard.graphVersion
+                || serverInfo.address != currentGuard.address
+            ) {
                 val graph = repository.remote.getVertices()
                 if (graph.isEmpty()) {
                     return false

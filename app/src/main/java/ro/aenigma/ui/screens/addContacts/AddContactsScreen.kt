@@ -43,7 +43,7 @@ fun AddContactsScreen(
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val floatingButtonVisible = profileToShare == null
             && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
-    var isContactImport by remember(key1 = uri) { mutableStateOf(uri.isNullOrBlank()) }
+    var isContactImport by remember(key1 = uri) { mutableStateOf(!uri.isNullOrBlank()) }
 
     LaunchedEffect(key1 = true) {
         mainViewModel.generateCode(profileToShare)
