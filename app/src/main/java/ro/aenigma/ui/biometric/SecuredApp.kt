@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -45,6 +46,7 @@ fun SecuredApp(
     content: (@Composable () -> Unit)
 ) {
     val context = LocalContext.current
+    val restartAppToRetryString = stringResource(id = R.string.restart_app_to_retry)
     val activity = context.findActivity()
     var authError by remember { mutableStateOf("") }
 
@@ -64,9 +66,9 @@ fun SecuredApp(
         ErrorScreen(
             modifier = Modifier.fillMaxSize(),
             text = if (authError.isBlank()) {
-                context.getString(R.string.restart_app_to_retry)
+                restartAppToRetryString
             } else {
-                "$authError - ${context.getString(R.string.restart_app_to_retry)}"
+                "$authError - $restartAppToRetryString"
             }
         )
     } else {

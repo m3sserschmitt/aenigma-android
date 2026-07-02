@@ -30,11 +30,6 @@ object HashExtensions {
     }
 
     @JvmStatic
-    fun String.getSha256(): ByteArray {
-        return this.toByteArray().getSha256()
-    }
-
-    @JvmStatic
     fun ByteArray.getSha256Hex(): String {
         return this.getSha256().joinToString(separator = "") { byte -> "%02x".format(byte) }
     }

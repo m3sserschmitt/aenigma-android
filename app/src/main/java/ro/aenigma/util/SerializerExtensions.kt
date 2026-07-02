@@ -84,22 +84,4 @@ object SerializerExtensions {
             null
         }
     }
-
-    @JvmStatic
-    inline fun <reified T, reified V> T?.map(): V? {
-        return if (this == null) {
-            null
-        } else try {
-            val objectMapper = createJsonMapper()
-            val json = objectMapper.writeValueAsString(this)
-            objectMapper.readValue(json, V::class.java)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    @JvmStatic
-    inline fun <reified T> T?.deepCopy(): T? {
-        return this.map()
-    }
 }

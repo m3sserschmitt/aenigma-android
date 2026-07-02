@@ -89,19 +89,6 @@ object PublicKeyExtensions {
     }
 
     @JvmStatic
-    fun String?.isValidPrivateKey(): Boolean {
-        return this.isValidKey { privateKeyRegex }
-    }
-
-    @JvmStatic
-    private val privateKeyRegex: Pattern by lazy {
-        Pattern.compile(
-            """^-----BEGIN(?: [A-Z]+)* PRIVATE KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PRIVATE KEY-----$""",
-            Pattern.MULTILINE
-        )
-    }
-
-    @JvmStatic
     private val publicKeyRegex: Pattern by lazy {
         Pattern.compile(
             """^-----BEGIN(?: [A-Z]+)* PUBLIC KEY-----\s*([A-Za-z0-9+/=\r\n]+?)\s*-----END(?: [A-Z]+)* PUBLIC KEY-----$""",

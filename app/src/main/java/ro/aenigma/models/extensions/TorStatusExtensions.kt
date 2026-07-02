@@ -25,11 +25,6 @@ import ro.aenigma.models.enums.TorStatus
 
 object TorStatusExtensions {
     @JvmStatic
-    fun TorStatus.torPreferenceIsChanging(torPreference: Boolean): Boolean {
-        return (!torPreference && this == TorStatus.ON) || (torPreference && this == TorStatus.OFF)
-    }
-
-    @JvmStatic
     fun TorStatus.torPreferenceIsNotChanging(torPreference: Boolean): Boolean {
         return (torPreference && this == TorStatus.ON) || (!torPreference && this == TorStatus.OFF)
     }
