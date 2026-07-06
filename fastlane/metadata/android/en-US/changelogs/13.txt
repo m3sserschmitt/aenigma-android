@@ -1,0 +1,8 @@
+* Multiple UI improvements
+* Articles can now be accessed from within chats
+* User is now automatically notified when someone else uses its link or QR code to connect
+* Improved files upload/download workflows
+* Added the possibility to share stories to all contacts
+* Added a new notification service to improve notification flows for messages and files
+* Added multiple share and redirect options for files
+* Users now have the possibility to broadcast their location to their contacts when changing servers

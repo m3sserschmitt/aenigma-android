@@ -73,7 +73,7 @@
     <string name="message_delivery_status">Message delivery status</string>
     <string name="please_wait">Please wait</string>
     <string name="app_name_and_version">Aenigma\nVersion: %s</string>
-    <string name="copyright_notices">Developed and maintained by Romulus–Emanuel Ruja.\n© 2025–2026 Romulus-Emanuel Ruja. All rights reserved.</string>
+    <string name="copyright_notices">© 2025–2026 Romulus-Emanuel Ruja &lt;romulus.ruja@aenigma.ro&gt;. All rights reserved.</string>
     <string name="gpl_license_info">This app is licensed under the GNU General Public License, version 3 (GPLv3). You are free to redistribute and/or modify this app under the terms of the GNU General Public License Version 3.</string>
     <string name="source_code_available_at">The source code of this app is available at:</string>
     <string name="source_code_link" translatable="false">https://github.com/m3sserschmitt/aenigma-android</string>
