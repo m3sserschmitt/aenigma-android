@@ -1,90 +1,146 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.services
 
-import dagger.hilt.android.scopes.ViewModelScoped
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import org.apache.commons.rng.UniformRandomProvider
 import org.apache.commons.rng.sampling.distribution.AliasMethodDiscreteSampler
 import org.apache.commons.rng.sampling.distribution.SharedStateDiscreteSampler
 import org.apache.commons.rng.simple.RandomSource
 import ro.aenigma.data.Repository
 import ro.aenigma.models.ArticleDto
-import ro.aenigma.util.Constants.Companion.ARTICLES_FEED_WEIGHT
+import ro.aenigma.models.extensions.ArticleDtoExtensions.prettyFormat
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.isWithinNewsfeedPeriod
+import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
-import ro.aenigma.util.Constants.Companion.SHARED_FILES_FEED_WEIGHT
+import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
+import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
+import ro.aenigma.util.ContextExtensions.getArticle
 import java.util.Locale
 import javax.inject.Inject
+import javax.inject.Singleton
+import kotlin.collections.emptyList
 import kotlin.collections.listOf
-import kotlin.math.abs
 
-@ViewModelScoped
+@Singleton
 class FeedSampler @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val repository: Repository
 ) {
     companion object {
         @JvmStatic
+        fun buildSampler(
+            weights: List<Int>,
+            rng: UniformRandomProvider
+        ): SharedStateDiscreteSampler {
+            val probabilities =
+                weights.map { weight -> weight.toDouble() / weights.sum().toDouble() }
+                    .toDoubleArray()
+            return AliasMethodDiscreteSampler.of(rng, probabilities)
+        }
+
+        @JvmStatic
         fun weightedInterleave(
-            sourceLists: List<List<ArticleDto>>,
-            weights: List<Double>,
+            sourcesList: List<List<ArticleDto>>,
+            sourcesWeight: List<Int>,
             rng: UniformRandomProvider = RandomSource.MT.create()
         ): List<ArticleDto> {
-
-            require(sourceLists.size == weights.size && sourceLists.isNotEmpty()) {
-                "sourceLists and weights must be non‑empty and same size"
+            if (sourcesList.size != sourcesWeight.size || sourcesList.isEmpty() || sourcesWeight.any { weight -> weight < 0 }) {
+                return listOf()
             }
-            require(weights.all { it > 0.0 }) { "all weights must be >0" }
-            require(abs(weights.sum()) > 0) { "sum of weights must be >0" }
+            return try {
+                val sources = sourcesList.map { source -> source.toMutableList() }.toMutableList()
+                val weights = sourcesWeight.toMutableList()
+                var sampler = buildSampler(weights, rng)
 
-            val queues = sourceLists.map { it.toMutableList() }.toMutableList()
-            val liveWeights = weights.toMutableList()
+                val outCapacity = sources.sumOf { source -> source.size }
+                val out = mutableListOf<ArticleDto>()
+                val hashes = mutableSetOf<Int>()
 
-            fun buildSampler(): SharedStateDiscreteSampler? {
-                val total = liveWeights.sum()
-                val probes = liveWeights.map { it / total }.toDoubleArray()
-                return AliasMethodDiscreteSampler.of(rng, probes)
-            }
+                while (out.size < outCapacity) {
 
-            var sampler: SharedStateDiscreteSampler? = buildSampler() ?: return listOf()
+                    val idx = sampler.sample()
 
-            val outCapacity = queues.sumOf { it.size }
-            val out = HashSet<ArticleDto>(outCapacity)
-            var i = 0L
-            while (out.size < outCapacity) {
-
-                val idx = sampler?.sample() ?: 0
-
-                if (queues[idx].isEmpty()) {
-                    queues.removeAt(idx)
-                    liveWeights.removeAt(idx)
-                    if (queues.isNotEmpty()) {
-                        sampler = buildSampler() ?: break
+                    if (sources[idx].isEmpty()) {
+                        sources.removeAt(idx)
+                        weights.removeAt(idx)
+                        if (sources.isNotEmpty()) {
+                            sampler = buildSampler(weights, rng)
+                        }
+                        continue
                     }
-                    continue
+                    val item = sources[idx].removeAt(0)
+                    if (hashes.add(item.hashCode())) {
+                        out.add(item)
+                    }
                 }
-                out.add(queues[idx].removeAt(0).copy(id = i))
-                i ++
+                out
+            } catch (_: Exception) {
+                listOf()
             }
-            return out.toList()
         }
     }
 
-    fun getFeed(): Flow<List<ArticleDto>> {
-        val latestSharedFilesFlow = repository.local.getLatestSharedFiles().catch {
-            emit(listOf())
+    private suspend fun getLocalArticles(): List<ArticleDto> {
+        val results = mutableListOf<ArticleDto>()
+        return try {
+            var lastIndex = Long.MAX_VALUE
+            do {
+                val messages = repository.local.getSharedFiles(lastIndex)
+
+                for (message in messages) {
+                    results.add(context.getArticle(message) ?: continue)
+                }
+
+                val last = messages.lastOrNull() ?: break
+                lastIndex = last.message.id
+            } while (last.isWithinNewsfeedPeriod() && results.size < NEWS_FEED_SIZE)
+
+            results
+        } catch (_: Exception) {
+            results
         }
-        val indexUrl =
-            String.format(ARTICLES_INDEX_URL_TEMPLATE, Locale.getDefault().language)
-        val articlesFlow = repository.remote.getArticles(indexUrl).catch {
-            emit(listOf())
+    }
+
+    private suspend fun getWebArticles(): List<ArticleDto> {
+        return try {
+            val indexUrl = String.format(ARTICLES_INDEX_URL_TEMPLATE, Locale.getDefault().language)
+            repository.remote.getArticles(indexUrl).map { article -> article.prettyFormat() }
+        } catch (_: Exception) {
+            listOf()
         }
-        return articlesFlow.combine(latestSharedFilesFlow) { a, b ->
-            weightedInterleave(
-                listOf(a, b),
-                listOf(ARTICLES_FEED_WEIGHT, SHARED_FILES_FEED_WEIGHT)
-            )
-        }.catch {
-            emit(listOf())
-        }
+    }
+
+    suspend fun getFeed(): List<ArticleDto> = coroutineScope {
+        val dbDeferred = async { runCatching { getLocalArticles() } }
+        val webDeferred = async { runCatching { getWebArticles() } }
+        val dbResult = dbDeferred.await().getOrElse { emptyList() }
+        val webResult = webDeferred.await().getOrElse { emptyList() }
+        weightedInterleave(
+            sourcesList = listOf(webResult, dbResult),
+            sourcesWeight = listOf(WEB_ARTICLES_FEED_WEIGHT, LOCAL_MEDIA_FEED_WEIGHT)
+        )
     }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Cleartext blocked everywhere by default -->
+    <base-config cleartextTrafficPermitted="false" />
+
+    <!-- Exception: allow cleartext only for .onion addresses -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">onion</domain>
+    </domain-config>
+</network-security-config>

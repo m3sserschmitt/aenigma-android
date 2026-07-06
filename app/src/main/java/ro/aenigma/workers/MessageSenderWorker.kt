@@ -1,20 +1,35 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
 import ro.aenigma.data.Repository
@@ -22,9 +37,9 @@ import ro.aenigma.services.PathFinder
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import ro.aenigma.R
 import ro.aenigma.models.AttachmentDto
-import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
@@ -33,66 +48,49 @@ import ro.aenigma.models.VertexDto
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.GuardDtoExtensions.getHostname
-import ro.aenigma.models.extensions.MessageDtoExtensions.isDelete
+import ro.aenigma.models.extensions.MessageDtoExtensions.isDeleteOrDeleteAll
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.markAsSent
 import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
-import ro.aenigma.services.Zipper
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
-import ro.aenigma.util.Constants.Companion.MESSAGE_SENDER_NOTIFICATION_ID
+import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
+import ro.aenigma.util.ContextExtensions.createZip
+import ro.aenigma.util.ContextExtensions.getCacheFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import java.io.File
-import java.util.UUID
-import java.util.concurrent.TimeUnit
+import ro.aenigma.workers.extensions.WorkManagerExtensions.sendMessage
 
 @HiltWorker
 class MessageSenderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val zipper: Zipper,
     private val signalrController: SignalrController,
     private val repository: Repository,
     private val signatureService: SignatureService,
-    private val notificationService: NotificationService,
+    private val notifier: Notifier,
     private val pathFinder: PathFinder
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val MESSAGE_ID_ARG = "MessageId"
-        private const val ADDITIONAL_DESTINATIONS_ARG = "AdditionalDestinations"
-        private const val UNIQUE_WORK_REQUEST_NAME = "MessageSenderWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val MAX_RETRY_COUNT = 5
+        const val MESSAGE_ID_ARG = "message-id"
+        const val ADDITIONAL_DESTINATIONS_ARG = "additional-destinations"
+        const val DESTINATIONS_ARG = "destinations"
+        const val UNIQUE_WORK_REQUEST_NAME = "message-sender-worker"
+        private const val MAX_RETRY_COUNT = 3
 
-        @JvmStatic
-        fun createWorkRequest(
-            workManager: WorkManager,
-            messageId: Long,
-            additionalDestinations: Set<String> = hashSetOf()
-        ): UUID {
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID_ARG, messageId)
-                .putStringArray(ADDITIONAL_DESTINATIONS_ARG, additionalDestinations.toTypedArray())
-                .build()
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniqueWork(
-                getUniqueWorkRequestName(messageId),
-                ExistingWorkPolicy.KEEP,
-                workRequest
-            )
-            return workRequest.id
+        fun getUniqueWorkRequestName(messageId: Long, destinations: List<String>): String {
+            return if (destinations.isNotEmpty()) {
+                "$UNIQUE_WORK_REQUEST_NAME-$messageId-${
+                    destinations.toTypedArray().contentHashCode()
+                }"
+            } else {
+                "$UNIQUE_WORK_REQUEST_NAME-$messageId"
+            }
         }
 
-        fun getUniqueWorkRequestName(messageId: Long): String {
+        fun getTag(messageId: Long): String {
             return "$UNIQUE_WORK_REQUEST_NAME-$messageId"
         }
     }
@@ -132,7 +130,13 @@ class MessageSenderWorker @AssistedInject constructor(
 
     private suspend fun saveAsSent(message: MessageDto) {
         repository.local.updateMessage(
-            message.markAsSent().run { if (isDelete()) markAsDeleted() else this })
+            message.markAsSent().run {
+                if (isDeleteOrDeleteAll()) {
+                    markAsDeleted()
+                } else {
+                    this
+                }
+            })
     }
 
     private suspend fun sendMessage(
@@ -169,24 +173,26 @@ class MessageSenderWorker @AssistedInject constructor(
     ): MessageWithAttachmentsDto? {
         if (messageWithAttachment.message.type != MessageType.FILES
             || messageWithAttachment.message.files.isNullOrEmpty()
-            || messageWithAttachment.attachment?.url != null
+            || !messageWithAttachment.attachment?.url.isNullOrBlank()
         ) {
             return messageWithAttachment
         }
 
         setForeground(getForegroundInfo())
 
-        val archive = if (messageWithAttachment.attachment?.path != null)
-            File(applicationContext.cacheDir, messageWithAttachment.attachment.path)
-        else
-            zipper.createZip(
-                messageWithAttachment.message.files, AttachmentsMetadataDto(
-                    description = messageWithAttachment.message.text,
-                    filesCount = messageWithAttachment.message.files.size
-                )
-            ) ?: return null
+        val archive = if (!messageWithAttachment.attachment?.path.isNullOrBlank()) {
+            val cachedArchive =
+                applicationContext.getCacheFile(messageWithAttachment.attachment.path)
+            if (!cachedArchive.exists()) {
+                applicationContext.createZip(uris = messageWithAttachment.message.files)
+            } else {
+                cachedArchive
+            }
+        } else {
+            applicationContext.createZip(uris = messageWithAttachment.message.files)
+        } ?: return null
 
-        val attachment = AttachmentDto(
+        var attachment = AttachmentDto(
             messageId = messageWithAttachment.message.id,
             path = archive.name,
             url = null,
@@ -194,46 +200,67 @@ class MessageSenderWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateAttachment(attachment)
 
-        val passphrase = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val encryptedFile = CryptoProvider.encrypt(archive, passphrase) ?: return null
-        val createdSharedData = repository.remote.postFile(encryptedFile, accessCount)
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val useTor = repository.local.useTor.firstOrNull() == true
+        val useOrbot = repository.local.useOrbot.firstOrNull() == true
+        val usingTor = useOrbot || useTor
+        val createdSharedData =
+            repository.remote.postEncryptedFile(archive, accessCount, key, usingTor) { progress ->
+                notifier.notifyUploadProgress(progress, id.hashCode())
+            }
         createdSharedData?.resourceUrl ?: return null
-
         archive.delete()
-        encryptedFile.delete()
 
-        val finalAttachment = attachment.copy(
+        attachment = attachment.copy(
             url = createdSharedData.resourceUrl,
-            passphrase = CryptoProvider.base64Encode(passphrase)
+            passphrase = CryptoProvider.base64Encode(key)
         )
-        repository.local.insertOrUpdateAttachment(finalAttachment)
+        repository.local.insertOrUpdateAttachment(attachment)
 
-        return MessageWithAttachmentsDto(
-            message = messageWithAttachment.message,
-            attachment = finalAttachment
+        return messageWithAttachment.copy(
+            attachment = attachment
         )
     }
 
     private suspend fun getDestinationContacts(
-        contactWithGroup: ContactWithGroupDto,
-        additionalDestinations: Array<String>?
+        contactWithGroup: ContactWithGroupDto?,
+        destinations: Array<String>,
+        additionalDestinations: Array<String>,
+        isBroadcast: Boolean
     ): List<ContactDto> {
-        val addressesSet = hashSetOf<String>()
+        val addressesSet = mutableSetOf<String>()
         val results = mutableListOf<ContactDto>()
-        if (contactWithGroup.contact.type == ContactType.CONTACT) {
-            addressesSet.add(contactWithGroup.contact.address)
-            results.add(contactWithGroup.contact)
-        } else {
-            contactWithGroup.group?.groupData?.members?.forEach { item ->
-                if (item.address != null && item.address != signatureService.address && addressesSet.add(
-                        item.address
-                    )
-                ) {
-                    repository.local.getContact(item.address)?.let { c -> results.add(c) }
+        when {
+            destinations.isNotEmpty() -> {
+                destinations.forEach { address ->
+                    if (addressesSet.add(address)) {
+                        repository.local.getContact(address)?.let { c -> results.add(c) }
+                    }
+                }
+            }
+
+            isBroadcast -> {
+                return repository.local.getAllContacts()
+            }
+
+            contactWithGroup?.contact?.type == ContactType.CONTACT -> {
+                addressesSet.add(contactWithGroup.contact.address)
+                results.add(contactWithGroup.contact)
+            }
+
+            contactWithGroup?.contact?.type == ContactType.GROUP -> {
+                contactWithGroup.group?.groupData?.members?.forEach { item ->
+                    if (!item.address.isNullOrBlank()
+                        && item.address != signatureService.address
+                        && addressesSet.add(item.address)
+                    ) {
+                        repository.local.getContact(item.address)?.let { c -> results.add(c) }
+                    }
                 }
             }
         }
-        additionalDestinations?.forEach { address ->
+
+        additionalDestinations.forEach { address ->
             if (!addressesSet.contains(address)) {
                 repository.local.getContact(address)?.let { c -> results.add(c) }
             }
@@ -241,46 +268,92 @@ class MessageSenderWorker @AssistedInject constructor(
         return results
     }
 
-    override suspend fun doWork(): Result {
-        if (runAttemptCount >= MAX_RETRY_COUNT) {
-            return Result.failure()
+    private fun scheduleChildWorkers(
+        messageId: Long,
+        contacts: List<ContactDto>,
+        destinations: Array<String>
+    ): Boolean {
+        return if (destinations.isEmpty()) {
+            val workManager = WorkManager.getInstance(applicationContext)
+            contacts.chunked(SEND_MESSAGES_CHUNK_SIZE).forEach { chunk ->
+                workManager.sendMessage(
+                    messageId = messageId,
+                    destinations = chunk.mapTo(mutableSetOf()) { item -> item.address }
+                )
+            }
+            true
+        } else {
+            false
         }
+    }
 
-        if (!signalrController.isConnected()) {
-            return Result.retry()
+    private fun getFailureOutputData(messageId: Long, destinations: Array<String>): Result {
+        return Result.failure(
+            workDataOf(
+                MESSAGE_ID_ARG to messageId,
+                DESTINATIONS_ARG to destinations
+            )
+        )
+    }
+
+    override suspend fun doWork(): Result {
+        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
+        val destinations = inputData.getStringArray(DESTINATIONS_ARG) ?: arrayOf()
+
+        if (runAttemptCount >= MAX_RETRY_COUNT) {
+            return getFailureOutputData(messageId, destinations)
         }
 
         if (!pathFinder.load()) {
             return Result.retry()
         }
 
-        val messageId = inputData.getLong(MESSAGE_ID_ARG, Long.MIN_VALUE)
-        val additionalDestinations = inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG)
+        val additionalDestinations =
+            inputData.getStringArray(ADDITIONAL_DESTINATIONS_ARG) ?: arrayOf()
+
         val userName = repository.local.name.first()
-        val messageToBeSent =
-            if (messageId > 0) repository.local.getMessageWithAttachments(messageId) else null
-        val chatId = messageToBeSent?.message?.chatId ?: return Result.failure()
+        val messageToBeSent = if (messageId > 0) {
+            repository.local.getMessageWithAttachments(messageId)
+        } else {
+            null
+        }
+        val chatId =
+            messageToBeSent?.message?.chatId ?: return getFailureOutputData(messageId, destinations)
         if (messageToBeSent.message.sent) {
             return Result.success()
         }
-        val contactWithGroup =
-            repository.local.getContactWithGroup(chatId) ?: return Result.failure()
-        val contacts = getDestinationContacts(contactWithGroup, additionalDestinations)
-        val messageWithAttachments = (
-                if (!contacts.isEmpty()) {
-                    resolveAttachments(messageToBeSent, contacts.size)
-                } else {
-                    messageToBeSent
-                })
-            ?: return Result.retry()
+
+        val isBroadcast = chatId == BROADCAST_CONTACT_ADDRESS
+        val contactWithGroup = repository.local.getContactWithGroup(chatId)
+            ?: if (!isBroadcast) {
+                return getFailureOutputData(messageId, destinations)
+            } else {
+                null
+            }
+        val contacts = getDestinationContacts(
+            contactWithGroup,
+            destinations,
+            additionalDestinations,
+            isBroadcast
+        )
+
+        val messageWithAttachments = if (!contacts.isEmpty()) {
+            resolveAttachments(messageToBeSent, contacts.size)
+        } else {
+            messageToBeSent
+        } ?: return Result.retry()
+
+        if (scheduleChildWorkers(messageId, contacts, destinations)) {
+            return Result.success()
+        }
 
         val ok = contacts.isEmpty() || sendMessage(
             contacts = contacts,
             message = messageWithAttachments.message,
             userName = userName,
-            groupAddress = contactWithGroup.group?.address,
+            groupAddress = contactWithGroup?.group?.address,
             resourceUrl = messageWithAttachments.attachment?.url
-                ?: contactWithGroup.group?.resourceUrl,
+                ?: contactWithGroup?.group?.resourceUrl,
             passphrase = messageWithAttachments.attachment?.passphrase
         )
         return if (ok) {
@@ -293,13 +366,13 @@ class MessageSenderWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            MESSAGE_SENDER_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
+            id.hashCode(),
+            notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                MESSAGE_SENDER_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.sending_message))
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.sending_message))
             )
     }
 }

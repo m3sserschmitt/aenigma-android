@@ -1,23 +1,37 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.services.SignatureService
@@ -38,11 +52,8 @@ import ro.aenigma.models.factories.GroupDataFactory
 import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
-import ro.aenigma.util.Constants.Companion.GROUP_UPLOAD_NOTIFICATION_ID
-import ro.aenigma.util.SerializerExtensions.toCanonicalJson
-import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class GroupUploadWorker @AssistedInject constructor(
@@ -51,45 +62,24 @@ class GroupUploadWorker @AssistedInject constructor(
     private val repository: Repository,
     private val messageSaver: MessageSaver,
     private val signatureService: SignatureService,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
 
     companion object {
-
-        private const val UNIQUE_WORK_NAME = "UploadGroupWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val MAX_ATTEMPTS_COUNT = 5
-        const val GROUP_NAME_ARG = "GroupName"
-        const val MEMBERS_ARG = "Members"
-        const val EXISTING_GROUP_ADDRESS_ARG = "GroupAddress"
-        const val ACTION_TYPE_ARG = "Action"
+        const val UNIQUE_WORK_NAME = "upload-group-worker"
+        private const val MAX_ATTEMPTS_COUNT = 3
+        const val GROUP_NAME_ARG = "group-name"
+        const val MEMBERS_ARG = "members"
+        const val EXISTING_GROUP_ADDRESS_ARG = "group-address"
+        const val ACTION_TYPE_ARG = "action"
 
         @JvmStatic
-        fun createOrUpdateGroupWorkRequest(
-            workManager: WorkManager, groupName: String?, members: List<String>?,
-            existingGroupAddress: String?, actionType: MessageType
-        ) {
-            val parameters = Data.Builder()
-                .putString(GROUP_NAME_ARG, groupName)
-                .putStringArray(MEMBERS_ARG, members?.toTypedArray() ?: arrayOf())
-                .putString(EXISTING_GROUP_ADDRESS_ARG, existingGroupAddress)
-                .putString(ACTION_TYPE_ARG, actionType.name)
-                .build()
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<GroupUploadWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            val workName =
-                if (existingGroupAddress != null) "$UNIQUE_WORK_NAME-$existingGroupAddress" else UNIQUE_WORK_NAME
-            workManager.enqueueUniqueWork(
-                workName,
-                ExistingWorkPolicy.APPEND_OR_REPLACE,
-                workRequest
-            )
+        fun getUniqueWorkRequest(groupAddress: String?): String {
+            return if (groupAddress.isNullOrBlank()) {
+                UNIQUE_WORK_NAME
+            } else {
+                "$UNIQUE_WORK_NAME-$groupAddress"
+            }
         }
     }
 
@@ -129,7 +119,7 @@ class GroupUploadWorker @AssistedInject constructor(
         existingGroupDataDto: GroupDataDto,
         memberAddresses: List<String>
     ): GroupDataDto? {
-        if(memberAddresses.contains(signatureService.address)) {
+        if (memberAddresses.contains(signatureService.address)) {
             return null
         }
         return existingGroupDataDto.removeMembers(memberAddresses).incrementNonce()
@@ -139,17 +129,20 @@ class GroupUploadWorker @AssistedInject constructor(
         existingGroupDataDto: GroupDataDto,
         memberAddresses: List<String>
     ): GroupDataDto? {
-        val members = existingGroupDataDto.members?.toHashSet() ?: return null
+        val existingAddresses = mutableSetOf<String>()
+        existingGroupDataDto.members?.mapNotNullTo(existingAddresses) { m -> m.address }
+            ?: return null
+        val result = existingGroupDataDto.members.toMutableList()
         memberAddresses.forEach { address ->
-            if (!members.contains(ExportedContactDataFactory.create(address))) {
+            if (!existingAddresses.contains(address)) {
                 repository.local.getContact(address)?.let { c ->
                     c.toExportedContactDataDto().let { ecd ->
-                        members.add(ecd)
+                        result.add(ecd)
                     }
                 }
             }
         }
-        return existingGroupDataDto.withMembers(members.toList()).incrementNonce()
+        return existingGroupDataDto.withMembers(result).incrementNonce()
     }
 
     private suspend fun createGroupData(
@@ -222,8 +215,7 @@ class GroupUploadWorker @AssistedInject constructor(
         return messageSaver.saveOutgoingMessage(
             MessageDtoFactory.createOutgoing(
                 chatId = groupDataDto.address,
-                text = encodedKey, // preserve compatibility with version 1.0.1; it will be set
-                // to null in the future;
+                text = null,
                 type = actionType,
                 actionFor = null
             ),
@@ -237,7 +229,10 @@ class GroupUploadWorker @AssistedInject constructor(
         )
     }
 
-    private fun calculateDestinations(groupData: GroupDataDto?, existingGroupData: GroupDataDto?): Set<String> {
+    private fun calculateDestinations(
+        groupData: GroupDataDto?,
+        existingGroupData: GroupDataDto?
+    ): Set<String> {
         return groupData?.members?.mapNotNull { item -> item.address }
             ?.union(existingGroupData?.members?.mapNotNull { item -> item.address } ?: listOf())
             ?.filter { item -> item != signatureService.address }
@@ -269,15 +264,17 @@ class GroupUploadWorker @AssistedInject constructor(
             guard = guard
         ) ?: return Result.failure()
         groupData.members ?: return Result.failure()
-        val serializedGroupData = groupData.toCanonicalJson()?.toByteArray()
-            ?: return Result.failure()
+
         val destinations = calculateDestinations(groupData, existingGroupData)
-        val destinationsCount = destinations.count()
-        if(destinationsCount <= 0) {
+        val accessCount = destinations.count()
+        if (accessCount <= 0) {
             return Result.failure()
         }
         val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
-        val response = repository.remote.createSharedData(serializedGroupData, key, destinationsCount)
+        val torPreference = repository.local.useTor.firstOrNull() == true
+        val orbotPreference = repository.local.useOrbot.firstOrNull() == true
+        val usingTor = torPreference || orbotPreference
+        val response = repository.remote.postGroupData(groupData, accessCount, key, usingTor)
             ?: return Result.retry()
         response.resourceUrl ?: return Result.retry()
 
@@ -290,13 +287,13 @@ class GroupUploadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GROUP_UPLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info)),
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info)),
                 FOREGROUND_SERVICE_TYPE_DATA_SYNC
             ) else
             ForegroundInfo(
-                GROUP_UPLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.uploading_channel_info))
             )
     }
 }

@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.addContacts
 
 import androidx.compose.foundation.layout.Box
@@ -25,15 +46,17 @@ import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.ui.screens.common.CopyToClipboardButton
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
-import ro.aenigma.ui.screens.common.ShareButton
+import ro.aenigma.ui.screens.common.RedirectUriButton
+import ro.aenigma.ui.screens.common.ShareTextButton
 import ro.aenigma.util.RequestState
-import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.util.ZonedDateTimeExtensions.socialMediaStyleFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateLinkDialog(
     sharedData: RequestState<CreatedSharedDataDto>,
-    onConfirmButtonClick: () -> Unit
+    onConfirmButtonClick: () -> Unit,
+    onForwardUri: (String) -> Unit = { }
 ) {
     if (sharedData !is RequestState.Idle) {
         val title = when (sharedData) {
@@ -79,9 +102,7 @@ fun CreateLinkDialog(
                             when (sharedData) {
                                 is RequestState.Success -> {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        val validUntil = PrettyDateFormatter.formatDateTime(
-                                            sharedData.data.validUntil
-                                        )
+                                        val validUntil = sharedData.data.validUntil?.socialMediaStyleFormat()
                                         if (validUntil != null) {
                                             Text(
                                                 text = stringResource(
@@ -102,13 +123,17 @@ fun CreateLinkDialog(
                                             color = MaterialTheme.colorScheme.onBackground
                                         )
                                         Row {
-                                            ShareButton(
+                                            ShareTextButton(
                                                 text = link,
-                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                                tint = MaterialTheme.colorScheme.onBackground
                                             )
                                             CopyToClipboardButton(
                                                 text = link,
-                                                iconTint = MaterialTheme.colorScheme.onBackground
+                                                tint = MaterialTheme.colorScheme.onBackground
+                                            )
+                                            RedirectUriButton(
+                                                tint = MaterialTheme.colorScheme.onBackground,
+                                                onClick = { onForwardUri(link) }
                                             )
                                         }
                                     }
@@ -158,13 +183,15 @@ fun CreateLinkDialog(
 fun CreateLinkDialog(
     visible: Boolean,
     sharedData: RequestState<CreatedSharedDataDto>,
-    onConfirmButtonClick: () -> Unit
+    onConfirmButtonClick: () -> Unit,
+    onForwardUri: (String) -> Unit = { }
 ) {
     if(visible)
     {
         CreateLinkDialog(
             sharedData = sharedData,
-            onConfirmButtonClick = onConfirmButtonClick
+            onConfirmButtonClick = onConfirmButtonClick,
+            onForwardUri = onForwardUri
         )
     }
 }

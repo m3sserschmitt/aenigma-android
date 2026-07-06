@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.feed
 
 import android.net.Uri
@@ -28,34 +49,32 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.RequestState
+import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun ArticleScreen(
-    url: String?,
+    uri: String?,
+    title: String? = null,
+    messageId: Long? = null,
     mainViewModel: MainViewModel,
+    forwardMessage: (Long) -> Unit,
     navigateBack: () -> Unit
 ) {
-    LaunchedEffect(key1 = url) {
-        if (!url.isNullOrBlank()) {
-            mainViewModel.fetchArticle(url)
-        }
-    }
+    LaunchedEffect(key1 = uri) { mainViewModel.fetchArticle(uri) }
 
-    val articleContent by mainViewModel.articleContent.collectAsState()
+    val content by mainViewModel.articleContent.collectAsState()
     val context = LocalContext.current
 
     ArticleScreen(
-        content = articleContent,
-        imageTransformer = mainViewModel.markdownImageTransformer,
+        content = content,
+        title = title,
+        imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
         onShareArticle = {
-            if (!url.isNullOrBlank()) {
-                context.shareText(
-                    String.format(
-                        WEB_ARTICLE_URL_TEMPLATE,
-                        Uri.encode(url).toString()
-                    )
-                )
+            if (uri.isRemoteUri()) {
+                context.shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri)))
+            } else if(messageId != null){
+                forwardMessage(messageId)
             }
         },
         navigateBack = navigateBack
@@ -65,6 +84,7 @@ fun ArticleScreen(
 @Composable
 fun ArticleScreen(
     content: RequestState<String>,
+    title: String? = null,
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     onShareArticle: () -> Unit,
     navigateBack: () -> Unit
@@ -73,7 +93,7 @@ fun ArticleScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StandardAppBar(
-                title = "",
+                title = title.takeIf { t -> !t.isNullOrBlank() } ?: "",
                 navigateBack = navigateBack,
                 actions = {
                     ShareTopAppBarAction(

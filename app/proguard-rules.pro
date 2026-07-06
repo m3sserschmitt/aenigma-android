@@ -121,3 +121,14 @@
 -keepclassmembers class ** {
     public <init>(...);
 }
+
+-keep class org.apache.tika.** { *; }
+
+-dontwarn aQute.bnd.annotation.Version
+-dontwarn javax.xml.stream.XMLInputFactory
+-dontwarn javax.xml.stream.XMLResolver
+-dontwarn org.osgi.framework.BundleActivator
+-dontwarn org.osgi.framework.BundleContext
+-dontwarn org.osgi.framework.ServiceReference
+-dontwarn org.osgi.util.tracker.ServiceTracker
+-dontwarn org.osgi.util.tracker.ServiceTrackerCustomizer

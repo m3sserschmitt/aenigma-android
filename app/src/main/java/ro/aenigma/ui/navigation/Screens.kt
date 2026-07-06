@@ -1,105 +1,160 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.navigation
 
 import android.net.Uri
 import androidx.navigation.NavController
+import ro.aenigma.util.Constants.Companion.APP_DEEP_LINK_SCHEME
 import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import ro.aenigma.util.QrCodeScannerState
+import ro.aenigma.viewmodels.MainViewModel
 import java.util.Locale
 
-class Screens(navController: NavController) {
+class Screens(navController: NavController, mainViewModel: MainViewModel) {
 
     companion object {
-        const val CHAT_SCREEN_CHAT_ID_ARG = "chatId"
-        const val ADD_CONTACTS_SCREEN_CONTACT_ID_ARG = "contactId"
-        const val ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG = "scannerState"
-        const val ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE = "me"
-        const val ARTICLE_SCREEN_ARTICLE_URL_ARG = "url"
+        const val URI_ARG = "uri"
+        const val CHAT_ID_ARG = "chatId"
+        const val CONTACT_ID_ARG = "contactId"
+        const val SCANNER_STATE_ARG = "scannerState"
+        const val MESSAGE_ID_ARG = "messageId"
+        const val TITLE_ARG = "title"
 
-        const val CONTACTS_SCREEN_BASE_ROUTE = "contacts"
-        const val CHAT_SCREEN_BASE_ROUTE = "chat"
-        const val ADD_CONTACTS_BASE_ROUTE = "addContacts"
-        const val ABOUT_BASE_ROUTE = "about"
-        const val LICENSES_BASE_ROUTE = "licenses"
-        const val FEED_BASE_ROUTE = "feed"
-        const val ARTICLE_BASE_ROUTE = "article"
+        const val CONTACTS_ROOT_PATH = "contacts"
+        const val CHAT_ROOT_PATH = "chat"
+        const val ADD_CONTACTS_ROOT_PATH = "addContacts"
+        const val ABOUT_ROOT_PATH = "about"
+        const val LICENSES_ROOT_PATH = "licenses"
+        const val FEED_ROOT_PATH = "feed"
+        const val ARTICLE_ROOT_PATH = "article"
 
-        const val CONTACTS_SCREEN_ROUTE_FULL = CONTACTS_SCREEN_BASE_ROUTE
-        const val CHAT_SCREEN_ROUTE_FULL = "$CHAT_SCREEN_BASE_ROUTE/{$CHAT_SCREEN_CHAT_ID_ARG}"
-        const val ADD_CONTACT_SCREEN_ROUTE_FULL =
-            "$ADD_CONTACTS_BASE_ROUTE/{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}/{$ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG}"
-        const val ABOUT_SCREEN_ROUTE_FULL = ABOUT_BASE_ROUTE
-        const val LICENSES_SCREEN_ROUTE_FULL = LICENSES_BASE_ROUTE
-        const val FEED_SCREEN_ROUTE_FULL = FEED_BASE_ROUTE
-        const val ARTICLE_SCREEN_ROUTE_FULL =
-            "$ARTICLE_BASE_ROUTE/{$ARTICLE_SCREEN_ARTICLE_URL_ARG}"
+        const val CONTACTS_PATH =
+            "$CONTACTS_ROOT_PATH?" +
+                    "$URI_ARG={$URI_ARG}&" +
+                    "$MESSAGE_ID_ARG={$MESSAGE_ID_ARG}"
+        const val CHAT_PATH = "$CHAT_ROOT_PATH/{$CHAT_ID_ARG}"
+        const val CHAT_DEEP_LINK = "$APP_DEEP_LINK_SCHEME://$CHAT_PATH"
+        const val ADD_CONTACTS_PATH =
+            "$ADD_CONTACTS_ROOT_PATH?" +
+                    "$CONTACT_ID_ARG={$CONTACT_ID_ARG}&" +
+                    "$URI_ARG={$URI_ARG}&" +
+                    "$SCANNER_STATE_ARG={$SCANNER_STATE_ARG}"
+        const val ABOUT_SCREEN_PATH = ABOUT_ROOT_PATH
+        const val LICENSES_SCREEN_PATH = LICENSES_ROOT_PATH
+        const val FEED_SCREEN_PATH = FEED_ROOT_PATH
+        const val ARTICLE_SCREEN_PATH =
+            "$ARTICLE_ROOT_PATH?" +
+                    "$URI_ARG={$URI_ARG}&" +
+                    "$TITLE_ARG={$TITLE_ARG}&" +
+                    "$MESSAGE_ID_ARG={$MESSAGE_ID_ARG}"
 
-        const val STARTING_SCREEN = CONTACTS_SCREEN_ROUTE_FULL
-        const val NO_SCREEN = "none"
+        const val ROOT_PATH = CONTACTS_ROOT_PATH
 
         @JvmStatic
         fun getChatScreenRoute(chatId: String): String {
-            return CHAT_SCREEN_ROUTE_FULL.replace("{$CHAT_SCREEN_CHAT_ID_ARG}", chatId)
+            return Uri.Builder().path(CHAT_ROOT_PATH).appendPath(chatId).build().toString()
+        }
+
+        @JvmStatic
+        fun getChatDeepLink(chatId: String): Uri {
+            return Uri.Builder().scheme(APP_DEEP_LINK_SCHEME).authority(CHAT_ROOT_PATH).appendPath(chatId).build()
         }
 
         @JvmStatic
         fun getAddContactsScreenRoute(
             contactId: String?,
+            uri: String?,
             scannerState: QrCodeScannerState
         ): String {
-            return (if (contactId.isNullOrBlank())
-                ADD_CONTACT_SCREEN_ROUTE_FULL.replace(
-                    "{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}",
-                    ADD_CONTACT_SCREEN_SHARE_MY_CODE_ARG_VALUE
-                )
-            else
-                ADD_CONTACT_SCREEN_ROUTE_FULL.replace(
-                    "{$ADD_CONTACTS_SCREEN_CONTACT_ID_ARG}",
-                    contactId
-                )
-                    ).replace(
-                    "{$ADD_CONTACTS_SCREEN_SCANNER_STATE_ARG}",
-                    scannerState.toString()
-                )
+            val builder = Uri.Builder()
+                .path(ADD_CONTACTS_ROOT_PATH)
+                .appendQueryParameter(SCANNER_STATE_ARG, scannerState.toString())
+            contactId?.let { builder.appendQueryParameter(CONTACT_ID_ARG, it) }
+            uri?.let { builder.appendQueryParameter(URI_ARG, it) }
+            return builder.build().toString()
         }
 
         @JvmStatic
-        fun getArticleScreenRoute(url: String): String {
-            val encodedUrl = Uri.encode(url).toString()
-            return ARTICLE_SCREEN_ROUTE_FULL.replace(
-                "{$ARTICLE_SCREEN_ARTICLE_URL_ARG}",
-                encodedUrl
-            )
+        fun getArticleScreenRoute(uri: String, title: String?, messageId: Long?): String {
+            val builder = Uri.Builder()
+                .path(ARTICLE_ROOT_PATH)
+                .appendQueryParameter(URI_ARG, uri)
+            messageId.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
+            title.let { builder.appendQueryParameter(TITLE_ARG, it) }
+            return builder.build().toString()
         }
 
         @JvmStatic
         fun getPrivacyPolicyScreenRoute(): String {
             val url = String.format(PRIVACY_POLICY_URL_TEMPLATE, Locale.getDefault().language)
-            return getArticleScreenRoute(url)
+            return getArticleScreenRoute(url, null, null)
         }
 
         @JvmStatic
-        fun getChatIdFromChatRoute(chatRoute: String): String? {
-            val regex = Regex("chat/([a-fA-F0-9]{64})")
-            val matchResult = regex.find(chatRoute)
-            return matchResult?.groupValues?.get(1)
-        }
-
-    }
-
-    val contacts: () -> Unit = {
-        navController.navigate(CONTACTS_SCREEN_ROUTE_FULL) {
-            popUpTo(CONTACTS_SCREEN_ROUTE_FULL) { inclusive = true }
+        fun getContactsRoute(uri: String?, messageId: Long?): String {
+            val builder = Uri.Builder().path(CONTACTS_ROOT_PATH)
+            uri?.let { builder.appendQueryParameter(URI_ARG, it) }
+            messageId.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
+            return builder.build().toString()
         }
     }
 
-    val chat: (String) -> Unit = { chatId ->
-        navController.navigate(getChatScreenRoute(chatId))
+    val root: () -> Unit = {
+        navController.navigate(ROOT_PATH) {
+            popUpTo(navController.graph.startDestinationId) {
+                inclusive = true
+            }
+            launchSingleTop = true
+        }
     }
 
-    val addContact: (String?) -> Unit = { contactId ->
+    val contacts: () -> Unit = { navController.navigate(getContactsRoute(null, null)) }
+
+    val back: () -> Unit = { navController.popBackStack() }
+
+    val forwardUri: (uri: String) -> Unit =
+        { uri -> navController.navigate(getContactsRoute(uri, null)) }
+
+    val forwardMessage: (id: Long) -> Unit =
+        { id -> navController.navigate(getContactsRoute(null, id)) }
+
+    val chat: (chatId: String) -> Unit =
+        { chatId -> navController.navigate(getChatScreenRoute(chatId)) }
+
+    val addContacts: (contactId: String?) -> Unit = { contactId ->
         navController.navigate(
             getAddContactsScreenRoute(
                 contactId = contactId,
+                uri = null,
+                scannerState = QrCodeScannerState.SHARE_CODE
+            )
+        )
+    }
+
+    val getSharedContact: (uri: String) -> Unit = { uri ->
+        navController.navigate(
+            getAddContactsScreenRoute(
+                contactId = null,
+                uri = uri,
                 scannerState = QrCodeScannerState.SHARE_CODE
             )
         )
@@ -108,28 +163,26 @@ class Screens(navController: NavController) {
     val scanServerCode: () -> Unit = {
         navController.navigate(
             getAddContactsScreenRoute(
-                contactId = null, scannerState = QrCodeScannerState.SCAN_SERVER_INFO_CODE
+                contactId = null,
+                uri = null,
+                scannerState = QrCodeScannerState.SCAN_SERVER_INFO_CODE
             )
         )
     }
 
-    val about: () -> Unit = {
-        navController.navigate(ABOUT_SCREEN_ROUTE_FULL)
-    }
+    val about: () -> Unit = { navController.navigate(ABOUT_SCREEN_PATH) }
 
-    val licenses: () -> Unit = {
-        navController.navigate(LICENSES_SCREEN_ROUTE_FULL)
-    }
+    val licenses: () -> Unit = { navController.navigate(LICENSES_SCREEN_PATH) }
 
     val feed: () -> Unit = {
-        navController.navigate(FEED_SCREEN_ROUTE_FULL)
+        mainViewModel.resetFeedScroll()
+        navController.navigate(FEED_SCREEN_PATH)
     }
 
-    val article: (String) -> Unit = { url ->
-        navController.navigate(getArticleScreenRoute(url))
-    }
+    val article: (uri: String, title: String?, messageId: Long?) -> Unit =
+        { uri, title, messageId ->
+            navController.navigate(getArticleScreenRoute(uri, title, messageId))
+        }
 
-    val privacyPolicy: () -> Unit = {
-        navController.navigate(getPrivacyPolicyScreenRoute())
-    }
+    val privacyPolicy: () -> Unit = { navController.navigate(getPrivacyPolicyScreenRoute()) }
 }

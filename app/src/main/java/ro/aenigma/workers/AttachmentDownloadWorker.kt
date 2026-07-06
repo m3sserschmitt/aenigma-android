@@ -1,96 +1,77 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.data.Repository
 import ro.aenigma.models.AttachmentDto
-import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithAttachmentsDto
 import ro.aenigma.models.enums.MessageType
-import ro.aenigma.services.NotificationService
-import ro.aenigma.services.Zipper
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_DOWNLOAD_NOTIFICATION_ID
-import ro.aenigma.util.ContextExtensions.getConversationFilesDir
-import ro.aenigma.util.FileExtensions.toContentUriString
-import ro.aenigma.util.StringExtensions.fromJson
+import ro.aenigma.services.Notifier
+import ro.aenigma.util.ContextExtensions.getCacheFile
+import ro.aenigma.util.ContextExtensions.createTempCacheFile
+import ro.aenigma.util.ContextExtensions.extractZip
+import ro.aenigma.util.ContextExtensions.toContentUri
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class AttachmentDownloadWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
-    private val zipper: Zipper,
     private val repository: Repository,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
 
     companion object {
         private const val UNIQUE_WORK_REQUEST_NAME = "attachment-download-worker"
-        private const val MESSAGE_ID_ARG = "message-id"
-        const val MAX_RETRY_COUNT = 5
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-
-        fun createRequest(workManager: WorkManager, messageId: Long) {
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID_ARG, messageId)
-                .build()
-
-            val workRequest = OneTimeWorkRequestBuilder<AttachmentDownloadWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniqueWork(
-                getUniqueWorkName(messageId), ExistingWorkPolicy.KEEP, workRequest
-            )
-        }
+        const val MESSAGE_ID_ARG = "message-id"
+        const val MAX_RETRY_COUNT = 3
 
         fun getUniqueWorkName(messageId: Long): String {
             return "$UNIQUE_WORK_REQUEST_NAME-$messageId"
         }
     }
 
-    private suspend fun downloadEncryptedFile(url: String): File? {
-        val tempFile = withContext(Dispatchers.IO) {
-            File.createTempFile("archive_", "_encrypted", applicationContext.cacheDir)
-        }
-        if(repository.remote.getFile(url, tempFile)) {
-            repository.remote.incrementFileAccessCount(url)
-            return tempFile
+    suspend fun downloadArchive(attachment: AttachmentDto): File? {
+        val url = attachment.url ?: return null
+        val key = CryptoProvider.base64Decode(attachment.passphrase ?: return null) ?: return null
+        val archive = applicationContext.createTempCacheFile(null)
+        return if (repository.remote.getEncryptedFile(url, key, archive)) {
+            archive
         } else {
-            return null
+            archive.delete()
+            null
         }
-    }
-
-    private fun decryptArchive(file: File, passphrase: String?): File? {
-        val key = CryptoProvider.base64Decode(passphrase ?: return null) ?: return null
-        return CryptoProvider.decrypt(file, key)
     }
 
     private suspend fun storeAttachment(message: MessageWithAttachmentsDto, archive: File) {
@@ -106,43 +87,36 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     private suspend fun resolveAttachments(message: MessageWithAttachmentsDto): File? {
         val attachment = message.attachment ?: return null
-        val archive = if (attachment.path == null) {
-            val downloaded = downloadEncryptedFile(attachment.url ?: return null) ?: return null
-            val decrypted = decryptArchive(downloaded, attachment.passphrase) ?: return null
-            downloaded.delete()
-            decrypted
+        val archive = if (!attachment.path.isNullOrBlank()) {
+            val cachedArchive = applicationContext.getCacheFile(attachment.path)
+            if (!cachedArchive.exists()) {
+                downloadArchive(attachment)
+            } else {
+                cachedArchive
+            }
         } else {
-            File(applicationContext.cacheDir, attachment.path)
-        }
+            downloadArchive(attachment)
+        } ?: return null
 
         storeAttachment(message, archive)
         return archive
     }
 
+    private suspend fun incrementFileAccessCount(messageWithAttachments: MessageWithAttachmentsDto) {
+        if (!messageWithAttachments.attachment?.url.isNullOrBlank()) {
+            repository.remote.incrementFileAccessCount(messageWithAttachments.attachment.url)
+        }
+    }
+
     private suspend fun resolveFiles(
         message: MessageDto,
         files: List<File>
-    ): AttachmentsMetadataDto? {
-        var metadata: AttachmentsMetadataDto? = null
-        val finalURIs = mutableListOf<String>()
-        for ((i, file) in files.withIndex()) {
-            if (file.name == ATTACHMENTS_METADATA_FILE) {
-                metadata = file.readText().fromJson()
-            }
-            val destinationFile = File(
-                applicationContext.getConversationFilesDir(message.chatId),
-                "${message.id}_${i}_${file.name}"
-            )
-            file.renameTo(destinationFile)
-            finalURIs.add(destinationFile.toContentUriString(applicationContext))
-        }
+    ) {
         repository.local.updateMessage(
-            message.copy(
-                text = metadata?.description,
-                files = finalURIs
-            )
+            message.copy(files = files.map { file ->
+                applicationContext.toContentUri(file).toString()
+            })
         )
-        return metadata
     }
 
     override suspend fun doWork(): Result {
@@ -154,19 +128,18 @@ class AttachmentDownloadWorker @AssistedInject constructor(
                 ?: return Result.failure()).takeIf { !it?.message?.senderAddress.isNullOrBlank() }
                 ?: return Result.failure()
 
-            if (message.message.type != MessageType.FILES) return Result.failure()
+            if (message.message.type != MessageType.FILES) return Result.success()
             if (message.message.files?.isNotEmpty() == true) return Result.success()
 
             setForeground(getForegroundInfo())
 
             val archive = resolveAttachments(message) ?: return Result.retry()
-            val files = zipper.extractZipToFilesDir(
-                applicationContext,
+            val files = applicationContext.extractZip(
                 archive,
                 message.message.chatId
             )
             resolveFiles(message.message, files)
-
+            incrementFileAccessCount(message)
             archive.delete()
 
             Result.success()
@@ -177,13 +150,13 @@ class AttachmentDownloadWorker @AssistedInject constructor(
 
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) ForegroundInfo(
-            ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
-            notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
+            id.hashCode(),
+            notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file)),
             FOREGROUND_SERVICE_TYPE_DATA_SYNC
         ) else
             ForegroundInfo(
-                ATTACHMENT_DOWNLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_file))
             )
     }
 }

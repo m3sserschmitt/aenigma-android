@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.chat
 
 import androidx.compose.material.icons.Icons
@@ -7,6 +28,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -18,17 +40,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
-import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
-import ro.aenigma.ui.screens.common.ReloadAppBarAction
+import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.StandardAppBar
@@ -40,7 +61,8 @@ fun ChatAppBar(
     contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
@@ -54,7 +76,7 @@ fun ChatAppBar(
     onSearchModeClosed: () -> Unit,
     onSearchClicked: (String) -> Unit,
     onGroupActionClicked: (MessageType) -> Unit,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -72,11 +94,13 @@ fun ChatAppBar(
             actions = {
                 if (selectedItemsCount == 1) {
                     ReplyToMessageAppBarAction(
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                         onReplyToMessageClicked = onReplyToMessageClicked
                     )
                 }
                 DeleteAppBarAction(
-                    onDeleteClicked = onDeleteClicked
+                    onDeleteClicked = onDeleteClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         )
@@ -93,16 +117,16 @@ fun ChatAppBar(
         } else if(contact is RequestState.Success){
             StandardAppBar(
                 title = contact.data.contact.name.toString(),
-                navigateBack = navigateToContactsScreen,
+                navigateBack = navigateBack,
                 actions = {
-                    ConnectionStatusAppBarAction(
-                        connectionStatus = connectionStatus
-                    )
-                    ReloadAppBarAction(
-                        visible = connectionStatus is SignalRStatus.Error.Aborted,
+                    ReloadClientAppBarAction(
+                        isClientWorkerRunning = isClientWorkerRunning,
+                        connectionStatus = connectionStatus,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onRetryConnection
                     )
                     ActivateSearchAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onSearchModeTriggered = onSearchModeTriggered
                     )
                     MoreActions(
@@ -214,7 +238,7 @@ fun DefaultChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = false,
-        connectionStatus = SignalRStatus.NotConnected,
+        connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroupDto(
                 ContactDtoFactory.createContact(
@@ -231,7 +255,7 @@ fun DefaultChatAppBarPreview() {
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         onDeleteClicked = {},
         onReplyToMessageClicked = {},
         selectedItemsCount = 0,
@@ -251,7 +275,7 @@ fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
         messages = RequestState.Success(listOf()),
         isSelectionMode = true,
-        connectionStatus = SignalRStatus.NotConnected,
+        connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
             ContactWithGroupDto(
                 ContactDtoFactory.createContact(
@@ -268,7 +292,7 @@ fun SelectionModeChatAppBarPreview() {
         onRetryConnection = {},
         onDeleteAllClicked = {},
         onRenameContactClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         onDeleteClicked = {},
         onReplyToMessageClicked = {},
         selectedItemsCount = 3,

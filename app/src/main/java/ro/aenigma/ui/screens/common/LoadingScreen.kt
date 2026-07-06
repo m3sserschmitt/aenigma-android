@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.material3.MaterialTheme
@@ -5,8 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
 
 @Composable
 fun LoadingScreen(
@@ -21,7 +42,7 @@ fun LoadingScreen(
             IndeterminateCircularIndicator(
                 visible = true,
                 text = "",
-                size = 60.dp,
+                size = INFO_SCREEN_ICON_SIZE,
                 color = MaterialTheme.colorScheme.onBackground,
                 textStyle = MaterialTheme.typography.bodySmall,
                 textColor = MaterialTheme.colorScheme.onBackground

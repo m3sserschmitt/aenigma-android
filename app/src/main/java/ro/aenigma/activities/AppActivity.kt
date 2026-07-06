@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.activities
 
 import android.app.KeyguardManager
@@ -12,9 +33,12 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -24,10 +48,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import ro.aenigma.data.PreferencesDataStore
 import ro.aenigma.di.DbPassphraseKeeper
-import ro.aenigma.services.NavigationTracker
-import ro.aenigma.services.NotificationService
+import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
-import ro.aenigma.services.TorController
+import ro.aenigma.services.OnionRoutingServiceController
 import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
@@ -36,29 +59,49 @@ import ro.aenigma.util.Constants.Companion.APP_DOMAIN
 import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
 import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
-import ro.aenigma.workers.SignalRClientWorker
-import ro.aenigma.workers.SignalRWorkerAction
 import javax.inject.Inject
-import androidx.core.net.toUri
+import androidx.work.WorkManager
+import ro.aenigma.R
+import ro.aenigma.data.LocalDataSource
+import ro.aenigma.models.factories.ContactDtoFactory
+import ro.aenigma.services.NotificationServiceController
+import ro.aenigma.services.OnionRoutingServiceMonitor
+import ro.aenigma.ui.screens.common.CheckNotificationsPermission
+import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
+import ro.aenigma.ui.screens.contacts.SetupUserNameDialog
+import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.util.ContextExtensions.openApplicationDetails
+import ro.aenigma.util.UriExtensions.getArticleUri
+import ro.aenigma.util.UriExtensions.isSharedData
+import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
 @AndroidEntryPoint
 class AppActivity : FragmentActivity() {
 
     @Inject
-    lateinit var torController: TorController
+    lateinit var onionRoutingServiceController: OnionRoutingServiceController
+
+    @Inject
+    lateinit var onionRoutingServiceMonitor: OnionRoutingServiceMonitor
 
     @Inject
     lateinit var signalrController: SignalrController
 
     @Inject
-    lateinit var navigationTracker: NavigationTracker
+    lateinit var notificationServiceController: NotificationServiceController
 
     @Inject
-    lateinit var notificationService: NotificationService
+    lateinit var notifier: Notifier
 
     @Inject
     lateinit var preferencesDataStore: PreferencesDataStore
+
+    @Inject
+    lateinit var localDataSource: LocalDataSource
+
+    @Inject
+    lateinit var workManager: WorkManager
 
     private val dbPassphraseLoaded = MutableStateFlow(false)
 
@@ -86,6 +129,11 @@ class AppActivity : FragmentActivity() {
                 val auth by isAuthenticated.collectAsState()
                 val authError by isAuthError.collectAsState()
                 val passphraseLoaded by dbPassphraseLoaded.collectAsState()
+                val userName by mainViewModel.userName.collectAsState()
+                val notificationsAllowed by mainViewModel.notificationsAllowed.collectAsState()
+                val context = LocalContext.current
+                var notificationPermissionDialogVisible by remember { mutableStateOf(false) }
+
                 navHostController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
@@ -97,15 +145,45 @@ class AppActivity : FragmentActivity() {
                 ) {
                     LaunchedEffect(key1 = true) {
                         observeTorPreference()
+                        observeTorProxy()
                         observeClientConnectivity()
-                        observeNavigation()
+                        observeNotificationServicePreference()
+                        createBroadcastContact()
                         handleAppLink()
                         schedulePeriodicSync()
                     }
 
+                    SetupUserNameDialog(
+                        visible = userName.isBlank(),
+                        onConfirmClicked = { userName -> mainViewModel.setupName(userName) }
+                    )
+
+                    CheckNotificationsPermission(
+                        onPermissionGranted = { granted ->
+                            notificationPermissionDialogVisible = !granted && notificationsAllowed
+                            if (granted) {
+                                mainViewModel.saveNotificationsPreference(true)
+                            }
+                        }
+                    )
+
+                    NotificationsPermissionRequiredDialog(
+                        visible = notificationPermissionDialogVisible,
+                        onPositiveButtonClicked = {
+                            notificationPermissionDialogVisible = false
+                            context.openApplicationDetails()
+                        },
+                        onNegativeButtonClicked = { rememberDecision ->
+                            if (rememberDecision) {
+                                mainViewModel.saveNotificationsPreference(false)
+                            }
+                            notificationPermissionDialogVisible = false
+                        }
+                    )
+
                     SetupNavigation(
-                        navigationTracker = navigationTracker,
                         navHostController = navHostController,
+                        notifier = notifier,
                         mainViewModel = mainViewModel
                     )
                 }
@@ -128,17 +206,16 @@ class AppActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        notifier.enterForeground()
         resetAuthentication()
-        onScreenChanged(navigationTracker.currentRoute.value ?: Screens.NO_SCREEN)
         if (dbPassphraseLoaded.value) {
             resetClient()
-            sync()
         }
     }
 
     override fun onPause() {
         super.onPause()
-        onScreenChanged(Screens.Companion.NO_SCREEN)
+        notifier.enterBackground()
         lastPausedTime.value = System.currentTimeMillis()
     }
 
@@ -154,62 +231,41 @@ class AppActivity : FragmentActivity() {
         isAuthError.value = false
     }
 
-    private fun sync() {
-        SignalRClientWorker.start(
-            this,
-            actions = SignalRWorkerAction.Pull() and SignalRWorkerAction.Cleanup()
-        )
-    }
-
     private fun resetClient() {
-        signalrController.resetClient()
+        lifecycleScope.launch { signalrController.resetClient() }
     }
 
     private fun schedulePeriodicSync() {
-        SignalRClientWorker.schedulePeriodicSync(this)
+        workManager.schedulePeriodicClientSync()
     }
 
     private fun observeTorPreference() {
-        return torController.observeTorPreferences(this)
+        return onionRoutingServiceController.observeTorPreferences(this)
+    }
+
+    private fun observeTorProxy() {
+        return onionRoutingServiceMonitor.observeSocksProxy(this)
     }
 
     private fun observeClientConnectivity() {
         return signalrController.observeSignalrConnection(this)
     }
 
-    private fun observeNavigation() {
-        navigationTracker.currentRoute.observe(this, navigationObserver)
+    private fun observeNotificationServicePreference() {
+        return notificationServiceController.observeNotificationServicePreference(this)
     }
 
-    private val navigationObserver = Observer<String> { route -> onScreenChanged(route) }
-
-    private fun onScreenChanged(route: String) {
-        if (NavigationTracker.isChatScreenRoute(route)) {
-            val chatId = Screens.getChatIdFromChatRoute(route) ?: return
-
-            disableNotifications(chatId)
-            dismissNotifications(chatId)
-        } else if (NavigationTracker.isContactsScreenRoute(route)) {
-            disableNotifications()
-        } else {
-            enableNotifications()
+    private fun createBroadcastContact() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val broadcastContact = ContactDtoFactory.createContact(
+                address = Constants.BROADCAST_CONTACT_ADDRESS,
+                name = applicationContext.getString(R.string.broadcast),
+                publicKey = null,
+                guardAddress = null,
+                guardHostname = null
+            )
+            localDataSource.insertOrIgnoreContact(broadcastContact)
         }
-    }
-
-    private fun enableNotifications() {
-        notificationService.enableNotifications()
-    }
-
-    private fun disableNotifications() {
-        notificationService.disableNotifications()
-    }
-
-    private fun disableNotifications(address: String) {
-        notificationService.disableNotifications(address)
-    }
-
-    private fun dismissNotifications(address: String) {
-        notificationService.dismissNotifications(address)
     }
 
     private fun handleAppLink() {
@@ -218,33 +274,26 @@ class AppActivity : FragmentActivity() {
         if (intent.action != Intent.ACTION_VIEW) {
             return
         }
-        when(domain) {
+        when (domain) {
             APP_DOMAIN -> handleAppDomain(appLinkData)
             ARTICLES_DOMAIN -> handleArticlesDomain(appLinkData)
-            WEB_DOMAIN -> handleWebLink(appLinkData)
+            WEB_DOMAIN -> handleWebDomain(appLinkData)
         }
     }
 
     private fun handleAppDomain(uri: Uri) {
-        if(uri.path?.lowercase() == "/share") {
-            mainViewModel.openContactSharedData(uri.toString())
+        if (uri.isSharedData()) {
+            val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
+            screens.getSharedContact(uri.toString())
         }
     }
 
     private fun handleArticlesDomain(uri: Uri) {
-        val stringUri = uri.toString()
-        if(stringUri.lowercase().endsWith(".md")) {
-            val screens = Screens(navHostController)
-            screens.article(stringUri)
-        }
+        val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
+        screens.article(uri.toString(), null, null)
     }
 
-    private fun handleWebLink(uri: Uri) {
-        val regex = Regex("[?&]url=([^&#]+)")
-        val match = regex.find(uri.toString().lowercase())
-        val encodedValue = match?.groups?.get(1)?.value
-        val decodedValue = encodedValue?.let { Uri.decode(it) }
-        val finalUri = decodedValue?.toUri() ?: return
-        handleArticlesDomain(finalUri)
+    private fun handleWebDomain(uri: Uri) {
+        handleArticlesDomain(uri.getArticleUri() ?: return)
     }
 }

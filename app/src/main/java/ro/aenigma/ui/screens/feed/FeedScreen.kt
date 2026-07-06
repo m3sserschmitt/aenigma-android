@@ -1,8 +1,35 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.feed
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -10,51 +37,90 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.NewPostSheetStateDto
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isFullyExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toExpanded
+import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
+import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.ui.screens.common.ComposeNewArticleAppBarAction
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
+import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
+import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun FeedScreen(
     mainViewModel: MainViewModel,
-    navigateToArticle: (String) -> Unit
+    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    redirectUri: (String) -> Unit
 ) {
     val articles by mainViewModel.newsFeed.collectAsState()
-
-    LaunchedEffect(key1 = articles) {
-        if(articles is RequestState.Idle)
-        {
-            mainViewModel.collectFeed()
-        }
-    }
+    val newPostSheetState by mainViewModel.newPostSheetState.collectAsState()
 
     FeedScreen(
         articles = articles,
-        okHttpClientProvider = mainViewModel.okHttpClientProvider,
+        newPostSheetState = newPostSheetState,
+        feedListState = mainViewModel.feedListState,
+        okHttpClientProvider = mainViewModel.provideOkHttpClientProvider(),
         onArticleClicked = { article ->
-            if (article.url?.isNotBlank() == true) {
-                navigateToArticle(article.url)
+            if (!article.url.isNullOrBlank()) {
+                navigateToArticle(article.url, article.title, article.messageId)
             }
         },
-        onReloadFeedClicked = { mainViewModel.reloadFeed() }
+        onNewPostSheetStateChanged = { sheetState -> mainViewModel.setNewPostSheetState(sheetState) },
+        onReloadFeedClicked = { mainViewModel.reloadFeed() },
+        onPostClicked = { mainViewModel.postArticle() },
+        onRedirectUriClicked = redirectUri
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
     articles: RequestState<List<ArticleDto>>,
+    newPostSheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     okHttpClientProvider: IOkHttpClientProvider,
+    feedListState: LazyListState = rememberLazyListState(),
     onArticleClicked: (ArticleDto) -> Unit,
-    onReloadFeedClicked: () -> Unit
+    onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
+    onReloadFeedClicked: () -> Unit = { },
+    onPostClicked: () -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
-    Scaffold(
+    val bottomSheetState = rememberStandardBottomSheetState(
+        initialValue = newPostSheetState.sheetState
+    )
+    val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
+
+    LaunchedEffect(key1 = newPostSheetState.isNotFullyExpanded()) {
+        if (newPostSheetState.isNotFullyExpanded()) {
+            bottomSheetState.partialExpand()
+        } else {
+            bottomSheetState.expand()
+        }
+    }
+
+    LaunchedEffect(key1 = bottomSheetScaffoldState.isNotFullyExpanded()) {
+        if (newPostSheetState.isFullyExpanded() && bottomSheetScaffoldState.isNotFullyExpanded()) {
+            onNewPostSheetStateChanged(newPostSheetState.toPartiallyExpanded())
+        }
+    }
+
+    BottomSheetScaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        scaffoldState = bottomSheetScaffoldState,
+        sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
+        sheetContainerColor = MaterialTheme.colorScheme.background,
         topBar = {
             StandardAppBar(
                 title = stringResource(id = R.string.news),
@@ -62,19 +128,44 @@ fun FeedScreen(
                 actions = {
                     ReloadAppBarAction(
                         visible = true,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         onClick = onReloadFeedClicked
                     )
+                },
+                navigateBackAlternative = {
+                    ComposeNewArticleAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onComposeNewArticle = {
+                            if (bottomSheetScaffoldState.isNotFullyExpanded()) {
+                                onNewPostSheetStateChanged(newPostSheetState.toExpanded())
+                            } else {
+                                onNewPostSheetStateChanged(newPostSheetState.toPartiallyExpanded())
+                            }
+                        }
+                    )
                 }
+            )
+        },
+        sheetContent = {
+            NewPostBottomSheet(
+                sheetState = newPostSheetState,
+                onSheetStateChanged = onNewPostSheetStateChanged,
+                onPostClicked = onPostClicked
             )
         }
     ) { padding ->
         FeedScreenContent(
             modifier = Modifier.padding(
-                top = padding.calculateTopPadding()
+                top = padding.calculateTopPadding(),
+                bottom = BOTTOM_SHEET_PEEK_HEIGHT,
+                start = 8.dp,
+                end = 8.dp
             ).fillMaxSize(),
+            feedListState = feedListState,
             articles = articles,
             okHttpClientProvider = okHttpClientProvider,
-            onArticleClicked = onArticleClicked
+            onArticleClicked = onArticleClicked,
+            onRedirectUriClicked = onRedirectUriClicked
         )
     }
 }
@@ -84,16 +175,20 @@ fun FeedScreenContent(
     modifier: Modifier,
     articles: RequestState<List<ArticleDto>>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (ArticleDto) -> Unit
+    feedListState: LazyListState = rememberLazyListState(),
+    onArticleClicked: (ArticleDto) -> Unit,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     when (articles) {
         is RequestState.Success -> {
             if (articles.data.isNotEmpty()) {
                 FeedList(
                     modifier = modifier,
-                    articleDtos = articles.data,
+                    listState = feedListState,
+                    articles = articles.data,
                     okHttpClientProvider = okHttpClientProvider,
-                    onArticleClicked = onArticleClicked
+                    onArticleClicked = onArticleClicked,
+                    onRedirectUriClicked = onRedirectUriClicked
                 )
             } else {
                 EmptyFeedScreen(modifier = modifier)
@@ -101,20 +196,21 @@ fun FeedScreenContent(
         }
 
         is RequestState.Error -> ErrorScreen(
+            modifier = modifier,
             text = stringResource(id = R.string.something_went_wrong)
         )
 
         RequestState.Idle,
-        RequestState.Loading -> LoadingScreen()
+        RequestState.Loading -> LoadingScreen(modifier = modifier)
     }
 }
 
 @Preview
 @Composable
 fun FeedScreenPreview() {
-    val articleDtos = List(1) {
+    val articles = List(1) {
         ArticleDto(
-            id = 1,
+            messageId = 1,
             title = "Article $it",
             description = "A short description for item $it",
             url = "https://picsum.photos/seed/$it/300/300",
@@ -123,7 +219,7 @@ fun FeedScreenPreview() {
         )
     }
     FeedScreen(
-        articles = RequestState.Success(articleDtos),
+        articles = RequestState.Success(articles),
         okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = {},
         onReloadFeedClicked = {}

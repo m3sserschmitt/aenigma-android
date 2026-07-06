@@ -1,8 +1,30 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -16,19 +38,20 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import ro.aenigma.R
-import ro.aenigma.models.enums.TorConnectionCheck
+import ro.aenigma.models.enums.TorCircuitState
 import ro.aenigma.models.extensions.TorConnectionCheckExtensions.isOk
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 import ro.aenigma.ui.screens.common.ActivateSearchAppBarAction
 import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
-import ro.aenigma.ui.screens.common.ConnectionStatusAppBarAction
+import ro.aenigma.ui.screens.common.CloseAppBarAction
 import ro.aenigma.ui.screens.common.CreateGroupTopAppBarAction
 import ro.aenigma.ui.screens.common.DeleteAppBarAction
 import ro.aenigma.ui.screens.common.DropdownMenuSwitch
 import ro.aenigma.ui.screens.common.EditTopAppBarAction
+import ro.aenigma.ui.screens.common.ForwardAttachmentsAppBarAction
 import ro.aenigma.ui.screens.common.ServersListAppBarAction
-import ro.aenigma.ui.screens.common.ReloadAppBarAction
+import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
@@ -36,13 +59,16 @@ import ro.aenigma.ui.screens.common.StandardAppBar
 
 @Composable
 fun ContactsAppBar(
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
     isSearchMode: Boolean,
     selectedItemsCount: Int,
     useTor: Boolean,
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    notificationServicePreference: Boolean = false,
+    torCircuitState: TorCircuitState,
+    isForwardMode: Boolean = false,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
     onSearchTriggered: () -> Unit,
@@ -55,6 +81,9 @@ fun ContactsAppBar(
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
     onResetUsernameClicked: () -> Unit,
+    onRemoveAttachments: () -> Unit = { },
+    onForwardAttachments: () -> Unit = { },
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -77,7 +106,7 @@ fun ContactsAppBar(
                 onSearchClicked(searchQuery)
             }
         )
-    } else if (isSelectionMode) {
+    } else if (isSelectionMode && !isForwardMode) {
         SelectionModeAppBar(
             selectedItemsCount = selectedItemsCount,
             onSelectionModeExited = onSelectionModeExited,
@@ -87,18 +116,22 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 DeleteAppBarAction(
-                    onDeleteClicked = onDeleteSelectedItemsClicked
+                    onDeleteClicked = onDeleteSelectedItemsClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 EditTopAppBarAction(
                     visible = selectedItemsCount == 1,
-                    onRenameClicked = onRenameSelectedItemClicked
+                    onRenameClicked = onRenameSelectedItemClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 ShareTopAppBarAction(
                     visible = selectedItemsCount == 1,
-                    onClick = onShareSelectedItemsClicked
+                    onClick = onShareSelectedItemsClicked,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 CreateGroupTopAppBarAction(
                     visible = selectedItemsCount > 0,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     onCreateGroupClicked = onCreateGroupClicked
                 )
             }
@@ -106,34 +139,56 @@ fun ContactsAppBar(
     } else {
         StandardAppBar(
             title = stringResource(
-                id = R.string.contacts
+                id = if (!isForwardMode) {
+                    R.string.contacts
+                } else {
+                    R.string.forward
+                }
             ),
             navigateBackVisible = false,
             actions = {
-                ConnectionStatusAppBarAction(
-                    connectionStatus = connectionStatus
-                )
-                ReloadAppBarAction(
-                    visible = connectionStatus is SignalRStatus.Error.Aborted,
+                ReloadClientAppBarAction(
+                    isClientWorkerRunning = isClientWorkerRunning,
+                    connectionStatus = connectionStatus,
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onClick = onRetryConnection
                 )
                 ActivateSearchAppBarAction(
+                    tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
-                MoreActions(
-                    navigateToAboutScreen = navigateToAboutScreen,
-                    onResetUsernameClicked = onResetUsernameClicked,
-                    useTor = useTor,
-                    useOrbot = useOrbot,
-                    torConnectionCheck = torConnectionCheck,
-                    onTorPreferenceChanged = onTorPreferenceChanged,
-                    onOrbotPreferenceChanged = onOrbotPreferenceChanged
-                )
+                if (isSelectionMode && isForwardMode) {
+                    ForwardAttachmentsAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onForwardAttachments = onForwardAttachments
+                    )
+                }
+                if (!isForwardMode) {
+                    MoreActions(
+                        navigateToAboutScreen = navigateToAboutScreen,
+                        onResetUsernameClicked = onResetUsernameClicked,
+                        useTor = useTor,
+                        useOrbot = useOrbot,
+                        notificationServicePreference = notificationServicePreference,
+                        torCircuitState = torCircuitState,
+                        onTorPreferenceChanged = onTorPreferenceChanged,
+                        onOrbotPreferenceChanged = onOrbotPreferenceChanged,
+                        onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged
+                    )
+                }
             },
             navigateBackAlternative = {
-                ServersListAppBarAction(
-                    onOpenServersList = onOpenServersList
-                )
+                if (!isForwardMode) {
+                    ServersListAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onOpenServersList = onOpenServersList
+                    )
+                } else {
+                    CloseAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onCloseClicked = onRemoveAttachments
+                    )
+                }
             }
         )
     }
@@ -143,9 +198,11 @@ fun ContactsAppBar(
 fun MoreActions(
     useTor: Boolean,
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    notificationServicePreference: Boolean,
+    torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit,
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -156,23 +213,17 @@ fun MoreActions(
     ) {
         TorSwitch(
             useTor = useTor,
-            torConnectionCheck = torConnectionCheck,
-            onTorPreferenceChanged = { activatingTor ->
-                if(useOrbot) {
-                    onOrbotPreferenceChanged(false)
-                }
-                onTorPreferenceChanged(activatingTor)
-            }
+            torCircuitState = torCircuitState,
+            onTorPreferenceChanged = onTorPreferenceChanged
         )
         OrbotSwitch(
             useOrbot = useOrbot,
-            torConnectionCheck = torConnectionCheck,
-            onOrbotPreferenceChanged = { activatingOrbot ->
-                if(useTor) {
-                    onTorPreferenceChanged(false)
-                }
-                onOrbotPreferenceChanged(activatingOrbot)
-            }
+            torCircuitState = torCircuitState,
+            onOrbotPreferenceChanged = onOrbotPreferenceChanged
+        )
+        NotificationServiceSwitch(
+            notificationServicePreference = notificationServicePreference,
+            onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged
         )
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.AccountCircle,
@@ -198,12 +249,12 @@ fun MoreActions(
 @Composable
 fun TorSwitch(
     useTor: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit
 ) {
     DropdownMenuSwitch(
         value = useTor,
-        isActive = useTor && torConnectionCheck.isOk(),
+        isActive = useTor && torCircuitState.isOk(),
         text = stringResource(id = R.string.tor_service),
         icon = {
             Icon(
@@ -220,12 +271,12 @@ fun TorSwitch(
 @Composable
 fun OrbotSwitch(
     useOrbot: Boolean,
-    torConnectionCheck: TorConnectionCheck,
+    torCircuitState: TorCircuitState,
     onOrbotPreferenceChanged: (Boolean) -> Unit
 ) {
     DropdownMenuSwitch(
         value = useOrbot,
-        isActive = useOrbot && torConnectionCheck.isOk(),
+        isActive = useOrbot && torCircuitState.isOk(),
         text = stringResource(id = R.string.orbot_service),
         icon = {
             Icon(
@@ -238,3 +289,25 @@ fun OrbotSwitch(
         onValueChanged = onOrbotPreferenceChanged
     )
 }
+
+@Composable
+fun NotificationServiceSwitch(
+    notificationServicePreference: Boolean,
+    onNotificationServicePreferenceChanged: (Boolean) -> Unit
+) {
+    DropdownMenuSwitch(
+        value = notificationServicePreference,
+        isActive = notificationServicePreference,
+        text = stringResource(id = R.string.notification_service),
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                imageVector = Icons.Filled.Notifications,
+                contentDescription = stringResource(id = R.string.notification_service),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        onValueChanged = onNotificationServicePreferenceChanged
+    )
+}
+

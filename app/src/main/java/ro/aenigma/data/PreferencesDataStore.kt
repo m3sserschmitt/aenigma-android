@@ -1,24 +1,43 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.data
 
 import android.content.Context
-import androidx.datastore.core.DataStore
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import ro.aenigma.util.Constants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.util.dataStore
 import javax.inject.Inject
 import javax.inject.Singleton
-
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.DATASTORE_PREFERENCES)
 
 @Singleton
 class PreferencesDataStore @Inject constructor(
@@ -31,6 +50,8 @@ class PreferencesDataStore @Inject constructor(
         private const val NAME_PREFERENCE = "name"
         private const val ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE = "encrypted-database-passphrase"
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
+        private const val NEWS_FEED_URI = "news-feed-file"
+        private const val NOTIFICATION_SERVICE_PREFERENCE = "use-notification-service"
     }
 
     private object PreferenceKeys {
@@ -40,6 +61,8 @@ class PreferencesDataStore @Inject constructor(
         val useOrbot = booleanPreferencesKey(ORBOT_PREFERENCE)
         val encryptedDatabasePassphrase =
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
+        val newsFeedUri = stringPreferencesKey(NEWS_FEED_URI)
+        val notificationServicePreference = booleanPreferencesKey(NOTIFICATION_SERVICE_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -81,6 +104,17 @@ class PreferencesDataStore @Inject constructor(
         }
     }
 
+    suspend fun saveNewsFeedUri(uri: Uri): Boolean {
+        return savePreference(uri.toString(), PreferenceKeys.newsFeedUri)
+    }
+
+    suspend fun saveNotificationServicePreference(notificationServicePreference: Boolean): Boolean {
+        return savePreference(
+            notificationServicePreference,
+            PreferenceKeys.notificationServicePreference
+        )
+    }
+
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
             .catch { emit(emptyPreferences()) }
@@ -98,4 +132,10 @@ class PreferencesDataStore @Inject constructor(
 
     val encryptedDatabasePassphrase: Flow<ByteArray> =
         getPreference(PreferenceKeys.encryptedDatabasePassphrase, byteArrayOf())
+
+    val newsFeedUri: Flow<Uri?> = getPreference(PreferenceKeys.newsFeedUri, "")
+        .map { uri -> uri.takeIf { value -> value.isNotBlank() }?.toUri() }
+
+    val notificationServicePreference: Flow<Boolean> =
+        getPreference(PreferenceKeys.notificationServicePreference, true)
 }

@@ -1,171 +1,117 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.services
 
-import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
+import android.app.Service
 import android.content.Intent
-import android.content.pm.PackageManager
-import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import dagger.hilt.android.qualifiers.ApplicationContext
-import ro.aenigma.R
-import ro.aenigma.activities.AppActivity
-import ro.aenigma.models.ContactDto
-import ro.aenigma.models.MessageDto
-import ro.aenigma.models.enums.MessageType
+import android.content.pm.ServiceInfo
+import android.os.Build
+import android.os.IBinder
+import androidx.work.WorkManager
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
 import javax.inject.Inject
-import javax.inject.Singleton
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
-@Singleton
-class NotificationService @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) {
+@AndroidEntryPoint
+class NotificationService @Inject constructor(): Service() {
+
     companion object {
-        const val TOR_NOTIFICATION_ID = 1371
-        private const val TOR_SERVICE_CHANNEL_ID = "tor-service-channel"
-        private const val TOR_SERVICE_CHANNEL_NAME = "Tor Service Notification"
-        private const val TOR_SERVICE_CHANNEL_DESCRIPTION = "Channel used for Tor Foreground Service"
-        private const val WORKERS_CHANNEL_ID = "workers-service-channel"
-        private const val WORKERS_CHANNEL_NAME = "Background Worker Notification"
-        private const val WORKERS_CHANNEL_DESCRIPTION = "Channel used for Background workers"
-        private const val NEW_MESSAGE_CHANNEL_ID = "new-message-channel"
-        private const val NEW_MESSAGE_CHANNEL_NAME = "New message notifications"
-        private const val NEW_MESSAGE_CHANNEL_DESCRIPTION =
-            "Channel used to display notification related to incoming messages"
-
-        const val NOTIFICATIONS_DISABLE_ALL = "*"
+        val SYNC_INTERVAL = 15.minutes
+        const val ACTION_START = "ON"
+        const val ACTION_STOP = "OFF"
     }
 
-    private fun createNotificationChannel(
-        channel: String,
-        name: String,
-        description: String,
-        importance: Int
-    ) {
-        val notificationChannel = NotificationChannel(channel, name, importance).apply {
-            this.description = description
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+    @Inject
+    lateinit var notifier: Notifier
+
+    @Inject
+    lateinit var workManager: WorkManager
+
+    private val tickerCoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    private var tickerJob: Job? = null
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_START -> start()
+            ACTION_STOP -> stop()
         }
-
-        val notificationManager: NotificationManager =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.createNotificationChannel(notificationChannel)
+        return START_STICKY
     }
 
-    private fun createChatNavigationIntent(): PendingIntent {
-        val intent = Intent(context, AppActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-        return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE)
+    override fun onDestroy() {
+        stopTimer()
+        super.onDestroy()
     }
 
-    private fun notify(notification: Notification, id: Int) {
-        with(NotificationManagerCompat.from(context)) {
-            if (ActivityCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                notify(id, notification)
-            }
+    private fun tickerFlow(interval: Duration) = flow {
+        while (true) {
+            emit(Unit)
+            delay(interval)
         }
     }
 
-    private val _blockedNotificationsSource: MutableLiveData<String> = MutableLiveData("")
-
-    val blockedNotificationsSource: LiveData<String> = _blockedNotificationsSource
-
-    fun createTorServiceNotification(text: String): Notification {
-        createNotificationChannel(
-            TOR_SERVICE_CHANNEL_ID, TOR_SERVICE_CHANNEL_NAME, TOR_SERVICE_CHANNEL_DESCRIPTION,
-            NotificationManager.IMPORTANCE_MIN
-        )
-        return NotificationCompat.Builder(context, TOR_SERVICE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_vpn)
-            .setContentTitle(context.getString(R.string.tor_service))
-            .setContentText(text)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(text)
-            ).setSilent(true)
-            .build()
+    private fun startTimer() {
+        stopTimer()
+        tickerJob = tickerFlow(SYNC_INTERVAL).onEach {
+            workManager.invokeClient(actions = ClientAction.connectPullCleanup())
+        }.launchIn(tickerCoroutineScope)
     }
 
-    fun createWorkerNotification(text: String): Notification {
-        createNotificationChannel(
-            WORKERS_CHANNEL_ID, WORKERS_CHANNEL_NAME, WORKERS_CHANNEL_DESCRIPTION,
-            NotificationManager.IMPORTANCE_MIN
-        )
-        return NotificationCompat.Builder(context, WORKERS_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_api)
-            .setContentTitle(context.getString(R.string.background_work))
-            .setContentText(text)
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText(text)
-            ).setSilent(true)
-            .build()
+    private fun stopTimer() {
+        tickerJob?.cancel()
     }
 
-    fun notifyTorStatus(text: String) {
-        notify(createTorServiceNotification(text), TOR_NOTIFICATION_ID)
-    }
-
-    fun notifyNewMessage(contact: ContactDto, messageEntity: MessageDto) {
-        if (listOf(NOTIFICATIONS_DISABLE_ALL, contact.address)
-                .contains(blockedNotificationsSource.value)
-        ) {
-            return
-        }
-
-        createNotificationChannel(
-            NEW_MESSAGE_CHANNEL_ID,
-            NEW_MESSAGE_CHANNEL_NAME,
-            NEW_MESSAGE_CHANNEL_DESCRIPTION,
-            NotificationManager.IMPORTANCE_MAX
-        )
-        val intent = createChatNavigationIntent()
-        val text = if(messageEntity.type == MessageType.FILES) {
-            context.getString(R.string.files_received)
+    private fun start() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                Notifier.NOTIFICATION_SERVICE_NOTIFICATION_ID,
+                notifier.createNotificationServiceNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+            )
         } else {
-            context.getString(R.string.text_message_received)
+            startForeground(
+                Notifier.NOTIFICATION_SERVICE_NOTIFICATION_ID,
+                notifier.createNotificationServiceNotification()
+            )
         }
-        val title = context.getString(R.string.new_message)
-        val notification = NotificationCompat.Builder(context, NEW_MESSAGE_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_message)
-            .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentIntent(intent)
-            .setAutoCancel(true)
-            .build()
-
-        notify(notification, contact.address.hashCode())
+        startTimer()
     }
 
-    fun dismissNotifications(address: String) {
-        with(NotificationManagerCompat.from(context))
-        {
-            cancel(address.hashCode())
-        }
-    }
-
-    fun enableNotifications() {
-        _blockedNotificationsSource.postValue("")
-    }
-
-    fun disableNotifications() {
-        _blockedNotificationsSource.postValue(NOTIFICATIONS_DISABLE_ALL)
-    }
-
-    fun disableNotifications(address: String) {
-        _blockedNotificationsSource.postValue(address)
+    private fun stop() {
+        stopTimer()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 }

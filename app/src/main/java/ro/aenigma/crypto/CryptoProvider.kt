@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.crypto
 
 import android.security.keystore.KeyGenParameterSpec
@@ -5,7 +26,6 @@ import android.security.keystore.KeyProperties
 import android.util.Base64
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
-import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPrivateKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import java.io.File
 import java.security.KeyStore
@@ -33,88 +53,70 @@ object CryptoProvider {
 
     private const val IV_BYTES_SIZE = 12
 
-    private external fun initDecryption(privateKey: String, passphrase: String): Boolean
+    private external fun initDecryption(privateKey: ByteArray, passphrase: ByteArray): Boolean
 
-    private external fun initSignature(privateKey: String, passphrase: String): Boolean
-
-    private external fun encrypt(publicKey: String, plaintext: ByteArray): ByteArray?
+    private external fun initSignature(privateKey: ByteArray, passphrase: ByteArray): Boolean
 
     private external fun encryptSymmetric(key: ByteArray, plaintext: ByteArray): ByteArray?
-
-    private external fun decrypt(ciphertext: ByteArray): ByteArray?
 
     private external fun decryptSymmetric(key: ByteArray, ciphertext: ByteArray): ByteArray?
 
     private external fun sign(data: ByteArray): ByteArray?
 
-    private external fun verify(publicKey: String, signedData: ByteArray): Boolean
+    private external fun verify(publicKey: ByteArray, signedData: ByteArray): Boolean
 
     private external fun unsealOnion(onion: ByteArray): ByteArray?
 
     private external fun sealOnion(
         plaintext: ByteArray,
-        keys: Array<String>,
-        addresses: Array<String>
+        keys: Array<ByteArray>,
+        addresses: Array<ByteArray>
     ): ByteArray?
 
-    private external fun getPKeySize(publicKey: String): Int
+    private external fun getPKeySize(publicKey: ByteArray): Int
 
     @JvmStatic
     fun getPublicKeySize(publicKey: String): Int {
         return if (publicKey.isValidPublicKey()) {
-            getPKeySize(publicKey)
+            getPKeySize(publicKey.toByteArray())
         } else {
             -1
         }
     }
 
     @JvmStatic
-    fun initDecryptionEx(privateKey: String, passphrase: String): Boolean {
-        if (!privateKey.isValidPrivateKey()) {
-            return false
+    fun initDecryptionEx(privateKey: ByteArray, passphrase: ByteArray): Boolean {
+        return try {
+            initDecryption(privateKey, passphrase)
+        } finally {
+            privateKey.fill(0)
+            passphrase.fill(0)
         }
-        return initDecryption(privateKey, passphrase)
     }
 
     @JvmStatic
-    fun initDecryptionEx(privateKey: String): Boolean {
-        return initDecryptionEx(privateKey, "")
+    fun initDecryptionEx(privateKey: ByteArray): Boolean {
+        return initDecryptionEx(privateKey, ByteArray(0))
     }
 
     @JvmStatic
-    fun initSignatureEx(privateKey: String, passphrase: String): Boolean {
-        if (!privateKey.isValidPrivateKey()) {
-            return false
+    fun initSignatureEx(privateKey: ByteArray, passphrase: ByteArray): Boolean {
+        return try {
+            initSignature(privateKey, passphrase)
+        } finally {
+            privateKey.fill(0)
+            passphrase.fill(0)
         }
-        return initSignature(privateKey, passphrase)
     }
 
     @JvmStatic
-    fun initSignatureEx(privateKey: String): Boolean {
-        return initSignatureEx(privateKey, "")
-    }
-
-    @JvmStatic
-    fun encryptEx(publicKey: String, plaintext: ByteArray): String? {
-        if (!publicKey.isValidPublicKey()) {
-            return null
-        }
-        val encryptedData = encrypt(publicKey, plaintext) ?: return null
-        return base64Encode(encryptedData)
-    }
-
-    @JvmStatic
-    fun decryptEx(ciphertext: String): ByteArray? {
-        if (!ciphertext.isValidBase64()) {
-            return null
-        }
-        return decrypt(base64Decode(ciphertext) ?: return null)
+    fun initSignatureEx(privateKey: ByteArray): Boolean {
+        return initSignatureEx(privateKey, ByteArray(0))
     }
 
     @JvmStatic
     fun signEx(data: ByteArray): String? {
-        val signature = sign(data)
-        return base64Encode(signature ?: return null)
+        return base64Encode(sign(data) ?: return null)
     }
 
     @JvmStatic
@@ -122,7 +124,7 @@ object CryptoProvider {
         if (!publicKey.isValidPublicKey() || !signedData.isValidBase64()) {
             return false
         }
-        return verify(publicKey, base64Decode(signedData) ?: return false)
+        return verify(publicKey.toByteArray(), base64Decode(signedData) ?: return false)
     }
 
     @JvmStatic
@@ -131,10 +133,17 @@ object CryptoProvider {
         keys: Array<String>,
         addresses: Array<String>
     ): String? {
-        if (keys.size != addresses.size || keys.any { item -> !item.isValidPublicKey() } || addresses.any { item -> !item.isValidAddress() }) {
+        if (keys.size != addresses.size || keys.any { item -> !item.isValidPublicKey() }
+            || addresses.any { item -> !item.isValidAddress() }) {
             return null
         }
-        return base64Encode(sealOnion(plaintext, keys, addresses) ?: return null)
+        return base64Encode(
+            sealOnion(
+                plaintext,
+                keys.map { key -> key.toByteArray() }.toTypedArray(),
+                addresses.map { addresses -> addresses.toByteArray() }.toTypedArray()
+            ) ?: return null
+        )
     }
 
     @JvmStatic
@@ -151,38 +160,35 @@ object CryptoProvider {
     }
 
     @JvmStatic
-    fun encrypt(file: File, key: ByteArray): File? {
+    fun encrypt(file: File, outFile: File, key: ByteArray): Boolean {
         var encryptedData: ByteArray? = null
         return try {
-            encryptedData = encrypt(file.readBytes(), key) ?: return null
-            val outFile = File(file.parentFile, "${file.name}_encrypted")
-            outFile.outputStream().use { output ->
-                output.write(encryptedData)
-            }
-            outFile
+            encryptedData = encrypt(file.readBytes(), key) ?: return false
+            outFile.outputStream().buffered().use { output -> output.write(encryptedData) }
+            true
         } catch (_: Exception) {
-            null
+            false
         } finally {
             encryptedData?.fill(0)
         }
     }
 
     @JvmStatic
-    fun decrypt(file: File, key: ByteArray): File? {
+    fun decrypt(file: File, outFile: File, key: ByteArray): Boolean {
+        var decryptedData: ByteArray? = null
         return try {
-            val decryptedData = decrypt(file.readBytes(), key) ?: return null
-            val outFile = File(file.parentFile, "${file.name}_decrypted")
-            outFile.outputStream().use { output ->
-                output.write(decryptedData)
-            }
-            outFile
+            decryptedData = decrypt(file.readBytes(), key) ?: return false
+            outFile.outputStream().buffered().use { output -> output.write(decryptedData) }
+            true
         } catch (_: Exception) {
-            null
+            false
+        } finally {
+            decryptedData?.fill(0)
         }
     }
 
     @JvmStatic
-    fun decrypt(ciphertext: ByteArray, key: ByteArray, ): ByteArray? {
+    fun decrypt(ciphertext: ByteArray, key: ByteArray): ByteArray? {
         return decryptSymmetric(key, ciphertext)
     }
 
@@ -256,16 +262,6 @@ object CryptoProvider {
         } catch (_: Exception) {
             return null
         }
-    }
-
-    @JvmStatic
-    fun masterKeyEncryptEx(plaintext: ByteArray): String? {
-        return base64Encode(masterKeyEncrypt(plaintext) ?: return null)
-    }
-
-    @JvmStatic
-    fun masterKeyDecryptEx(ciphertext: String): ByteArray? {
-        return masterKeyDecrypt(base64Decode(ciphertext) ?: return null)
     }
 
     @JvmStatic

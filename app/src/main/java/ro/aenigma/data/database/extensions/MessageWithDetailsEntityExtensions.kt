@@ -1,12 +1,29 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.data.database.extensions
 
-import android.content.Context
-import org.ocpsoft.prettytime.PrettyTime
-import ro.aenigma.R
 import ro.aenigma.data.database.MessageWithDetails
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
-import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.MessageWithDetailsDto
 
 object MessageWithDetailsEntityExtensions {
@@ -16,20 +33,6 @@ object MessageWithDetailsEntityExtensions {
             message = message.toDto(),
             sender = sender?.toDto(),
             actionFor = actionFor?.toDto()
-        )
-    }
-
-    @JvmStatic
-    fun MessageWithDetails.toArticleDto(context: Context): ArticleDto {
-        val date = PrettyTime().format(message.date)
-        val senderName = sender?.name ?: context.getString(R.string.unknown)
-        return ArticleDto(
-            id = message.id,
-            title = context.getString(R.string.article_title_template,  senderName, date),
-            description = message.text,
-            url = null,
-            date = message.date.toString(),
-            imageUrls = message.files
         )
     }
 }

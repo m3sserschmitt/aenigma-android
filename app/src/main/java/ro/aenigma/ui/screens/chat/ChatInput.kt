@@ -1,10 +1,26 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.chat
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,14 +42,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
+import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
+import ro.aenigma.ui.screens.common.FilesCountIndicator
+import ro.aenigma.ui.screens.common.FilesPickerButton
+import ro.aenigma.ui.screens.common.SendButton
 import ro.aenigma.util.RequestState
 
 @Composable
@@ -49,32 +66,8 @@ fun ChatInput(
     onSendClicked: () -> Unit,
     onReplyAborted: () -> Unit
 ) {
-    if(!visible) {
+    if (!visible) {
         return
-    }
-    val context = LocalContext.current
-    val multiplePhotoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris: List<Uri> ->
-        val contentResolver = context.contentResolver
-        val takeFlags =
-            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-
-        uris.forEach { uri ->
-            try {
-                contentResolver.takePersistableUriPermission(uri, takeFlags)
-            } catch (_: SecurityException) {
-            }
-        }
-        if (uris.size > ATTACHMENTS_MAX_COUNT) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.attachment_files_limit).format(ATTACHMENTS_MAX_COUNT),
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            onAttachmentsSelected(uris.map { it.toString() })
-        }
     }
 
     Column {
@@ -82,8 +75,8 @@ fun ChatInput(
             message = replyToMessage,
             onReplyAborted = onReplyAborted
         )
-        SelectedAttachments(
-            files = attachments,
+        FilesCountIndicator(
+            count = attachments.size,
             onRemoveAttachments = {
                 onAttachmentsSelected(listOf())
             }
@@ -94,21 +87,10 @@ fun ChatInput(
                 .background(MaterialTheme.colorScheme.background),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
+            FilesPickerButton(
                 modifier = Modifier.weight(1f),
-                onClick = {
-                    multiplePhotoPicker.launch(arrayOf("*/*"))
-                }
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    painter = painterResource(id = R.drawable.ic_attachement),
-                    contentDescription = stringResource(
-                        id = R.string.send_file
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
+                onFilesSelected = onAttachmentsSelected
+            )
             TextField(
                 modifier = Modifier.weight(8f),
                 value = messageInputText,
@@ -127,58 +109,11 @@ fun ChatInput(
                     unfocusedTextColor = MaterialTheme.colorScheme.onSecondaryContainer
                 ),
             )
-            IconButton(
-                modifier = Modifier
-                    .size(64.dp)
-                    .weight(1f),
-                onClick = onSendClicked,
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(
-                        id = R.string.send
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SelectedAttachments(
-    files: List<String>,
-    onRemoveAttachments: () -> Unit
-) {
-    if(files.isNotEmpty())
-    {
-        Row {
-            Text(
-                modifier = Modifier
-                    .weight(9f)
-                    .padding(4.dp)
-                    .align(alignment = Alignment.CenterVertically),
-                text = if (files.size > 1)
-                    stringResource(id = R.string.n_attachments_selected).format(files.size)
-                else
-                    stringResource(id = R.string.one_attachment_selected),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onBackground
+            SendButton(
+                modifier = Modifier.size(64.dp).weight(1f),
+                tint = MaterialTheme.colorScheme.onBackground,
+                onClick = onSendClicked
             )
-            IconButton(
-                modifier = Modifier.weight(1f),
-                onClick = onRemoveAttachments
-            ) {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    imageVector = Icons.Filled.Close,
-                    contentDescription = stringResource(
-                        id = R.string.close
-                    ),
-                    tint = MaterialTheme.colorScheme.onBackground
-                )
-            }
         }
     }
 }
@@ -192,13 +127,14 @@ fun ReplyToMessage(
         return
     }
     val name = if (message.data.message.incoming && message.data.sender?.name != null) {
-        stringResource(id = R.string.they_said).format(message.data.sender.name)
+        message.data.sender.name
     } else if(!message.data.message.incoming) {
-        stringResource(id = R.string.you_said)
+        stringResource(id = R.string.you)
     } else {
         return
     }
-    val text = message.data.message.text ?: return
+    val context = LocalContext.current
+    val text = message.data.message.getMessageTextByAction(context)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -215,7 +151,7 @@ fun ReplyToMessage(
             )
             Text(
                 modifier = Modifier.padding(start = 4.dp),
-                text = text,
+                text = text ?: "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = .75f),
                 maxLines = 3,

@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.addContacts
 
 import android.annotation.SuppressLint
@@ -14,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,9 +55,11 @@ import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.ServerInfoDto
+import ro.aenigma.ui.screens.common.LinkButton
 import ro.aenigma.ui.screens.common.LoadingDialog
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.SaveNewContactDialog
+import ro.aenigma.ui.screens.common.ShareButton
 import ro.aenigma.ui.screens.common.UseLinkDialog
 import ro.aenigma.ui.themes.ApplicationComposeTheme
 import ro.aenigma.util.QrCodeGenerator
@@ -51,6 +73,7 @@ fun AddContactsContent(
     qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedDataDto>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
+    isContactImport: Boolean = false,
     onQrCodeFound: (ExportedContactDataDto) -> Unit,
     onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
@@ -58,12 +81,15 @@ fun AddContactsContent(
     onSaveContactDismissed: () -> Unit,
     onCreateLinkClicked: () -> Unit,
     onGetLink: (String) -> Unit,
-    onSharedDataConfirm: () ->  Unit
+    onSharedDataConfirm: () ->  Unit,
+    onForwardUri: (String) -> Unit = { }
 ) {
     var useLinkDialogVisible by remember { mutableStateOf(false) }
     var createLinkDialogVisible by remember { mutableStateOf(false) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
-    var useLinkLoadingDialogVisible by remember { mutableStateOf(false) }
+    var useLinkLoadingDialogVisible by remember(key1 = isContactImport) {
+        mutableStateOf(isContactImport)
+    }
     var createLinkLoadingDialogVisible by remember { mutableStateOf(false) }
 
     LoadingDialog(
@@ -115,7 +141,8 @@ fun AddContactsContent(
         onConfirmButtonClick = {
             onSharedDataConfirm()
             createLinkDialogVisible = false
-        }
+        },
+        onForwardUri = onForwardUri
     )
 
     UseLinkDialog(
@@ -203,36 +230,23 @@ fun ShareActionButtons(
     onUseLinkClicked: () -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(.5f),
+        modifier = Modifier.fillMaxWidth(.35f),
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row (
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            TextButton(
+            ShareButton(
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 onClick = onCreateLinkClicked
-            ) {
-                Text(
-                    text = stringResource(
-                        id = R.string.share_link
-                    ),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
+            )
             if(isOwnCode) {
-                TextButton(
-                    onClick = onUseLinkClicked,
-                ) {
-                    Text(
-                        text = stringResource(
-                            id = R.string.use_link
-                        ),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                LinkButton (
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    onClick = onUseLinkClicked
+                )
             }
         }
     }

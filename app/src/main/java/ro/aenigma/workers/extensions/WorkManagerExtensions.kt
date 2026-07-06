@@ -1,0 +1,294 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+package ro.aenigma.workers.extensions
+
+import androidx.work.BackoffPolicy
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import ro.aenigma.models.enums.MessageType
+import ro.aenigma.services.ClientAction
+import ro.aenigma.workers.AttachmentDownloadWorker
+import ro.aenigma.workers.GenerateNewsfeedWorker
+import ro.aenigma.workers.GraphReaderWorker
+import ro.aenigma.workers.GroupDownloadWorker
+import ro.aenigma.workers.GroupUploadWorker
+import ro.aenigma.workers.MessageSenderWorker
+import ro.aenigma.workers.SignalRClientWorker
+import java.util.concurrent.TimeUnit
+
+object WorkManagerExtensions {
+    private const val DEFAULT_DELAY_BETWEEN_RETRY: Long = 2
+    private val DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT = TimeUnit.SECONDS
+    const val SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME = "sync-and-invoke-client-work-chain"
+
+    @JvmStatic
+    private fun getGenerateFeedRequest(): OneTimeWorkRequest {
+        return OneTimeWorkRequestBuilder<GenerateNewsfeedWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            ).build()
+    }
+
+    @JvmStatic
+    fun getSyncGraphRequest(): OneTimeWorkRequest {
+        return OneTimeWorkRequestBuilder<GraphReaderWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            ).build()
+    }
+
+    @JvmStatic
+    fun getInvokeClientRequest(
+        actions: ClientAction
+    ): OneTimeWorkRequest {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val parameters = Data.Builder()
+            .putInt(SignalRClientWorker.ACTION_ARG, actions.value)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<SignalRClientWorker>()
+            .setConstraints(constraints)
+            .setInputData(parameters)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            ).setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+        return workRequest.build()
+    }
+
+    @JvmStatic
+    fun WorkManager.generateFeed() {
+        enqueueUniqueWork(
+            GenerateNewsfeedWorker.UNIQUE_WORK_REQUEST_NAME,
+            ExistingWorkPolicy.REPLACE,
+            getGenerateFeedRequest()
+        )
+    }
+
+    @JvmStatic
+    fun WorkManager.downloadAttachment(messageId: Long) {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val parameters = Data.Builder()
+            .putLong(AttachmentDownloadWorker.MESSAGE_ID_ARG, messageId)
+            .build()
+
+        val downloadWorkRequest = OneTimeWorkRequestBuilder<AttachmentDownloadWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(constraints)
+            .setInputData(parameters)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            )
+            .build()
+
+        beginUniqueWork(
+            AttachmentDownloadWorker.getUniqueWorkName(messageId),
+            ExistingWorkPolicy.KEEP,
+            downloadWorkRequest,
+        ).then(getGenerateFeedRequest()).enqueue()
+    }
+
+    @JvmStatic
+    fun WorkManager.downloadGroupData(messageId: Long) {
+        val parameters = Data.Builder()
+            .putLong(GroupDownloadWorker.MESSAGE_ID_ARG, messageId)
+            .build()
+        val workRequest = OneTimeWorkRequestBuilder<GroupDownloadWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .setInputData(parameters)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            )
+            .build()
+        enqueueUniqueWork(
+            GroupDownloadWorker.getUniqueWorkName(messageId),
+            ExistingWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+
+    @JvmStatic
+    fun WorkManager.createOrUpdateGroup(
+        groupName: String?, members: List<String>?,
+        existingGroupAddress: String?, actionType: MessageType
+    ) {
+        val parameters = Data.Builder()
+            .putString(GroupUploadWorker.GROUP_NAME_ARG, groupName)
+            .putStringArray(GroupUploadWorker.MEMBERS_ARG, members?.toTypedArray() ?: arrayOf())
+            .putString(GroupUploadWorker.EXISTING_GROUP_ADDRESS_ARG, existingGroupAddress)
+            .putString(GroupUploadWorker.ACTION_TYPE_ARG, actionType.name)
+            .build()
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val workRequest = OneTimeWorkRequestBuilder<GroupUploadWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(constraints)
+            .setInputData(parameters)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            )
+            .build()
+        enqueueUniqueWork(
+            GroupUploadWorker.getUniqueWorkRequest(existingGroupAddress),
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            workRequest
+        )
+    }
+
+    @JvmStatic
+    private fun WorkManager.sendMessage(inputData: Data, tag: String, uniqueWorkName: String) {
+        val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val workRequest = OneTimeWorkRequestBuilder<MessageSenderWorker>()
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .setConstraints(constraints)
+            .setInputData(inputData)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR,
+                DEFAULT_DELAY_BETWEEN_RETRY,
+                DEFAULT_DELAY_BETWEEN_REQUEST_TIME_UNIT
+            )
+            .addTag(tag)
+            .build()
+        enqueueUniqueWork(uniqueWorkName, ExistingWorkPolicy.REPLACE, workRequest)
+    }
+
+    @JvmStatic
+    fun WorkManager.resendMessage(inputData: Data) {
+        val messageId = inputData.getLong(MessageSenderWorker.MESSAGE_ID_ARG, 0)
+        val destinations =
+            inputData.getStringArray(MessageSenderWorker.DESTINATIONS_ARG) ?: arrayOf()
+        val tag = MessageSenderWorker.getTag(messageId)
+        val uniqueWorkName =
+            MessageSenderWorker.getUniqueWorkRequestName(messageId, destinations.sorted())
+        return sendMessage(inputData, tag, uniqueWorkName)
+    }
+
+    @JvmStatic
+    fun WorkManager.sendMessage(
+        messageId: Long,
+        destinations: Set<String> = hashSetOf(),
+        additionalDestinations: Set<String> = hashSetOf()
+    ) {
+        val parameters = Data.Builder()
+            .putLong(MessageSenderWorker.MESSAGE_ID_ARG, messageId)
+            .putStringArray(
+                MessageSenderWorker.ADDITIONAL_DESTINATIONS_ARG,
+                additionalDestinations.toTypedArray()
+            ).putStringArray(
+                MessageSenderWorker.DESTINATIONS_ARG,
+                destinations.toTypedArray<String?>()
+            ).build()
+        return sendMessage(
+            parameters,
+            MessageSenderWorker.getTag(messageId),
+            MessageSenderWorker.getUniqueWorkRequestName(
+                messageId,
+                destinations.sorted()
+            )
+        )
+    }
+
+    @JvmStatic
+    fun WorkManager.schedulePeriodicClientSync() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val actions = ClientAction.Connect and ClientAction.Pull
+        val parameters =
+            Data.Builder().putInt(SignalRClientWorker.ACTION_ARG, actions.value).build()
+
+        val signalRClientRequest = PeriodicWorkRequestBuilder<SignalRClientWorker>(
+            SignalRClientWorker.PERIODIC_WORK_REPEAT_INTERVAL,
+            SignalRClientWorker.PERIODIC_WORK_REQUEST_TIME_UNIT
+        ).setConstraints(constraints)
+            .setInputData(parameters)
+            .build()
+
+        enqueueUniquePeriodicWork(
+            SignalRClientWorker.UNIQUE_PERIODIC_WORK_REQUEST,
+            ExistingPeriodicWorkPolicy.CANCEL_AND_REENQUEUE,
+            signalRClientRequest
+        )
+    }
+
+    @JvmStatic
+    fun WorkManager.invokeClient(
+        actions: ClientAction
+    ) {
+        enqueueUniqueWork(
+            SignalRClientWorker.UNIQUE_ONE_TIME_REQUEST,
+            ExistingWorkPolicy.REPLACE,
+            getInvokeClientRequest(actions)
+        )
+    }
+
+    @JvmStatic
+    fun WorkManager.syncGraphAndInvokeClient(
+        actions: ClientAction
+    ) {
+        beginUniqueWork(
+            SYNC_AND_INVOKE_CLIENT_UNIQUE_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            getSyncGraphRequest()
+        ).then(getInvokeClientRequest(actions = actions)).enqueue()
+    }
+}

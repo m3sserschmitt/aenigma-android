@@ -1,19 +1,32 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -27,9 +40,7 @@ import ro.aenigma.models.GroupDto
 import ro.aenigma.models.extensions.ContactDtoExtensions.withName
 import ro.aenigma.models.extensions.ContactDtoExtensions.withNewMessage
 import ro.aenigma.models.factories.ContactDtoFactory
-import ro.aenigma.services.NotificationService
-import ro.aenigma.util.Constants.Companion.GROUP_DOWNLOAD_NOTIFICATION_ID
-import java.util.concurrent.TimeUnit
+import ro.aenigma.services.Notifier
 
 @HiltWorker
 class GroupDownloadWorker @AssistedInject constructor(
@@ -37,31 +48,16 @@ class GroupDownloadWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val repository: Repository,
     private val signatureService: SignatureService,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        private const val UNIQUE_WORK_REQUEST_NAME = "GroupDownloadWorkRequest"
-        private const val DELAY_BETWEEN_RETRIES: Long = 5
-        private const val MESSAGE_ID_ARG = "MessageId"
-        const val MAX_RETRY_COUNT = 5
+        const val UNIQUE_WORK_REQUEST_NAME = "group-download-worker"
+        const val MESSAGE_ID_ARG = "message-id"
+        const val MAX_RETRY_COUNT = 3
 
-        @JvmStatic
-        fun createWorkRequest(workManager: WorkManager, messageId: Long) {
-            val parameters = Data.Builder()
-                .putLong(MESSAGE_ID_ARG, messageId)
-                .build()
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<GroupDownloadWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setInputData(parameters)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-            workManager.enqueueUniqueWork(
-                "$UNIQUE_WORK_REQUEST_NAME-$messageId", ExistingWorkPolicy.KEEP, workRequest
-            )
+        fun getUniqueWorkName(messageId: Long): String {
+            return "${UNIQUE_WORK_REQUEST_NAME}-$messageId"
         }
     }
 
@@ -111,19 +107,18 @@ class GroupDownloadWorker @AssistedInject constructor(
             repository.local.getMessageWithAttachments(messageId)
         else return Result.failure()
         message?.attachment?.url ?: return Result.failure()
-        val passphrase =
-            (message.attachment.passphrase ?: message.message.text) ?: return Result.failure()
+        val passphrase = message.attachment.passphrase ?: return Result.failure()
         message.message.senderAddress ?: return Result.failure()
 
-        val existentGroup = repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
+        val existentGroup =
+            repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
         val groupData = repository.remote.getGroupData(
             url = message.attachment.url,
             existentGroup = existentGroup,
-            passphrase = CryptoProvider.base64Decode(passphrase)
-                ?: return Result.failure(),
+            key = CryptoProvider.base64Decode(passphrase) ?: return Result.failure(),
             expectedPublisherAddress = message.message.senderAddress
         ) ?: return Result.retry()
-        repository.remote.incrementSharedDataAccessCount(message.attachment.url)
+        repository.remote.incrementFileAccessCount(message.attachment.url)
         createContactEntities(groupData, message.attachment.url)
         return Result.success()
     }
@@ -131,13 +126,13 @@ class GroupDownloadWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GROUP_DOWNLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info)),
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info)),
                 FOREGROUND_SERVICE_TYPE_DATA_SYNC
             ) else
             ForegroundInfo(
-                GROUP_DOWNLOAD_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.downloading_channel_info))
             )
     }
 }

@@ -1,27 +1,51 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
-import ro.aenigma.services.SignalRStatus
+import ro.aenigma.services.ClientStatus
 
 @Composable
 fun CloseAppBarAction(
+    tint: Color = Color.Unspecified,
     onCloseClicked: () -> Unit
 ) {
     IconButton(
@@ -32,13 +56,14 @@ fun CloseAppBarAction(
             contentDescription = stringResource(
                 id = R.string.close
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun NavigateBackAppBarAction(
+    tint: Color = Color.Unspecified,
     onBackClicked: () -> Unit
 ) {
     IconButton(
@@ -49,13 +74,14 @@ fun NavigateBackAppBarAction(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = stringResource(id = R.string.back),
-            tint = MaterialTheme.colorScheme.onBackground
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ServersListAppBarAction(
+    tint: Color = Color.Unspecified,
     onOpenServersList: () -> Unit
 ) {
     IconButton(
@@ -64,13 +90,30 @@ fun ServersListAppBarAction(
         Icon(
             painter = painterResource(id = R.drawable.ic_storage),
             contentDescription = stringResource(id = R.string.servers),
-            tint = MaterialTheme.colorScheme.onBackground
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun ComposeNewArticleAppBarAction(
+    tint: Color = Color.Unspecified,
+    onComposeNewArticle: () -> Unit,
+) {
+    IconButton(
+        onClick = onComposeNewArticle
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Add,
+            contentDescription = stringResource(id = R.string.compose_article),
+            tint = tint
         )
     }
 }
 
 @Composable
 fun DeleteAppBarAction(
+    tint: Color = Color.Unspecified,
     onDeleteClicked: () -> Unit
 ) {
     IconButton(
@@ -81,13 +124,14 @@ fun DeleteAppBarAction(
             contentDescription = stringResource(
                 id = R.string.delete
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ReplyToMessageAppBarAction(
+    tint: Color = Color.Unspecified,
     onReplyToMessageClicked: () -> Unit
 ) {
     IconButton(
@@ -98,15 +142,15 @@ fun ReplyToMessageAppBarAction(
             contentDescription = stringResource(
                 id = R.string.delete
             ),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
 
 @Composable
 fun ActivateSearchAppBarAction(
-    onSearchModeTriggered: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.onBackground
+    tint: Color = Color.Unspecified,
+    onSearchModeTriggered: () -> Unit
 ) {
     IconButton(onClick = {
         onSearchModeTriggered()
@@ -122,43 +166,89 @@ fun ActivateSearchAppBarAction(
 }
 
 @Composable
-fun ConnectionStatusAppBarAction(
-    connectionStatus: SignalRStatus
+fun ForwardAttachmentsAppBarAction(
+    tint: Color = Color.Unspecified,
+    onForwardAttachments: () -> Unit
 ) {
-    IndeterminateCircularIndicator(
-        size = 18.dp,
-        color = MaterialTheme.colorScheme.onBackground,
-        textColor = MaterialTheme.colorScheme.onBackground,
-        visible = connectionStatus greaterOrEqualThan SignalRStatus.NotConnected
-                && connectionStatus smallerThan SignalRStatus.Authenticated,
-        text = stringResource(id = R.string.connecting),
-        textStyle = MaterialTheme.typography.bodyMedium
+    SendButton(
+        tint = tint,
+        onClick = onForwardAttachments
     )
 }
 
 @Composable
-fun ReloadAppBarAction(
-    visible: Boolean,
-    onClick: () -> Unit
+private fun AppBarConnectionStatusIndicator(
+    tint: Color = Color.Unspecified,
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean
 ) {
-    if(visible) {
-        IconButton(onClick = {
-            onClick()
-        }) {
-            Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = stringResource(
-                    id = R.string.reload
-                ),
-                tint = MaterialTheme.colorScheme.onBackground
+    val isError = connectionStatus is ClientStatus.Error
+    val clientIsInitializing = connectionStatus greaterOrEqualThan ClientStatus.Connecting
+            && connectionStatus smallerThan ClientStatus.Authenticated && !isError
+    val isProgress = clientIsInitializing || isClientWorkerRunning
+    val isAuthenticated = connectionStatus greaterOrEqualThan ClientStatus.Authenticated && !isError
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IndeterminateCircularIndicator(
+            size = 18.dp,
+            color = tint,
+            textColor = tint,
+            visible = isProgress,
+            text = stringResource(id = R.string.working),
+            textStyle = MaterialTheme.typography.bodySmall
+        )
+        if (!isAuthenticated) {
+            Text(
+                text = stringResource(id = R.string.disconnected),
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
 }
 
 @Composable
+fun ReloadAppBarAction(
+    visible: Boolean,
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    if (visible) {
+        ReloadButton(
+            tint = tint,
+            onClick = onClick
+        )
+    }
+}
+
+@Composable
+fun ReloadClientAppBarAction(
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean,
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AppBarConnectionStatusIndicator(
+            tint = tint,
+            connectionStatus = connectionStatus,
+            isClientWorkerRunning = isClientWorkerRunning
+        )
+        ReloadButton(
+            tint = tint,
+            onClick = onClick
+        )
+    }
+}
+
+@Composable
 fun CloseSearchTopAppBarAction(
     isEmptySearchQuery: Boolean,
+    tint: Color = Color.Unspecified,
     onClose: () -> Unit,
     onClearSearchQuery: () -> Unit
 ) {
@@ -177,7 +267,7 @@ fun CloseSearchTopAppBarAction(
         Icon(
             imageVector = Icons.Filled.Close,
             contentDescription = stringResource(id = R.string.close),
-            tint = MaterialTheme.colorScheme.onPrimaryContainer
+            tint = tint
         )
     }
 }
@@ -185,6 +275,7 @@ fun CloseSearchTopAppBarAction(
 @Composable
 fun EditTopAppBarAction(
     visible: Boolean,
+    tint: Color = Color.Unspecified,
     onRenameClicked: () -> Unit
 ) {
     if(visible) {
@@ -196,7 +287,7 @@ fun EditTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.rename
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }
@@ -205,27 +296,21 @@ fun EditTopAppBarAction(
 @Composable
 fun ShareTopAppBarAction(
     visible: Boolean,
-    onClick: () -> Unit,
-    tint: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
 ) {
     if(visible) {
-        IconButton(
+        ShareButton(
+            tint = tint,
             onClick = onClick
-        ) {
-            Icon(
-                imageVector = Icons.Filled.Share,
-                contentDescription = stringResource(
-                    id = R.string.share
-                ),
-                tint = tint
-            )
-        }
+        )
     }
 }
 
 @Composable
 fun CreateGroupTopAppBarAction(
     visible: Boolean,
+    tint: Color = Color.Unspecified,
     onCreateGroupClicked: () -> Unit
 ) {
     if(visible) {
@@ -237,7 +322,7 @@ fun CreateGroupTopAppBarAction(
                 contentDescription = stringResource(
                     id = R.string.create_channel
                 ),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                tint = tint
             )
         }
     }

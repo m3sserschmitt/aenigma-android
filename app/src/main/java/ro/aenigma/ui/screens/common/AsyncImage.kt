@@ -1,7 +1,27 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -23,6 +43,7 @@ import ro.aenigma.util.rememberImageLoader
 
 @Composable
 private fun RemoteAsyncImage(
+    modifier: Modifier = Modifier,
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider,
     contentScale: ContentScale = ContentScale.Fit
@@ -31,10 +52,9 @@ private fun RemoteAsyncImage(
     if(imageLoader != null) {
         val context = LocalContext.current
         AsyncImage(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .padding(bottom = 12.dp),
+                .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)
                 .data(uri)
                 .crossfade(true)
@@ -50,6 +70,7 @@ private fun RemoteAsyncImage(
 
 @Composable
 fun AsyncImage(
+    modifier: Modifier = Modifier,
     uri: String,
     okHttpClientProvider: IOkHttpClientProvider,
     contentScale: ContentScale = ContentScale.Fit
@@ -64,10 +85,9 @@ fun AsyncImage(
     } else {
         val context = LocalContext.current
         AsyncImage(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(8.dp))
-                .padding(bottom = 12.dp),
+                .clip(RoundedCornerShape(8.dp)),
             model = ImageRequest.Builder(context)
                 .data(uri)
                 .crossfade(true)

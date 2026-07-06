@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.material3.SnackbarDuration
@@ -6,26 +27,20 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import kotlinx.coroutines.delay
-import ro.aenigma.services.SignalRStatus
 import kotlinx.coroutines.launch
 
 @Composable
-fun <T> ConnectionStatusSnackBar(
-    connectionStatus: SignalRStatus,
+fun SnackBar(
+    visible: Boolean,
     message: String,
     actionLabel: String,
-    targetStatus: Class<T>,
     snackBarHostState: SnackbarHostState,
     onActionPerformed: () -> Unit
-) where T : SignalRStatus {
+) {
     val coroutineScope = rememberCoroutineScope()
-    val currentStatus = rememberUpdatedState(connectionStatus)
 
-    LaunchedEffect(key1 = connectionStatus) {
-        delay(15_000L)
-        if (targetStatus.isInstance(currentStatus.value) && currentStatus.value == connectionStatus) {
+    LaunchedEffect(key1 = visible) {
+        if (visible) {
             coroutineScope.launch {
                 if (snackBarHostState.currentSnackbarData == null) {
                     val result = snackBarHostState.showSnackbar(

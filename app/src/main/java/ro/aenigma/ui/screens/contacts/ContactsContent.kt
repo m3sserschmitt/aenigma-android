@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.runtime.Composable
@@ -16,7 +37,7 @@ fun ContactsContent(
     contacts: RequestState<List<ContactWithLastMessageDto>>,
     isSearchMode: Boolean,
     isSelectionMode: Boolean,
-    selectedContacts: List<ContactWithLastMessageDto>,
+    selectedContacts: Map<String, ContactWithLastMessageDto>,
     onItemSelected: (ContactWithLastMessageDto) -> Unit,
     onItemDeselected: (ContactWithLastMessageDto) -> Unit,
     navigateToChatScreen: (chatId: String) -> Unit
@@ -30,7 +51,7 @@ fun ContactsContent(
                     modifier = modifier,
                     items = contacts.data,
                     listItem = { _, contact, isSelected ->
-                        ContactItem(
+                        ContactWithChatPreviewItem(
                             onItemSelected = onItemSelected,
                             onItemDeselected = onItemDeselected,
                             onClick = { item -> navigateToChatScreen(item.contact.address) },
@@ -40,7 +61,7 @@ fun ContactsContent(
                         )
                     },
                     selectedItems = selectedContacts,
-                    itemKeyProvider = { c -> c.contact.address }
+                    itemKeySelector = { c -> c.contact.address }
                 )
 
             } else {
@@ -87,17 +108,7 @@ fun ContactsContentPreview() {
         ),
         isSearchMode = false,
         isSelectionMode = true,
-        selectedContacts = listOf(
-            ContactWithLastMessageDto(
-                ContactDtoFactory.createContact(
-                    address = "123",
-                    name = "John",
-                    publicKey = "",
-                    guardHostname = "",
-                    guardAddress = "",
-                ), null
-            )
-        ),
+        selectedContacts = mapOf(),
         onItemSelected = { },
         onItemDeselected = { },
         navigateToChatScreen = {}

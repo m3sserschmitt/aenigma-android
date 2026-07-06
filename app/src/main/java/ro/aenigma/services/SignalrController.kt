@@ -1,102 +1,129 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.services
 
-import android.content.Context
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.work.WorkManager
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import ro.aenigma.data.Repository
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.models.enums.TorStatus
-import ro.aenigma.models.extensions.TorStatusExtensions.torPreferenceIsChanging
-import ro.aenigma.models.extensions.TorStatusExtensions.with
-import ro.aenigma.workers.GraphReaderWorker
-import ro.aenigma.workers.SignalRClientWorker
-import ro.aenigma.workers.SignalRWorkerAction
+import ro.aenigma.workers.extensions.WorkManagerExtensions.invokeClient
+import ro.aenigma.workers.extensions.WorkManagerExtensions.syncGraphAndInvokeClient
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SignalrController @Inject constructor(
-    @param:ApplicationContext private val applicationContext: Context,
-    private val torServiceMonitor: TorServiceMonitor,
-    private val signalRClient: SignalRClient,
-    private val repository: Repository
+    private val workManager: WorkManager,
+    private val onionRoutingServiceMonitor: OnionRoutingServiceMonitor,
+    private val signalRClient: SignalRClient
 ) {
+    private val sendMutex = Mutex()
+
+    private val connectMutex = Mutex()
+
     val clientStatus = signalRClient.status
 
-    fun enqueueSyncAndReconnect() {
-        val syncGraphWorkRequest = GraphReaderWorker.createSyncRequest()
-        val startConnectionWorkRequest = SignalRClientWorker.createRequest(
-            actions = SignalRWorkerAction.connectPullCleanup()
+    fun enqueueSyncAndConnect() {
+        workManager.syncGraphAndInvokeClient(
+            actions = ClientAction.connectPullCleanup()
         )
-        WorkManager.getInstance(applicationContext)
-            .beginWith(syncGraphWorkRequest)
-            .then(startConnectionWorkRequest)
-            .enqueue()
+    }
+
+    fun enqueueSyncGraphAndReconnect() {
+        workManager.syncGraphAndInvokeClient(
+            actions = ClientAction.Disconnect and ClientAction.connectPullCleanup()
+        )
     }
 
     fun enqueueReconnect() {
-        SignalRClientWorker.start(
-            context = applicationContext,
-            actions = SignalRWorkerAction.Disconnect() and SignalRWorkerAction.connectPullCleanup()
+        workManager.invokeClient(
+            actions = ClientAction.Disconnect and ClientAction.connectPullCleanup()
         )
     }
 
-    private fun enqueue(clientStatus: SignalRStatus, torPreference: Boolean, torStatus: TorStatus) {
+    fun enqueueConnect() {
+        workManager.invokeClient(
+            actions = ClientAction.connectPullCleanup()
+        )
+    }
+
+    private fun enqueue(clientStatus: ClientStatus) {
         when (clientStatus) {
-            is SignalRStatus.Error.Aborted -> {
+            is ClientStatus.Error.Aborted -> {
             }
 
-            SignalRStatus.NotConnected,
-            is SignalRStatus.Error.ConnectionRefused,
-            is SignalRStatus.Error.Disconnected,
-            is SignalRStatus.Error -> {
-                enqueueSyncAndReconnect()
+            ClientStatus.NotConnected -> {
+                enqueueSyncAndConnect()
             }
 
-            SignalRStatus.Authenticated,
-            SignalRStatus.Authenticating,
-            SignalRStatus.Clean,
-            SignalRStatus.Cleaning,
-            SignalRStatus.Connected,
-            SignalRStatus.Connecting,
-            SignalRStatus.Pulling,
-            SignalRStatus.Synchronized -> {
-                if (torStatus.torPreferenceIsChanging(torPreference)) {
-                    enqueueReconnect()
-                }
+            is ClientStatus.Error.ConnectionRefused,
+            is ClientStatus.Error.Disconnected -> {
+                enqueueConnect()
+            }
+
+            is ClientStatus.Error -> {
+                enqueueReconnect()
+            }
+
+            ClientStatus.DisconnectedByClient,
+            ClientStatus.Authenticated,
+            ClientStatus.Authenticating,
+            ClientStatus.Clean,
+            ClientStatus.Cleaning,
+            ClientStatus.Connected,
+            ClientStatus.Connecting,
+            ClientStatus.Pulling,
+            ClientStatus.Synchronized -> {
             }
         }
     }
 
     fun observeSignalrConnection(lifecycleOwner: LifecycleOwner) {
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            combine(
-                repository.local.useTor,
-                torServiceMonitor.torStatus,
-                signalRClient.status
-            ) { torPreference, torStatus, clientStatus ->
-                Triple(torPreference, torStatus, clientStatus)
-            }.distinctUntilChanged().collect { (torPreference, torStatus, clientStatus) ->
-                torStatus.with(torPreference) { enqueue(clientStatus, torPreference, torStatus) }
+            signalRClient.status.collect { clientStatus ->
+                enqueue(clientStatus)
             }
         }
         lifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            repository.local.useOrbot.drop(1).collect { enqueueReconnect() }
+            onionRoutingServiceMonitor.torStatus.drop(1).distinctUntilChanged().collect { status ->
+                if (status == TorStatus.ON || status == TorStatus.OFF) {
+                    enqueueReconnect()
+                }
+            }
         }
     }
 
-    fun resetClient() {
-        return signalRClient.resetAborted()
+    suspend fun resetClient(): Boolean {
+        return signalRClient.reset()
     }
 
-    suspend fun sendMessages(messages: List<String>): Boolean {
-        return signalRClient.sendChunkedMessages(messages)
+    suspend fun sendMessages(messages: List<String>): Boolean = sendMutex.withLock {
+        return signalRClient.sendMessages(messages)
     }
 
     fun isConnected(): Boolean {
@@ -111,7 +138,7 @@ class SignalrController @Inject constructor(
         return signalRClient.pull()
     }
 
-    suspend fun connect(host: String): Boolean {
+    suspend fun connect(host: String?): Boolean = connectMutex.withLock {
         return signalRClient.connect(host)
     }
 

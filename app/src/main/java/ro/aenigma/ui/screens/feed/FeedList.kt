@@ -1,20 +1,31 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.feed
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -22,94 +33,45 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
-import ro.aenigma.ui.screens.common.FilesList
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
+import ro.aenigma.ui.screens.common.ArticleCard
+import ro.aenigma.ui.screens.common.ItemsList
 
 @Composable
 fun FeedList(
     modifier: Modifier = Modifier,
-    articleDtos: List<ArticleDto>,
+    articles: List<ArticleDto>,
     okHttpClientProvider: IOkHttpClientProvider,
-    onArticleClicked: (ArticleDto) -> Unit = {}
+    listState: LazyListState = rememberLazyListState(),
+    onArticleClicked: (ArticleDto) -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
-    LazyColumn(
-        modifier = modifier
-    ) {
-        items(
-            items = articleDtos,
-            key = { article -> article.hashCode() }
-        ) { article ->
-            ArticleCard(
-                modifier = Modifier.clickable { onArticleClicked(article) },
-                articleDto = article,
-                okHttpClientProvider = okHttpClientProvider
-            )
-        }
-    }
-}
-
-@Composable
-fun ArticleCard(
-    modifier: Modifier = Modifier,
-    articleDto: ArticleDto,
-    okHttpClientProvider: IOkHttpClientProvider
-) {
-    Card(
-        modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = 8.dp,
-                vertical = 4.dp
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            Modifier.background(color = MaterialTheme.colorScheme.secondaryContainer)
-                .fillMaxSize()
-                .padding(8.dp)
-        ) {
-            if (!articleDto.title.isNullOrBlank()) {
-                Text(
-                    text = articleDto.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
-                )
-                Spacer(
-                    modifier = Modifier.height(4.dp)
-                )
-            }
-            FilesList(
-                uris = articleDto.imageUrls?.mapNotNull { uri -> uri }
-                    ?.filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
-                    ?: listOf(),
-                textColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                okHttpClientProvider = okHttpClientProvider
-            )
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-            if (!articleDto.description.isNullOrBlank()) {
-                Text(
-                    text = articleDto.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer
+    ItemsList(
+        modifier = modifier,
+        listState = listState,
+        items = articles,
+        itemKeySelector = { article -> article.hashCode() },
+        listItem = { _, item, _ ->
+            Box(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(top = 8.dp),
+            ) {
+                ArticleCard(
+                    article = item,
+                    okHttpClientProvider = okHttpClientProvider,
+                    onClick = onArticleClicked,
+                    onRedirectUriClicked = onRedirectUriClicked
                 )
             }
         }
-    }
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun FeedListPreview() {
-    val articleDtos = List(1) {
+    val articles = List(1) {
         ArticleDto(
-            id = 1,
+            messageId = 1,
             title = "Article $it",
             description = "A short description for item $it",
             url = "https://picsum.photos/seed/$it/300/300",
@@ -118,7 +80,7 @@ fun FeedListPreview() {
         )
     }
     FeedList(
-        articleDtos = articleDtos,
+        articles = articles,
         okHttpClientProvider = OkHttpClientProviderDefault(),
         onArticleClicked = { }
     )

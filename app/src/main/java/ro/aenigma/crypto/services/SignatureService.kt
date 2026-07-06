@@ -1,5 +1,28 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.crypto.services
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.getAddressFromPublicKey
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.KeysManager
@@ -11,7 +34,7 @@ import javax.inject.Singleton
 @Singleton
 class SignatureService @Inject constructor(keysManager: KeysManager) {
 
-    private val lock = Any()
+    private val _mutex = Mutex()
 
     private var _publicKey: String? = null
 
@@ -33,27 +56,24 @@ class SignatureService @Inject constructor(keysManager: KeysManager) {
         _publicKey = keysManager.readPublicKey()
         _address = _publicKey.getAddressFromPublicKey()
         val privateKey = keysManager.readPrivateKey()
-        ready =
-            _publicKey != null && _address != null && privateKey != null && CryptoProvider.initSignatureEx(
-                privateKey
-            )
+        ready = _publicKey != null && _address != null && privateKey != null
+                && CryptoProvider.initSignatureEx(privateKey)
     }
 
-    fun sign(data: ByteArray): SignatureDto {
+    suspend fun sign(data: ByteArray): SignatureDto = _mutex.withLock {
         if (!ready) {
             return SignatureDto(_publicKey, null)
         }
-        synchronized(lock)
-        {
-            return try {
-                SignatureDto(_publicKey, CryptoProvider.signEx(data))
-            } catch (_: Exception) {
-                SignatureDto(_publicKey, null)
-            }
+
+        return try {
+            SignatureDto(_publicKey, CryptoProvider.signEx(data))
+        } catch (_: Exception) {
+            SignatureDto(_publicKey, null)
         }
+
     }
 
-    inline fun <reified T> jsonSign(data: T): SignatureDto? {
+    suspend inline fun <reified T> jsonSign(data: T): SignatureDto? {
         return data.jsonSign(this)
     }
 }

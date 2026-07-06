@@ -1,28 +1,35 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.util
 
-import android.webkit.MimeTypeMap
 import androidx.core.net.toUri
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.erdtman.jcs.JsonCanonicalizer
 import ro.aenigma.util.SerializerExtensions.createJsonMapper
+import ro.aenigma.util.UriExtensions.isRemote
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 object StringExtensions {
-    fun String.isImageUrlByExtension(): Boolean {
-        if (!this.isRemoteUri()) {
-            return false
-        }
-        val extension = MimeTypeMap.getFileExtensionFromUrl(this)
-
-        MimeTypeMap.getSingleton()
-            .getMimeTypeFromExtension(extension)
-            ?.let { if (it.startsWith("image/", ignoreCase = true)) return true }
-
-        val otherExtensions = setOf(
-            "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic", "heif",
-            "tif", "tiff", "ico", "avif", "apng", "jfif"
-        )
-        return extension in otherExtensions
-    }
 
     fun String?.getBaseUrl(): String? {
         return try {
@@ -67,7 +74,11 @@ object StringExtensions {
         return this?.trim(' ', '/')
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isDomain(): Boolean {
+        contract {
+            returns(true) implies (this@isDomain != null)
+        }
         return try {
             val domainRegex = Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(?::\\d+)?$")
             return domainRegex.matches(this ?: return false)
@@ -76,7 +87,11 @@ object StringExtensions {
         }
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isOnionAddress(): Boolean {
+        contract {
+            returns(true) implies (this@isOnionAddress != null)
+        }
         return try {
             val regex = Regex("^[a-z2-7]{56}\\.onion(?::\\d+)?$")
             return regex.matches(this ?: return false)
@@ -103,12 +118,12 @@ object StringExtensions {
         return this.getQueryParameter("tag")
     }
 
+    @OptIn(ExperimentalContracts::class)
     fun String?.isRemoteUri(): Boolean {
-        return try {
-            this?.toUri()?.scheme in listOf("http", "https")
-        } catch (_: Exception) {
-            false
+        contract {
+            returns(true) implies (this@isRemoteUri != null)
         }
+        return this?.toUri()?.isRemote() == true
     }
 
     @JvmStatic
@@ -127,5 +142,94 @@ object StringExtensions {
         } catch (_: Exception) {
             null
         }
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isImageMime(): Boolean {
+        contract {
+            returns(true) implies (this@isImageMime != null)
+        }
+        return this?.startsWith("image/", ignoreCase = true) == true
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isVideoMime(): Boolean {
+        contract {
+            returns(true) implies (this@isVideoMime != null)
+        }
+        return this?.startsWith("video/", ignoreCase = true) == true
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isAudioMime(): Boolean {
+        contract {
+            returns(true) implies (this@isAudioMime != null)
+        }
+        return this?.startsWith("audio/", ignoreCase = true) == true
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isPdfMime(): Boolean {
+        contract {
+            returns(true) implies (this@isPdfMime != null)
+        }
+        return this?.lowercase() == "application/pdf"
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isMarkdownMime(): Boolean {
+        contract {
+            returns(true) implies (this@isMarkdownMime != null)
+        }
+        return this?.lowercase() == "text/markdown"
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isApkMime(): Boolean {
+        contract {
+            returns(true) implies (this@isApkMime != null)
+        }
+        return this?.lowercase() == "application/vnd.android.package-archive"
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isArchiveMime(): Boolean {
+        contract {
+            returns(true) implies (this@isArchiveMime != null)
+        }
+        return this?.lowercase() in setOf(
+            "application/zip",
+            "application/x-zip-compressed",
+            "application/x-7z-compressed",
+            "application/x-rar-compressed",
+            "application/vnd.rar",
+            "application/x-tar",
+            "application/gzip"
+        )
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isJsonMime(): Boolean {
+        contract {
+            returns(true) implies (this@isJsonMime != null)
+        }
+        return this?.lowercase() == "application/json"
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    @JvmStatic
+    fun String?.isTextMime(): Boolean {
+        contract {
+            returns(true) implies (this@isTextMime != null)
+        }
+        return this?.startsWith("text/", ignoreCase = true) == true
     }
 }

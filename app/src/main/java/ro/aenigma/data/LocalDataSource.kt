@@ -1,8 +1,32 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.data
 
 import android.content.Context
+import android.net.Uri
+import androidx.core.net.toUri
 import dagger.Lazy
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import ro.aenigma.data.database.ContactsDao
 import ro.aenigma.data.database.EdgesDao
 import ro.aenigma.data.database.GuardsDao
@@ -11,6 +35,7 @@ import ro.aenigma.data.database.VerticesDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import ro.aenigma.data.database.extensions.ContactEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactWithGroupEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.ContactWithLastMessageEntityExtensions.toDto
@@ -18,11 +43,11 @@ import ro.aenigma.data.database.extensions.EdgeEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.GuardEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.MessageWithAttachmentsEntityExtensions.toDto
-import ro.aenigma.data.database.extensions.MessageWithDetailsEntityExtensions.toArticleDto
 import ro.aenigma.data.database.extensions.MessageWithDetailsEntityExtensions.toDto
 import ro.aenigma.data.database.extensions.VertexEntityExtensions.toDto
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.AttachmentDto
+import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.ContactWithLastMessageDto
@@ -46,8 +71,18 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.util.Constants.Companion.API_BASE_URL
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
+import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
+import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
+import ro.aenigma.util.Constants.Companion.NEWS_FEED_DIRECTORY
 import ro.aenigma.util.ContextExtensions.deleteUri
-import ro.aenigma.util.ContextExtensions.getConversationFilesDir
+import ro.aenigma.util.ContextExtensions.createAppFilesDirectory
+import ro.aenigma.util.ContextExtensions.getAppFile
+import ro.aenigma.util.ContextExtensions.readNewsFeed
+import ro.aenigma.util.ContextExtensions.readText
+import ro.aenigma.util.ContextExtensions.toContentUri
+import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -69,6 +104,54 @@ class LocalDataSource @Inject constructor(
     @Inject
     lateinit var edgesDao: Lazy<EdgesDao>
 
+    val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
+
+    val name: Flow<String> = preferencesDataStore.name
+
+    val useTor: Flow<Boolean> = preferencesDataStore.useTor
+
+    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
+
+    val newsFeedUri: Flow<Uri?> = preferencesDataStore.newsFeedUri
+
+    val notificationServicePreference: Flow<Boolean> = preferencesDataStore.notificationServicePreference
+
+    suspend fun saveBroadcastText(content: String): Uri {
+        val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$MARKDOWN_FILE_EXTENSION")
+        withContext(Dispatchers.IO) { file.writeText(content) }
+        return context.toContentUri(file)
+    }
+
+    suspend fun readText(uri: Uri): String? {
+        return context.readText(uri)
+    }
+
+    suspend fun readText(uri: String): String? {
+        return readText(uri.toUri())
+    }
+
+    suspend fun saveMetadata(metadata: AttachmentsMetadataDto): Uri? {
+        val jsonMetadata = metadata.toCanonicalJson() ?: return null
+        val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$JSON_FILE_EXTENSION")
+        withContext(Dispatchers.IO) { file.writeText(jsonMetadata) }
+        return context.toContentUri(file)
+    }
+
+    suspend fun saveNewsFeed(feed: List<ArticleDto>): Uri? {
+        val jsonFeed = feed.toCanonicalJson() ?: return null
+        val file = context.getAppFile(NEWS_FEED_DIRECTORY, ".$JSON_FILE_EXTENSION")
+        withContext(Dispatchers.IO) { file.writeText(jsonFeed) }
+        val previousFeedUri = preferencesDataStore.newsFeedUri.firstOrNull()
+        val newFeedUri = context.toContentUri(file)
+        preferencesDataStore.saveNewsFeedUri(newFeedUri)
+        context.deleteUri(previousFeedUri ?: return newFeedUri)
+        return newFeedUri
+    }
+
+    suspend fun readNewsFeed(uri: Uri): List<ArticleDto>? {
+        return context.readNewsFeed(uri)
+    }
+
     suspend fun saveName(name: String): Boolean {
         return preferencesDataStore.saveName(name)
     }
@@ -77,7 +160,7 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveTorPreference(useTor)
     }
 
-    suspend fun  saveOrbotPreference(useOrbot: Boolean): Boolean {
+    suspend fun saveOrbotPreference(useOrbot: Boolean): Boolean {
         return preferencesDataStore.saveOrbotPreference(useOrbot)
     }
 
@@ -85,7 +168,11 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationsAllowed(granted)
     }
 
-    suspend fun getGuardHostname(guard: ServerInfoDto): String? {
+    suspend fun saveNotificationServicePreference(notificationServicePreference: Boolean): Boolean {
+        return preferencesDataStore.saveNotificationServicePreference(notificationServicePreference)
+    }
+
+    suspend fun getHostname(guard: ServerInfoDto): String? {
         val useTor = useTor.firstOrNull() == true
         val useOrbot = useOrbot.firstOrNull() == true
         return if (useTor || useOrbot) {
@@ -100,16 +187,9 @@ class LocalDataSource @Inject constructor(
     }
 
     suspend fun getGuardHostname(): String? {
-        return getGuardHostname(getGuard()?.toServerInfoDto() ?: return null)
+        val guard = getGuard() ?: return API_BASE_URL
+        return getHostname(guard.toServerInfoDto())
     }
-
-    val notificationsAllowed: Flow<Boolean> = preferencesDataStore.notificationsAllowed
-
-    val name: Flow<String> = preferencesDataStore.name
-
-    val useTor: Flow<Boolean> = preferencesDataStore.useTor
-
-    val useOrbot: Flow<Boolean> = preferencesDataStore.useOrbot
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {
         return contactsDao.get().getWithMessagesFlow()
@@ -120,12 +200,16 @@ class LocalDataSource @Inject constructor(
         return contactsDao.get().getWithMessages().map { item -> item.toDto() }
     }
 
-    suspend fun searchContacts(searchQuery: String = ""): List<ContactDto> {
-        return contactsDao.get().search(searchQuery).map { item -> item.toDto() }
+    suspend fun searchContacts(searchQuery: String = "", type: String = ""): List<ContactDto> {
+        return contactsDao.get().search(searchQuery, type).map { item -> item.toDto() }
     }
 
     suspend fun getContact(address: String): ContactDto? {
         return contactsDao.get().get(address)?.toDto()
+    }
+
+    suspend fun getAllContacts(): List<ContactDto> {
+        return contactsDao.get().getAll().map { item -> item.toDto() }
     }
 
     suspend fun getContactWithGroup(address: String): ContactWithGroupDto? {
@@ -176,9 +260,8 @@ class LocalDataSource @Inject constructor(
             .map { items -> items.map { item -> item.toDto() } }
     }
 
-    fun getLatestSharedFiles(): Flow<List<ArticleDto>> {
-        return messagesDao.get().getLatestSharedFilesFlow()
-            .map { items -> items.map { m -> m.toArticleDto(context) } }
+    suspend fun getSharedFiles(lastIndex: Long): List<MessageWithDetailsDto> {
+        return messagesDao.get().getSharedFiles(lastIndex).map { item -> item.toDto() }
     }
 
     suspend fun getConversationPage(
@@ -196,9 +279,9 @@ class LocalDataSource @Inject constructor(
         return updateContactLastMessageId(chatId)
     }
 
-    private fun clearConversationFiles(chatId: String): Boolean {
+    private suspend fun clearConversationFiles(chatId: String): Boolean {
         return try {
-            context.getConversationFilesDir(chatId).deleteRecursively()
+            context.createAppFilesDirectory(chatId).deleteRecursively()
         } catch (_: Exception) {
             false
         }
@@ -240,6 +323,9 @@ class LocalDataSource @Inject constructor(
 
     suspend fun removeMessageSoft(refId: String) {
         val message = messagesDao.get().getByRefId(refId)?.toDto() ?: return
+        if (message.chatId == BROADCAST_CONTACT_ADDRESS) {
+            return
+        }
         messagesDao.get().removeSoft(refId)
         removeFiles(message)
         updateContactLastMessageId(message.chatId)

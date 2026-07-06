@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
 import android.content.res.Configuration
@@ -18,6 +39,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
 
 @Composable
 fun SimpleInfoScreen(
@@ -58,7 +80,7 @@ fun SimpleInfoScreen(
                 modifier = Modifier.padding(start = 4.dp),
                 text = message,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -90,7 +112,7 @@ fun SimpleInfoScreenIcon(
     contentDescription: String
 ) {
     Icon(
-        modifier = Modifier.size(60.dp),
+        modifier = Modifier.size(INFO_SCREEN_ICON_SIZE),
         painter = icon,
         contentDescription = contentDescription,
         tint = MaterialTheme.colorScheme.onBackground

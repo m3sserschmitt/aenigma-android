@@ -1,17 +1,32 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.workers
 
 import android.content.Context
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
 import android.os.Build
 import androidx.hilt.work.HiltWorker
-import androidx.work.BackoffPolicy
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkerParameters
 import ro.aenigma.data.Repository
 import ro.aenigma.models.VertexDto
@@ -21,36 +36,21 @@ import ro.aenigma.R
 import ro.aenigma.models.EdgeDto
 import ro.aenigma.models.GuardDto
 import ro.aenigma.models.factories.VertexDtoFactory
-import ro.aenigma.services.NotificationService
-import ro.aenigma.util.Constants.Companion.GRAPH_READER_NOTIFICATION_ID
-import java.util.concurrent.TimeUnit
+import ro.aenigma.services.Notifier
 
 @HiltWorker
 class GraphReaderWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val repository: Repository,
-    private val notificationService: NotificationService
+    private val notifier: Notifier
 ) : CoroutineWorker(context, params) {
     companion object {
         private const val MAX_RETRY_COUNT = 3
-        private const val DELAY_BETWEEN_RETRIES: Long = 2 // Seconds
-
-        @JvmStatic
-        fun createSyncRequest(): OneTimeWorkRequest {
-            val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-
-            return OneTimeWorkRequestBuilder<GraphReaderWorker>()
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                .setConstraints(constraints)
-                .setBackoffCriteria(BackoffPolicy.LINEAR, DELAY_BETWEEN_RETRIES, TimeUnit.SECONDS)
-                .build()
-        }
     }
 
     private suspend fun saveGraph(graph: List<VertexDto>, guardDto: GuardDto): Boolean {
-        if(guardDto.onionService.isNullOrBlank() && guardDto.hostname.isNullOrBlank()) {
+        if (guardDto.onionService.isNullOrBlank() && guardDto.hostname.isNullOrBlank()) {
             return false
         }
         repository.local.insertGuard(guardDto)
@@ -71,7 +71,7 @@ class GraphReaderWorker @AssistedInject constructor(
         repository.local.insertOrIgnoreVertices(vertices)
 
         graph.forEach { vertex ->
-            vertex.neighborhood?.neighbors?.map { neighborAddress ->
+            vertex.neighborhood?.neighbors?.forEach { neighborAddress ->
                 neighborAddress?.let { targetAddress ->
                     vertex.neighborhood.address?.let { sourceAddress ->
                         repository.local.insertOrIgnoreEdge(
@@ -97,9 +97,11 @@ class GraphReaderWorker @AssistedInject constructor(
             val serverInfo = repository.remote.getServerInfo() ?: return false
             val currentGuard = repository.local.getGuard()
 
-            if (currentGuard == null || serverInfo.graphVersion != currentGuard.graphVersion) {
+            if (currentGuard == null || serverInfo.graphVersion != currentGuard.graphVersion
+                || serverInfo.address != currentGuard.address
+            ) {
                 val graph = repository.remote.getVertices()
-                if(graph.isEmpty()) {
+                if (graph.isEmpty()) {
                     return false
                 }
                 clearDatabase()
@@ -126,13 +128,13 @@ class GraphReaderWorker @AssistedInject constructor(
     override suspend fun getForegroundInfo(): ForegroundInfo {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             ForegroundInfo(
-                GRAPH_READER_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing)),
-            FOREGROUND_SERVICE_TYPE_DATA_SYNC
-        ) else
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.guard_syncing)),
+                FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            ) else
             ForegroundInfo(
-                GRAPH_READER_NOTIFICATION_ID,
-                notificationService.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
+                id.hashCode(),
+                notifier.createWorkerNotification(applicationContext.getString(R.string.guard_syncing))
             )
     }
 }

@@ -1,8 +1,28 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.chat
 
 import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -14,19 +34,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -42,6 +59,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.MessageDto
@@ -50,149 +68,122 @@ import ro.aenigma.ui.screens.common.selectable
 import ro.aenigma.models.enums.MessageType
 import ro.aenigma.models.extensions.MessageDtoExtensions.attachmentsNotAvailable
 import ro.aenigma.models.extensions.MessageDtoExtensions.getMessageTextByAction
-import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
+import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.getDateTime
+import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.screens.common.IndeterminateCircularIndicator
 import ro.aenigma.ui.screens.common.FilesList
-import ro.aenigma.util.Constants.Companion.ATTACHMENTS_METADATA_FILE
-import ro.aenigma.util.PrettyDateFormatter
+import ro.aenigma.ui.screens.common.SelectionModeBullet
 import java.time.ZonedDateTime
 import ro.aenigma.util.ContextExtensions.showImageViewer
+import ro.aenigma.util.ZonedDateTimeExtensions.messageCardStyleFormat
 
 @Composable
-fun MessageItem(
+fun MessageCard(
+    modifier: Modifier = Modifier,
     message: MessageWithDetailsDto,
-    okHttpClientProvider: IOkHttpClientProvider,
-    isSelectionMode: Boolean,
-    isSelected: Boolean,
-    onItemSelected: (MessageWithDetailsDto) -> Unit,
-    onItemDeselected: (MessageWithDetailsDto) -> Unit,
-    onClick: (MessageWithDetailsDto) -> Unit,
+    okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
+    isOutgoingFailed: Boolean = false,
+    isOutgoingSent: Boolean = false,
+    contentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
+    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    deliveryStatusVisible: Boolean = true,
+    senderVisible: Boolean = true,
+    dateFormatter: (ZonedDateTime) -> String = { date -> date.messageCardStyleFormat() ?: "" },
+    onItemSelected: (MessageWithDetailsDto) -> Unit = { },
+    onItemDeselected: (MessageWithDetailsDto) -> Unit = { },
+    onClick: (MessageWithDetailsDto) -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val context = LocalContext.current
-    val text = if(message.message.text.isNullOrBlank()) {
-        null
-    } else {
-        message.message.getMessageTextByAction(context)
-    }
-    val paddingStart = if (message.message.incoming) 0.dp else 50.dp
-    val paddingEnd = if (message.message.incoming) 50.dp else 0.dp
-    val contentColor = if (message.message.incoming)
-        MaterialTheme.colorScheme.onSecondaryContainer
-    else
-        MaterialTheme.colorScheme.onPrimaryContainer
-    val containerColor = if (message.message.incoming)
-        MaterialTheme.colorScheme.secondaryContainer
-    else
-        MaterialTheme.colorScheme.primaryContainer
-    val sender =
-        if (message.message.chatId != message.message.senderAddress && message.message.incoming)
-            message.sender
-        else null
-    val deliveryStatus by message.message.deliveryStatus.collectAsState()
-    val isOutgoingSent = !message.message.incoming && (message.message.sent || deliveryStatus == WorkInfo.State.SUCCEEDED)
-    val isOutgoingFailed = message.message.isNotSent() && deliveryStatus == WorkInfo.State.FAILED
-    var showImageViewer by remember { mutableStateOf(false) }
+    val text = message.message.getMessageTextByAction(context)
+    val coroutineScope = rememberCoroutineScope()
 
-    FullScreenImageViewer(
-        visible = showImageViewer,
-        message = message.message,
-        onDismiss = {
-            showImageViewer = false
-        }
-    )
-
-    Box(
-        modifier = Modifier.fillMaxWidth()
-            .padding(paddingStart, 8.dp, paddingEnd, 0.dp),
-        contentAlignment = if (message.message.incoming) Alignment.CenterStart else Alignment.CenterEnd,
-    ) {
-        Card(
-            modifier = Modifier
-                .selectable(
-                    item = message,
-                    isSelectionMode = isSelectionMode,
-                    isSelected = isSelected,
-                    onItemSelected = onItemSelected,
-                    onItemDeselected = onItemDeselected,
-                    onClick = { item -> onClick(item)
-                        if(!isOutgoingFailed) {
-                            showImageViewer = true
-                        }
-                    }
-                ),
-            colors = CardDefaults.cardColors().copy(
-                containerColor = containerColor,
-                contentColor = contentColor
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isSelectionMode) {
-                    if (isSelected) {
-                        Icon(
-                            modifier = Modifier.alpha(.5f),
-                            imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = stringResource(R.string.message_selection),
-                            tint = contentColor,
-                        )
-                    } else {
-                        Icon(
-                            modifier = Modifier.alpha(.5f),
-                            painter = painterResource(id = R.drawable.ic_radio_button_unchecked),
-                            contentDescription = stringResource(R.string.message_selection),
-                            tint = contentColor,
-                        )
-                    }
+    Card(
+        modifier = modifier.selectable(
+            item = message,
+            isSelectionMode = isSelectionMode,
+            isSelected = isSelected,
+            onItemSelected = onItemSelected,
+            onItemDeselected = onItemDeselected,
+            onClick = { item ->
+                onClick(item)
+                coroutineScope.launch {
+                    context.showImageViewer(
+                        message = message.message
+                    )
                 }
+            }
+        ),
+        colors = CardDefaults.cardColors().copy(
+            containerColor = containerColor,
+            contentColor = contentColor
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            SelectionModeBullet(
+                isSelectionMode = isSelectionMode,
+                isSelected = isSelected,
+                contentColor = contentColor
+            )
 
-                Column(
-                    modifier = Modifier.padding(8.dp).run {
-                        if(message.message.type == MessageType.FILES) {
-                            fillMaxWidth()
-                        } else {
-                            width(IntrinsicSize.Max)
-                        }
-                    },
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            Column(
+                modifier = Modifier.padding(8.dp).run {
+                    if (message.message.type == MessageType.FILES) {
+                        fillMaxWidth()
+                    } else {
+                        width(IntrinsicSize.Max)
+                    }
+                },
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                SenderName(
+                    visible = senderVisible,
+                    contact = message.sender,
+                    color = contentColor
+                )
+
+                ResponseTo(
+                    message = message,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    onRedirectUriClicked = onRedirectUriClicked
+                )
+
+                DisplayFiles(
+                    message = message.message,
+                    textColor = contentColor,
+                    okHttpClientProvider = okHttpClientProvider,
+                    onRedirectUriClicked = onRedirectUriClicked
+                )
+
+                MessageText(
+                    text = text,
+                    isFiles = message.message.type == MessageType.FILES,
+                    contentColor = contentColor
+                )
+
+                DisplayLinks(
+                    text = text,
+                    textColor = contentColor,
+                    okHttpClientProvider = okHttpClientProvider,
+                    onRedirectUriClicked = onRedirectUriClicked
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SenderName(
-                        contact = sender,
-                        color = contentColor
-                    )
-
-                    ResponseTo(
-                        message = message,
-                        contentColor = MaterialTheme.colorScheme.onSecondary,
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    )
-
-                    DisplayFiles(
-                        message = message.message,
-                        textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider
-                    )
-
-                    MessageText(
-                        text = text,
-                        contentColor = contentColor
-                    )
-
-                    DisplayLinks(
-                        text = text,
-                        textColor = contentColor,
-                        okHttpClientProvider = okHttpClientProvider
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    if(deliveryStatusVisible) {
                         if (isOutgoingSent) {
                             Icon(
                                 modifier = Modifier.size(12.dp).alpha(.5f),
@@ -214,10 +205,13 @@ fun MessageItem(
                                 tint = contentColor
                             )
                         }
+                    }
+                    val dateTime = message.getDateTime()
+                    if(dateTime != null) {
                         Text(
                             modifier = Modifier.alpha(0.5f),
                             textAlign = TextAlign.End,
-                            text = PrettyDateFormatter.formatTime(message.message.date),
+                            text = dateFormatter(dateTime),
                             color = contentColor,
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -225,21 +219,6 @@ fun MessageItem(
                 }
             }
         }
-    }
-}
-
-@Composable
-fun FullScreenImageViewer(
-    visible: Boolean,
-    message: MessageDto,
-    onDismiss: () -> Unit
-) {
-    val context = LocalContext.current
-    if(visible) {
-        context.showImageViewer(
-            message = message,
-            onDismiss = onDismiss
-        )
     }
 }
 
@@ -259,7 +238,8 @@ fun rememberMatchedLinks(text: String): List<String> {
 fun DisplayLinks(
     text: String?,
     textColor: Color = Color.Unspecified,
-    okHttpClientProvider: IOkHttpClientProvider
+    okHttpClientProvider: IOkHttpClientProvider,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     if(text.isNullOrBlank()) {
         return
@@ -273,8 +253,9 @@ fun DisplayLinks(
 
     FilesList(
         uris = links,
-        textColor = textColor,
-        okHttpClientProvider = okHttpClientProvider
+        contentColor = textColor,
+        okHttpClientProvider = okHttpClientProvider,
+        onRedirectUriClicked = onRedirectUriClicked
     )
 }
 
@@ -310,7 +291,8 @@ fun ClickToRetryMessage(
 fun DisplayFiles(
     message: MessageDto,
     okHttpClientProvider: IOkHttpClientProvider,
-    textColor: Color = Color.Unspecified
+    textColor: Color = Color.Unspecified,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val filesDownloadState by message.attachmentDownloadStatus.collectAsState()
     if(message.attachmentsNotAvailable() && filesDownloadState != WorkInfo.State.SUCCEEDED) {
@@ -332,21 +314,22 @@ fun DisplayFiles(
     } else if(message.type == MessageType.FILES) {
         val filesLate by message.filesLate.collectAsState()
         val files = if(message.files.isNullOrEmpty()) { filesLate } else { message.files }
-            .filter { item -> !item.endsWith(ATTACHMENTS_METADATA_FILE) }
         FilesList(
             uris = files,
-            textColor = textColor,
-            okHttpClientProvider = okHttpClientProvider
+            contentColor = textColor,
+            okHttpClientProvider = okHttpClientProvider,
+            onRedirectUriClicked = onRedirectUriClicked
         )
     }
 }
 
 @Composable
 fun SenderName(
+    visible: Boolean,
     contact: ContactDto?,
     color: Color
 ) {
-    if(contact == null)
+    if(contact == null || !visible)
     {
         return
     }
@@ -362,57 +345,36 @@ fun SenderName(
 @Composable
 fun ResponseTo(
     message: MessageWithDetailsDto?,
-    contentColor: Color,
-    containerColor: Color
+    contentColor: Color = Color.Unspecified,
+    containerColor: Color = Color.Unspecified,
+    onRedirectUriClicked: (String) -> Unit = { }
 ) {
-    if (message == null) {
+    if (message == null || message.message.type != MessageType.REPLY || message.actionFor == null
+        || message.actionFor.deleted) {
         return
     }
-    val context = LocalContext.current
     val actionForSender by message.actionForSender.collectAsState()
-    if(message.message.type != MessageType.REPLY) {
-        return
-    }
-    val name = if (message.actionFor?.incoming == true) {
-        (actionForSender?.name ?: return) + ":"
+    val sender = if (message.actionFor.incoming) {
+        actionForSender
     } else {
-        context.getString(R.string.you)
+        ContactDtoFactory.createContact(name = stringResource(R.string.you))
     }
-    val text = if (message.actionFor?.deleted == true) {
-        context.getString(R.string.message_deleted)
-    } else {
-        message.actionFor?.text ?: return
-    }
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = containerColor,
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(4.dp)
-        ) {
-            Text(
-                text = name,
-                color = contentColor,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = text,
-                color = contentColor.copy(alpha = .75f),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
+    MessageCard(
+        message = MessageWithDetailsDto(message.actionFor, sender, null),
+        deliveryStatusVisible = false,
+        containerColor = containerColor,
+        contentColor = contentColor,
+        onRedirectUriClicked = onRedirectUriClicked
+    )
 }
 
 @Composable
 fun MessageText(
     text: String?,
+    isFiles: Boolean = false,
     contentColor: Color
 ) {
-    if(text.isNullOrBlank())
-    {
+    if (text.isNullOrBlank() || isFiles) {
         return
     }
     Text(
@@ -427,7 +389,7 @@ fun MessageText(
 @Composable
 @Preview
 fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = false,
@@ -452,7 +414,7 @@ fun GroupSelectionModeNotSelectedIncomingMessagePreview() {
 @Composable
 @Preview
 fun GroupSelectionModeIncomingMessageSelectedPreview() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = true,
         isSelected = true,
@@ -477,7 +439,7 @@ fun GroupSelectionModeIncomingMessageSelectedPreview() {
 @Composable
 @Preview
 fun MessagePending() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,
@@ -498,7 +460,7 @@ fun MessagePending() {
 @Composable
 @Preview
 fun MessageSent() {
-    MessageItem(
+    MessageCard(
         okHttpClientProvider = OkHttpClientProviderDefault(),
         isSelectionMode = false,
         isSelected = false,

@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.data.database
 
 import androidx.room.Dao
@@ -9,7 +30,7 @@ import androidx.room.Update
 import ro.aenigma.util.Constants.Companion.CONVERSATION_PAGE_SIZE
 import ro.aenigma.util.Constants.Companion.MESSAGES_TABLE
 import kotlinx.coroutines.flow.Flow
-import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
+import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 
 @Dao
 interface MessagesDao {
@@ -74,7 +95,11 @@ interface MessagesDao {
     suspend fun update(message: MessageEntity)
 
     @Transaction
-    @Query("SELECT * FROM $MESSAGES_TABLE WHERE type = 'FILES' AND deleted = 0 AND incoming = 1 " +
-            "ORDER BY Id DESC LIMIT $NEWS_FEED_SIZE")
-    fun getLatestSharedFilesFlow(): Flow<List<MessageWithDetails>>
+    @Query("SELECT * FROM $MESSAGES_TABLE " +
+            "WHERE id < :lastIndex " +
+            "AND deleted = 0 " +
+            "AND type = 'FILES' " +
+            "AND (incoming = 1 OR chatId = '$BROADCAST_CONTACT_ADDRESS') " +
+            "ORDER BY Id DESC LIMIT $CONVERSATION_PAGE_SIZE")
+    suspend fun getSharedFiles(lastIndex: Long): List<MessageWithDetails>
 }

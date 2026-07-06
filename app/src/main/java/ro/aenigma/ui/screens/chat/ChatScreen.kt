@@ -1,7 +1,29 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.chat
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -9,7 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -18,12 +40,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import ro.aenigma.R
+import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
-import ro.aenigma.services.SignalRStatus
-import ro.aenigma.ui.screens.common.ConnectionStatusSnackBar
+import ro.aenigma.services.ClientStatus
+import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.RenameContactDialog
 import ro.aenigma.models.enums.MessageType
@@ -34,16 +57,18 @@ import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
+import kotlin.collections.listOf
 
 @Composable
 fun ChatScreen(
-    chatId: String,
+    chatId: String?,
     chatViewModel: ChatViewModel,
-    navigateToContactsScreen: () -> Unit,
-    navigateToAddContactsScreen: (String) -> Unit
+    navigateBack: () -> Unit,
+    navigateToAddContactsScreen: (String) -> Unit,
+    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    redirectUri: (String) -> Unit
 ) {
-    LaunchedEffect(key1 = true)
-    {
+    LaunchedEffect(key1 = true) {
         chatViewModel.collectSelectedContact(chatId)
         chatViewModel.loadConversation(chatId)
     }
@@ -54,51 +79,65 @@ fun ChatScreen(
     val messageInputText by chatViewModel.messageInputText.collectAsState()
     val attachments by chatViewModel.attachments.collectAsState()
     val connectionStatus by chatViewModel.clientStatus.collectAsState()
+    val isClientWorkerRunning by chatViewModel.isClientWorkerRunning.collectAsState()
     val nextConversationPageAvailable by chatViewModel.nextPageAvailable.collectAsState()
     val contacts by chatViewModel.contacts.collectAsState()
     val isMember by chatViewModel.isMember.collectAsState()
     val isAdmin by chatViewModel.isAdmin.collectAsState()
 
     MarkConversationAsRead(
-        chatId = chatId,
         messages = messages,
         chatViewModel = chatViewModel
     )
 
     ChatScreen(
         contact = selectedContact,
-        okHttpClientProvider = chatViewModel.okHttpClientProvider,
+        okHttpClientProvider = chatViewModel.provideOkHttpClientProvider(),
         isMember = isMember,
         isAdmin = isAdmin,
         contacts = contacts,
         connectionStatus = connectionStatus,
+        isClientWorkerRunning = isClientWorkerRunning,
         replyToMessage = replyToMessage,
         messages = messages,
         nextConversationPageAvailable = nextConversationPageAvailable,
         messageInputText = messageInputText,
         attachments = attachments,
         onContactSearchQueryChanged = { searchQuery -> chatViewModel.searchContacts(searchQuery) },
-        onRetryConnection = { chatViewModel.retryClientConnection() },
+        onRetryConnection = { chatViewModel.syncAndReconnect() },
         onInputTextChanged = { newInputTextValue ->
-            chatViewModel.setMessageInputText(
-                newInputTextValue
-            )
+            chatViewModel.setMessageInputText(newInputTextValue)
         },
         onAttachmentsSelected = { attachments -> chatViewModel.setAttachments(attachments) },
         onNewContactNameChanged = { name -> name.isNotBlank() },
         onRenameContactConfirmed = { name -> chatViewModel.renameContact(name) },
         onRenameContactDismissed = { },
         onSendClicked = { chatViewModel.sendMessage() },
-        onDeleteAll = { chatViewModel.clearConversation(chatId) },
+        onDeleteAll = { chatViewModel.clearConversation() },
         onDelete = { selectedMessages -> chatViewModel.removeMessages(selectedMessages) },
         onReplyToMessage = { selectedMessage -> chatViewModel.setReplyTo(selectedMessage) },
         onSearch = { searchQuery -> chatViewModel.searchConversation(searchQuery) },
         onAddGroupMembers = { members, action -> chatViewModel.editGroupMembers(members, action) },
         onLeaveGroup = { chatViewModel.leaveGroup() },
         onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
-        loadNextPage = { chatViewModel.loadNextPage(chatId) },
-        navigateToContactsScreen = navigateToContactsScreen,
-        navigateToAddContactsScreen = navigateToAddContactsScreen
+        onArticleClicked = { article ->
+            if (!article.url.isNullOrBlank()) {
+                navigateToArticle(article.url, article.title, article.messageId)
+            }
+        },
+        onRedirectUriClicked = { uri ->
+            chatViewModel.markConversationAsRead()
+            redirectUri(uri)
+        },
+        loadNextPage = { chatViewModel.loadNextPage() },
+        navigateBack = {
+            chatViewModel.markConversationAsRead()
+            navigateBack()
+        },
+        navigateToAddContactsScreen = { address ->
+            chatViewModel.markConversationAsRead()
+            navigateToAddContactsScreen(address)
+        }
     )
 }
 
@@ -109,7 +148,8 @@ fun ChatScreen(
     isMember: Boolean,
     isAdmin: Boolean,
     contacts: RequestState<List<ContactDto>>,
-    connectionStatus: SignalRStatus,
+    connectionStatus: ClientStatus,
+    isClientWorkerRunning: Boolean = false,
     messages: RequestState<List<MessageWithDetailsDto>>,
     replyToMessage: RequestState<MessageWithDetailsDto>,
     nextConversationPageAvailable: Boolean,
@@ -127,11 +167,13 @@ fun ChatScreen(
     onDelete: (List<MessageWithDetailsDto>) -> Unit,
     onReplyToMessage: (MessageWithDetailsDto?) -> Unit,
     onSearch: (String) -> Unit,
-    onAddGroupMembers: (List<String>, MessageType) -> Unit,
+    onAddGroupMembers: (List<ContactDto>, MessageType) -> Unit = { _, _ -> },
     onLeaveGroup: () -> Unit,
     onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onArticleClicked: (ArticleDto) -> Unit = { },
+    onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit,
-    navigateToContactsScreen: () -> Unit,
+    navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
@@ -142,7 +184,7 @@ fun ChatScreen(
     var groupAction by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
     var isSelectionMode by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateListOf<MessageWithDetailsDto>() }
+    val selectedItems = remember { mutableStateMapOf<Long, MessageWithDetailsDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
@@ -188,6 +230,8 @@ fun ChatScreen(
         visible = clearConversationConfirmationVisible,
         onConfirmClicked = {
             clearConversationConfirmationVisible = false
+            selectedItems.clear()
+            isSelectionMode = false
             onDeleteAll()
         },
         onDismissClicked = {
@@ -198,8 +242,10 @@ fun ChatScreen(
     DeleteSelectedMessagesDialog(
         visible = deleteMessagesConfirmationVisible,
         onConfirmClicked = {
-            onDelete(selectedItems)
+            onDelete(selectedItems.values.toList())
             deleteMessagesConfirmationVisible = false
+            selectedItems.clear()
+            isSelectionMode = false
         },
         onDismissClicked = {
             deleteMessagesConfirmationVisible = false
@@ -214,35 +260,28 @@ fun ChatScreen(
         }
     )
 
-    ConnectionStatusSnackBar(
+    SnackBar(
         message = stringResource(id = R.string.connection_failed),
         actionLabel = stringResource(id = R.string.retry),
-        connectionStatus = connectionStatus,
-        targetStatus = SignalRStatus.Error.Aborted::class.java,
+        visible = connectionStatus is ClientStatus.Error.Aborted,
         snackBarHostState = snackBarHostState,
         onActionPerformed = onRetryConnection
     )
 
     BackHandler(
-        enabled = isSearchMode || isSelectionMode
+        enabled = true
     ) {
-        if(isSearchMode)
-        {
+        if(!isSelectionMode && !isSearchMode) {
+            navigateBack()
+        }
+
+        if (isSearchMode) {
             isSearchMode = false
         }
 
-        if(isSelectionMode)
-        {
+        if (isSelectionMode) {
             selectedItems.clear()
             isSelectionMode = false
-        }
-    }
-
-    LaunchedEffect(key1 = messages)
-    {
-        if(messages is RequestState.Success)
-        {
-            selectedItems.removeAll { item -> !messages.data.contains(item) }
         }
     }
 
@@ -254,6 +293,7 @@ fun ChatScreen(
     }
 
     Scaffold (
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = {
             SnackbarHost(hostState = snackBarHostState)
         },
@@ -264,6 +304,7 @@ fun ChatScreen(
                 isMember = isMember,
                 isAdmin = isAdmin,
                 connectionStatus = connectionStatus,
+                isClientWorkerRunning = isClientWorkerRunning,
                 isSelectionMode = isSelectionMode,
                 onRenameContactClicked = {
                     renameContactDialogVisible = true
@@ -279,14 +320,14 @@ fun ChatScreen(
                     deleteMessagesConfirmationVisible = true
                 },
                 onReplyToMessageClicked = {
-                    val selectedItem = selectedItems.firstOrNull()
+                    val selectedItem = selectedItems.values.firstOrNull()
                     if(selectedItem != null)
                     {
                         onReplyToMessage(selectedItem)
                     }
                     selectedItems.clear()
                 },
-                navigateToContactsScreen = navigateToContactsScreen,
+                navigateBack = navigateBack,
                 isSearchMode = isSearchMode,
                 onSearchModeClosed = {
                     isSearchMode = false
@@ -322,8 +363,8 @@ fun ChatScreen(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding(),
-                    start = 4.dp,
-                    end = 4.dp
+                    start = 8.dp,
+                    end = 8.dp
                 ),
                 okHttpClientProvider = okHttpClientProvider,
                 isMember = isMember,
@@ -350,12 +391,14 @@ fun ChatScreen(
                         isSelectionMode = true
                     }
 
-                    selectedItems.add(selectedMessage)
+                    selectedItems[selectedMessage.message.id] = selectedMessage
                 },
                 onMessageDeselected = {
-                    deselectedMessage -> selectedItems.remove(deselectedMessage)
+                    deselectedMessage -> selectedItems.remove(deselectedMessage.message.id)
                 },
                 onMessageClicked = onMessageClicked,
+                onArticleClicked = onArticleClicked,
+                onRedirectUriClicked = onRedirectUriClicked,
                 loadNextPage = loadNextPage
             )
         }
@@ -364,15 +407,13 @@ fun ChatScreen(
 
 @Composable
 fun MarkConversationAsRead(
-    chatId: String,
     messages: RequestState<List<MessageWithDetailsDto>>,
     chatViewModel: ChatViewModel
 ) {
     LaunchedEffect(key1 = messages)
     {
-        if(messages is RequestState.Success)
-        {
-            chatViewModel.markConversationAsRead(chatId)
+        if (messages is RequestState.Success) {
+            chatViewModel.markConversationAsRead()
         }
     }
 }
@@ -452,7 +493,7 @@ fun ChatScreenPreview() {
         isMember = true,
         isAdmin = false,
         contacts = RequestState.Success(listOf()),
-        connectionStatus = SignalRStatus.Authenticated,
+        connectionStatus = ClientStatus.Authenticated,
         replyToMessage = RequestState.Idle,
         messages = RequestState.Success(
             listOf(message1, message2, message3)
@@ -471,12 +512,11 @@ fun ChatScreenPreview() {
         onDelete = {},
         onReplyToMessage = {},
         onSearch = {},
-        onAddGroupMembers = { _: List<String>, _: MessageType -> },
         onLeaveGroup = { },
         onRenameContactDismissed = {},
         loadNextPage = { },
         onMessageClicked = {},
-        navigateToContactsScreen = {},
+        navigateBack = {},
         navigateToAddContactsScreen = {}
     )
 }

@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <jni.h>
 #include <map>
 
@@ -8,115 +29,173 @@ using namespace std;
 static CryptoContext *decryptContext = nullptr;
 static CryptoContext *signContext = nullptr;
 
-static unsigned char* toUnsignedCharArray(JNIEnv *env, jbyteArray array, int &len)
-{
+static unsigned char* toUnsignedCharArray(JNIEnv *env, jbyteArray array, int &len) {
+    if (array == nullptr) {
+        len = 0;
+        return nullptr;
+    }
+
     len = env->GetArrayLength(array);
-    auto buf = new unsigned char[len];
-    env->GetByteArrayRegion(array, 0, len, reinterpret_cast<jbyte*>(buf));
-    return buf;
+    if (len == 0) {
+        return nullptr;
+    }
+
+    jbyte *arrayElements = env->GetByteArrayElements(array, nullptr);
+    if (arrayElements == nullptr) {
+        len = 0;
+        return nullptr;
+    }
+
+    auto *nativeArray = new unsigned char[len];
+    memcpy(nativeArray, arrayElements, len);
+
+    memset(arrayElements, 0, len);
+    env->ReleaseByteArrayElements(array, arrayElements, JNI_ABORT);
+
+    return nativeArray;
 }
 
-static jbyteArray toJByteArray(JNIEnv *env, const unsigned char *data, unsigned int size)
-{
-    auto ret = env->NewByteArray((int)size);
-    env->SetByteArrayRegion(ret, 0, (int)size, (jbyte *)data);
+static char* toCharArray(JNIEnv *env, jbyteArray array, int &len) {
+    if (array == nullptr) {
+        len = 0;
+        return nullptr;
+    }
+
+    len = env->GetArrayLength(array);
+    if (len == 0) {
+        return nullptr;
+    }
+
+    jbyte *arrayElements = env->GetByteArrayElements(array, nullptr);
+    if (arrayElements == nullptr) {
+        len = 0;
+        return nullptr;
+    }
+
+    char *nativeArray = new char[len + 1];
+    memcpy(nativeArray, arrayElements, len);
+    nativeArray[len] = '\0';
+
+    memset(arrayElements, 0, len);
+    env->ReleaseByteArrayElements(array, arrayElements, JNI_ABORT);
+
+    return nativeArray;
+}
+
+template<typename T>
+static void freeArray(T* array, int len) {
+    if (array == nullptr) { return; }
+    memset(array, 0, len * sizeof(T));
+    delete[] array;
+}
+
+static jbyteArray toJByteArray(JNIEnv *env, const unsigned char *data, unsigned int size) {
+    if (data == nullptr || size == 0) {
+        return nullptr;
+    }
+
+    auto ret = env->NewByteArray((jsize) size);
+    if (ret == nullptr) {
+        return nullptr;
+    }
+
+    env->SetByteArrayRegion(ret, 0, (jsize) size, reinterpret_cast<const jbyte *>(data));
+
     return ret;
 }
 
-static const char **toArrayOfStrings(JNIEnv *env, jobjectArray array, int &size)
-{
-    size = env->GetArrayLength(array);
-    auto **strings = new const char*[size];
+static void freeArrayOfStrings(const char **strings, int size) {
+    if (strings == nullptr) { return; }
 
-    for (int t = 0; t < size; t ++) {
-
-        auto javaString = (jstring)env->GetObjectArrayElement(array, t);
-        auto string = env->GetStringUTFChars(javaString, nullptr);
-
-        auto len = env->GetStringUTFLength(javaString);
-        auto stringCopy = new char[len + 1];
-        memcpy(stringCopy, string, len);
-        stringCopy[len] = 0;
-        strings[t] = stringCopy;
-
-        env->ReleaseStringUTFChars(javaString, string);
-        env->DeleteLocalRef(javaString);
-    }
-
-    return strings;
-}
-
-static void releaseStrings(const char **strings, int count)
-{
-    for(int k = 0; k < count; k ++)
-    {
-        delete[] strings[k];
+    for (int t = 0; t < size; t++) {
+        delete[] strings[t];
     }
 
     delete[] strings;
 }
 
-static CryptoContext *createEncryptionContext(JNIEnv *env, jstring key)
-{
-    auto publicKey = env->GetStringUTFChars(key, nullptr);
-    auto ctx = CreateAsymmetricEncryptionContext(publicKey);
-    env->ReleaseStringUTFChars(key, publicKey);
-    return ctx;
+static const char **toArrayOfStrings(JNIEnv *env, jobjectArray array, int &size) {
+    if (array == nullptr) {
+        size = 0;
+        return nullptr;
+    }
+
+    size = env->GetArrayLength(array);
+    if (size == 0) {
+        return nullptr;
+    }
+
+    auto **strings = new const char *[size]();
+
+    for (int t = 0; t < size; t++) {
+
+        auto byteArray = (jbyteArray) env->GetObjectArrayElement(array, t);
+
+        if (byteArray == nullptr) {
+            strings[t] = nullptr;
+            continue;
+        }
+
+        int byteArraySize;
+        strings[t] = toCharArray(env, byteArray, byteArraySize);
+    }
+
+    return strings;
 }
 
-static CryptoContext *createDecryptionContext(JNIEnv *env, jstring key, jstring passphrase)
-{
-    auto privateKey = env->GetStringUTFChars(key, nullptr);
-    auto protectionPassphrase = env->GetStringUTFChars(passphrase, nullptr);
+static CryptoContext *createDecryptionContext(JNIEnv *env, jbyteArray key, jbyteArray passphrase) {
+    int privateKeySize;
+    int protectionPassphraseSize;
+    auto privateKey = toCharArray(env, key, privateKeySize);
+    auto protectionPassphrase = toCharArray(env, passphrase, protectionPassphraseSize);
     auto ctx = CreateAsymmetricDecryptionContext(privateKey, protectionPassphrase);
-    env->ReleaseStringUTFChars(key, privateKey);
-    env->ReleaseStringUTFChars(passphrase, protectionPassphrase);
+    freeArray(privateKey, privateKeySize);
+    freeArray(protectionPassphrase, protectionPassphraseSize);
     return ctx;
 }
 
-static CryptoContext *createSignatureContext(JNIEnv *env, jstring key, jstring passphrase)
-{
-    auto privateKey = env->GetStringUTFChars(key, nullptr);
-    auto protectionPassphrase = env->GetStringUTFChars(passphrase, nullptr);
+static CryptoContext *createSignatureContext(JNIEnv *env, jbyteArray key, jbyteArray passphrase) {
+    int privateKeySize;
+    int protectionPassphraseSize;
+    auto privateKey = toCharArray(env, key, privateKeySize);
+    auto protectionPassphrase = toCharArray(env, passphrase, protectionPassphraseSize);
     auto ctx = CreateSignatureContext(privateKey, protectionPassphrase);
-    env->ReleaseStringUTFChars(key, privateKey);
-    env->ReleaseStringUTFChars(passphrase, protectionPassphrase);
+    freeArray(privateKey, privateKeySize);
+    freeArray(protectionPassphrase, protectionPassphraseSize);
     return ctx;
 }
 
-static CryptoContext *createSignatureVerificationContext(JNIEnv *env, jstring key)
-{
-    auto publicKey = env->GetStringUTFChars(key, nullptr);
+static CryptoContext *createSignatureVerificationContext(JNIEnv *env, jbyteArray key) {
+    int publicKeySize;
+    auto publicKey = toCharArray(env, key, publicKeySize);
     auto ctx = CreateVerificationContext(publicKey);
-    env->ReleaseStringUTFChars(key, publicKey);
+    freeArray(publicKey, publicKeySize);
     return ctx;
 }
 
-static CryptoContext *createSymmetricEncryptionContext(JNIEnv *env, jbyteArray key)
-{
+static CryptoContext *createSymmetricEncryptionContext(JNIEnv *env, jbyteArray key) {
     int keySize;
     auto cKey = toUnsignedCharArray(env, key, keySize);
     auto ctx = CreateSymmetricEncryptionContext(cKey);
-    delete[] cKey;
+    freeArray(cKey, keySize);
     return ctx;
 }
 
-static CryptoContext *createSymmetricDecryptionContext(JNIEnv *env, jbyteArray key)
-{
+static CryptoContext *createSymmetricDecryptionContext(JNIEnv *env, jbyteArray key) {
     int keySize;
     auto cKey = toUnsignedCharArray(env, key, keySize);
     auto ctx = CreateSymmetricDecryptionContext(cKey);
-    delete[] cKey;
+    freeArray(cKey, keySize);
     return ctx;
 }
 
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_ro_aenigma_crypto_CryptoProvider_initDecryption(JNIEnv *env,
-                                                                            jobject thiz,
-                                                                            jstring privateKey,
-                                                                            jstring passphrase) {
-    if(decryptContext == nullptr) {
+                             jobject thiz,
+                             jbyteArray privateKey,
+                             jbyteArray passphrase) {
+    if (decryptContext == nullptr) {
         decryptContext = createDecryptionContext(env, privateKey, passphrase);
     }
     return decryptContext != nullptr;
@@ -125,70 +204,13 @@ Java_ro_aenigma_crypto_CryptoProvider_initDecryption(JNIEnv *env,
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_ro_aenigma_crypto_CryptoProvider_initSignature(JNIEnv *env,
-                                                                           jobject thiz,
-                                                                           jstring privateKey,
-                                                                           jstring passphrase) {
-    if(signContext == nullptr) {
+                             jobject thiz,
+                             jbyteArray privateKey,
+                             jbyteArray passphrase) {
+    if (signContext == nullptr) {
         signContext = createSignatureContext(env, privateKey, passphrase);
     }
     return signContext != nullptr;
-}
-
-extern "C"
-JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_encrypt(
-        JNIEnv *env,
-        jobject thiz,
-        jstring key,
-        jbyteArray plaintext) {
-
-    auto ctx = createEncryptionContext(env, key);
-
-    if(not ctx)
-    {
-        return nullptr;
-    }
-
-    int len;
-    auto data = toUnsignedCharArray(env, plaintext, len);
-    auto ciphertext = RunEx(ctx, data, len);
-    delete[] data;
-
-    if(not ciphertext or ciphertext->isError())
-    {
-        delete ctx;
-        return nullptr;
-    }
-
-    auto result = toJByteArray(env, ciphertext->getData(), ciphertext->getDataSize());
-    delete ctx;
-    
-    return result;
-}
-
-extern "C"
-JNIEXPORT jbyteArray JNICALL
-Java_ro_aenigma_crypto_CryptoProvider_decrypt(
-        JNIEnv *env,
-        jobject thiz,
-        jbyteArray ciphertext) {
-    
-    if(not decryptContext)
-    {
-        return nullptr;
-    }
-
-    int len;
-    auto data = toUnsignedCharArray(env, ciphertext, len);
-    auto plaintext = RunEx(decryptContext, data, len);
-    delete[] data;
-
-    if(not plaintext or plaintext->isError())
-    {
-        return nullptr;
-    }
-
-    return toJByteArray(env, plaintext->getData(), plaintext->getDataSize());
 }
 
 extern "C"
@@ -197,19 +219,17 @@ Java_ro_aenigma_crypto_CryptoProvider_sign(
         JNIEnv *env,
         jobject thiz,
         jbyteArray plaintext) {
-    
-    if(not signContext)
-    {
+
+    if (not signContext) {
         return nullptr;
     }
 
     int len;
     auto data = toUnsignedCharArray(env, plaintext, len);
     auto signature = RunEx(signContext, data, len);
-    delete[] data;
+    freeArray(data, len);
 
-    if(not signature or signature->isError())
-    {
+    if (not signature or signature->isError()) {
         return nullptr;
     }
 
@@ -221,20 +241,19 @@ JNIEXPORT jboolean JNICALL
 Java_ro_aenigma_crypto_CryptoProvider_verify(
         JNIEnv *env,
         jobject thiz,
-        jstring key,
+        jbyteArray key,
         jbyteArray signature) {
 
     auto ctx = createSignatureVerificationContext(env, key);
 
-    if(not ctx)
-    {
+    if (not ctx) {
         return false;
     }
 
     int len;
     auto data = toUnsignedCharArray(env, signature, len);
     auto result = RunVerification(ctx, data, len);
-    delete[] data;
+    freeArray(data, len);
     delete ctx;
 
     return result;
@@ -246,18 +265,16 @@ Java_ro_aenigma_crypto_CryptoProvider_unsealOnion(
         JNIEnv *env, jobject thiz,
         jbyteArray onion) {
 
-    if(not decryptContext)
-    {
+    if (not decryptContext) {
         return nullptr;
     }
 
     int len;
     auto data = toUnsignedCharArray(env, onion, len);
     auto plaintext = UnsealOnion(decryptContext, data, len);
-    delete[] data;
+    freeArray(data, len);
 
-    if(not plaintext or len < 0)
-    {
+    if (not plaintext or len < 0) {
         return nullptr;
     }
 
@@ -273,12 +290,12 @@ Java_ro_aenigma_crypto_CryptoProvider_sealOnion(
         jobjectArray keys,
         jobjectArray addresses) {
 
-    int keysCount;
-    int addressesCount;
-    int plaintextLen;
-    int outLen;
+    int keysCount = 0;
+    int addressesCount = 0;
+    int plaintextSize = 0;
+    int onionSize = 0;
 
-    unsigned char *input = nullptr;
+    unsigned char *cPlaintext = nullptr;
     const unsigned char *onion = nullptr;
     jbyteArray out = nullptr;
 
@@ -289,20 +306,20 @@ Java_ro_aenigma_crypto_CryptoProvider_sealOnion(
         goto cleanup;
     }
 
-    input = toUnsignedCharArray(env, plaintext, plaintextLen);
-    onion = SealOnion(input, plaintextLen, cKeys, cAddresses, keysCount, outLen);
+    cPlaintext = toUnsignedCharArray(env, plaintext, plaintextSize);
+    onion = SealOnion(cPlaintext, plaintextSize, cKeys, cAddresses, keysCount, onionSize);
 
-    if (onion == nullptr || outLen < 0) {
+    if (onion == nullptr || onionSize < 0) {
         goto cleanup;
     }
 
-    out = toJByteArray(env, onion, outLen);
+    out = toJByteArray(env, onion, onionSize);
 
     cleanup:
-    delete[] input;
-    delete[] onion;
-    releaseStrings(cKeys, keysCount);
-    releaseStrings(cAddresses, addressesCount);
+    freeArray(cPlaintext, plaintextSize);
+    freeArray((unsigned char *) onion, onionSize);
+    freeArrayOfStrings(cKeys, keysCount);
+    freeArrayOfStrings(cAddresses, addressesCount);
 
     return out;
 }
@@ -312,10 +329,11 @@ JNIEXPORT jint JNICALL
 Java_ro_aenigma_crypto_CryptoProvider_getPKeySize(
         JNIEnv *env,
         jobject thiz,
-        jstring publicKey) {
-    auto key = env->GetStringUTFChars(publicKey, nullptr);
-    auto result = GetPKeySize(key);
-    env->ReleaseStringUTFChars(publicKey, key);
+        jbyteArray key) {
+    int publicKeySize;
+    auto publicKey = toCharArray(env, key, publicKeySize);
+    auto result = GetPKeySize(publicKey);
+    freeArray(publicKey, publicKeySize);
     return result;
 }
 
@@ -327,24 +345,25 @@ Java_ro_aenigma_crypto_CryptoProvider_encryptSymmetric(
         jbyteArray key,
         jbyteArray plaintext) {
     auto ctx = createSymmetricEncryptionContext(env, key);
-    if(not ctx)
-    {
+
+    if (not ctx) {
         return nullptr;
     }
+
     int plaintextSize;
     auto cPlaintext = toUnsignedCharArray(env, plaintext, plaintextSize);
 
-    int ciphertextSize;
-    auto ciphertext = Run(ctx, cPlaintext, plaintextSize, ciphertextSize);
+    auto ciphertext = RunEx(ctx, cPlaintext, plaintextSize);
+    freeArray(cPlaintext, plaintextSize);
 
-    delete[] cPlaintext;
-    if(not ciphertext)
-    {
+    if (not ciphertext or ciphertext->isError()) {
         delete ctx;
         return nullptr;
     }
-    auto out = toJByteArray(env, ciphertext, ciphertextSize);
+
+    auto out = toJByteArray(env, ciphertext->getData(), ciphertext->getDataSize());
     delete ctx;
+
     return out;
 }
 
@@ -356,23 +375,24 @@ Java_ro_aenigma_crypto_CryptoProvider_decryptSymmetric(
         jbyteArray key,
         jbyteArray ciphertext) {
     auto ctx = createSymmetricDecryptionContext(env, key);
-    if(not ctx)
-    {
+
+    if (not ctx) {
         return nullptr;
     }
+
     int ciphertextSize;
     auto cCiphertext = toUnsignedCharArray(env, ciphertext, ciphertextSize);
 
-    int plaintextSize;
-    auto plaintext = Run(ctx, cCiphertext, ciphertextSize, plaintextSize);
+    auto plaintext = RunEx(ctx, cCiphertext, ciphertextSize);
+    freeArray(cCiphertext, ciphertextSize);
 
-    delete[] cCiphertext;
-    if(not plaintext)
-    {
+    if (not plaintext or plaintext->isError()) {
         delete ctx;
         return nullptr;
     }
-    auto out = toJByteArray(env, plaintext, plaintextSize);
+
+    auto out = toJByteArray(env, plaintext->getData(), plaintext->getDataSize());
     delete ctx;
+
     return out;
 }

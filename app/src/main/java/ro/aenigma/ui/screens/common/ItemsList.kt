@@ -1,3 +1,24 @@
+/*
+    Aenigma - Private Messaging
+    Client Android mobile application for Aenigma - Federated messaging system
+    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+
+    This file is part of Aenigma project.
+
+    Aenigma is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Aenigma is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,18 +57,18 @@ fun CheckScrollPercentage(
 }
 
 @Composable
-fun <T> ItemsList(
+fun <K: Any, V> ItemsList(
     modifier: Modifier = Modifier,
-    items: List<T>,
+    items: List<V>,
     nextPageAvailable: Boolean = false,
-    itemKeyProvider: (T) -> Any,
-    selectedItems: List<T> = listOf(),
+    itemKeySelector: (V) -> K,
+    selectedItems: Map<K, V> = mapOf(),
     reversedLayout: Boolean = false,
     listState: LazyListState = rememberLazyListState(),
-    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
+    listItem: @Composable (next: V?, entity: V, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { }
 ) {
-    if(nextPageAvailable) {
+    if (nextPageAvailable) {
         CheckScrollPercentage(
             itemsCount = items.size,
             state = listState,
@@ -62,13 +83,14 @@ fun <T> ItemsList(
     ) {
         itemsIndexed(
             items = items,
-            key = { _, item -> itemKeyProvider(item) }
+            key = { _, item -> itemKeySelector(item) }
         ) { index, element ->
-            val isSelected = selectedItems.any { item -> itemKeyProvider(item) == itemKeyProvider(element) }
-            val nextItem = if(index < items.size - 1)
+            val isSelected = selectedItems.containsKey(itemKeySelector(element))
+            val nextItem = if (index < items.size - 1) {
                 items[index + 1]
-            else
+            } else {
                 null
+            }
 
             listItem(nextItem, element, isSelected)
         }
@@ -76,22 +98,22 @@ fun <T> ItemsList(
 }
 
 @Composable
-fun <T> AutoScrollItemsList(
+fun <K: Any, V> AutoScrollItemsList(
     modifier: Modifier = Modifier,
-    items: List<T>,
+    items: List<V>,
     listState: LazyListState = rememberLazyListState(),
     nextPageAvailable: Boolean = false,
     reversedLayout: Boolean = false,
-    itemKeyProvider: (T) -> Any,
-    selectedItems: List<T>,
-    listItem: @Composable (next: T?, entity: T, isSelected: Boolean) -> Unit,
+    itemKeySelector: (V) -> K,
+    selectedItems: Map<K, V> = mapOf(),
+    listItem: @Composable (next: V?, entity: V, isSelected: Boolean) -> Unit,
     loadNextPage: () -> Unit = { },
 ) {
     ItemsList(
         modifier = modifier,
         items = items,
         nextPageAvailable = nextPageAvailable,
-        itemKeyProvider = itemKeyProvider,
+        itemKeySelector = itemKeySelector,
         selectedItems = selectedItems,
         listItem = listItem,
         listState = listState,
@@ -99,7 +121,7 @@ fun <T> AutoScrollItemsList(
         loadNextPage = loadNextPage
     )
 
-    LaunchedEffect(key1 = items.size)
+    LaunchedEffect(key1 = items)
     {
         if (items.isNotEmpty() && (listState.firstVisibleItemIndex < 2)) {
             listState.scrollToItem(0)
