@@ -1,0 +1,2 @@
+* Enabled file sharing from other apps
+* Fixed small UI glitches
