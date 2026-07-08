@@ -25,7 +25,9 @@ import android.app.KeyguardManager
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -61,6 +63,9 @@ import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
 import javax.inject.Inject
 import androidx.work.WorkManager
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.withContext
+import ro.aenigma.AenigmaApp
 import ro.aenigma.R
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.models.factories.ContactDtoFactory
@@ -70,8 +75,14 @@ import ro.aenigma.ui.screens.common.CheckNotificationsPermission
 import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.contacts.SetupUserNameDialog
 import ro.aenigma.util.Constants
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
 import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.util.ContextExtensions.filterSharedUris
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
+import ro.aenigma.util.ContextExtensions.openInBrowser
+import ro.aenigma.util.LongExtensions.toMegabytes
+import ro.aenigma.util.StringExtensions.isTextMime
 import ro.aenigma.util.UriExtensions.getArticleUri
 import ro.aenigma.util.UriExtensions.isSharedData
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
@@ -105,11 +116,9 @@ class AppActivity : FragmentActivity() {
 
     private val dbPassphraseLoaded = MutableStateFlow(false)
 
-    private val isAuthenticated = MutableStateFlow(false)
+    private val isAuthenticated = MutableStateFlow(true)
 
     private val isAuthError = MutableStateFlow(false)
-
-    private val lastPausedTime = MutableStateFlow(0L)
 
     private val mainViewModel: MainViewModel by viewModels()
 
@@ -126,7 +135,7 @@ class AppActivity : FragmentActivity() {
         val keyguardManager = getSystemService(KEYGUARD_SERVICE) as KeyguardManager
         setContent {
             ApplicationComposeTheme {
-                val auth by isAuthenticated.collectAsState()
+                val authenticated by isAuthenticated.collectAsState()
                 val authError by isAuthError.collectAsState()
                 val passphraseLoaded by dbPassphraseLoaded.collectAsState()
                 val userName by mainViewModel.userName.collectAsState()
@@ -137,10 +146,13 @@ class AppActivity : FragmentActivity() {
                 navHostController = rememberNavController()
                 SecuredApp(
                     isDeviceSecured = keyguardManager.isDeviceSecure,
-                    isAuthenticated = auth,
+                    isAuthenticated = authenticated,
                     isAuthError = authError,
                     dbPassphraseLoaded = passphraseLoaded,
-                    onAuthSuccess = { isAuthenticated.value = true },
+                    onAuthSuccess = {
+                        isAuthenticated.value = true
+                        saveAuthenticationTimestamp()
+                    },
                     onAuthFailed = { isAuthError.value = true }
                 ) {
                     LaunchedEffect(key1 = true) {
@@ -150,6 +162,7 @@ class AppActivity : FragmentActivity() {
                         observeNotificationServicePreference()
                         createBroadcastContact()
                         handleAppLink()
+                        handleSharedFiles()
                         schedulePeriodicSync()
                     }
 
@@ -208,21 +221,30 @@ class AppActivity : FragmentActivity() {
         super.onResume()
         notifier.enterForeground()
         resetAuthentication()
-        if (dbPassphraseLoaded.value) {
-            resetClient()
-        }
+        resetClient()
     }
 
     override fun onPause() {
         super.onPause()
         notifier.enterBackground()
-        lastPausedTime.value = System.currentTimeMillis()
+        saveAuthenticationTimestamp()
+    }
+
+    private fun saveAuthenticationTimestamp() {
+        (application as AenigmaApp).applicationScope.launch {
+            localDataSource.saveAuthenticationTimestamp()
+        }
     }
 
     private fun resetAuthentication() {
-        val lastPausedTimeValue = lastPausedTime.value
-        if (lastPausedTimeValue != 0L) {
-            val elapsed = System.currentTimeMillis() - lastPausedTimeValue
+        lifecycleScope.launch(Dispatchers.IO) {
+            val authenticationTimestamp =
+                localDataSource.authenticationTimestamp.firstOrNull() ?: 0L
+            val elapsed = if (authenticationTimestamp > 0) {
+                System.currentTimeMillis() - authenticationTimestamp
+            } else {
+                AUTHENTICATION_DEADLINE + 1
+            }
             if (elapsed > AUTHENTICATION_DEADLINE) {
                 isAuthenticated.value = false
                 isAuthError.value = false
@@ -232,7 +254,9 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun resetClient() {
-        lifecycleScope.launch { signalrController.resetClient() }
+        if (dbPassphraseLoaded.value) {
+            lifecycleScope.launch(Dispatchers.IO) { signalrController.resetClient() }
+        }
     }
 
     private fun schedulePeriodicSync() {
@@ -281,19 +305,106 @@ class AppActivity : FragmentActivity() {
         }
     }
 
+    private fun handleSharedFiles() {
+        when (intent.action) {
+            Intent.ACTION_SEND -> {
+                if (intent.type.isTextMime()) {
+                    intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
+                        mainViewModel.setText(text)
+                    }
+                } else {
+                    val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                    } else {
+                        intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                    }
+                    uri?.let { onSingleFileReceived(it) }
+                }
+                Screens(navController = navHostController, mainViewModel = mainViewModel).root()
+            }
+
+            Intent.ACTION_SEND_MULTIPLE -> {
+                val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+                }
+                uris?.let { onMultipleFilesReceived(it) }
+                Screens(navController = navHostController, mainViewModel = mainViewModel).root()
+            }
+        }
+    }
+
+    private fun onSingleFileReceived(uri: Uri) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val uriFilterResult = applicationContext.filterSharedUris(uris = listOf(uri))
+            mainViewModel.setAttachments(uriFilterResult.acceptedUris.map { it.toString() })
+            if (uriFilterResult.tooLargeCount > 0) {
+                val fileTooLargeString = applicationContext.getString(
+                    R.string.files_too_large,
+                    ATTACHMENT_MAX_SIZE.toMegabytes()
+                )
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, fileTooLargeString, Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun onMultipleFilesReceived(uris: List<Uri>) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val uriFilterResult = applicationContext.filterSharedUris(uris = uris)
+            mainViewModel.setAttachments(uriFilterResult.acceptedUris.map { it.toString() })
+            if (uriFilterResult.tooLargeCount > 0) {
+                val fileTooLargeString = applicationContext.getString(
+                    R.string.files_too_large,
+                    ATTACHMENT_MAX_SIZE.toMegabytes()
+                )
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, fileTooLargeString, Toast.LENGTH_LONG).show()
+                }
+            }
+            if (uriFilterResult.excessCount > 0) {
+                val tooManyAttachmentsString = getString(
+                    R.string.attachment_files_limit,
+                    ATTACHMENTS_MAX_COUNT
+                )
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, tooManyAttachmentsString, Toast.LENGTH_LONG)
+                        .show()
+                }
+            }
+        }
+    }
+
     private fun handleAppDomain(uri: Uri) {
         if (uri.isSharedData()) {
-            val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
-            screens.getSharedContact(uri.toString())
+            Screens(
+                navController = navHostController,
+                mainViewModel = mainViewModel
+            ).getSharedContact(uri.toString())
+        } else {
+            applicationContext.openInBrowser(uri)
         }
     }
 
     private fun handleArticlesDomain(uri: Uri) {
-        val screens = Screens(navController = navHostController, mainViewModel = mainViewModel)
-        screens.article(uri.toString(), null, null)
+        if (uri.host == ARTICLES_DOMAIN) {
+            Screens(
+                navController = navHostController,
+                mainViewModel = mainViewModel
+            ).article(uri.toString(), null, null)
+        } else {
+            applicationContext.openInBrowser(uri)
+        }
     }
 
     private fun handleWebDomain(uri: Uri) {
-        handleArticlesDomain(uri.getArticleUri() ?: return)
+        val articleUri = uri.getArticleUri()
+        if (articleUri != null) {
+            handleArticlesDomain(articleUri)
+        } else {
+            applicationContext.openInBrowser(uri)
+        }
     }
 }

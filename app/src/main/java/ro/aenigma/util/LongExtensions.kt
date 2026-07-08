@@ -19,27 +19,11 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package ro.aenigma
+package ro.aenigma.util
 
-import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
-import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import javax.inject.Inject
+object LongExtensions {
+    private const val BYTES_PER_MB = 1024.0 * 1024.0
 
-@HiltAndroidApp
-class AenigmaApp : Application(), Configuration.Provider {
-
-    @Inject
-    lateinit var hiltWorkerFactory: HiltWorkerFactory
-
-    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-        .setWorkerFactory(hiltWorkerFactory)
-        .build()
+    @JvmStatic
+    fun Long.toMegabytes(): Double = this / BYTES_PER_MB
 }

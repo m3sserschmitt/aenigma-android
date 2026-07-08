@@ -19,27 +19,12 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package ro.aenigma
+package ro.aenigma.models
 
-import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
-import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import javax.inject.Inject
+import android.net.Uri
 
-@HiltAndroidApp
-class AenigmaApp : Application(), Configuration.Provider {
-
-    @Inject
-    lateinit var hiltWorkerFactory: HiltWorkerFactory
-
-    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder()
-        .setWorkerFactory(hiltWorkerFactory)
-        .build()
-}
+data class UriFilterResult(
+    val acceptedUris: List<Uri>,
+    val tooLargeCount: Int,
+    val excessCount: Int
+)

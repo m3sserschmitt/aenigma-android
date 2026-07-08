@@ -128,7 +128,7 @@
     <string name="news">News</string>
     <string name="there_is_nothing_here">There is nothing here right now</string>
     <string name="picture">Picture</string>
-    <string name="attachment_files_limit">You are allowed to attach a maximum of %s files</string>
+    <string name="attachment_files_limit">You are allowed to attach a maximum of %d files</string>
     <string name="article_title_template">%1$s shared this %2$s</string>
     <string name="unknown">Unknown</string>
     <string name="no_onion_service">No Onion service available</string>
@@ -160,11 +160,11 @@
     <string name="tor_service_info">Make sure Orbot VPN connection is not running before starting TOR Service</string>
     <string name="cover_preview">Cover preview</string>
     <string name="content_preview">Content preview</string>
-    <string name="compose_article">Compose article</string>
+    <string name="compose_article">Compose</string>
     <string name="title">Title</string>
     <string name="cover_photo">Cover image</string>
-    <string name="optional_description">Optional description</string>
-    <string name="content">Content</string>
+    <string name="optional_description">Optional summary</string>
+    <string name="content">Story</string>
     <string name="empty_article_cover">Start editing the article to preview the cover</string>
     <string name="empty_article_content">There is no content to preview yet</string>
     <string name="post">Post</string>
@@ -180,4 +180,6 @@
     <string name="new_connection_created">New connection created</string>
     <string name="broadcast_new_location">Broadcast new server location to connect with others</string>
     <string name="disconnected">Disconnected</string>
+    <string name="no_permission_to_open">No permission to open this file</string>
+    <string name="total_post_size_exceeded">You are allowed to share a maximum of %.2f MB</string>
 </resources>

@@ -29,6 +29,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +53,7 @@ class PreferencesDataStore @Inject constructor(
         private const val DATABASE_PASSPHRASE_SIZE_BYTES = 128
         private const val NEWS_FEED_URI = "news-feed-file"
         private const val NOTIFICATION_SERVICE_PREFERENCE = "use-notification-service"
+        private const val AUTHENTICATION_TIMESTAMP = "last-authentiction-timestamp"
     }
 
     private object PreferenceKeys {
@@ -63,6 +65,7 @@ class PreferencesDataStore @Inject constructor(
             byteArrayPreferencesKey(ENCRYPTED_DATABASE_PASSPHRASE_PREFERENCE)
         val newsFeedUri = stringPreferencesKey(NEWS_FEED_URI)
         val notificationServicePreference = booleanPreferencesKey(NOTIFICATION_SERVICE_PREFERENCE)
+        val notificationTimestampPreference = longPreferencesKey(AUTHENTICATION_TIMESTAMP)
     }
 
     private val dataStore = context.dataStore
@@ -115,6 +118,13 @@ class PreferencesDataStore @Inject constructor(
         )
     }
 
+    suspend fun saveAuthenticationTimestamp(): Boolean {
+        return savePreference(
+            System.currentTimeMillis(),
+            PreferenceKeys.notificationTimestampPreference
+        )
+    }
+
     private fun <T> getPreference(key: Preferences.Key<T>, defaultValue: T): Flow<T> {
         return dataStore.data
             .catch { emit(emptyPreferences()) }
@@ -138,4 +148,7 @@ class PreferencesDataStore @Inject constructor(
 
     val notificationServicePreference: Flow<Boolean> =
         getPreference(PreferenceKeys.notificationServicePreference, true)
+
+    val authenticationTimestamp: Flow<Long> =
+        getPreference(PreferenceKeys.notificationTimestampPreference, 0L)
 }

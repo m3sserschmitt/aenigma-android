@@ -401,7 +401,7 @@ fun ServersBottomSheet(
     ) {
         SheetContent(
             modifier = Modifier.fillMaxWidth()
-                .weight(8f),
+                .weight(1f),
             sheetState = sheetState,
             serversHistory = serversHistory,
             servers = servers,
@@ -413,8 +413,7 @@ fun ServersBottomSheet(
             onConnectPeopleClicked = onConnectPeopleClicked
         )
         SearchBar(
-            modifier = Modifier.fillMaxWidth()
-                .weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             value = searchQuery,
             placeholder = stringResource(id = R.string.server_query),
             onValueChanged = { newSearchQuery -> onSearchQueryChanged(newSearchQuery) },
@@ -422,8 +421,7 @@ fun ServersBottomSheet(
         )
         PrimaryButton(
             modifier = Modifier.fillMaxWidth()
-                .padding(top = 4.dp)
-                .weight(1f),
+                .padding(top = 4.dp),
             text = stringResource(id = R.string.connect),
             onClick = onConnectClicked
         )

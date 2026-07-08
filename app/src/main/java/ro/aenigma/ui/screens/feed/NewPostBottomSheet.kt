@@ -34,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,7 +119,7 @@ fun EditArticleSection(
             onSheetStateChanged = onSheetStateChanged
         )
         SimpleOutlineTextInput(
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             value = sheetState.content,
             label = stringResource(id = R.string.content),
             isError = contentError,
@@ -127,6 +128,11 @@ fun EditArticleSection(
                 contentError = newValue.isBlank()
             },
             singleLine = false
+        )
+        VerticalDivider(
+            modifier = Modifier.background(color = MaterialTheme.colorScheme.background)
+                .weight(1f),
+            color = MaterialTheme.colorScheme.background
         )
         PrimaryButton(
             modifier = Modifier.fillMaxWidth(),
