@@ -68,9 +68,11 @@ import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
+import ro.aenigma.models.UriFilterResult
 import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
+import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
@@ -519,6 +521,12 @@ object ContextExtensions {
                 }
             }
             startActivity(intent)
+        } catch (_: SecurityException) {
+            Toast.makeText(
+                this,
+                getString(R.string.no_permission_to_open),
+                Toast.LENGTH_SHORT
+            ).show()
         } catch (_: Exception) {
             Toast.makeText(
                 this,
@@ -669,7 +677,7 @@ object ContextExtensions {
     suspend fun Context.getArticle(
         message: MessageWithDetailsDto
     ): ArticleDto? {
-        if(!message.message.isFile()) {
+        if (!message.message.isFile()) {
             return null
         }
         return try {
@@ -695,5 +703,56 @@ object ContextExtensions {
         } catch (_: Exception) {
             null
         }
+    }
+
+    fun Context.openInBrowser(uri: Uri): Boolean {
+        val intent = Intent.makeMainSelectorActivity(
+            Intent.ACTION_MAIN,
+            Intent.CATEGORY_APP_BROWSER
+        ).apply {
+            data = uri
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            startActivity(intent)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    suspend fun Context.filterSharedUris(
+        uris: List<Uri>,
+        maxCount: Int = ATTACHMENTS_MAX_COUNT,
+        maxSizeBytes: Long = ATTACHMENT_MAX_SIZE,
+    ): UriFilterResult = withContext(Dispatchers.IO) {
+        var tooLargeCount = 0
+
+        val sizeFiltered = uris.filter { uri ->
+            val fits = try {
+                sizeOf(uri) <= maxSizeBytes
+            } catch (_: SecurityException) {
+                false
+            }
+            if (!fits) {
+                tooLargeCount++
+            }
+            fits
+        }
+
+        val excessCount = (sizeFiltered.size - maxCount).coerceAtLeast(0)
+        val accepted = sizeFiltered.take(maxCount)
+
+        accepted.forEach { uri ->
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+            }
+        }
+
+        UriFilterResult(accepted, tooLargeCount, excessCount)
     }
 }

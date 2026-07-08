@@ -67,6 +67,7 @@ import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.OkHttpClientProvider
 import ro.aenigma.services.SignalrController
 import ro.aenigma.services.OnionRoutingServiceMonitor
+import ro.aenigma.services.UriBatcher
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
 import ro.aenigma.util.StringExtensions.getHttpUri
@@ -80,6 +81,7 @@ import ro.aenigma.workers.extensions.WorkManagerExtensions.generateFeed
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val messageSaver: MessageSaver,
+    private val uriBatcher: UriBatcher,
     private val signatureServiceLazy: dagger.Lazy<SignatureService>,
     private val markdownImageTransformerLazy: dagger.Lazy<MarkdownImageTransformer>,
     signalrController: SignalrController,
@@ -120,6 +122,8 @@ class MainViewModel @Inject constructor(
 
     private val _sharedDataCreateResult =
         MutableStateFlow<RequestState<CreatedSharedDataDto>>(RequestState.Idle)
+
+    private val _text = MutableStateFlow<String?>(null)
 
     private val _notificationsAllowed = MutableStateFlow(true)
 
@@ -706,21 +710,26 @@ class MainViewModel @Inject constructor(
 
     fun redirectAttachments(chatIds: List<String>) {
         val attachments = attachments.value
+        if(attachments.isEmpty()) {
+            return
+        }
         val remoteUris = attachments.filterTo(mutableSetOf()) { uri -> uri.isRemoteUri() }
         val contentUris = attachments.minus(remoteUris)
         viewModelScope.launch(ioDispatcher) {
             chatIds.forEach { chatId ->
                 repository.local.getContact(chatId)?.let { contact ->
                     if (contentUris.isNotEmpty()) {
-                        messageSaver.saveOutgoingMessage(
-                            MessageDtoFactory.createOutgoing(
-                                chatId = contact.address,
-                                text = null,
-                                type = MessageType.FILES,
-                                actionFor = null,
-                                attachments = contentUris
+                        uriBatcher.split(contentUris).forEach { batch ->
+                            messageSaver.saveOutgoingMessage(
+                                MessageDtoFactory.createOutgoing(
+                                    chatId = contact.address,
+                                    text = null,
+                                    type = MessageType.FILES,
+                                    actionFor = null,
+                                    attachments = batch
+                                )
                             )
-                        )
+                        }
                     }
                     for (remoteUri in remoteUris) {
                         messageSaver.saveOutgoingMessage(
@@ -738,12 +747,39 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun redirectText(chatIds: List<String>) {
+        val text = _text.value
+        if(text.isNullOrBlank()) {
+            return
+        }
+        viewModelScope.launch(ioDispatcher) {
+            chatIds.forEach { chatId ->
+                repository.local.getContact(chatId)?.let { contact ->
+                    messageSaver.saveOutgoingMessage(
+                        MessageDtoFactory.createOutgoing(
+                            chatId = contact.address,
+                            text = text,
+                            type = MessageType.TEXT,
+                            actionFor = null
+                        )
+                    )
+                }
+            }
+        }
+        setText(null)
+    }
+
     fun setAttachments(messageId: Long) {
         viewModelScope.launch(ioDispatcher) {
             repository.local.getMessage(messageId)?.let { message ->
                 message.files?.let { files -> setAttachments(files) }
             }
         }
+    }
+
+    fun setText(text: String?) {
+        _text.value = text
+        setIsForwardMode(!text.isNullOrBlank())
     }
 
     fun resetFeedScroll() {

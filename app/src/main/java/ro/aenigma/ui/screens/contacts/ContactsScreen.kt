@@ -134,6 +134,7 @@ fun ContactsScreen(
         navigateToChatScreen = { chatId ->
             if (isForwardMode) {
                 mainViewModel.redirectAttachments(listOf(chatId))
+                mainViewModel.redirectText(listOf(chatId))
                 navigateToRoot()
             } else {
                 navigateToChatScreen(chatId)
@@ -150,6 +151,7 @@ fun ContactsScreen(
         onResetUserNameClicked = { mainViewModel.resetUserName() },
         onForwardAttachments = { chatIds ->
             mainViewModel.redirectAttachments(chatIds)
+            mainViewModel.redirectText(chatIds)
             navigateToRoot()
         },
         onRemoveAttachments = {

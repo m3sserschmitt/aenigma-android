@@ -106,6 +106,10 @@ abstract class BaseViewModel(
 
     fun setAttachments(attachments: List<String>) {
         _attachments.value = attachments
-        _isForwardMode.value = attachments.isNotEmpty()
+        setIsForwardMode(attachments.isNotEmpty())
+    }
+
+    fun setIsForwardMode(forwardMode: Boolean) {
+        _isForwardMode.value = forwardMode
     }
 }

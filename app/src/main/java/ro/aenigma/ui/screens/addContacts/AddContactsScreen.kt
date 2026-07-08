@@ -56,6 +56,7 @@ fun AddContactsScreen(
     initialScannerState: QrCodeScannerState,
     navigateBack: () -> Unit,
     onForwardUri: (String) -> Unit = { },
+    navigateToRoot: () -> Unit = { },
     mainViewModel: MainViewModel
 ) {
     var scannerState by remember { mutableStateOf(value = initialScannerState) }
@@ -97,7 +98,7 @@ fun AddContactsScreen(
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact(name)
-            navigateBack()
+            navigateToRoot()
         },
         onSaveContactDismissed = {
             mainViewModel.resetContactChanges()

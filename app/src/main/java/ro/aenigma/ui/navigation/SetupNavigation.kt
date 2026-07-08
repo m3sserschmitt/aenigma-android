@@ -132,6 +132,7 @@ fun SetupNavigation(
                 notifier = notifier,
                 navigateBack = screen.back,
                 onForwardUri = screen.forwardUri,
+                navigateToRoot = screen.root,
                 mainViewModel = mainViewModel
             )
             aboutComposable(

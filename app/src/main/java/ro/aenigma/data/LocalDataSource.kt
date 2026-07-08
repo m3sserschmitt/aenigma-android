@@ -116,6 +116,12 @@ class LocalDataSource @Inject constructor(
 
     val notificationServicePreference: Flow<Boolean> = preferencesDataStore.notificationServicePreference
 
+    val authenticationTimestamp: Flow<Long> = preferencesDataStore.authenticationTimestamp
+
+    suspend fun saveAuthenticationTimestamp(): Boolean {
+        return preferencesDataStore.saveAuthenticationTimestamp()
+    }
+
     suspend fun saveBroadcastText(content: String): Uri {
         val file = context.getAppFile(BROADCAST_CONTACT_ADDRESS, ".$MARKDOWN_FILE_EXTENSION")
         withContext(Dispatchers.IO) { file.writeText(content) }

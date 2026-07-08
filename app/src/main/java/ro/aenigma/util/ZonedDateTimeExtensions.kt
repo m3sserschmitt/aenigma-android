@@ -41,9 +41,11 @@ object ZonedDateTimeExtensions {
             val daysAgo = ChronoUnit.DAYS.between(targetDateTime, now)
             val yearsAgo = ChronoUnit.YEARS.between(targetDateTime, now)
             val differentDays = targetDateTime.toLocalDate() != now.toLocalDate()
+            val differentYears = targetDateTime.toLocalDate().year != now.toLocalDate().year
             val formatter = when {
                 daysAgo < 1 && differentDays -> DateTimeFormatter.ofPattern("EEE, HH:mm")
                 daysAgo < 1 -> DateTimeFormatter.ofPattern("HH:mm")
+                yearsAgo < 1 && differentYears -> DateTimeFormatter.ofPattern("EEE, d MMM yyyy, HH:mm")
                 yearsAgo < 1 -> DateTimeFormatter.ofPattern("EEE, d MMM, HH:mm")
                 else -> DateTimeFormatter.ofPattern("EEE, d MMM yyyy, HH:mm")
             }

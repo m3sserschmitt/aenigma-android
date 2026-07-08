@@ -21,7 +21,6 @@
 
 package ro.aenigma.ui.screens.common
 
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.ManagedActivityResultLauncher
@@ -57,16 +56,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import ro.aenigma.R
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
+import ro.aenigma.services.UriBatcher
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
+import ro.aenigma.util.ContextExtensions.filterSharedUris
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
-import ro.aenigma.util.ContextExtensions.sizeOf
+import ro.aenigma.util.LongExtensions.toMegabytes
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import kotlin.collections.forEach
 
@@ -244,40 +247,31 @@ fun rememberFilesPicker(
     maxSizeBytes: Long = ATTACHMENT_MAX_SIZE
 ): ManagedActivityResultLauncher<Array<String>, List<@JvmSuppressWildcards Uri>> {
     val context = LocalContext.current
-    val contentResolver = context.contentResolver
     val tooManyAttachmentsString =
         stringResource(id = R.string.attachment_files_limit, ATTACHMENTS_MAX_COUNT)
     val fileTooLargeString =
-        stringResource(id = R.string.files_too_large, maxSizeBytes / (1024.0 * 1024.0))
+        stringResource(id = R.string.files_too_large, maxSizeBytes.toMegabytes())
     val coroutineScope = rememberCoroutineScope()
     return rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         coroutineScope.launch {
-            var fileTooLarge = false
-            val filteredUris = uris.filter { uri ->
-                try {
-                    contentResolver.takePersistableUriPermission(
-                        uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                    if (context.sizeOf(uri) > maxSizeBytes) {
-                        fileTooLarge = true
-                        false
-                    } else {
-                        true
-                    }
-                } catch (_: SecurityException) {
-                    false
+            val uriFilterResult = context.filterSharedUris(
+                uris = uris,
+                maxCount = maxCount,
+                maxSizeBytes = maxSizeBytes
+            )
+            if (uriFilterResult.tooLargeCount > 0) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, fileTooLargeString, Toast.LENGTH_LONG).show()
                 }
             }
-            if (fileTooLarge) {
-                Toast.makeText(context, fileTooLargeString, Toast.LENGTH_LONG).show()
+            if (uriFilterResult.excessCount > 0) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, tooManyAttachmentsString, Toast.LENGTH_LONG).show()
+                }
             }
-            if (filteredUris.size > maxCount) {
-                Toast.makeText(context, tooManyAttachmentsString, Toast.LENGTH_LONG).show()
-            }
-            onFilesSelected(filteredUris.map { it.toString() })
+            onFilesSelected(uriFilterResult.acceptedUris.map { it.toString() })
         }
     }
 }
@@ -314,6 +308,13 @@ fun FilesSelector(
     sheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { }
 ) {
+    val context = LocalContext.current
+    val uriBatcher = UriBatcher(context)
+    val coroutineScope = rememberCoroutineScope()
+    val totalPostSizeExceededString = stringResource(
+        id = R.string.total_post_size_exceeded,
+        ATTACHMENT_MAX_SIZE.toMegabytes()
+    )
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
@@ -326,7 +327,17 @@ fun FilesSelector(
         )
         FilesPickerButton(
             onFilesSelected = { fileUris ->
-                onSheetStateChanged(sheetState.copy(fileUris = fileUris))
+                coroutineScope.launch {
+                    val batches = uriBatcher.split(fileUris)
+                    if (batches.size > 1) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, totalPostSizeExceededString, Toast.LENGTH_LONG)
+                                .show()
+                        }
+                    } else {
+                        onSheetStateChanged(sheetState.copy(fileUris = fileUris))
+                    }
+                }
             }
         )
     }
