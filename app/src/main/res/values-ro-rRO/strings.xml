@@ -73,7 +73,7 @@
     <string name="message_selection">Statusul de selectarea al mesajului</string>
     <string name="message_delivery_status">Statusul de expediere al mesajului</string>
     <string name="please_wait">Vă rugăm așteptați</string>
-    <string name="app_name_and_version">Aenigma\nVersiunea: %s</string>
+    <string name="app_name_and_version">Aenigma - Comunicare Privată\nVersiunea: %s</string>
     <string name="copyright_notices">© 2025–2026 Romulus-Emanuel Ruja &lt;romulus.ruja@aenigma.ro&gt;. Toate drepturile rezervate.</string>
     <string name="gpl_license_info">Această aplicație este distribuită sub GNU General Public License, versiunea 3 (GPLv3). Aveți dreptul să redistribuiți și/sau  modificați această aplicație sub termenii GNU General Public License Version 3.</string>
     <string name="source_code_available_at">Codul sursă al aplicației este disponibil la:</string>
@@ -137,7 +137,7 @@
     <string name="files_received">Cineva ți-a trimis niște fișiere</string>
     <string name="new_message">Mesaj nou</string>
     <string name="restart_app_to_retry">Reporniți aplicația pentru a reîncerca</string>
-    <string name="backed_by_openssl">OpenSSL 3.0, licențiată sub:</string>
+    <string name="backed_by_openssl">Criptografie bazată pe %s, licențiată sub:</string>
     <string name="privacy_policy">Politica de confidențialitate</string>
     <string name="tor_starting">Se inițializează TOR</string>
     <string name="connected_through_tor">Conectat prin rețeaua Onion Router</string>

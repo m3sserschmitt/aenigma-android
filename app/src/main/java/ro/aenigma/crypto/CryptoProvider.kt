@@ -75,6 +75,17 @@ object CryptoProvider {
 
     private external fun getPKeySize(publicKey: ByteArray): Int
 
+    private external fun getOpenSslVersion(): ByteArray
+
+    @JvmStatic
+    fun getOpenSslFullVersion(): String? {
+        return try {
+            String(getOpenSslVersion())
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     @JvmStatic
     fun getPublicKeySize(publicKey: String): Int {
         return if (publicKey.isValidPublicKey()) {

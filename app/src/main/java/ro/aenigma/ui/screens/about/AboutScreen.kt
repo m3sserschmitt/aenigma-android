@@ -57,6 +57,7 @@ import ro.aenigma.R
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.StandardAppBar
 import androidx.core.net.toUri
+import ro.aenigma.crypto.CryptoProvider
 
 @Composable
 fun AboutScreen(
@@ -163,8 +164,10 @@ fun AboutScreen(
                 action = navigateToLicensesScreen,
             )
 
+            val opensslString = stringResource(id = R.string.openssl)
+            val opensslVersion = remember { CryptoProvider.getOpenSslFullVersion() ?: opensslString}
             Text(
-                text = stringResource(R.string.backed_by_openssl),
+                text = stringResource(R.string.backed_by_openssl, opensslVersion),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )

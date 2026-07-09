@@ -67,7 +67,7 @@ android {
     }
 
     namespace = 'ro.aenigma'
-    ndkVersion = "29.0.14206865"
+    ndkVersion = '30.0.15729638'
 }
 
 dependencies {

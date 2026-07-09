@@ -89,7 +89,8 @@ static void freeArray(T* array, int len) {
     delete[] array;
 }
 
-static jbyteArray toJByteArray(JNIEnv *env, const unsigned char *data, unsigned int size) {
+template<typename T>
+static jbyteArray toJByteArray(JNIEnv *env, T *data, unsigned int size) {
     if (data == nullptr || size == 0) {
         return nullptr;
     }
@@ -395,4 +396,13 @@ Java_ro_aenigma_crypto_CryptoProvider_decryptSymmetric(
     delete ctx;
 
     return out;
+}
+
+extern "C"
+JNIEXPORT jbyteArray JNICALL
+Java_ro_aenigma_crypto_CryptoProvider_getOpenSslVersion(
+        JNIEnv *env,
+        jobject thiz) {
+    auto version = GetOpenSslVersion();
+    return toJByteArray(env, version, strlen(version));
 }
