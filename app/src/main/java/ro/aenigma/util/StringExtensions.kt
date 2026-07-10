@@ -126,6 +126,22 @@ object StringExtensions {
         return this?.toUri()?.isRemote() == true
     }
 
+    fun String?.isRemoteImageUri(): Boolean {
+        val imageExtensions =
+            setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "tiff", "avif")
+
+        val path = try {
+            java.net.URI(this).path ?: this
+        } catch (_: Exception) {
+            this
+        } ?: return false
+
+        val lastSegment = path.substringAfterLast('/')
+        val extension = lastSegment.substringAfterLast('.', "").lowercase()
+
+        return extension.isNotEmpty() && extension in imageExtensions
+    }
+
     @JvmStatic
     inline fun <reified T> String?.fromJson(): T? {
         return try {

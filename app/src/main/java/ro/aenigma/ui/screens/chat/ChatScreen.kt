@@ -143,38 +143,39 @@ fun ChatScreen(
 
 @Composable
 fun ChatScreen(
-    contact: RequestState<ContactWithGroupDto>,
-    okHttpClientProvider: IOkHttpClientProvider,
-    isMember: Boolean,
-    isAdmin: Boolean,
-    contacts: RequestState<List<ContactDto>>,
-    connectionStatus: ClientStatus,
+    contact: RequestState<ContactWithGroupDto> = RequestState.Idle,
+    okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
+    isMember: Boolean = false,
+    isAdmin: Boolean = false,
+    moreOptionsMenuExpanded: Boolean = false,
+    contacts: RequestState<List<ContactDto>> = RequestState.Idle,
+    connectionStatus: ClientStatus = ClientStatus.Authenticated,
     isClientWorkerRunning: Boolean = false,
-    messages: RequestState<List<MessageWithDetailsDto>>,
-    replyToMessage: RequestState<MessageWithDetailsDto>,
-    nextConversationPageAvailable: Boolean,
-    messageInputText: String,
-    attachments: List<String>,
-    onContactSearchQueryChanged: (String) -> Unit,
-    onRetryConnection: () -> Unit,
-    onInputTextChanged: (String) -> Unit,
-    onAttachmentsSelected: (List<String>) -> Unit,
-    onNewContactNameChanged: (String) -> Boolean,
-    onRenameContactConfirmed: (String) -> Unit,
-    onRenameContactDismissed: () -> Unit,
-    onSendClicked: () -> Unit,
-    onDeleteAll: () -> Unit,
-    onDelete: (List<MessageWithDetailsDto>) -> Unit,
-    onReplyToMessage: (MessageWithDetailsDto?) -> Unit,
-    onSearch: (String) -> Unit,
+    messages: RequestState<List<MessageWithDetailsDto>> = RequestState.Success(listOf()),
+    replyToMessage: RequestState<MessageWithDetailsDto> = RequestState.Idle,
+    nextConversationPageAvailable: Boolean = false,
+    messageInputText: String = "",
+    attachments: List<String> = listOf(),
+    onContactSearchQueryChanged: (String) -> Unit = { },
+    onRetryConnection: () -> Unit = { },
+    onInputTextChanged: (String) -> Unit = { },
+    onAttachmentsSelected: (List<String>) -> Unit = { },
+    onNewContactNameChanged: (String) -> Boolean = { true },
+    onRenameContactConfirmed: (String) -> Unit  = { },
+    onRenameContactDismissed: () -> Unit = { },
+    onSendClicked: () -> Unit = { },
+    onDeleteAll: () -> Unit = { },
+    onDelete: (List<MessageWithDetailsDto>) -> Unit = { },
+    onReplyToMessage: (MessageWithDetailsDto?) -> Unit = { },
+    onSearch: (String) -> Unit = { },
     onAddGroupMembers: (List<ContactDto>, MessageType) -> Unit = { _, _ -> },
-    onLeaveGroup: () -> Unit,
-    onMessageClicked: (MessageWithDetailsDto) -> Unit,
+    onLeaveGroup: () -> Unit = { },
+    onMessageClicked: (MessageWithDetailsDto) -> Unit = { },
     onArticleClicked: (ArticleDto) -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { },
-    loadNextPage: () -> Unit,
-    navigateBack: () -> Unit,
-    navigateToAddContactsScreen: (String) -> Unit
+    loadNextPage: () -> Unit = { },
+    navigateBack: () -> Unit = { },
+    navigateToAddContactsScreen: (String) -> Unit = { }
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
@@ -303,6 +304,7 @@ fun ChatScreen(
                 contact = contact,
                 isMember = isMember,
                 isAdmin = isAdmin,
+                moreOptionsMenuExpanded = moreOptionsMenuExpanded,
                 connectionStatus = connectionStatus,
                 isClientWorkerRunning = isClientWorkerRunning,
                 isSelectionMode = isSelectionMode,
@@ -418,106 +420,93 @@ fun MarkConversationAsRead(
     }
 }
 
+private val messagesPreview = RequestState.Success(
+    listOf(
+        MessageWithDetailsDto(
+            MessageDto(
+                chatId = "123",
+                text = "Awesome!",
+                type = MessageType.TEXT,
+                actionFor = null,
+                id = 3,
+                senderAddress = null,
+                serverUUID = null,
+                refId = null,
+                incoming = false,
+                sent = true,
+                deleted = false,
+                date = ZonedDateTime.now(),
+                dateReceivedOnServer = ZonedDateTime.now(),
+                files = listOf()
+            ), null, null
+        ),
+        MessageWithDetailsDto(
+            MessageDto(
+                chatId = "123",
+                text = "See you tomorrow at 3 p.m",
+                type = MessageType.TEXT,
+                actionFor = null,
+                id = 2,
+                senderAddress = "123",
+                serverUUID = null,
+                refId = null,
+                incoming = true,
+                sent = true,
+                deleted = false,
+                date = ZonedDateTime.now(),
+                dateReceivedOnServer = ZonedDateTime.now(),
+                files = listOf()
+            ), null, null
+        ),
+        MessageWithDetailsDto(
+            MessageDto(
+                chatId = "123",
+                senderAddress = "123",
+                text = "Hey",
+                serverUUID = null,
+                type = MessageType.TEXT,
+                refId = null,
+                actionFor = null,
+                dateReceivedOnServer = ZonedDateTime.now(),
+                id = 1,
+                incoming = true,
+                sent = true,
+                deleted = false,
+                date = ZonedDateTime.now(),
+                files = listOf()
+            ), null, null
+        )
+    )
+)
+
+private val contactPreview = RequestState.Success(
+    ContactWithGroupDto(
+        ContactDtoFactory.createContact(
+            address = "123",
+            name = "John",
+            publicKey = null,
+            guardHostname = null,
+            guardAddress = null,
+        ), null
+    )
+)
+
 @Preview
 @Composable
 fun ChatScreenPreview() {
-    val message3 = MessageWithDetailsDto(
-        MessageDto(
-            chatId = "123",
-            senderAddress = "123",
-            text = "Hey",
-            serverUUID = null,
-            type = MessageType.TEXT,
-            refId = null,
-            actionFor = null,
-            dateReceivedOnServer = ZonedDateTime.now(),
-            id = 1,
-            incoming = true,
-            sent = true,
-            deleted = false,
-            date = ZonedDateTime.now(),
-            files = listOf()
-        ), null, null
-    )
-    val message2 = MessageWithDetailsDto(
-        MessageDto(
-            chatId = "123",
-            text = "See you tomorrow at 3 p.m",
-            type = MessageType.TEXT,
-            actionFor = null,
-            id = 2,
-            senderAddress = "123",
-            serverUUID = null,
-            refId = null,
-            incoming = true,
-            sent = true,
-            deleted = false,
-            date = ZonedDateTime.now(),
-            dateReceivedOnServer = ZonedDateTime.now(),
-            files = listOf()
-        ), null, null
-    )
-
-    val message1 = MessageWithDetailsDto(
-        MessageDto(
-            chatId = "123",
-            text = "Awesome!",
-            type = MessageType.TEXT,
-            actionFor = null,
-            id = 3,
-            senderAddress = null,
-            serverUUID = null,
-            refId = null,
-            incoming = false,
-            sent = true,
-            deleted = false,
-            date = ZonedDateTime.now(),
-            dateReceivedOnServer = ZonedDateTime.now(),
-            files = listOf()
-        ), null, null
-    )
-
     ChatScreen(
-        contact = RequestState.Success(
-            ContactWithGroupDto(
-                ContactDtoFactory.createContact(
-                    address = "123",
-                    name = "John",
-                    publicKey = null,
-                    guardHostname = null,
-                    guardAddress = null,
-                ), null
-            )
-        ),
-        okHttpClientProvider = OkHttpClientProviderDefault(),
-        isMember = true,
-        isAdmin = false,
-        contacts = RequestState.Success(listOf()),
-        connectionStatus = ClientStatus.Authenticated,
-        replyToMessage = RequestState.Idle,
-        messages = RequestState.Success(
-            listOf(message1, message2, message3)
-        ),
-        nextConversationPageAvailable = true,
-        onRetryConnection = {},
-        messageInputText = "",
-        attachments = listOf(),
-        onContactSearchQueryChanged = { },
-        onAttachmentsSelected = { },
-        onSendClicked = {},
-        onRenameContactConfirmed = {},
-        onInputTextChanged = {},
-        onNewContactNameChanged = { true },
-        onDeleteAll = {},
-        onDelete = {},
-        onReplyToMessage = {},
-        onSearch = {},
-        onLeaveGroup = { },
-        onRenameContactDismissed = {},
-        loadNextPage = { },
-        onMessageClicked = {},
-        navigateBack = {},
-        navigateToAddContactsScreen = {}
+        contact = contactPreview,
+        messages = messagesPreview
+    )
+}
+
+@Preview
+@Composable
+fun ChatScreenMoreOptionsMenuExpandedPreview() {
+    ChatScreen(
+        contact = contactPreview,
+        messages = messagesPreview,
+        moreOptionsMenuExpanded = true
     )
 }
 
@@ -526,5 +515,13 @@ fun ChatScreenPreview() {
 fun ChatScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         ChatScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ChatScreenMoreOptionsMenuExpandedDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ChatScreenMoreOptionsMenuExpandedPreview()
     }
 }

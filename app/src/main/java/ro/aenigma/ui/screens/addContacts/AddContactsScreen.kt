@@ -117,23 +117,23 @@ fun AddContactsScreen(
 
 @Composable
 fun AddContactsScreen(
-    scannerState: QrCodeScannerState,
-    qrCode: RequestState<QrCodeDto>,
-    sharedDataCreate: RequestState<CreatedSharedDataDto>,
-    importedContactDetails: RequestState<ExportedContactDataDto>,
+    scannerState: QrCodeScannerState = QrCodeScannerState.SHARE_CODE,
+    qrCode: RequestState<QrCodeDto> = RequestState.Idle,
+    sharedDataCreate: RequestState<CreatedSharedDataDto> = RequestState.Idle,
+    importedContactDetails: RequestState<ExportedContactDataDto> = RequestState.Idle,
     isContactImport: Boolean = false,
-    floatingButtonVisible: Boolean,
-    onScannerStateChanged: (QrCodeScannerState) -> Unit,
-    onQrCodeFound: (ExportedContactDataDto) -> Unit,
-    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
-    onSaveContact: (String) -> Unit,
-    onSaveContactDismissed: () -> Unit,
-    onNewContactNameChanged: (String) -> Boolean,
-    onCreateLinkClicked: () -> Unit,
-    onGetLink: (String) -> Unit,
-    onSharedDataConfirm: () -> Unit,
+    floatingButtonVisible: Boolean = true,
+    onScannerStateChanged: (QrCodeScannerState) -> Unit = { },
+    onQrCodeFound: (ExportedContactDataDto) -> Unit = { },
+    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit = { },
+    onSaveContact: (String) -> Unit = { },
+    onSaveContactDismissed: () -> Unit = { },
+    onNewContactNameChanged: (String) -> Boolean  = { true },
+    onCreateLinkClicked: () -> Unit = { },
+    onGetLink: (String) -> Unit = { },
+    onSharedDataConfirm: () -> Unit = { },
     onForwardUri: (String) -> Unit = { },
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit = { }
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -216,28 +216,14 @@ fun QrScannerFab(
 @Composable
 fun AddContactsScreenPreview() {
     AddContactsScreen(
-        scannerState = QrCodeScannerState.SHARE_CODE,
         qrCode = RequestState.Success(
             QrCodeDto(
                 QrCodeGenerator(
                     400,
                     400
-                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
+                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", false
             )
-        ),
-        sharedDataCreate = RequestState.Idle,
-        importedContactDetails = RequestState.Idle,
-        floatingButtonVisible = true,
-        onNewContactNameChanged = { true },
-        onQrCodeFound = { },
-        onServerInfoQrCodeFound = { },
-        onSaveContact = { },
-        onScannerStateChanged = { },
-        onSaveContactDismissed = { },
-        navigateBack = { },
-        onCreateLinkClicked = { },
-        onGetLink = { },
-        onSharedDataConfirm = { }
+        )
     )
 }
 

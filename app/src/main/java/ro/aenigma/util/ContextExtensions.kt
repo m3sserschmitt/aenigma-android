@@ -89,6 +89,7 @@ import ro.aenigma.util.StringExtensions.isApkMime
 import ro.aenigma.util.StringExtensions.isArchiveMime
 import ro.aenigma.util.StringExtensions.isAudioMime
 import ro.aenigma.util.StringExtensions.isImageMime
+import ro.aenigma.util.StringExtensions.isRemoteImageUri
 import ro.aenigma.util.StringExtensions.isJsonMime
 import ro.aenigma.util.StringExtensions.isMarkdownMime
 import ro.aenigma.util.StringExtensions.isPdfMime
@@ -171,10 +172,17 @@ object ContextExtensions {
 
     suspend fun Context.getFileTypeIcon(uri: String): FileDisplayInfoDto {
         if (uri.isRemoteUri()) {
-            return FileDisplayInfoDto(
-                painterResourceId = R.drawable.ic_link,
-                isImage = false
-            )
+            return if(uri.isRemoteImageUri()) {
+                FileDisplayInfoDto(
+                    painterResourceId = R.drawable.ic_photo,
+                    isImage = true
+                )
+            } else {
+                FileDisplayInfoDto(
+                    painterResourceId = R.drawable.ic_link,
+                    isImage = false
+                )
+            }
         }
         val mime = getFileType(uri)
         return when {

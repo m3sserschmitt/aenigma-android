@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.NewPostSheetStateDto
+import ro.aenigma.models.enums.NewPostSheetSection
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isFullyExpanded
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toExpanded
@@ -53,6 +55,7 @@ import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.ReloadAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
+import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.RequestState
@@ -87,18 +90,19 @@ fun FeedScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedScreen(
-    articles: RequestState<List<ArticleDto>>,
+    articles: RequestState<List<ArticleDto>> = RequestState.Success(listOf()),
     newPostSheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
-    okHttpClientProvider: IOkHttpClientProvider,
+    okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     feedListState: LazyListState = rememberLazyListState(),
-    onArticleClicked: (ArticleDto) -> Unit,
+    onArticleClicked: (ArticleDto) -> Unit = { },
     onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
     onReloadFeedClicked: () -> Unit = { },
     onPostClicked: () -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val bottomSheetState = rememberStandardBottomSheetState(
-        initialValue = newPostSheetState.sheetState
+        initialValue = newPostSheetState.sheetState,
+        skipHiddenState = false
     )
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
 
@@ -205,23 +209,87 @@ fun FeedScreenContent(
     }
 }
 
+private val articlesPreview = RequestState.Success(
+    listOf(
+        ArticleDto(
+            messageId = 1,
+            title = "Nothing More",
+            author = "Michaela",
+            description = "The message arrived just after midnight — three words, nothing more. " +
+                    "She read them twice before setting the phone down. Some conversations don't" +
+                    " need length to matter. Outside, the city kept its usual rhythm, unaware that " +
+                    "somewhere in the dark, a single reply had already changed everything.",
+            url = null,
+            date = "2026-07-10T17:23:00Z",
+            imageUrls = listOf("https://my.blog.com")
+        ),
+        ArticleDto(
+            messageId = 2,
+            title = "The Office Coffee Machine Knows",
+            author = "Rania",
+            description = "Okay but why does the coffee machine at work have more personality than" +
+                    " half my coworkers. It hisses when it's annoyed. It takes forever when you're " +
+                    "late. And somehow it still makes a better cup than the fancy one I bought for " +
+                    "home. Some things just aren't meant to be replaced.",
+            url = null,
+            date = "2026-07-04T20:34:01Z",
+            imageUrls = listOf("https://articles.aenigma.ro/seed-images/coffe-machine.jpg")
+        ),
+        ArticleDto(
+            messageId = 3,
+            title = "Cereal Counts as Cooking",
+            author = "John",
+            description = "So I tried to cook dinner without a recipe tonight. Bold move, I know. " +
+                    "Twenty minutes in, the kitchen smelled amazing and I felt like a genius. " +
+                    "Ten minutes after that, smoke alarm. Ten minutes after THAT, cereal for dinner. " +
+                    "Still counts as cooking, right?",
+            url = null,
+            date = "2026-06-26T00:00:00Z",
+            imageUrls = listOf("https://articles.aenigma.ro/seed-images/cereals.jpg")
+        ),
+    )
+)
+
 @Preview
 @Composable
 fun FeedScreenPreview() {
-    val articles = List(1) {
-        ArticleDto(
-            messageId = 1,
-            title = "Article $it",
-            description = "A short description for item $it",
-            url = "https://picsum.photos/seed/$it/300/300",
-            date = "Aug 25th 2025",
-            imageUrls = null
-        )
-    }
     FeedScreen(
-        articles = RequestState.Success(articles),
-        okHttpClientProvider = OkHttpClientProviderDefault(),
-        onArticleClicked = {},
-        onReloadFeedClicked = {}
+        articles = articlesPreview
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun FeedScreenStoryBottomSheetPreview() {
+    FeedScreen(
+        articles = articlesPreview,
+        newPostSheetState = NewPostSheetStateDto(
+            SheetValue.Expanded,
+            selectedSection = NewPostSheetSection.EDIT,
+            title = "The To-Do List That Never Opened",
+            fileUris = listOf(),
+            description = "",
+            content = "Tried to be productive today. Made a to-do list, color-coded it, even added " +
+                    "little checkboxes. Then spent forty-five minutes deciding which pen to use. " +
+                    "Never actually opened the list again. But hey, it looked great sitting on my " +
+                    "desk. Productivity is a mindset, right? Right."
+        )
+    )
+}
+
+@Preview
+@Composable
+fun FeedScreenDarkPreview() {
+    ApplicationComposeDarkTheme {
+        FeedScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun FeedScreenStoryBottomSheetDarkPreview() {
+    ApplicationComposeDarkTheme {
+        FeedScreenStoryBottomSheetPreview()
+    }
 }

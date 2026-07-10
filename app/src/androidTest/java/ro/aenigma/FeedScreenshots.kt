@@ -22,31 +22,38 @@
 
 package ro.aenigma
 
+import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Test
-import ro.aenigma.ui.screens.chat.ChatScreenDarkPreview
-import ro.aenigma.ui.screens.chat.ChatScreenMoreOptionsMenuExpandedDarkPreview
-import ro.aenigma.ui.screens.chat.ChatScreenMoreOptionsMenuExpandedPreview
-import ro.aenigma.ui.screens.chat.ChatScreenPreview
+import org.junit.runner.RunWith
+import ro.aenigma.ui.screens.feed.FeedScreenDarkPreview
+import ro.aenigma.ui.screens.feed.FeedScreenPreview
+import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetDarkPreview
+import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetPreview
 
-class ChatScreenshots: ScreenshotBase() {
+@RunWith(AndroidJUnit4::class)
+class FeedScreenshots: ScreenshotBase() {
 
-    @Test
-    fun captureChatScreen() {
-        return captureScreenshot("ChatScreen") { ChatScreenPreview() }
+    override fun waitForIdle() {
+        Thread.sleep(5000)
     }
 
     @Test
-    fun captureChatScreenMoreOptionsMenuExpanded() {
-        return captureScreenshot("ChatScreenMoreOptionsMenuExpanded") { ChatScreenMoreOptionsMenuExpandedPreview() }
+    fun captureFeedScreen() {
+        return captureScreenshot("FeedScreen") { FeedScreenPreview() }
     }
 
     @Test
-    fun captureChatScreenDark() {
-        return captureScreenshot("ChatScreenDark") { ChatScreenDarkPreview() }
+    fun captureFeedScreenStoryBottomSheet() {
+        return captureScreenshot("FeedScreenStoryBottomSheet") { FeedScreenStoryBottomSheetPreview() }
     }
 
     @Test
-    fun captureChatScreenMoreOptionsMenuExpandedDark() {
-        return captureScreenshot("ChatScreenMoreOptionsMenuExpandedDark") { ChatScreenMoreOptionsMenuExpandedDarkPreview() }
+    fun captureFeedScreenDark() {
+        return captureScreenshot("FeedScreenDark") { FeedScreenDarkPreview() }
+    }
+
+    @Test
+    fun captureFeedScreenStoryBottomSheetDark() {
+        return captureScreenshot("FeedScreenStoryBottomSheetDark") { FeedScreenStoryBottomSheetDarkPreview() }
     }
 }

@@ -66,6 +66,7 @@ fun ContactsAppBar(
     selectedItemsCount: Int,
     useTor: Boolean,
     useOrbot: Boolean,
+    moreOptionsMenuExpanded: Boolean = false,
     notificationServicePreference: Boolean = false,
     torCircuitState: TorCircuitState,
     isForwardMode: Boolean = false,
@@ -169,6 +170,7 @@ fun ContactsAppBar(
                         onResetUsernameClicked = onResetUsernameClicked,
                         useTor = useTor,
                         useOrbot = useOrbot,
+                        expanded = moreOptionsMenuExpanded,
                         notificationServicePreference = notificationServicePreference,
                         torCircuitState = torCircuitState,
                         onTorPreferenceChanged = onTorPreferenceChanged,
@@ -198,6 +200,7 @@ fun ContactsAppBar(
 fun MoreActions(
     useTor: Boolean,
     useOrbot: Boolean,
+    expanded: Boolean = false,
     notificationServicePreference: Boolean,
     torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit,
@@ -206,10 +209,10 @@ fun MoreActions(
     onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var isExpanded by remember(key1 = expanded) { mutableStateOf(expanded) }
     BasicDropdownMenu(
-        expanded = expanded,
-        onToggle = { isExpended -> expanded = isExpended }
+        expanded = isExpanded,
+        onToggle = { value -> isExpanded = value }
     ) {
         TorSwitch(
             useTor = useTor,
@@ -231,7 +234,7 @@ fun MoreActions(
             text = stringResource(id = R.string.reset_username),
             onClick = {
                 onResetUsernameClicked()
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -240,7 +243,7 @@ fun MoreActions(
             text = stringResource(id = R.string.about_app),
             onClick = {
                 navigateToAboutScreen()
-                expanded = false
+                isExpanded = false
             }
         )
     }

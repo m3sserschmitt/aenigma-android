@@ -66,6 +66,7 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.models.factories.ServersSheetStateDtoFactory
 import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.InstallOrbotDialog
@@ -165,39 +166,40 @@ fun ContactsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
-    connectionStatus: ClientStatus,
+    connectionStatus: ClientStatus = ClientStatus.Authenticated,
     isClientWorkerRunning: Boolean = false,
-    contacts: RequestState<List<ContactWithLastMessageDto>>,
-    servers: RequestState<List<ServerInfoDto>>,
-    serversHistory: RequestState<List<ServerInfoDto>>,
-    serversSheetState: ServersSheetStateDto,
-    useTor: Boolean,
-    useOrbot: Boolean,
+    contacts: RequestState<List<ContactWithLastMessageDto>> = RequestState.Success(listOf()),
+    servers: RequestState<List<ServerInfoDto>> = RequestState.Success(listOf()),
+    serversHistory: RequestState<List<ServerInfoDto>> = RequestState.Idle,
+    serversSheetState: ServersSheetStateDto = ServersSheetStateDtoFactory.create(),
+    useTor: Boolean = false,
+    useOrbot: Boolean = false,
+    moreOptionsMenuExpanded: Boolean = false,
     notificationServicePreference: Boolean = false,
-    torCircuitState: TorCircuitState,
+    torCircuitState: TorCircuitState = TorCircuitState.UNDEFINED,
     isForwardMode: Boolean = false,
-    onTorPreferenceChanged: (Boolean) -> Unit,
-    onOrbotPreferenceChanged: (Boolean) -> Unit,
+    onTorPreferenceChanged: (Boolean) -> Unit = { },
+    onOrbotPreferenceChanged: (Boolean) -> Unit = { },
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
-    onRetryConnection: () -> Unit,
-    onSearch: (String) -> Unit,
-    onServersSearch: (String) -> Unit,
-    onServerConnectClicked: (String) -> Unit,
-    onServerClicked: (ServerInfoDto) -> Unit,
-    onScanServerCodeClicked: () -> Unit,
+    onRetryConnection: () -> Unit = { },
+    onSearch: (String) -> Unit = { },
+    onServersSearch: (String) -> Unit = { },
+    onServerConnectClicked: (String) -> Unit = { },
+    onServerClicked: (ServerInfoDto) -> Unit = { },
+    onScanServerCodeClicked: () -> Unit = { },
     onConnectPeopleClicked: () -> Unit = { },
-    onServersSheetStateChanged: (ServersSheetStateDto) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
-    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
-    onNewContactNameChanged: (String) -> Boolean,
-    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
-    onContactSaveDismissed: () -> Unit,
-    onResetUserNameClicked: () -> Unit,
+    onServersSheetStateChanged: (ServersSheetStateDto) -> Unit = { },
+    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit = { },
+    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit = { _, _ -> },
+    onNewContactNameChanged: (String) -> Boolean = { true },
+    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit  = { _, _ -> },
+    onContactSaveDismissed: () -> Unit = { },
+    onResetUserNameClicked: () -> Unit = { },
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: (List<String>) -> Unit = { },
-    navigateToAddContactScreen: (String?) -> Unit,
-    navigateToAboutScreen: () -> Unit,
-    navigateToChatScreen: (String) -> Unit
+    navigateToAddContactScreen: (String?) -> Unit = { },
+    navigateToAboutScreen: () -> Unit = { },
+    navigateToChatScreen: (String) -> Unit = { }
 ) {
     var createGroupDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
@@ -210,7 +212,10 @@ fun ContactsScreen(
     var serversSearchQuery by remember { mutableStateOf("") }
     val selectedItems = remember { mutableStateMapOf<String, ContactWithLastMessageDto>() }
     val snackBarHostState = remember { SnackbarHostState() }
-    val bottomSheetState = rememberStandardBottomSheetState(initialValue = serversSheetState.sheetState)
+    val bottomSheetState = rememberStandardBottomSheetState(
+        initialValue = serversSheetState.sheetState,
+        skipHiddenState = false
+    )
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val cannotShareChannelsString = stringResource(id = R.string.cannot_share_channels)
     val couldNotSelectChannelString = stringResource(id = R.string.cannot_select_channels_to_create_channel)
@@ -412,6 +417,7 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 useTor = useTor,
                 useOrbot = useOrbot,
+                moreOptionsMenuExpanded = moreOptionsMenuExpanded,
                 notificationServicePreference = notificationServicePreference,
                 torCircuitState = torCircuitState,
                 isForwardMode = isForwardMode,
@@ -552,75 +558,98 @@ fun ContactsFab(
     }
 }
 
+private val contactsPreview = RequestState.Success(
+    listOf(
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "123",
+                name = "John",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), MessageDtoFactory.createOutgoing(
+                chatId = "123",
+                text = "Awesome!",
+                type = MessageType.TEXT,
+                actionFor = null,
+            )
+        ),
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "124",
+                name = "Elizabeth",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), MessageDtoFactory.createIncoming(
+                chatId = "124",
+                text = "Can't wait to see you tomorrow!",
+                type = MessageType.TEXT,
+                senderAddress = "124",
+                serverUUID = null,
+                actionFor = null,
+                refId = null,
+                dateReceivedOnServer = ZonedDateTime.now()
+            )
+        ),
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "125",
+                name = "Broadcast",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), null
+        )
+    )
+)
+
+private val serversPreview = RequestState.Success(
+    listOf(
+        ServerInfoDto(
+            address = "123",
+            graphVersion = "123",
+            onionService = "http://bdhpslhrwcj3teiq24esu7r4qyuuvfk3un75b3ro4k3cb2bllyhnrjqd.onion",
+            hostname = "https://aenigma.ro"
+        ),
+        ServerInfoDto(
+            address = "124",
+            graphVersion = "124",
+            onionService = "http://wsgdrsbqpjqwxxktn6zkywo6arhdcmuqadfvfubdmhzggdg6uaejcpid.onion"
+        )
+    )
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun ContactsScreenPreview() {
     ContactsScreen(
-        connectionStatus = ClientStatus.Connected,
-        useTor = true,
-        useOrbot = false,
-        torCircuitState = TorCircuitState.OK,
-        onTorPreferenceChanged = { _ -> },
-        onOrbotPreferenceChanged = { },
-        onRetryConnection = {},
-        onContactRenamed = { _, _ -> },
-        onNewContactNameChanged = { true },
-        onDeleteSelectedItems = {},
-        onSearch = {},
-        onServersSearch = {},
-        onServerClicked = {},
-        onServerConnectClicked = {},
-        onScanServerCodeClicked = {},
-        onServersSheetStateChanged = { },
-        onGroupCreated = { _, _ -> },
-        contacts = RequestState.Success(
-            listOf(
-                ContactWithLastMessageDto(
-                    ContactDtoFactory.createContact(
-                        address = "123",
-                        name = "John",
-                        publicKey = null,
-                        guardHostname = null,
-                        guardAddress = null,
-                    ), MessageDtoFactory.createOutgoing(
-                        chatId = "123",
-                        text = "Awesome!",
-                        type = MessageType.TEXT,
-                        actionFor = null,
-                    )
-                ),
-                ContactWithLastMessageDto(
-                    ContactDtoFactory.createContact(
-                        address = "124",
-                        name = "Elizabeth",
-                        publicKey = null,
-                        guardHostname = null,
-                        guardAddress = null,
-                    ), MessageDtoFactory.createIncoming(
-                        chatId = "124",
-                        text = "Can't wait to see you tomorrow!",
-                        type = MessageType.TEXT,
-                        senderAddress = "124",
-                        serverUUID = null,
-                        actionFor = null,
-                        refId = null,
-                        dateReceivedOnServer = ZonedDateTime.now()
-                    )
-                )
-            )
-        ),
-        servers = RequestState.Idle,
-        serversHistory = RequestState.Idle,
+        contacts = contactsPreview
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun ContactsScreenMoreOptionsExpandedPreview() {
+    ContactsScreen(
+        contacts = contactsPreview,
+        moreOptionsMenuExpanded = true
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun ContactsScreenServersBottomSheetPreview() {
+    ContactsScreen(
+         contacts = contactsPreview,
         serversSheetState = ServersSheetStateDto(
-            sheetState = SheetValue.Hidden,
+            sheetState = SheetValue.Expanded,
             selectedSection = ServersSheetSection.SERVERS
         ),
-        onResetUserNameClicked = {},
-        navigateToChatScreen = {},
-        navigateToAddContactScreen = {},
-        onContactSaveDismissed = {},
-        navigateToAboutScreen = { },
+        servers = serversPreview
     )
 }
 
@@ -629,5 +658,21 @@ fun ContactsScreenPreview() {
 fun ContactsScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         ContactsScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenMoreOptionsExpandedDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenMoreOptionsExpandedPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenServersBottomSheetDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenServersBottomSheetPreview()
     }
 }

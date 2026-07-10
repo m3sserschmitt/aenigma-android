@@ -61,6 +61,7 @@ fun ChatAppBar(
     contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
+    moreOptionsMenuExpanded: Boolean = false,
     connectionStatus: ClientStatus,
     isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
@@ -134,6 +135,7 @@ fun ChatAppBar(
                         isGroup = contact.data.contact.type == ContactType.GROUP,
                         isMember = isMember,
                         isAdmin = isAdmin,
+                        expanded = moreOptionsMenuExpanded,
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
@@ -153,18 +155,17 @@ fun MoreActions(
     isGroup: Boolean,
     isMember: Boolean,
     isAdmin: Boolean,
+    expanded: Boolean = false,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit,
     onGroupActionClicked: (MessageType) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var isExpanded by remember(key1 = expanded) { mutableStateOf(expanded) }
 
     BasicDropdownMenu(
-        expanded = expanded,
-        onToggle = {
-            isExpanded -> expanded = isExpanded
-        }
+        expanded = isExpanded,
+        onToggle = { value -> isExpanded = value }
     ) {
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Edit,
@@ -173,7 +174,7 @@ fun MoreActions(
             visible = (isGroup && isMember && isAdmin) || !isGroup,
             onClick = {
                 onRenameContactClicked()
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -183,7 +184,7 @@ fun MoreActions(
             visible = !isGroup,
             onClick = {
                 onShareContactClicked()
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -193,7 +194,7 @@ fun MoreActions(
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -203,7 +204,7 @@ fun MoreActions(
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -213,7 +214,7 @@ fun MoreActions(
             visible = isGroup && isMember && !isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_LEAVE)
-                expanded = false
+                isExpanded = false
             }
         )
         if(messages is RequestState.Success)
@@ -225,7 +226,7 @@ fun MoreActions(
                 text = stringResource(id = R.string.clear_conversation),
                 onClick = {
                     onDeleteAllClicked()
-                    expanded = false
+                    isExpanded = false
                 }
             )
         }
