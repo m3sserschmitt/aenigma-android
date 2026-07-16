@@ -43,6 +43,7 @@ import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
+import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.ClientStatus
@@ -144,11 +145,13 @@ fun ChatScreen(
 @Composable
 fun ChatScreen(
     contact: RequestState<ContactWithGroupDto> = RequestState.Idle,
+    contacts: RequestState<List<ContactDto>> = RequestState.Idle,
     okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     isMember: Boolean = false,
     isAdmin: Boolean = false,
+    isSelectionMode: Boolean = false,
     moreOptionsMenuExpanded: Boolean = false,
-    contacts: RequestState<List<ContactDto>> = RequestState.Idle,
+    selectedItems: Map<Long, MessageWithDetailsDto> = mapOf(),
     connectionStatus: ClientStatus = ClientStatus.Authenticated,
     isClientWorkerRunning: Boolean = false,
     messages: RequestState<List<MessageWithDetailsDto>> = RequestState.Success(listOf()),
@@ -183,9 +186,11 @@ fun ChatScreen(
     var addGroupMemberDialogVisible by remember { mutableStateOf(false) }
     var leaveGroupDialogVisible by remember { mutableStateOf(false) }
     var groupAction by remember { mutableStateOf(MessageType.GROUP_MEMBER_ADD) }
-    var isSelectionMode by remember { mutableStateOf(false) }
+    var isSelection by remember(key1 = isSelectionMode) { mutableStateOf(isSelectionMode) }
     var isSearchMode by remember { mutableStateOf(false) }
-    val selectedItems = remember { mutableStateMapOf<Long, MessageWithDetailsDto>() }
+    val selectedMessageItems = remember {
+        mutableStateMapOf<Long, MessageWithDetailsDto>().apply { putAll(selectedItems) }
+    }
     val snackBarHostState = remember { SnackbarHostState() }
 
     AddGroupMemberDialog(
@@ -231,8 +236,8 @@ fun ChatScreen(
         visible = clearConversationConfirmationVisible,
         onConfirmClicked = {
             clearConversationConfirmationVisible = false
-            selectedItems.clear()
-            isSelectionMode = false
+            selectedMessageItems.clear()
+            isSelection = false
             onDeleteAll()
         },
         onDismissClicked = {
@@ -243,10 +248,10 @@ fun ChatScreen(
     DeleteSelectedMessagesDialog(
         visible = deleteMessagesConfirmationVisible,
         onConfirmClicked = {
-            onDelete(selectedItems.values.toList())
+            onDelete(selectedMessageItems.values.toList())
             deleteMessagesConfirmationVisible = false
-            selectedItems.clear()
-            isSelectionMode = false
+            selectedMessageItems.clear()
+            isSelection = false
         },
         onDismissClicked = {
             deleteMessagesConfirmationVisible = false
@@ -254,10 +259,10 @@ fun ChatScreen(
     )
 
     ExitSelectionMode(
-        isSelectionMode = isSelectionMode,
-        selectedItemsCount = selectedItems.size,
+        isSelectionMode = isSelection,
+        selectedItemsCount = selectedMessageItems.size,
         onSelectionModeExited = {
-            isSelectionMode = false
+            isSelection = false
         }
     )
 
@@ -272,7 +277,7 @@ fun ChatScreen(
     BackHandler(
         enabled = true
     ) {
-        if(!isSelectionMode && !isSearchMode) {
+        if(!isSelection && !isSearchMode) {
             navigateBack()
         }
 
@@ -280,9 +285,9 @@ fun ChatScreen(
             isSearchMode = false
         }
 
-        if (isSelectionMode) {
-            selectedItems.clear()
-            isSelectionMode = false
+        if (isSelection) {
+            selectedMessageItems.clear()
+            isSelection = false
         }
     }
 
@@ -307,27 +312,27 @@ fun ChatScreen(
                 moreOptionsMenuExpanded = moreOptionsMenuExpanded,
                 connectionStatus = connectionStatus,
                 isClientWorkerRunning = isClientWorkerRunning,
-                isSelectionMode = isSelectionMode,
+                isSelectionMode = isSelection,
                 onRenameContactClicked = {
                     renameContactDialogVisible = true
                 },
                 onDeleteAllClicked = {
                     clearConversationConfirmationVisible = true
                 },
-                selectedItemsCount = selectedItems.size,
+                selectedItemsCount = selectedMessageItems.size,
                 onSelectionModeExited = {
-                    selectedItems.clear()
+                    selectedMessageItems.clear()
                 },
                 onDeleteClicked = {
                     deleteMessagesConfirmationVisible = true
                 },
                 onReplyToMessageClicked = {
-                    val selectedItem = selectedItems.values.firstOrNull()
+                    val selectedItem = selectedMessageItems.values.firstOrNull()
                     if(selectedItem != null)
                     {
                         onReplyToMessage(selectedItem)
                     }
-                    selectedItems.clear()
+                    selectedMessageItems.clear()
                 },
                 navigateBack = navigateBack,
                 isSearchMode = isSearchMode,
@@ -370,33 +375,33 @@ fun ChatScreen(
                 ),
                 okHttpClientProvider = okHttpClientProvider,
                 isMember = isMember,
-                isSelectionMode = isSelectionMode,
+                isSelectionMode = isSelection,
                 isSearchMode = isSearchMode,
                 replyToMessage = replyToMessage,
                 messages = messages,
                 nextConversationPageAvailable = nextConversationPageAvailable,
-                selectedMessages = selectedItems,
+                selectedMessages = selectedMessageItems,
                 messageInputText = messageInputText,
                 attachments = attachments,
                 onInputTextChanged = onInputTextChanged,
                 onAttachmentsSelected = onAttachmentsSelected,
                 onSendClicked = {
                     onSendClicked()
-                    selectedItems.clear()
+                    selectedMessageItems.clear()
                 },
                 onReplyAborted = {
                     onReplyToMessage(null)
                 },
                 onMessageSelected = { selectedMessage ->
-                    if(!isSelectionMode)
+                    if(!isSelection)
                     {
-                        isSelectionMode = true
+                        isSelection = true
                     }
 
-                    selectedItems[selectedMessage.message.id] = selectedMessage
+                    selectedMessageItems[selectedMessage.message.id] = selectedMessage
                 },
                 onMessageDeselected = {
-                    deselectedMessage -> selectedItems.remove(deselectedMessage.message.id)
+                    deselectedMessage -> selectedMessageItems.remove(deselectedMessage.message.id)
                 },
                 onMessageClicked = onMessageClicked,
                 onArticleClicked = onArticleClicked,
@@ -496,7 +501,22 @@ private val contactPreview = RequestState.Success(
 fun ChatScreenPreview() {
     ChatScreen(
         contact = contactPreview,
-        messages = messagesPreview
+        messages = messagesPreview,
+        isMember = true
+    )
+}
+
+@Preview
+@Composable
+fun ChatScreenSelectionModePreview() {
+    ChatScreen(
+        contact = contactPreview,
+        messages = messagesPreview,
+        isMember = true,
+        isSelectionMode = true,
+        selectedItems = mapOf(
+            messagesPreview.data.first().message.id to messagesPreview.data.first()
+        )
     )
 }
 
@@ -506,6 +526,7 @@ fun ChatScreenMoreOptionsMenuExpandedPreview() {
     ChatScreen(
         contact = contactPreview,
         messages = messagesPreview,
+        isMember = true,
         moreOptionsMenuExpanded = true
     )
 }
@@ -515,6 +536,14 @@ fun ChatScreenMoreOptionsMenuExpandedPreview() {
 fun ChatScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         ChatScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ChatScreenSelectionModeDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ChatScreenSelectionModePreview()
     }
 }
 

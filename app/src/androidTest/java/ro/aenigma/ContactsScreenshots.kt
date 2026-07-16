@@ -29,6 +29,8 @@ import ro.aenigma.ui.screens.contacts.ContactsScreenDarkPreview
 import ro.aenigma.ui.screens.contacts.ContactsScreenMoreOptionsExpandedDarkPreview
 import ro.aenigma.ui.screens.contacts.ContactsScreenMoreOptionsExpandedPreview
 import ro.aenigma.ui.screens.contacts.ContactsScreenPreview
+import ro.aenigma.ui.screens.contacts.ContactsScreenSelectionModeDarkPreview
+import ro.aenigma.ui.screens.contacts.ContactsScreenSelectionModePreview
 import ro.aenigma.ui.screens.contacts.ContactsScreenServersBottomSheetPreview
 import ro.aenigma.ui.screens.contacts.ContactsScreenServersBottomSheetDarkPreview
 
@@ -38,6 +40,11 @@ class ContactsScreenshots: ScreenshotBase() {
     @Test
     fun captureContactsScreen() {
         return captureScreenshot("ContactsScreen") { ContactsScreenPreview() }
+    }
+
+    @Test
+    fun captureContactsScreenSelectionMode() {
+        return captureScreenshot("ContactsScreenSelectionMode") { ContactsScreenSelectionModePreview() }
     }
 
     @Test
@@ -53,6 +60,11 @@ class ContactsScreenshots: ScreenshotBase() {
     @Test
     fun captureContactsScreenDark() {
         return captureScreenshot("ContactsScreenDark") { ContactsScreenDarkPreview() }
+    }
+
+    @Test
+    fun captureContactsScreenSelectionModeDark() {
+        return captureScreenshot("ContactsScreenSelectionModeDark") { ContactsScreenSelectionModeDarkPreview() }
     }
 
     @Test

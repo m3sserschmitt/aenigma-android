@@ -178,6 +178,8 @@ fun ContactsScreen(
     notificationServicePreference: Boolean = false,
     torCircuitState: TorCircuitState = TorCircuitState.UNDEFINED,
     isForwardMode: Boolean = false,
+    isSelectionMode: Boolean = false,
+    selectedItems: Map<String, ContactWithLastMessageDto> = mapOf(),
     onTorPreferenceChanged: (Boolean) -> Unit = { },
     onOrbotPreferenceChanged: (Boolean) -> Unit = { },
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
@@ -208,9 +210,11 @@ fun ContactsScreen(
     var orbotInfoDialogVisible by remember { mutableStateOf(false) }
     var torServiceInfoDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    var isSelectionMode by remember { mutableStateOf(false) }
+    var isSelection by remember(key1 = isSelectionMode) { mutableStateOf(isSelectionMode) }
     var serversSearchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateMapOf<String, ContactWithLastMessageDto>() }
+    val selectedContactItems = remember(key1 = selectedItems) {
+        mutableStateMapOf<String, ContactWithLastMessageDto>().apply { putAll(selectedItems) }
+    }
     val snackBarHostState = remember { SnackbarHostState() }
     val bottomSheetState = rememberStandardBottomSheetState(
         initialValue = serversSheetState.sheetState,
@@ -297,9 +301,9 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems.values.toList())
-            isSelectionMode = false
-            selectedItems.clear()
+            onDeleteSelectedItems(selectedContactItems.values.toList())
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismissClicked = {
             deleteContactsConfirmationVisible = false
@@ -310,13 +314,13 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            val contact = selectedItems.values.singleOrNull()
+            val contact = selectedContactItems.values.singleOrNull()
             if (contact != null) {
                 onContactRenamed(contact, name)
             }
             renameContactDialogVisible = false
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -327,10 +331,10 @@ fun ContactsScreen(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            onGroupCreated(selectedItems.values.toList(), name)
+            onGroupCreated(selectedContactItems.values.toList(), name)
             createGroupDialogVisible = false
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismissClicked = {
             onContactSaveDismissed()
@@ -339,24 +343,24 @@ fun ContactsScreen(
     )
 
     BackHandler(
-        enabled = isSearchMode || isSelectionMode || isForwardMode
+        enabled = isSearchMode || isSelection || isForwardMode
     ) {
         if (isSearchMode) {
             isSearchMode = false
-        } else if (isSelectionMode) {
-            selectedItems.clear()
-            isSelectionMode = false
+        } else if (isSelection) {
+            selectedContactItems.clear()
+            isSelection = false
         } else if (isForwardMode) {
             onRemoveAttachments()
         }
     }
 
     ExitSelectionMode(
-        isSelectionMode = isSelectionMode,
-        selectedItemsCount = selectedItems.size,
+        isSelectionMode = isSelection,
+        selectedItemsCount = selectedContactItems.size,
         onSelectionModeExited = {
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         }
     )
 
@@ -450,10 +454,10 @@ fun ContactsScreen(
                     isSearchMode = false
                 },
                 onSelectionModeExited = {
-                    selectedItems.clear()
+                    selectedContactItems.clear()
                 },
-                isSelectionMode = isSelectionMode,
-                selectedItemsCount = selectedItems.size,
+                isSelectionMode = isSelection,
+                selectedItemsCount = selectedContactItems.size,
                 onOpenServersList = {
                     if (bottomSheetScaffoldState.isNotFullyExpanded()) {
                         onServersSheetStateChanged(serversSheetState.toExpanded())
@@ -468,7 +472,7 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    val selectedItem = selectedItems.values.singleOrNull()?.contact
+                    val selectedItem = selectedContactItems.values.singleOrNull()?.contact
                     if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
                         navigateToAddContactScreen(selectedItem.address)
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
@@ -477,10 +481,10 @@ fun ContactsScreen(
                     }
                 },
                 onCreateGroupClicked = {
-                    if (selectedItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
+                    if (selectedContactItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
                         Toast.makeText(context, couldNotSelectChannelString, Toast.LENGTH_SHORT)
                             .show()
-                    } else if (selectedItems.any { item -> item.value.contact.address == BROADCAST_CONTACT_ADDRESS }) {
+                    } else if (selectedContactItems.any { item -> item.value.contact.address == BROADCAST_CONTACT_ADDRESS }) {
                         Toast.makeText(context, couldNotSelectBroadcastString, Toast.LENGTH_SHORT)
                             .show()
                     } else {
@@ -489,9 +493,9 @@ fun ContactsScreen(
                 },
                 onResetUsernameClicked = onResetUserNameClicked,
                 onForwardAttachments = {
-                    onForwardAttachments(selectedItems.keys.toList())
-                    selectedItems.clear()
-                    isSelectionMode = false
+                    onForwardAttachments(selectedContactItems.keys.toList())
+                    selectedContactItems.clear()
+                    isSelection = false
                 },
                 onRemoveAttachments = onRemoveAttachments,
                 onRetryConnection = onRetryConnection,
@@ -523,17 +527,17 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 navigateToChatScreen = navigateToChatScreen,
                 onItemSelected = { selectedContact ->
-                    if (!isSelectionMode) {
-                        isSelectionMode = true
+                    if (!isSelection) {
+                        isSelection = true
                     }
 
-                    selectedItems[selectedContact.contact.address] = selectedContact
+                    selectedContactItems[selectedContact.contact.address] = selectedContact
                 },
                 onItemDeselected = { deselectedContact ->
-                    selectedItems.remove(deselectedContact.contact.address)
+                    selectedContactItems.remove(deselectedContact.contact.address)
                 },
-                isSelectionMode = isSelectionMode,
-                selectedContacts = selectedItems
+                isSelectionMode = isSelection,
+                selectedContacts = selectedContactItems
             )
         }
     }
@@ -620,7 +624,6 @@ private val serversPreview = RequestState.Success(
     )
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun ContactsScreenPreview() {
@@ -629,7 +632,18 @@ fun ContactsScreenPreview() {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun ContactsScreenSelectionModePreview() {
+    ContactsScreen(
+        contacts = contactsPreview,
+        isSelectionMode = true,
+        selectedItems = mapOf(
+            contactsPreview.data.first().contact.address to contactsPreview.data.first()
+        )
+    )
+}
+
 @Preview
 @Composable
 fun ContactsScreenMoreOptionsExpandedPreview() {
@@ -658,6 +672,14 @@ fun ContactsScreenServersBottomSheetPreview() {
 fun ContactsScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         ContactsScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenSelectionModeDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenSelectionModePreview()
     }
 }
 

@@ -221,7 +221,7 @@ fun AddContactsScreenPreview() {
                 QrCodeGenerator(
                     400,
                     400
-                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", false
+                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
             )
         )
     )

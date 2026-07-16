@@ -27,12 +27,19 @@ import ro.aenigma.ui.screens.chat.ChatScreenDarkPreview
 import ro.aenigma.ui.screens.chat.ChatScreenMoreOptionsMenuExpandedDarkPreview
 import ro.aenigma.ui.screens.chat.ChatScreenMoreOptionsMenuExpandedPreview
 import ro.aenigma.ui.screens.chat.ChatScreenPreview
+import ro.aenigma.ui.screens.chat.ChatScreenSelectionModeDarkPreview
+import ro.aenigma.ui.screens.chat.ChatScreenSelectionModePreview
 
 class ChatScreenshots: ScreenshotBase() {
 
     @Test
     fun captureChatScreen() {
         return captureScreenshot("ChatScreen") { ChatScreenPreview() }
+    }
+
+    @Test
+    fun captureChatScreenSelectionMode() {
+        return captureScreenshot("ChatScreenSelectionMode") { ChatScreenSelectionModePreview() }
     }
 
     @Test
@@ -43,6 +50,11 @@ class ChatScreenshots: ScreenshotBase() {
     @Test
     fun captureChatScreenDark() {
         return captureScreenshot("ChatScreenDark") { ChatScreenDarkPreview() }
+    }
+
+    @Test
+    fun captureChatScreenSelectionModeDark() {
+        return captureScreenshot("ChatScreenSelectionModeDark") { ChatScreenSelectionModeDarkPreview() }
     }
 
     @Test
