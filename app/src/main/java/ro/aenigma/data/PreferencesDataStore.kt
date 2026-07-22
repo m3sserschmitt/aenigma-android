@@ -54,6 +54,7 @@ class PreferencesDataStore @Inject constructor(
         private const val NEWS_FEED_URI = "news-feed-file"
         private const val NOTIFICATION_SERVICE_PREFERENCE = "use-notification-service"
         private const val AUTHENTICATION_TIMESTAMP = "last-authentiction-timestamp"
+        private const val EPHEMERAL_LINKS_PREFERENCE = "ephemeral-links"
     }
 
     private object PreferenceKeys {
@@ -66,6 +67,7 @@ class PreferencesDataStore @Inject constructor(
         val newsFeedUri = stringPreferencesKey(NEWS_FEED_URI)
         val notificationServicePreference = booleanPreferencesKey(NOTIFICATION_SERVICE_PREFERENCE)
         val notificationTimestampPreference = longPreferencesKey(AUTHENTICATION_TIMESTAMP)
+        val ephemeralLinksPreference = booleanPreferencesKey(EPHEMERAL_LINKS_PREFERENCE)
     }
 
     private val dataStore = context.dataStore
@@ -95,6 +97,10 @@ class PreferencesDataStore @Inject constructor(
 
     suspend fun saveOrbotPreference(useOrbot: Boolean): Boolean {
         return savePreference(useOrbot, PreferenceKeys.useOrbot)
+    }
+
+    suspend fun saveEphemeralLinksPreference(ephemeralLinksPreference: Boolean): Boolean {
+        return savePreference(ephemeralLinksPreference, PreferenceKeys.ephemeralLinksPreference)
     }
 
     suspend fun saveEncryptedDatabasePassphrase() {
@@ -151,4 +157,7 @@ class PreferencesDataStore @Inject constructor(
 
     val authenticationTimestamp: Flow<Long> =
         getPreference(PreferenceKeys.notificationTimestampPreference, 0L)
+
+    val ephemeralLinksPreference: Flow<Boolean> =
+        getPreference(PreferenceKeys.ephemeralLinksPreference, true)
 }

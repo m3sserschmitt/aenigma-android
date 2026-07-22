@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -78,9 +79,8 @@ fun BasicDropdownMenu(
 }
 
 @Composable
-fun BasicDropDownMenuItem(
-    imageVector: ImageVector,
-    contentDescription: String,
+fun BasicDropdownMenuItem(
+    icon: @Composable () -> Unit,
     text: String,
     enabled: Boolean = true,
     visible: Boolean = true,
@@ -89,14 +89,7 @@ fun BasicDropDownMenuItem(
     if (visible) {
         DropdownMenuItem(
             enabled = enabled,
-            leadingIcon = {
-                Icon(
-                    modifier = Modifier.alpha(.75f),
-                    imageVector = imageVector,
-                    contentDescription = contentDescription,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            },
+            leadingIcon = { icon() },
             text = {
                 Text(
                     text = text,
@@ -107,6 +100,56 @@ fun BasicDropDownMenuItem(
             onClick = onClick
         )
     }
+}
+
+@Composable
+fun BasicDropDownMenuItem(
+    imageVector: ImageVector,
+    contentDescription: String,
+    text: String,
+    enabled: Boolean = true,
+    visible: Boolean = true,
+    onClick: () -> Unit
+) {
+    BasicDropdownMenuItem(
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        text = text,
+        enabled = enabled,
+        visible = visible,
+        onClick = onClick
+    )
+}
+
+@Composable
+fun BasicDropdownMenuItem(
+    painter: Painter,
+    contentDescription: String,
+    text: String,
+    enabled: Boolean = true,
+    visible: Boolean = true,
+    onClick: () -> Unit
+) {
+    BasicDropdownMenuItem(
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                painter = painter,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        text = text,
+        enabled = enabled,
+        visible = visible,
+        onClick = onClick
+    )
 }
 
 @Composable
@@ -148,5 +191,55 @@ fun DropdownMenuSwitch(
         onClick = {
             onValueChanged(!value)
         }
+    )
+}
+
+@Composable
+fun DropdownMenuSwitch(
+    value: Boolean,
+    isActive: Boolean = false,
+    text: String,
+    painter: Painter,
+    contentDescription: String,
+    onValueChanged: (Boolean) -> Unit = { }
+) {
+    DropdownMenuSwitch(
+        value = value,
+        isActive = isActive,
+        text = text,
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                painter = painter,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        onValueChanged = onValueChanged
+    )
+}
+
+@Composable
+fun DropdownMenuSwitch(
+    value: Boolean,
+    isActive: Boolean = false,
+    text: String,
+    imageVector: ImageVector,
+    contentDescription: String,
+    onValueChanged: (Boolean) -> Unit = { }
+) {
+    DropdownMenuSwitch(
+        value = value,
+        isActive = isActive,
+        text = text,
+        icon = {
+            Icon(
+                modifier = Modifier.alpha(.75f),
+                imageVector = imageVector,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        },
+        onValueChanged = onValueChanged
     )
 }

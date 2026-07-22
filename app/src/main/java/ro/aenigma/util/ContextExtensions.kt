@@ -74,6 +74,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
 import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
+import ro.aenigma.util.Constants.Companion.EXPORTED_QR_CODE_FILE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
@@ -99,6 +100,7 @@ import ro.aenigma.util.StringExtensions.isVideoMime
 import ro.aenigma.util.UriExtensions.isRemote
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.DATASTORE_PREFERENCES)
@@ -172,7 +174,7 @@ object ContextExtensions {
 
     suspend fun Context.getFileTypeIcon(uri: String): FileDisplayInfoDto {
         if (uri.isRemoteUri()) {
-            return if(uri.isRemoteImageUri()) {
+            return if (uri.isRemoteImageUri()) {
                 FileDisplayInfoDto(
                     painterResourceId = R.drawable.ic_photo,
                     isImage = true
@@ -235,6 +237,10 @@ object ContextExtensions {
 
     fun Context.getPublicKeyFile(): File {
         return File(filesDir, PUBLIC_KEY_FILE)
+    }
+
+    fun Context.getQRCodeFile(): File {
+        return File(filesDir, EXPORTED_QR_CODE_FILE)
     }
 
     private suspend fun createDirectory(parent: File, directory: String): File {
@@ -514,8 +520,8 @@ object ContextExtensions {
         this.startActivity(intent)
     }
 
-    suspend fun Context.openUriInExternalApp(uri: Uri) {
-        try {
+    suspend fun Context.openUriInExternalApp(uri: Uri): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 data = uri
                 addCategory(Intent.CATEGORY_BROWSABLE)
@@ -529,59 +535,44 @@ object ContextExtensions {
                 }
             }
             startActivity(intent)
-        } catch (_: SecurityException) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_permission_to_open),
-                Toast.LENGTH_SHORT
-            ).show()
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_app_to_open),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    fun Context.shareText(text: String) {
-        try {
+    fun Context.shareText(text: String): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, text)
-            this.startActivity(
+            startActivity(
                 Intent.createChooser(
                     intent,
                     getString(R.string.share_via)
                 )
             )
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.failed_to_share),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    fun Context.copyToClipboard(text: String) {
-        try {
+    fun Context.copyToClipboard(text: String): Boolean {
+        return try {
             val clipboard = this.getSystemService(
                 Context.CLIPBOARD_SERVICE
             ) as ClipboardManager
             val data = ClipData.newPlainText("", text)
             clipboard.setPrimaryClip(data)
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                this.getString(R.string.failed_to_copy_to_clipboard),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    suspend fun Context.shareUri(uri: Uri) {
-        try {
+    suspend fun Context.shareUri(uri: Uri): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = getFileType(uri)
                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -590,17 +581,14 @@ object ContextExtensions {
             startActivity(
                 Intent.createChooser(intent, getString(R.string.share_via))
             )
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.failed_to_share),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    suspend fun Context.shareUriOrText(uri: Uri) {
-        if (uri.isRemote()) {
+    suspend fun Context.shareUriOrText(uri: Uri): Boolean {
+        return if (uri.isRemote()) {
             shareText(text = uri.toString())
         } else {
             shareUri(uri = uri)
@@ -762,5 +750,37 @@ object ContextExtensions {
         }
 
         UriFilterResult(accepted, tooLargeCount, excessCount)
+    }
+
+    suspend fun Context.saveQRCode(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val file = getQRCodeFile()
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+            }
+            toContentUri(file)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun Context.shareQrCode(bitmap: Bitmap): Boolean {
+        val uri = saveQRCode(bitmap) ?: return false
+        return shareUri(uri = uri)
+    }
+
+    suspend fun Context.showToast(message: String) {
+        val context = this
+        return withContext(Dispatchers.Main) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    suspend fun Context.showFailedToShareToast() {
+        return showToast(message = getString(R.string.failed_to_share))
+    }
+
+    suspend fun Context.showNoAppToOpenFileOrAccessDeniedToast() {
+        return showToast(getString(R.string.no_app_to_open_or_access_denied))
     }
 }

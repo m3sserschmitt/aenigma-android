@@ -21,6 +21,7 @@
 
 package ro.aenigma.viewmodels
 
+import android.net.Uri
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.lifecycle.viewModelScope
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -74,6 +76,7 @@ import ro.aenigma.util.StringExtensions.getHttpUri
 import javax.inject.Inject
 import kotlin.collections.filter
 import ro.aenigma.util.SerializerExtensions.toJson
+import ro.aenigma.util.StringExtensions.getHost
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.workers.extensions.WorkManagerExtensions.createOrUpdateGroup
 import ro.aenigma.workers.extensions.WorkManagerExtensions.generateFeed
@@ -125,11 +128,15 @@ class MainViewModel @Inject constructor(
 
     private val _text = MutableStateFlow<String?>(null)
 
+    private val _uri = MutableStateFlow<Uri?>(null)
+
     private val _notificationsAllowed = MutableStateFlow(true)
 
     private val _useTor = MutableStateFlow(false)
 
     private val _useOrbot = MutableStateFlow(false)
+
+    private val _ephemeralLinksPreference = MutableStateFlow(false)
 
     private val _notificationServicePreference = MutableStateFlow(false)
 
@@ -149,6 +156,8 @@ class MainViewModel @Inject constructor(
 
     val useOrbot: StateFlow<Boolean> = _useOrbot
 
+    val ephemeralLinksPreference : StateFlow<Boolean> = _ephemeralLinksPreference
+
     val notificationServicePreference: StateFlow<Boolean> = _notificationServicePreference
 
     val torCircuitState: StateFlow<TorCircuitState> = onionRoutingServiceMonitor.torCircuitState
@@ -167,6 +176,8 @@ class MainViewModel @Inject constructor(
 
     val feedListState: LazyListState = LazyListState()
 
+    val uri: StateFlow<Uri?> = _uri
+
     init {
         loadContacts()
         loadServers()
@@ -174,6 +185,7 @@ class MainViewModel @Inject constructor(
         collectOrbotPreference()
         collectNotificationServicePreference()
         collectNotificationsPreferences()
+        collectEphemeralLinksPreference()
         collectFeed()
         collectUserName()
         collectClientWork()
@@ -200,6 +212,16 @@ class MainViewModel @Inject constructor(
                 _notificationsAllowed.value = false
             }.collect { allowed ->
                 _notificationsAllowed.value = allowed
+            }
+        }
+    }
+
+    private fun collectEphemeralLinksPreference() {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.ephemeralLinksPreference.catch {
+                _ephemeralLinksPreference.value = false
+            }.collect { ephemeralLinksPreference ->
+                _ephemeralLinksPreference.value = ephemeralLinksPreference
             }
         }
     }
@@ -475,11 +497,18 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    fun ephemeralLinksPreferenceChanged(ephemeralLinksPreference: Boolean) {
+        viewModelScope.launch(ioDispatcher) {
+            repository.local.saveEphemeralLinksPreference(ephemeralLinksPreference)
+        }
+    }
+
     private fun getMyProfileBitmap(): Flow<QrCodeDto?> {
         return flow {
             val guard = repository.local.getGuard()
             val signatureService = signatureServiceLazy.get()
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
+                val hostname = repository.local.getHostname(guard.toServerInfoDto()).getHost()
                 _exportedContactDetails.value = ExportedContactDataDto(
                     guardHostname = guard.hostname,
                     guardAddress = guard.address,
@@ -491,7 +520,7 @@ class MainViewModel @Inject constructor(
                 if (code != null) {
                     emit(
                         QrCodeDto(
-                            code, "@${userName.value}", true
+                            code, "${userName.value}@${hostname}", true
                         )
                     )
                 } else {
@@ -512,7 +541,13 @@ class MainViewModel @Inject constructor(
                 val code = QrCodeGenerator(400, 400)
                     .encodeAsBitmap(_exportedContactDetails.value.toJson())
                 if (code != null) {
-                    emit(QrCodeDto(code, "@${contact.name.toString()}", false))
+                    emit(
+                        QrCodeDto(
+                            code,
+                            "${contact.name.toString()}@${contact.guardHostname.toString()}",
+                            false
+                        )
+                    )
                 } else {
                     emit(null)
                 }
@@ -615,10 +650,16 @@ class MainViewModel @Inject constructor(
             try {
                 val data = _exportedContactDetails.value.toCanonicalJson()?.toByteArray()
                 if (data != null) {
+                    val accessCount =
+                        if (repository.local.ephemeralLinksPreference.firstOrNull() ?: true) {
+                            1
+                        } else {
+                            Int.MAX_VALUE
+                        }
                     val response = repository.remote.createSharedData(
                         data = data,
                         passphrase = null,
-                        accessCount = 1
+                        accessCount = accessCount
                     )
                     if (response != null) {
                         _sharedDataCreateResult.value = RequestState.Success(response)
@@ -780,6 +821,10 @@ class MainViewModel @Inject constructor(
     fun setText(text: String?) {
         _text.value = text
         setIsForwardMode(!text.isNullOrBlank())
+    }
+
+    fun setUri(uri: Uri?) {
+        _uri.value = uri
     }
 
     fun resetFeedScroll() {

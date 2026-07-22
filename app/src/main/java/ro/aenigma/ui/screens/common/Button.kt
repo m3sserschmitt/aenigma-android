@@ -46,6 +46,8 @@ import ro.aenigma.util.ContextExtensions.copyToClipboard
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.ContextExtensions.shareUriOrText
+import ro.aenigma.util.ContextExtensions.showFailedToShareToast
+import ro.aenigma.util.ContextExtensions.showNoAppToOpenFileOrAccessDeniedToast
 
 @Composable
 fun ShareButton(
@@ -120,7 +122,13 @@ fun OpenInExternalAppButton(
     val coroutineScope = rememberCoroutineScope()
     OpenInExternalAppButton(
         tint = tint,
-        onClick = { coroutineScope.launch { context.openUriInExternalApp(uri) } }
+        onClick = {
+            coroutineScope.launch {
+                if (!context.openUriInExternalApp(uri)) {
+                    context.showNoAppToOpenFileOrAccessDeniedToast()
+                }
+            }
+        }
     )
 }
 
@@ -155,7 +163,13 @@ fun ShareUriButton(
     val coroutineScope = rememberCoroutineScope()
     ShareButton(
         tint = tint,
-        onClick = { coroutineScope.launch { context.shareUriOrText(uri) } }
+        onClick = {
+            coroutineScope.launch {
+                if(!context.shareUriOrText(uri)) {
+                    context.showFailedToShareToast()
+                }
+            }
+        }
     )
 }
 
@@ -165,9 +179,14 @@ fun ShareTextButton(
     tint: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     ShareButton(
         tint = tint,
-        onClick = { context.shareText(text) }
+        onClick = {
+            if(!context.shareText(text)) {
+                coroutineScope.launch { context.showFailedToShareToast() }
+            }
+        }
     )
 }
 
@@ -177,8 +196,13 @@ fun CopyToClipboardButton(
     tint: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     IconButton(
-        onClick = { context.copyToClipboard(text) }
+        onClick = {
+            if(!context.copyToClipboard(text)) {
+                coroutineScope.launch { context.showFailedToShareToast() }
+            }
+        }
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_copy),

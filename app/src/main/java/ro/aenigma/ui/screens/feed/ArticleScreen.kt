@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -41,6 +42,7 @@ import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.model.ImageTransformer
 import com.mikepenz.markdown.model.NoOpImageTransformerImpl
 import com.mikepenz.markdown.model.rememberMarkdownState
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
@@ -48,6 +50,7 @@ import ro.aenigma.ui.screens.common.ShareTopAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContextExtensions.shareText
+import ro.aenigma.util.ContextExtensions.showFailedToShareToast
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.viewmodels.MainViewModel
@@ -65,6 +68,7 @@ fun ArticleScreen(
 
     val content by mainViewModel.articleContent.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     ArticleScreen(
         content = content,
@@ -72,8 +76,10 @@ fun ArticleScreen(
         imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
         onShareArticle = {
             if (uri.isRemoteUri()) {
-                context.shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri)))
-            } else if(messageId != null){
+                if (!context.shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri)))) {
+                    coroutineScope.launch { context.showFailedToShareToast() }
+                }
+            } else if (messageId != null) {
                 forwardMessage(messageId)
             }
         },

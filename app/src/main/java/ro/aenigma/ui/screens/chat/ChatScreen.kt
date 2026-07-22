@@ -43,7 +43,6 @@ import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
 import ro.aenigma.models.ContactWithGroupDto
-import ro.aenigma.models.ContactWithLastMessageDto
 import ro.aenigma.models.MessageDto
 import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.ClientStatus
@@ -305,7 +304,6 @@ fun ChatScreen(
         },
         topBar = {
             ChatAppBar(
-                messages = messages,
                 contact = contact,
                 isMember = isMember,
                 isAdmin = isAdmin,

@@ -121,7 +121,7 @@
     <string name="downloading_file">Se descarcă un fișier</string>
     <string name="files">Fișiere</string>
     <string name="unknown_file">Fișier necunoscut</string>
-    <string name="no_app_to_open">Nu s-a găsit o aplicație pentru a deschide fișierul</string>
+    <string name="no_app_to_open_or_access_denied">Nu s-a găsit o aplicație pentru a deschide fișierul sau accessul este restricționat</string>
     <string name="open">Deschide</string>
     <string name="news">Noutăți</string>
     <string name="there_is_nothing_here">Nu este nimic aici pentru moment</string>
@@ -159,7 +159,7 @@
     <string name="compose_article">Compuneți</string>
     <string name="title">Titlu</string>
     <string name="cover_photo">Imagine de copertă</string>
-    <string name="optional_description">Sumar opțional</string>
+    <string name="optional_description">Previzualizare opțională</string>
     <string name="content">Povestea</string>
     <string name="empty_article_cover">Începeți să editați articolul pentru a previzualiza coperta</string>
     <string name="empty_article_content">Nu există conținut pentru previzualizare</string>
@@ -177,4 +177,6 @@
     <string name="disconnected">Deconectat</string>
     <string name="no_permission_to_open">Nu aveți permisiune pentru a deschide fișierul</string>
     <string name="total_post_size_exceeded">Un maxim de %.2f MB este permis pentru distribuire</string>
+    <string name="export_qr_code">Exportați codul QR</string>
+    <string name="ephemeral_links">Link-uri efemere</string>
 </resources>

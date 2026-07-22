@@ -88,6 +88,8 @@ class Constants {
 
         const val PUBLIC_KEY_FILE = "public-key.pem"
 
+        const val EXPORTED_QR_CODE_FILE = "contact-code.jpg"
+
         const val LOCAL_MEDIA_FEED_WEIGHT = 3
 
         const val WEB_ARTICLES_FEED_WEIGHT = 1

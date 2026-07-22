@@ -119,7 +119,11 @@ fun AddContactsContent(
     )
 
     val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
+    val initialName = if (requestSuccessful) {
+        importedContactDetails.data.name ?: ""
+    } else {
+        ""
+    }
     SaveNewContactDialog(
         visible = scannerState == QrCodeScannerState.SAVE
                 || (requestSuccessful && saveContactDialogVisible),
@@ -280,12 +284,13 @@ fun DisplayPortraitQrCode(
             qrCode = qrCode
         )
         Text(
-            modifier = Modifier.alpha(.75f),
+            modifier = Modifier.alpha(.75f)
+                .padding(start = 16.dp, end = 16.dp),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             text = qrCode.label,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
@@ -335,12 +340,12 @@ fun DisplayLandscapeQrCode(
                 onUseLinkClicked = onUseLinkClicked
             )
             Text(
-                modifier = Modifier.alpha(.75f),
+                modifier = Modifier.alpha(.75f).padding(start = 16.dp, end = 16.dp),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 text = qrCode.label,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )

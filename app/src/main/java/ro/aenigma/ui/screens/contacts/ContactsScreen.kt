@@ -149,7 +149,6 @@ fun ContactsScreen(
         },
         onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
-        onResetUserNameClicked = { mainViewModel.resetUserName() },
         onForwardAttachments = { chatIds ->
             mainViewModel.redirectAttachments(chatIds)
             mainViewModel.redirectText(chatIds)
@@ -196,7 +195,6 @@ fun ContactsScreen(
     onNewContactNameChanged: (String) -> Boolean = { true },
     onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit  = { _, _ -> },
     onContactSaveDismissed: () -> Unit = { },
-    onResetUserNameClicked: () -> Unit = { },
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: (List<String>) -> Unit = { },
     navigateToAddContactScreen: (String?) -> Unit = { },
@@ -491,7 +489,6 @@ fun ContactsScreen(
                         createGroupDialogVisible = true
                     }
                 },
-                onResetUsernameClicked = onResetUserNameClicked,
                 onForwardAttachments = {
                     onForwardAttachments(selectedContactItems.keys.toList())
                     selectedContactItems.clear()

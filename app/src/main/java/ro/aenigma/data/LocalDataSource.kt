@@ -118,6 +118,12 @@ class LocalDataSource @Inject constructor(
 
     val authenticationTimestamp: Flow<Long> = preferencesDataStore.authenticationTimestamp
 
+    val ephemeralLinksPreference: Flow<Boolean> = preferencesDataStore.ephemeralLinksPreference
+
+    suspend fun saveEphemeralLinksPreference(ephemeralLinksPreference: Boolean): Boolean {
+        return preferencesDataStore.saveEphemeralLinksPreference(ephemeralLinksPreference)
+    }
+
     suspend fun saveAuthenticationTimestamp(): Boolean {
         return preferencesDataStore.saveAuthenticationTimestamp()
     }

@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithGroupDto
-import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.ClientStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -57,7 +56,6 @@ import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatAppBar(
-    messages: RequestState<List<MessageWithDetailsDto>>,
     contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
@@ -131,7 +129,6 @@ fun ChatAppBar(
                         onSearchModeTriggered = onSearchModeTriggered
                     )
                     MoreActions(
-                        messages = messages,
                         isGroup = contact.data.contact.type == ContactType.GROUP,
                         isMember = isMember,
                         isAdmin = isAdmin,
@@ -151,7 +148,6 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: RequestState<List<MessageWithDetailsDto>>,
     isGroup: Boolean,
     isMember: Boolean,
     isAdmin: Boolean,
@@ -217,19 +213,16 @@ fun MoreActions(
                 isExpanded = false
             }
         )
-        if(messages is RequestState.Success)
-        {
-            BasicDropDownMenuItem(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = stringResource(id = R.string.delete),
-                visible = messages.data.isNotEmpty(),
-                text = stringResource(id = R.string.clear_conversation),
-                onClick = {
-                    onDeleteAllClicked()
-                    isExpanded = false
-                }
-            )
-        }
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(id = R.string.delete),
+            visible = true,
+            text = stringResource(id = R.string.clear_conversation),
+            onClick = {
+                onDeleteAllClicked()
+                isExpanded = false
+            }
+        )
     }
 }
 
@@ -237,7 +230,6 @@ fun MoreActions(
 @Preview
 fun DefaultChatAppBarPreview() {
     ChatAppBar(
-        messages = RequestState.Success(listOf()),
         isSelectionMode = false,
         connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
@@ -274,7 +266,6 @@ fun DefaultChatAppBarPreview() {
 @Composable
 fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
-        messages = RequestState.Success(listOf()),
         isSelectionMode = true,
         connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(

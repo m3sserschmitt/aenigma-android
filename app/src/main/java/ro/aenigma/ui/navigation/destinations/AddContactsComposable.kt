@@ -56,8 +56,6 @@ fun NavGraphBuilder.addContactsComposable(
     ) { navBackStackEntry ->
         val profileId = navBackStackEntry.arguments?.getString(Screens.CONTACT_ID_ARG)
             ?.takeIf { p -> p.isNotBlank() }
-        val uri =
-            navBackStackEntry.arguments?.getString(Screens.URI_ARG)?.takeIf { u -> u.isNotBlank() }
         val scanTypeString =
             navBackStackEntry.arguments?.getString(Screens.SCANNER_STATE_ARG)
                 ?: QrCodeScannerState.SCAN_CODE.toString()
@@ -70,7 +68,6 @@ fun NavGraphBuilder.addContactsComposable(
 
         AddContactsScreen(
             profileToShare = profileId,
-            uri = uri,
             initialScannerState = QrCodeScannerState.valueOf(scanTypeString),
             navigateBack = navigateBack,
             onForwardUri = onForwardUri,

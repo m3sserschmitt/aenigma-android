@@ -68,6 +68,7 @@ import kotlinx.coroutines.withContext
 import ro.aenigma.AenigmaApp
 import ro.aenigma.R
 import ro.aenigma.data.LocalDataSource
+import ro.aenigma.models.SharedContent
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.NotificationServiceController
 import ro.aenigma.services.OnionRoutingServiceMonitor
@@ -120,6 +121,10 @@ class AppActivity : FragmentActivity() {
 
     private val isAuthError = MutableStateFlow(false)
 
+    private val pendingSharedContent = mutableStateOf<SharedContent?>(null)
+
+    private val pendingDeepLink = mutableStateOf<Uri?>(null)
+
     private val mainViewModel: MainViewModel by viewModels()
 
     private lateinit var navHostController: NavHostController
@@ -127,6 +132,10 @@ class AppActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            captureSharedFiles(intent)
+            captureAppLink(intent)
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT)
@@ -161,14 +170,27 @@ class AppActivity : FragmentActivity() {
                         observeClientConnectivity()
                         observeNotificationServicePreference()
                         createBroadcastContact()
-                        handleAppLink()
-                        handleSharedFiles()
                         schedulePeriodicSync()
+                    }
+
+                    LaunchedEffect(key1 = pendingSharedContent.value) {
+                        val content = pendingSharedContent.value ?: return@LaunchedEffect
+                        handleSharedContent(content)
+                        pendingSharedContent.value = null
+                    }
+
+                    LaunchedEffect(key1 = pendingDeepLink.value) {
+                        val uri = pendingDeepLink.value ?: return@LaunchedEffect
+                        handleAppLink(uri)
+                        pendingDeepLink.value = null
                     }
 
                     SetupUserNameDialog(
                         visible = userName.isBlank(),
-                        onConfirmClicked = { userName -> mainViewModel.setupName(userName) }
+                        onConfirmClicked = {
+                            userName -> mainViewModel.setupName(userName)
+                            mainViewModel.generateCode(null)
+                        }
                     )
 
                     CheckNotificationsPermission(
@@ -202,6 +224,13 @@ class AppActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        captureSharedFiles(intent)
+        captureAppLink(intent)
     }
 
     private fun loadDbPassphrase() {
@@ -292,45 +321,58 @@ class AppActivity : FragmentActivity() {
         }
     }
 
-    private fun handleAppLink() {
-        val appLinkData = intent.data ?: return
-        val domain = appLinkData.host?.lowercase() ?: return
+    private fun handleAppLink(uri: Uri) {
+        val domain = uri.host?.lowercase() ?: return
         if (intent.action != Intent.ACTION_VIEW) {
             return
         }
         when (domain) {
-            APP_DOMAIN -> handleAppDomain(appLinkData)
-            ARTICLES_DOMAIN -> handleArticlesDomain(appLinkData)
-            WEB_DOMAIN -> handleWebDomain(appLinkData)
+            APP_DOMAIN -> handleAppDomain(uri)
+            ARTICLES_DOMAIN -> handleArticlesDomain(uri)
+            WEB_DOMAIN -> handleWebDomain(uri)
         }
     }
 
-    private fun handleSharedFiles() {
+    private fun handleSharedContent(sharedContent: SharedContent) {
+        when (sharedContent) {
+            is SharedContent.Text -> mainViewModel.setText(sharedContent.text)
+            is SharedContent.SingleFile -> onSingleFileReceived(sharedContent.uri)
+            is SharedContent.MultipleFiles -> onMultipleFilesReceived(sharedContent.uris)
+        }
+    }
+
+    private fun captureAppLink(intent: Intent) {
+        if (intent.action != Intent.ACTION_VIEW) return
+        val uri = intent.data ?: return
+        pendingDeepLink.value = uri
+    }
+
+    private fun captureSharedFiles(intent: Intent) {
         when (intent.action) {
             Intent.ACTION_SEND -> {
                 if (intent.type.isTextMime()) {
                     intent.getStringExtra(Intent.EXTRA_TEXT)?.let { text ->
-                        mainViewModel.setText(text)
+                        pendingSharedContent.value = SharedContent.Text(text)
                     }
                 } else {
                     val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
                     } else {
+                        @Suppress("DEPRECATION")
                         intent.getParcelableExtra(Intent.EXTRA_STREAM)
                     }
-                    uri?.let { onSingleFileReceived(it) }
+                    uri?.let { pendingSharedContent.value = SharedContent.SingleFile(it) }
                 }
-                Screens(navController = navHostController, mainViewModel = mainViewModel).root()
             }
 
             Intent.ACTION_SEND_MULTIPLE -> {
                 val uris = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 } else {
+                    @Suppress("DEPRECATION")
                     intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
                 }
-                uris?.let { onMultipleFilesReceived(it) }
-                Screens(navController = navHostController, mainViewModel = mainViewModel).root()
+                uris?.let { pendingSharedContent.value = SharedContent.MultipleFiles(it) }
             }
         }
     }
@@ -379,10 +421,11 @@ class AppActivity : FragmentActivity() {
 
     private fun handleAppDomain(uri: Uri) {
         if (uri.isSharedData()) {
+            mainViewModel.setUri(uri)
             Screens(
                 navController = navHostController,
                 mainViewModel = mainViewModel
-            ).getSharedContact(uri.toString())
+            ).addContacts(null)
         } else {
             applicationContext.openInBrowser(uri)
         }
