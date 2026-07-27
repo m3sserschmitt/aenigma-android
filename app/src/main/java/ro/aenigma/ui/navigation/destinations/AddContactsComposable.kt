@@ -38,6 +38,7 @@ fun NavGraphBuilder.addContactsComposable(
     navigateBack: () -> Unit,
     navigateToRoot: () -> Unit,
     onForwardUri: (String) -> Unit,
+    navigateToAddContactsHelpScreen: () -> Unit = { }
 ) {
     composable(
         route = Screens.ADD_CONTACTS_PATH,
@@ -71,6 +72,7 @@ fun NavGraphBuilder.addContactsComposable(
             initialScannerState = QrCodeScannerState.valueOf(scanTypeString),
             navigateBack = navigateBack,
             onForwardUri = onForwardUri,
+            navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
             navigateToRoot = navigateToRoot,
             mainViewModel = mainViewModel
         )

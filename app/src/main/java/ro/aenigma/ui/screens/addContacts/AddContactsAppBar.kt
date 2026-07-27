@@ -24,6 +24,7 @@ package ro.aenigma.ui.screens.addContacts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ import ro.aenigma.ui.screens.common.BasicDropDownMenuItem
 import ro.aenigma.ui.screens.common.BasicDropdownMenu
 import ro.aenigma.ui.screens.common.BasicDropdownMenuItem
 import ro.aenigma.ui.screens.common.DropdownMenuSwitch
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.QrCodeScannerState
 
@@ -47,6 +49,7 @@ fun AddContactsAppBar(
     onResetUsernameClicked: () -> Unit = { },
     onEphemeralLinksPreferenceChanged: (Boolean) -> Unit = { },
     onExportQrCodeClicked: () -> Unit = { },
+    navigateToAddContactsHelpScreen: () -> Unit = { },
     navigateBack: () -> Unit = { },
 ) {
     val isScanning =
@@ -60,6 +63,10 @@ fun AddContactsAppBar(
         navigateBack = navigateBack,
         transparent = isScanning,
         actions = {
+            ShowInfoAppBarAction(
+                tint = MaterialTheme.colorScheme.onBackground,
+                onShowInfoClicked = navigateToAddContactsHelpScreen
+            )
             MoreActions(
                 expanded = moreOptionsMenuExpanded,
                 onResetUsernameClicked = onResetUsernameClicked,

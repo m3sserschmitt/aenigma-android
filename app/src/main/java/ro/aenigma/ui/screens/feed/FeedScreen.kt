@@ -45,16 +45,12 @@ import ro.aenigma.models.NewPostSheetStateDto
 import ro.aenigma.models.enums.NewPostSheetSection
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isFullyExpanded
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.isNotFullyExpanded
-import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toExpanded
 import ro.aenigma.models.extensions.NewPostSheetStateDtoExtensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
 import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.services.IOkHttpClientProvider
-import ro.aenigma.ui.screens.common.ComposeNewArticleAppBarAction
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.ui.screens.common.ReloadAppBarAction
-import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
@@ -64,7 +60,9 @@ import ro.aenigma.viewmodels.MainViewModel
 @Composable
 fun FeedScreen(
     mainViewModel: MainViewModel,
-    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToArticleScreen: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToFeedHelpScreen: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { },
     redirectUri: (String) -> Unit
 ) {
     val articles by mainViewModel.newsFeed.collectAsState()
@@ -77,13 +75,15 @@ fun FeedScreen(
         okHttpClientProvider = mainViewModel.provideOkHttpClientProvider(),
         onArticleClicked = { article ->
             if (!article.url.isNullOrBlank()) {
-                navigateToArticle(article.url, article.title, article.messageId)
+                navigateToArticleScreen(article.url, article.title, article.messageId)
             }
         },
         onNewPostSheetStateChanged = { sheetState -> mainViewModel.setNewPostSheetState(sheetState) },
         onReloadFeedClicked = { mainViewModel.reloadFeed() },
         onPostClicked = { mainViewModel.postArticle() },
-        onRedirectUriClicked = redirectUri
+        onRedirectUriClicked = redirectUri,
+        navigateToFeedHelpScreen = navigateToFeedHelpScreen,
+        navigateToNewPostSheetHelpScreen = navigateToNewPostSheetHelpScreen
     )
 }
 
@@ -98,6 +98,8 @@ fun FeedScreen(
     onNewPostSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
     onReloadFeedClicked: () -> Unit = { },
     onPostClicked: () -> Unit = { },
+    navigateToFeedHelpScreen: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { },
     onRedirectUriClicked: (String) -> Unit = { }
 ) {
     val bottomSheetState = rememberStandardBottomSheetState(
@@ -126,35 +128,20 @@ fun FeedScreen(
         sheetPeekHeight = BOTTOM_SHEET_PEEK_HEIGHT,
         sheetContainerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            StandardAppBar(
-                title = stringResource(id = R.string.news),
-                navigateBackVisible = false,
-                actions = {
-                    ReloadAppBarAction(
-                        visible = true,
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        onClick = onReloadFeedClicked
-                    )
-                },
-                navigateBackAlternative = {
-                    ComposeNewArticleAppBarAction(
-                        tint = MaterialTheme.colorScheme.onBackground,
-                        onComposeNewArticle = {
-                            if (bottomSheetScaffoldState.isNotFullyExpanded()) {
-                                onNewPostSheetStateChanged(newPostSheetState.toExpanded())
-                            } else {
-                                onNewPostSheetStateChanged(newPostSheetState.toPartiallyExpanded())
-                            }
-                        }
-                    )
-                }
+            FeedAppBar(
+                bottomSheetScaffoldState = bottomSheetScaffoldState,
+                newPostSheetState = newPostSheetState,
+                onReloadFeedClicked = onReloadFeedClicked,
+                onNewPostSheetStateChanged = onNewPostSheetStateChanged,
+                navigateToFeedHelpScreen = navigateToFeedHelpScreen
             )
         },
         sheetContent = {
             NewPostBottomSheet(
                 sheetState = newPostSheetState,
                 onSheetStateChanged = onNewPostSheetStateChanged,
-                onPostClicked = onPostClicked
+                onPostClicked = onPostClicked,
+                navigateToNewPostSheetHelpScreen = navigateToNewPostSheetHelpScreen
             )
         }
     ) { padding ->

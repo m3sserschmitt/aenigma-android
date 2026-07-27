@@ -26,7 +26,9 @@ import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.scalars.ScalarsConverterFactory
 import ro.aenigma.data.LocalDataSource
-import ro.aenigma.data.network.EnigmaApi
+import ro.aenigma.data.network.AenigmaApi
+import ro.aenigma.data.network.AenigmaArticlesApi
+import ro.aenigma.util.Constants.Companion.ARTICLES_API_BASE_URL
 import ro.aenigma.util.SerializerExtensions.createJsonConverterFactory
 import ro.aenigma.util.StringExtensions.getBaseUrl
 import javax.inject.Inject
@@ -50,7 +52,7 @@ class RetrofitProvider @Inject constructor(
         }
     }
 
-    suspend fun getInstance(): Retrofit? {
+    private suspend fun getAenigmRetrofitInstance(): Retrofit? {
         return try {
             val baseUrl = localDataSource.getGuardHostname()?.getBaseUrl() ?: return null
             getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null)
@@ -59,15 +61,23 @@ class RetrofitProvider @Inject constructor(
         }
     }
 
-    suspend fun getApi(): EnigmaApi? {
-        return getInstance()?.create(EnigmaApi::class.java)
-    }
-
-    private suspend fun getInstance(baseUrl: String): Retrofit? {
+    private suspend fun getAenigmRetrofitInstance(baseUrl: String): Retrofit? {
         return getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null)
     }
 
-    suspend fun getApi(baseUrl: String): EnigmaApi? {
-        return getInstance(baseUrl)?.create(EnigmaApi::class.java)
+    private suspend fun getAenigmaArticlesRetrofitInstance(): Retrofit? {
+        return getInstance(ARTICLES_API_BASE_URL, okHttpClientProvider.getInstance() ?: return null)
+    }
+
+    suspend fun getAenigmaApi(): AenigmaApi? {
+        return getAenigmRetrofitInstance()?.create(AenigmaApi::class.java)
+    }
+
+    suspend fun getAenigmaApi(baseUrl: String): AenigmaApi? {
+        return getAenigmRetrofitInstance(baseUrl)?.create(AenigmaApi::class.java)
+    }
+
+    suspend fun getAenigmaArticlesApi(): AenigmaArticlesApi? {
+        return getAenigmaArticlesRetrofitInstance()?.create(AenigmaArticlesApi::class.java)
     }
 }

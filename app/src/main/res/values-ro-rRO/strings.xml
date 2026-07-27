@@ -143,7 +143,7 @@
     <string name="connected_through_tor">Conectat prin rețeaua Onion Router</string>
     <string name="tor_stopped">Serviciul TOR a fost oprit</string>
     <string name="background_work">Lucrează în fundal</string>
-    <string name="servers">Servere disponibile</string>
+    <string name="servers">Servere</string>
     <string name="history">Istoric</string>
     <string name="connect">Conectează</string>
     <string name="no_server_found">Nu am găsit niciun server</string>
@@ -179,4 +179,5 @@
     <string name="total_post_size_exceeded">Un maxim de %.2f MB este permis pentru distribuire</string>
     <string name="export_qr_code">Exportați codul QR</string>
     <string name="ephemeral_links">Link-uri efemere</string>
+    <string name="info">Informații</string>
 </resources>

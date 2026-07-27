@@ -34,11 +34,9 @@ import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.extensions.ArticleDtoExtensions.prettyFormat
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.isWithinNewsfeedPeriod
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
-import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 import ro.aenigma.util.ContextExtensions.getArticle
-import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.collections.emptyList
@@ -126,8 +124,7 @@ class FeedSampler @Inject constructor(
 
     private suspend fun getWebArticles(): List<ArticleDto> {
         return try {
-            val indexUrl = String.format(ARTICLES_INDEX_URL_TEMPLATE, Locale.getDefault().language)
-            repository.remote.getArticles(indexUrl).map { article -> article.prettyFormat() }
+            repository.remote.getArticlesIndex().map { article -> article.prettyFormat() }
         } catch (_: Exception) {
             listOf()
         }

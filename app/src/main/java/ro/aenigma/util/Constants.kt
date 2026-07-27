@@ -64,15 +64,13 @@ class Constants {
 
         const val APP_DOMAIN = "aenigma.ro"
 
-        const val ARTICLES_DOMAIN = "articles.$APP_DOMAIN"
+        const val ARTICLES_DOMAIN = "articles.aenigma.ro"
 
-        const val WEB_DOMAIN = "web.$APP_DOMAIN"
+        const val WEB_DOMAIN = "web.aenigma.ro"
 
         const val API_BASE_URL = "https://$APP_DOMAIN/"
 
-        const val ARTICLES_INDEX_URL_TEMPLATE = "https://$ARTICLES_DOMAIN/index-%s.json"
-
-        const val PRIVACY_POLICY_URL_TEMPLATE = "https://$ARTICLES_DOMAIN/privacy-policy-%s.md"
+        const val ARTICLES_API_BASE_URL = "https://$ARTICLES_DOMAIN"
 
         const val WEB_ARTICLE_URL_TEMPLATE = "https://$WEB_DOMAIN/#/blog/article?url=%s"
 
@@ -142,6 +140,22 @@ class Constants {
         const val FILE_API_PATH = "/File"
 
         const val INCREMENT_FILE_COUNT_API_PAT = "/IncrementFileAccessCount"
+
+        const val ARTICLES_INDEX_API_PATH = "/index-{lang}.json"
+
+        const val CONTACTS_HELP_API_PATH = "/user-guide/contacts-screen-{lang}.md"
+
+        const val SERVERS_SHEET_HELP_API_PATH = "/user-guide/servers-bottom-sheet-{lang}.md"
+
+        const val CHAT_HELP_API_PATH = "/user-guide/chat-screen-{lang}.md"
+
+        const val ADD_CONTACTS_HELP_API_PATH = "/user-guide/add-contacts-screen-{lang}.md"
+
+        const val FEED_HELP_API_PATH = "/user-guide/feed-screen-{lang}.md"
+
+        const val NEW_POST_SHEET_HELP_API_PATH = "/user-guide/new-post-bottom-sheet-{lang}.md"
+
+        const val PRIVACY_POLICY_API_PATH = "/privacy-policy-{lang}.md"
 
         const val ONION_ROUTING_ENDPOINT = "OnionRouting"
 

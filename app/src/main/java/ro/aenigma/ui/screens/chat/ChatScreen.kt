@@ -65,7 +65,8 @@ fun ChatScreen(
     chatViewModel: ChatViewModel,
     navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit,
-    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToArticleScreen: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToChatHelpScreen: () -> Unit = { },
     redirectUri: (String) -> Unit
 ) {
     LaunchedEffect(key1 = true) {
@@ -122,7 +123,7 @@ fun ChatScreen(
         onMessageClicked = { message -> chatViewModel.onMessageClicked(message) },
         onArticleClicked = { article ->
             if (!article.url.isNullOrBlank()) {
-                navigateToArticle(article.url, article.title, article.messageId)
+                navigateToArticleScreen(article.url, article.title, article.messageId)
             }
         },
         onRedirectUriClicked = { uri ->
@@ -137,7 +138,8 @@ fun ChatScreen(
         navigateToAddContactsScreen = { address ->
             chatViewModel.markConversationAsRead()
             navigateToAddContactsScreen(address)
-        }
+        },
+        navigateToChatHelpScreen = navigateToChatHelpScreen
     )
 }
 
@@ -177,7 +179,8 @@ fun ChatScreen(
     onRedirectUriClicked: (String) -> Unit = { },
     loadNextPage: () -> Unit = { },
     navigateBack: () -> Unit = { },
-    navigateToAddContactsScreen: (String) -> Unit = { }
+    navigateToAddContactsScreen: (String) -> Unit = { },
+    navigateToChatHelpScreen: () -> Unit = { }
 ) {
     var renameContactDialogVisible by remember { mutableStateOf(false) }
     var clearConversationConfirmationVisible by remember { mutableStateOf(false) }
@@ -360,7 +363,8 @@ fun ChatScreen(
                     }
                 },
                 onRetryConnection = onRetryConnection,
-                navigateToAddContactsScreen = navigateToAddContactsScreen
+                navigateToAddContactsScreen = navigateToAddContactsScreen,
+                navigateToChatHelpScreen = navigateToChatHelpScreen
             )
         },
         content = { paddingValues ->

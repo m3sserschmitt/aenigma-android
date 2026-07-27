@@ -46,8 +46,6 @@ import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.ui.screens.common.ShareTopAppBarAction
-import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.ContextExtensions.showFailedToShareToast
@@ -57,24 +55,25 @@ import ro.aenigma.viewmodels.MainViewModel
 
 @Composable
 fun ArticleScreen(
-    uri: String?,
+    uri: String? = null,
     title: String? = null,
     messageId: Long? = null,
     mainViewModel: MainViewModel,
-    forwardMessage: (Long) -> Unit,
-    navigateBack: () -> Unit
+    forwardMessage: (Long) -> Unit = { },
+    navigateBack: () -> Unit = { }
 ) {
-    LaunchedEffect(key1 = uri) { mainViewModel.fetchArticle(uri) }
+    LaunchedEffect(key1 = uri) { mainViewModel.fetchArticle(uri ?: return@LaunchedEffect) }
 
     val content by mainViewModel.articleContent.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     ArticleScreen(
-        content = content,
+        uri = uri,
         title = title,
+        content = content,
         imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
-        onShareArticle = {
+        onShareArticle = { uri ->
             if (uri.isRemoteUri()) {
                 if (!context.shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri)))) {
                     coroutineScope.launch { context.showFailedToShareToast() }
@@ -89,25 +88,21 @@ fun ArticleScreen(
 
 @Composable
 fun ArticleScreen(
-    content: RequestState<String>,
+    uri: String? = null,
     title: String? = null,
+    content: RequestState<String>,
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
-    onShareArticle: () -> Unit,
+    onShareArticle: (String) -> Unit,
     navigateBack: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            StandardAppBar(
-                title = title.takeIf { t -> !t.isNullOrBlank() } ?: "",
-                navigateBack = navigateBack,
-                actions = {
-                    ShareTopAppBarAction(
-                        visible = true,
-                        onClick = onShareArticle,
-                        tint = MaterialTheme.colorScheme.onBackground
-                    )
-                }
+            ArticleAppBar(
+                uri = uri,
+                title = title,
+                onShareArticle = onShareArticle,
+                navigateBack = navigateBack
             )
         },
         content = { paddingValues ->

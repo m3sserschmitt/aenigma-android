@@ -22,6 +22,7 @@
 package ro.aenigma.ui.screens.common
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -36,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -166,6 +168,17 @@ fun ActivateSearchAppBarAction(
 }
 
 @Composable
+fun ShowInfoAppBarAction(
+    tint: Color = Color.Unspecified,
+    onShowInfoClicked: () -> Unit = { }
+) {
+    InfoButton(
+        tint = tint,
+        onClick = onShowInfoClicked
+    )
+}
+
+@Composable
 fun ForwardAttachmentsAppBarAction(
     tint: Color = Color.Unspecified,
     onForwardAttachments: () -> Unit
@@ -191,11 +204,16 @@ private fun AppBarConnectionStatusIndicator(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IndeterminateCircularIndicator(
+            modifier = Modifier.padding(end = 4.dp),
             size = 18.dp,
             color = tint,
             textColor = tint,
             visible = isProgress,
-            text = stringResource(id = R.string.working),
+            text = if (isAuthenticated) {
+                stringResource(id = R.string.working)
+            } else {
+                ""
+            },
             textStyle = MaterialTheme.typography.bodySmall
         )
         if (!isAuthenticated) {

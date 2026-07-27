@@ -147,7 +147,7 @@
     <string name="connected_through_tor">Connected through The Onion Router network</string>
     <string name="tor_stopped">TOR Service stopped</string>
     <string name="background_work">Background work</string>
-    <string name="servers">Available servers</string>
+    <string name="servers">Servers</string>
     <string name="history">History</string>
     <string name="connect">Connect</string>
     <string name="no_server_found">No server found</string>
@@ -185,4 +185,5 @@
     <string name="openssl" translatable="false">OpenSSL</string>
     <string name="export_qr_code">Export QR code</string>
     <string name="ephemeral_links">Ephemeral links</string>
+    <string name="info">Info</string>
 </resources>

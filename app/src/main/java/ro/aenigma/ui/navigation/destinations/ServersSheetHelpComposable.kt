@@ -26,26 +26,26 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.Screens
-import ro.aenigma.ui.screens.about.AboutScreen
+import ro.aenigma.ui.screens.feed.ArticleScreen
+import ro.aenigma.viewmodels.MainViewModel
 
-fun NavGraphBuilder.aboutComposable (
+fun NavGraphBuilder.serversSheetHelpComposable (
     notifier: Notifier,
-    navigateBack: () -> Unit,
-    navigateToLicensesScreen: () -> Unit,
-    navigateToPrivacyPolicyScreen: () -> Unit
+    mainViewModel: MainViewModel,
+    navigateBack: () -> Unit
 ) {
     composable(
-        route = Screens.ABOUT_SCREEN_PATH
+        route = Screens.SERVERS_SHEET_HELP_SCREEN_PATH
     ) {
         LaunchedEffect(key1 = true) {
-            notifier.enableNotifications()
             notifier.exitChat()
+            notifier.enableNotifications()
+            mainViewModel.fetchServersSheetHelp()
         }
 
-        AboutScreen(
+        ArticleScreen(
+            mainViewModel = mainViewModel,
             navigateBack = navigateBack,
-            navigateToLicensesScreen = navigateToLicensesScreen,
-            navigateToPrivacyPolicyScreen = navigateToPrivacyPolicyScreen
         )
     }
 }

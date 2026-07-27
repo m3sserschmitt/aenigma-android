@@ -61,9 +61,9 @@ import ro.aenigma.crypto.CryptoProvider
 
 @Composable
 fun AboutScreen(
-    navigateBack: () -> Unit,
-    navigateToLicensesScreen: () -> Unit,
-    navigateToPrivacyPolicy: () -> Unit
+    navigateBack: () -> Unit = { },
+    navigateToLicensesScreen: () -> Unit = { },
+    navigateToPrivacyPolicyScreen: () -> Unit = { }
 ) {
     var appLicenseVisible by remember { mutableStateOf(false) }
     var apacheLicenseVisible by remember { mutableStateOf(false) }
@@ -165,7 +165,9 @@ fun AboutScreen(
             )
 
             val opensslString = stringResource(id = R.string.openssl)
-            val opensslVersion = remember { CryptoProvider.getOpenSslFullVersion() ?: opensslString}
+            val opensslVersion = remember {
+                CryptoProvider.getOpenSslFullVersion() ?: opensslString
+            }
             Text(
                 text = stringResource(R.string.backed_by_openssl, opensslVersion),
                 style = MaterialTheme.typography.bodyMedium,
@@ -183,7 +185,7 @@ fun AboutScreen(
             Link(
                 context = context,
                 url = stringResource(id = R.string.privacy_policy),
-                action = navigateToPrivacyPolicy
+                action = navigateToPrivacyPolicyScreen
             )
             VerticalDivider(
                 modifier = Modifier.weight(1f)
@@ -238,7 +240,7 @@ fun LicenseDialog(
     onCloseButtonClicked: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    if (visible ) {
+    if (visible) {
         BasicAlertDialog(
             onDismissRequest = { }
         ) {
@@ -280,13 +282,8 @@ fun readRawTextResource(
 
 @Preview
 @Composable
-fun AboutScreenPreview()
-{
-    AboutScreen(
-        navigateBack = { },
-        navigateToLicensesScreen = { },
-        navigateToPrivacyPolicy = { }
-    )
+fun AboutScreenPreview() {
+    AboutScreen()
 }
 
 @Preview

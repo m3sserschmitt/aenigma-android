@@ -27,8 +27,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import ro.aenigma.ui.screens.feed.FeedScreenDarkPreview
 import ro.aenigma.ui.screens.feed.FeedScreenPreview
-import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetDarkPreview
-import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetPreview
 
 @RunWith(AndroidJUnit4::class)
 class FeedScreenshots: ScreenshotBase() {
@@ -43,17 +41,7 @@ class FeedScreenshots: ScreenshotBase() {
     }
 
     @Test
-    fun captureFeedScreenStoryBottomSheet() {
-        return captureScreenshot("FeedScreenStoryBottomSheet") { FeedScreenStoryBottomSheetPreview() }
-    }
-
-    @Test
     fun captureFeedScreenDark() {
         return captureScreenshot("FeedScreenDark") { FeedScreenDarkPreview() }
-    }
-
-    @Test
-    fun captureFeedScreenStoryBottomSheetDark() {
-        return captureScreenshot("FeedScreenStoryBottomSheetDark") { FeedScreenStoryBottomSheetDarkPreview() }
     }
 }

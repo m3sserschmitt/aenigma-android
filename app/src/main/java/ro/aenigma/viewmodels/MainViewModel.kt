@@ -699,18 +699,12 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun fetchArticle(uri: String?) {
-        viewModelScope.launch {
+    fun fetchArticle(fetcher: suspend () -> String?) {
+        viewModelScope.launch(ioDispatcher) {
             _articleContent.value = RequestState.Loading
             _articleContent.value = try {
-                val result = if (uri.isRemoteUri()) {
-                    repository.remote.getText(uri)
-                } else if (!uri.isNullOrBlank()) {
-                    repository.local.readText(uri)
-                } else {
-                    null
-                }
-                if (result != null) {
+                val result = fetcher()
+                if(result != null) {
                     RequestState.Success(result)
                 } else {
                     RequestState.Error(Exception("Cannot fetch resource"))
@@ -719,6 +713,46 @@ class MainViewModel @Inject constructor(
                 RequestState.Error(e)
             }
         }
+    }
+
+    fun fetchArticle(uri: String) {
+        fetchArticle {
+            if (uri.isRemoteUri()) {
+                repository.remote.getText(uri)
+            } else if (uri.isNotBlank()) {
+                repository.local.readText(uri)
+            } else {
+                null
+            }
+        }
+    }
+
+    fun fetchPrivacyPolicy() {
+        fetchArticle { repository.remote.getPrivacyPolicy() }
+    }
+
+    fun fetchContactsHelp() {
+        fetchArticle { repository.remote.getContactsScreenHelp() }
+    }
+
+    fun fetchServersSheetHelp() {
+        fetchArticle { repository.remote.getServersSheetHelp() }
+    }
+
+    fun fetchChatHelp() {
+        fetchArticle { repository.remote.getChatScreenHelp() }
+    }
+
+    fun fetchFeedHelp() {
+        fetchArticle { repository.remote.getFeedScreenHelp() }
+    }
+
+    fun fetchNewPostSheetHelp() {
+        fetchArticle { repository.remote.getNewPostSheetHelp() }
+    }
+
+    fun fetchAddContactsHelp() {
+        fetchArticle { repository.remote.getAddContactsHelp() }
     }
 
     fun switchServer(server: ServerInfoDto) {

@@ -19,33 +19,31 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package ro.aenigma.ui.navigation.destinations
+package ro.aenigma.ui.screens.feed
 
-import androidx.compose.runtime.LaunchedEffect
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.composable
-import ro.aenigma.services.Notifier
-import ro.aenigma.ui.navigation.Screens
-import ro.aenigma.ui.screens.about.AboutScreen
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import ro.aenigma.ui.screens.common.ShareTopAppBarAction
+import ro.aenigma.ui.screens.common.StandardAppBar
 
-fun NavGraphBuilder.aboutComposable (
-    notifier: Notifier,
-    navigateBack: () -> Unit,
-    navigateToLicensesScreen: () -> Unit,
-    navigateToPrivacyPolicyScreen: () -> Unit
+@Composable
+fun ArticleAppBar(
+    uri: String? = null,
+    title: String? = null,
+    onShareArticle: (String) -> Unit = { },
+    navigateBack: () -> Unit = { },
 ) {
-    composable(
-        route = Screens.ABOUT_SCREEN_PATH
-    ) {
-        LaunchedEffect(key1 = true) {
-            notifier.enableNotifications()
-            notifier.exitChat()
+    StandardAppBar(
+        title = title.takeIf { t -> !t.isNullOrBlank() } ?: "",
+        navigateBack = navigateBack,
+        actions = {
+            if(!uri.isNullOrBlank()) {
+                ShareTopAppBarAction(
+                    visible = true,
+                    onClick = { onShareArticle(uri) },
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
         }
-
-        AboutScreen(
-            navigateBack = navigateBack,
-            navigateToLicensesScreen = navigateToLicensesScreen,
-            navigateToPrivacyPolicyScreen = navigateToPrivacyPolicyScreen
-        )
-    }
+    )
 }

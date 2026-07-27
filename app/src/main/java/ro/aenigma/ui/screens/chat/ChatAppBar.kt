@@ -51,6 +51,7 @@ import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
 import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.RequestState
 
@@ -76,7 +77,8 @@ fun ChatAppBar(
     onSearchClicked: (String) -> Unit,
     onGroupActionClicked: (MessageType) -> Unit,
     navigateBack: () -> Unit,
-    navigateToAddContactsScreen: (String) -> Unit
+    navigateToAddContactsScreen: (String) -> Unit,
+    navigateToChatHelpScreen: () -> Unit = { }
 ) {
     var searchQuery by remember { mutableStateOf("") }
     LaunchedEffect(key1 = isSearchMode)
@@ -127,6 +129,10 @@ fun ChatAppBar(
                     ActivateSearchAppBarAction(
                         tint = MaterialTheme.colorScheme.onBackground,
                         onSearchModeTriggered = onSearchModeTriggered
+                    )
+                    ShowInfoAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onShowInfoClicked = navigateToChatHelpScreen
                     )
                     MoreActions(
                         isGroup = contact.data.contact.type == ContactType.GROUP,

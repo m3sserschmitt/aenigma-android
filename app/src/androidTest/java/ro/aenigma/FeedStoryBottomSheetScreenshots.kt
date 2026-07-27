@@ -24,31 +24,19 @@ package ro.aenigma
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Test
 import org.junit.runner.RunWith
-import ro.aenigma.ui.screens.addContacts.AddContactsScreenDarkPreview
-import ro.aenigma.ui.screens.addContacts.AddContactsScreenMoreOptionsMenuExpandedDarkPreview
-import ro.aenigma.ui.screens.addContacts.AddContactsScreenMoreOptionsMenuExpandedPreview
-import ro.aenigma.ui.screens.addContacts.AddContactsScreenPreview
+import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetDarkPreview
+import ro.aenigma.ui.screens.feed.FeedScreenStoryBottomSheetPreview
 
 @RunWith(AndroidJUnit4::class)
-class AddContactsScreenshots: ScreenshotBase() {
+class FeedStoryBottomSheetScreenshots: ScreenshotBase() {
 
     @Test
-    fun captureAddContactsScreen() {
-        return captureScreenshot("AddContactsScreen") { AddContactsScreenPreview() }
+    fun captureFeedScreenStoryBottomSheet() {
+        return captureScreenshot("FeedScreenStoryBottomSheet") { FeedScreenStoryBottomSheetPreview() }
     }
 
     @Test
-    fun captureAddContactsScreenMoreOptionsMenuExpanded() {
-        return captureScreenshot("AddContactsScreenMoreOptionsMenuExpanded") { AddContactsScreenMoreOptionsMenuExpandedPreview() }
-    }
-
-    @Test
-    fun captureAddContactsScreenDark() {
-        return captureScreenshot("AddContactsScreenDark") { AddContactsScreenDarkPreview() }
-    }
-
-    @Test
-    fun captureAddContactsScreenMoreOptionsMenuExpandedDark() {
-        return captureScreenshot("AddContactsScreenMoreOptionsMenuExpandedDark") { AddContactsScreenMoreOptionsMenuExpandedDarkPreview() }
+    fun captureFeedScreenStoryBottomSheetDark() {
+        return captureScreenshot("FeedScreenStoryBottomSheetDark") { FeedScreenStoryBottomSheetDarkPreview() }
     }
 }

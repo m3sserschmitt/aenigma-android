@@ -51,6 +51,7 @@ import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 
 @Composable
@@ -80,6 +81,7 @@ fun ContactsAppBar(
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: () -> Unit = { },
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
+    navigateToContactsHelpScreen: () -> Unit = { },
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -153,6 +155,12 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
+                if(!isForwardMode) {
+                    ShowInfoAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onShowInfoClicked = navigateToContactsHelpScreen
+                    )
+                }
                 if (isSelectionMode && isForwardMode) {
                     ForwardAttachmentsAppBarAction(
                         tint = MaterialTheme.colorScheme.onBackground,

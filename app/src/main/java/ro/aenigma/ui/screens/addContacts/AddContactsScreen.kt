@@ -58,6 +58,7 @@ fun AddContactsScreen(
     initialScannerState: QrCodeScannerState,
     navigateBack: () -> Unit,
     onForwardUri: (String) -> Unit = { },
+    navigateToAddContactsHelpScreen: () -> Unit = { },
     navigateToRoot: () -> Unit = { },
     mainViewModel: MainViewModel
 ) {
@@ -122,6 +123,7 @@ fun AddContactsScreen(
         onGetLink = { url -> mainViewModel.openContactSharedData(url) },
         onSharedDataConfirm = { mainViewModel.resetContactChanges() },
         onForwardUri = onForwardUri,
+        navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
         navigateBack = navigateBack
     )
 }
@@ -148,6 +150,7 @@ fun AddContactsScreen(
     onGetLink: (String) -> Unit = { },
     onSharedDataConfirm: () -> Unit = { },
     onForwardUri: (String) -> Unit = { },
+    navigateToAddContactsHelpScreen: () -> Unit = { },
     navigateBack: () -> Unit = { }
 ) {
     val context = LocalContext.current
@@ -171,6 +174,7 @@ fun AddContactsScreen(
                         }
                     }
                 },
+                navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
                 navigateBack = navigateBack
             )
         },
@@ -253,8 +257,32 @@ fun AddContactsScreenPreview() {
 
 @Preview
 @Composable
+fun AddContactsScreenMoreOptionsMenuExpandedPreview() {
+    AddContactsScreen(
+        qrCode = RequestState.Success(
+            QrCodeDto(
+                QrCodeGenerator(
+                    400,
+                    400
+                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
+            )
+        ),
+        moreOptionsMenuExpanded = true
+    )
+}
+
+@Preview
+@Composable
 fun AddContactsScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         AddContactsScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun AddContactsScreenMoreOptionsMenuExpandedDarkPreview() {
+    ApplicationComposeDarkTheme {
+        AddContactsScreenMoreOptionsMenuExpandedPreview()
     }
 }

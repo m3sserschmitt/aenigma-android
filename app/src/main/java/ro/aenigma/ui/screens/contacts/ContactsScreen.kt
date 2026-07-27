@@ -90,6 +90,8 @@ fun ContactsScreen(
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
+    navigateToContactsHelpScreen: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { },
     navigateToRoot: () -> Unit,
     mainViewModel: MainViewModel
 ) {
@@ -144,6 +146,8 @@ fun ContactsScreen(
         onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
         navigateToAboutScreen = navigateToAboutScreen,
+        navigateToContactsHelpScreen = navigateToContactsHelpScreen,
+        navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen,
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
@@ -198,6 +202,8 @@ fun ContactsScreen(
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: (List<String>) -> Unit = { },
     navigateToAddContactScreen: (String?) -> Unit = { },
+    navigateToContactsHelpScreen: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { },
     navigateToAboutScreen: () -> Unit = { },
     navigateToChatScreen: (String) -> Unit = { }
 ) {
@@ -399,7 +405,8 @@ fun ContactsScreen(
                     onServerClicked = onServerClicked,
                     onSheetStateChanged = onServersSheetStateChanged,
                     onScanCodeClicked = onScanServerCodeClicked,
-                    onConnectPeopleClicked = onConnectPeopleClicked
+                    onConnectPeopleClicked = onConnectPeopleClicked,
+                    navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
                 )
             }
         },
@@ -496,7 +503,8 @@ fun ContactsScreen(
                 },
                 onRemoveAttachments = onRemoveAttachments,
                 onRetryConnection = onRetryConnection,
-                navigateToAboutScreen = navigateToAboutScreen
+                navigateToAboutScreen = navigateToAboutScreen,
+                navigateToContactsHelpScreen = navigateToContactsHelpScreen
             )
         },
     ) { paddingValues ->

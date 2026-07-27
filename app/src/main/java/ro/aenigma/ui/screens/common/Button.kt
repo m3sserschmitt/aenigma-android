@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -265,6 +266,24 @@ fun ReloadButton (
             imageVector = Icons.Filled.Refresh,
             contentDescription = stringResource(
                 id = R.string.reload
+            ),
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun InfoButton(
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = stringResource(
+                id = R.string.info
             ),
             tint = tint
         )
