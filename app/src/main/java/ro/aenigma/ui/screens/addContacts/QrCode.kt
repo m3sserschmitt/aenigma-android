@@ -24,7 +24,6 @@ package ro.aenigma.ui.screens.addContacts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -41,14 +40,11 @@ import ro.aenigma.util.QrCodeGenerator
 
 @Composable
 fun LandscapeQrCode(
+    modifier: Modifier = Modifier,
     qrCode: QrCodeDto
 ) {
     Image(
-        modifier = Modifier
-            .padding(
-                start = 12.dp,
-                end = 12.dp
-            )
+        modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .fillMaxHeight(),
         contentScale = ContentScale.FillHeight,
@@ -61,16 +57,11 @@ fun LandscapeQrCode(
 
 @Composable
 fun PortraitQrCode(
+    modifier: Modifier = Modifier,
     qrCode: QrCodeDto
 ) {
     Image(
-        modifier = Modifier
-            .padding(
-                start = 12.dp,
-                end = 12.dp,
-                top = 12.dp,
-                bottom = 6.dp
-            )
+        modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .fillMaxWidth(),
         contentScale = ContentScale.FillWidth,

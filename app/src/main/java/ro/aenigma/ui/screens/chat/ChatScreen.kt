@@ -38,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.ContactDto
@@ -54,6 +53,7 @@ import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.OkHttpClientProviderDefault
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.ChatViewModel
 import java.time.ZonedDateTime
@@ -372,8 +372,8 @@ fun ChatScreen(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
                     bottom = paddingValues.calculateBottomPadding(),
-                    start = 8.dp,
-                    end = 8.dp
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 ),
                 okHttpClientProvider = okHttpClientProvider,
                 isMember = isMember,

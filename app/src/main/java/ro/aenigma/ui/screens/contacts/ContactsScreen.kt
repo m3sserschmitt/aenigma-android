@@ -77,6 +77,7 @@ import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openOrbot
 import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
@@ -526,7 +527,9 @@ fun ContactsScreen(
             ContactsContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = BOTTOM_SHEET_PEEK_HEIGHT
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 ),
                 contacts = contacts,
                 isSearchMode = isSearchMode,
@@ -553,7 +556,6 @@ fun ContactsFab(
     onFabClicked: () -> Unit
 ) {
     FloatingActionButton(
-        modifier = Modifier.padding(bottom = BOTTOM_SHEET_PEEK_HEIGHT),
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         onClick = { onFabClicked() },
     ) {

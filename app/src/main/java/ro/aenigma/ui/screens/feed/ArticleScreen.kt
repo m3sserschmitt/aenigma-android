@@ -35,7 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.model.ImageTransformer
@@ -45,6 +44,7 @@ import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.ContextExtensions.showFailedToShareToast
 import ro.aenigma.util.RequestState
@@ -108,8 +108,9 @@ fun ArticleScreen(
             ArticleScreenContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    start = 8.dp,
-                    end = 8.dp
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 ),
                 content = content,
                 imageTransformer = imageTransformer

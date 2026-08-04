@@ -58,6 +58,7 @@ import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.StandardAppBar
 import androidx.core.net.toUri
 import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 
 @Composable
 fun AboutScreen(
@@ -106,8 +107,8 @@ fun AboutScreen(
                 .padding(
                     top = padding.calculateTopPadding(),
                     bottom = padding.calculateBottomPadding(),
-                    start = 8.dp,
-                    end = 8.dp
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 )
                 .verticalScroll(scrollState)
         ) {

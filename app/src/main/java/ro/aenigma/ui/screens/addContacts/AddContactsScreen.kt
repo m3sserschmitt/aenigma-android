@@ -45,6 +45,7 @@ import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.ServerInfoDto
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.ContextExtensions.shareQrCode
 import ro.aenigma.util.ContextExtensions.showFailedToShareToast
 import ro.aenigma.util.RequestState
@@ -196,6 +197,8 @@ fun AddContactsScreen(
                     .padding(
                         top = paddingValues.calculateTopPadding(),
                         bottom = paddingValues.calculateBottomPadding(),
+                        start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                        end = HORIZONTAL_SCREEN_CONTENT_PADDING
                     ),
                 scannerState = scannerState,
                 qrCode = qrCode,

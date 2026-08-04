@@ -38,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import ro.aenigma.R
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.NewPostSheetStateDto
@@ -54,6 +53,7 @@ import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.RequestState
 import ro.aenigma.viewmodels.MainViewModel
 
@@ -148,9 +148,9 @@ fun FeedScreen(
         FeedScreenContent(
             modifier = Modifier.padding(
                 top = padding.calculateTopPadding(),
-                bottom = BOTTOM_SHEET_PEEK_HEIGHT,
-                start = 8.dp,
-                end = 8.dp
+                bottom = padding.calculateBottomPadding(),
+                start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                end = HORIZONTAL_SCREEN_CONTENT_PADDING
             ).fillMaxSize(),
             feedListState = feedListState,
             articles = articles,

@@ -285,6 +285,10 @@ fun DisplayPortraitQrCode(
             )
         )
         PortraitQrCode(
+            modifier = Modifier.padding(
+                top = 12.dp,
+                bottom = 6.dp
+            ),
             qrCode = qrCode
         )
         Text(
@@ -321,6 +325,10 @@ fun DisplayLandscapeQrCode(
         verticalAlignment = Alignment.CenterVertically
     ) {
         LandscapeQrCode(
+            modifier = Modifier.padding(
+                start = 12.dp,
+                end = 12.dp
+            ),
             qrCode = qrCode
         )
         Column(

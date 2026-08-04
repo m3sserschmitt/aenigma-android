@@ -142,6 +142,7 @@ class Constants {
         val NAVIGATION_BAR_HEIGHT = IntrinsicSize.Min
         val BOTTOM_SHEET_PEEK_HEIGHT = 45.dp
         val INFO_SCREEN_ICON_SIZE = 50.dp
+        val HORIZONTAL_SCREEN_CONTENT_PADDING = 8.dp
 
 
         // Media
