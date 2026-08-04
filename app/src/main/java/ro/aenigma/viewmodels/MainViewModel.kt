@@ -72,7 +72,6 @@ import ro.aenigma.services.OnionRoutingServiceMonitor
 import ro.aenigma.services.UriBatcher
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
-import ro.aenigma.util.StringExtensions.getHttpUri
 import javax.inject.Inject
 import kotlin.collections.filter
 import ro.aenigma.util.SerializerExtensions.toJson
@@ -452,7 +451,6 @@ class MainViewModel @Inject constructor(
             repository.local.insertOrUpdateContact(newContact)
             messageSaver.saveOutgoingHelloMessage(newContact.address)
         }
-        resetContactChanges()
     }
 
     fun createGroup(contacts: List<ContactWithLastMessageDto>, name: String) {
@@ -508,7 +506,7 @@ class MainViewModel @Inject constructor(
             val guard = repository.local.getGuard()
             val signatureService = signatureServiceLazy.get()
             if (guard != null && signatureService.address != null && signatureService.publicKey != null) {
-                val hostname = repository.local.getHostname(guard.toServerInfoDto()).getHost()
+                val hostname = repository.local.getAppBaseApi(guard.toServerInfoDto()).getHost()
                 _exportedContactDetails.value = ExportedContactDataDto(
                     guardHostname = guard.hostname,
                     guardAddress = guard.address,
@@ -758,7 +756,7 @@ class MainViewModel @Inject constructor(
     fun switchServer(server: ServerInfoDto) {
         viewModelScope.launch(ioDispatcher) {
             switchServer(
-                serverQuery = repository.local.getHostname(server) ?: return@launch,
+                serverQuery = repository.local.getAppBaseApi(server) ?: return@launch,
                 expectedAddress = server.address
             )
         }
@@ -767,8 +765,7 @@ class MainViewModel @Inject constructor(
     fun switchServer(serverQuery: String, expectedAddress: String? = null) {
         viewModelScope.launch(ioDispatcher) {
             try {
-                val serverInfoUrl = serverQuery.getHttpUri() ?: return@launch
-                val guardDto = repository.remote.getServerInfo(serverInfoUrl, expectedAddress)
+                val guardDto = repository.remote.getServerInfo(serverQuery, expectedAddress)
                     ?.withNoGraphVersion() ?: return@launch
                 repository.local.insertGuard(guardDto)
                 signalrController.enqueueSyncGraphAndReconnect()
@@ -883,7 +880,7 @@ class MainViewModel @Inject constructor(
         _importedContactDetails.value = RequestState.Idle
     }
 
-    fun resetContactChanges() {
+    fun resetSharedData() {
         resetScannedContactDetails()
         resetSharedDataRequestResult()
         resetSharedDataCreateResult()
@@ -891,6 +888,6 @@ class MainViewModel @Inject constructor(
 
     override fun init() {
         resetSearchQuery()
-        resetContactChanges()
+        resetSharedData()
     }
 }

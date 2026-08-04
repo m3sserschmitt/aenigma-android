@@ -28,9 +28,8 @@ import retrofit2.converter.scalars.ScalarsConverterFactory
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.data.network.AenigmaApi
 import ro.aenigma.data.network.AenigmaArticlesApi
-import ro.aenigma.util.Constants.Companion.ARTICLES_API_BASE_URL
+import ro.aenigma.util.Constants.Companion.OK_HTTP_READ_MILLISECONDS_TIMEOUT
 import ro.aenigma.util.SerializerExtensions.createJsonConverterFactory
-import ro.aenigma.util.StringExtensions.getBaseUrl
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,19 +53,16 @@ class RetrofitProvider @Inject constructor(
 
     private suspend fun getAenigmRetrofitInstance(): Retrofit? {
         return try {
-            val baseUrl = localDataSource.getGuardHostname()?.getBaseUrl() ?: return null
+            val baseUrl = localDataSource.getAppBaseApi() ?: return null
             getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null)
         } catch (_: Exception) {
             null
         }
     }
 
-    private suspend fun getAenigmRetrofitInstance(baseUrl: String): Retrofit? {
-        return getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null)
-    }
-
     private suspend fun getAenigmaArticlesRetrofitInstance(): Retrofit? {
-        return getInstance(ARTICLES_API_BASE_URL, okHttpClientProvider.getInstance() ?: return null)
+        val baseUrl = localDataSource.getArticlesBaseApi() ?: return null
+        return getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null)
     }
 
     suspend fun getAenigmaApi(): AenigmaApi? {
@@ -74,10 +70,20 @@ class RetrofitProvider @Inject constructor(
     }
 
     suspend fun getAenigmaApi(baseUrl: String): AenigmaApi? {
-        return getAenigmRetrofitInstance(baseUrl)?.create(AenigmaApi::class.java)
+        return getInstance(baseUrl, okHttpClientProvider.getInstance() ?: return null).create(
+            AenigmaApi::class.java
+        )
     }
 
     suspend fun getAenigmaArticlesApi(): AenigmaArticlesApi? {
         return getAenigmaArticlesRetrofitInstance()?.create(AenigmaArticlesApi::class.java)
+    }
+
+    suspend fun getAenigmaArticlesApi(baseUrl: String): AenigmaArticlesApi? {
+        return getInstance(
+            baseUrl,
+            okHttpClientProvider.getInstance(readTimeoutMilliseconds = OK_HTTP_READ_MILLISECONDS_TIMEOUT)
+                ?: return null
+        ).create(AenigmaArticlesApi::class.java)
     }
 }

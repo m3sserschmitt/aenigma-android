@@ -57,9 +57,6 @@ import ro.aenigma.ui.biometric.SecuredApp
 import ro.aenigma.ui.navigation.Screens
 import ro.aenigma.ui.navigation.SetupNavigation
 import ro.aenigma.ui.themes.ApplicationComposeTheme
-import ro.aenigma.util.Constants.Companion.APP_DOMAIN
-import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
-import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 import ro.aenigma.viewmodels.MainViewModel
 import javax.inject.Inject
 import androidx.work.WorkManager
@@ -77,15 +74,18 @@ import ro.aenigma.ui.screens.common.NotificationsPermissionRequiredDialog
 import ro.aenigma.ui.screens.contacts.SetupUserNameDialog
 import ro.aenigma.util.Constants
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
-import ro.aenigma.util.Constants.Companion.AUTHENTICATION_DEADLINE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_BYTES_SIZE
+import ro.aenigma.util.Constants.Companion.AUTHENTICATION_MILLISECONDS_TIMEOUT
 import ro.aenigma.util.ContextExtensions.filterSharedUris
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
 import ro.aenigma.util.ContextExtensions.openInBrowser
 import ro.aenigma.util.LongExtensions.toMegabytes
 import ro.aenigma.util.StringExtensions.isTextMime
 import ro.aenigma.util.UriExtensions.getArticleUri
+import ro.aenigma.util.UriExtensions.isAppDomain
+import ro.aenigma.util.UriExtensions.isArticlesDomain
 import ro.aenigma.util.UriExtensions.isSharedData
+import ro.aenigma.util.UriExtensions.isWebDomain
 import ro.aenigma.workers.extensions.WorkManagerExtensions.schedulePeriodicClientSync
 
 @AndroidEntryPoint
@@ -272,9 +272,9 @@ class AppActivity : FragmentActivity() {
             val elapsed = if (authenticationTimestamp > 0) {
                 System.currentTimeMillis() - authenticationTimestamp
             } else {
-                AUTHENTICATION_DEADLINE + 1
+                AUTHENTICATION_MILLISECONDS_TIMEOUT + 1
             }
-            if (elapsed > AUTHENTICATION_DEADLINE) {
+            if (elapsed > AUTHENTICATION_MILLISECONDS_TIMEOUT) {
                 isAuthenticated.value = false
                 isAuthError.value = false
             }
@@ -322,14 +322,13 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun handleAppLink(uri: Uri) {
-        val domain = uri.host?.lowercase() ?: return
         if (intent.action != Intent.ACTION_VIEW) {
             return
         }
-        when (domain) {
-            APP_DOMAIN -> handleAppDomain(uri)
-            ARTICLES_DOMAIN -> handleArticlesDomain(uri)
-            WEB_DOMAIN -> handleWebDomain(uri)
+        when {
+            uri.isAppDomain() -> handleAppDomain(uri)
+            uri.isArticlesDomain() -> handleArticlesDomain(uri)
+            uri.isWebDomain() -> handleWebDomain(uri)
         }
     }
 
@@ -384,7 +383,7 @@ class AppActivity : FragmentActivity() {
             if (uriFilterResult.tooLargeCount > 0) {
                 val fileTooLargeString = applicationContext.getString(
                     R.string.files_too_large,
-                    ATTACHMENT_MAX_SIZE.toMegabytes()
+                    ATTACHMENT_MAX_BYTES_SIZE.toMegabytes()
                 )
                 withContext(Dispatchers.Main) {
                     Toast.makeText(applicationContext, fileTooLargeString, Toast.LENGTH_LONG).show()
@@ -400,7 +399,7 @@ class AppActivity : FragmentActivity() {
             if (uriFilterResult.tooLargeCount > 0) {
                 val fileTooLargeString = applicationContext.getString(
                     R.string.files_too_large,
-                    ATTACHMENT_MAX_SIZE.toMegabytes()
+                    ATTACHMENT_MAX_BYTES_SIZE.toMegabytes()
                 )
                 withContext(Dispatchers.Main) {
                     Toast.makeText(applicationContext, fileTooLargeString, Toast.LENGTH_LONG).show()
@@ -432,7 +431,7 @@ class AppActivity : FragmentActivity() {
     }
 
     private fun handleArticlesDomain(uri: Uri) {
-        if (uri.host == ARTICLES_DOMAIN) {
+        if (uri.isArticlesDomain()) {
             Screens(
                 navController = navHostController,
                 mainViewModel = mainViewModel

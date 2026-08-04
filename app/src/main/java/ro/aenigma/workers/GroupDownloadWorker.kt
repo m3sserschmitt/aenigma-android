@@ -113,7 +113,7 @@ class GroupDownloadWorker @AssistedInject constructor(
         val existentGroup =
             repository.local.getContactWithGroup(message.message.chatId)?.group?.groupData
         val groupData = repository.remote.getGroupData(
-            url = message.attachment.url,
+            hostOrUrl = message.attachment.url,
             existentGroup = existentGroup,
             key = CryptoProvider.base64Decode(passphrase) ?: return Result.failure(),
             expectedPublisherAddress = message.message.senderAddress

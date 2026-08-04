@@ -64,6 +64,7 @@ import org.apache.tika.Tika
 import ro.aenigma.R
 import ro.aenigma.activities.AppActivity
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ArticleSourceDto
 import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
@@ -72,8 +73,9 @@ import ro.aenigma.models.UriFilterResult
 import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
+import ro.aenigma.util.Constants.Companion.ARTICLE_SOURCES_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_BYTES_SIZE
 import ro.aenigma.util.Constants.Companion.EXPORTED_QR_CODE_FILE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
@@ -464,7 +466,7 @@ object ContextExtensions {
 
     suspend fun Context.splitFilesFirstFitDecreasing(
         uris: List<String>,
-        limitBytes: Long = ATTACHMENT_MAX_SIZE
+        limitBytes: Long = ATTACHMENT_MAX_BYTES_SIZE
     ): List<List<String>> {
 
         val entries = uris.map { Entry(it, sizeOf(it)) }
@@ -720,7 +722,7 @@ object ContextExtensions {
     suspend fun Context.filterSharedUris(
         uris: List<Uri>,
         maxCount: Int = ATTACHMENTS_MAX_COUNT,
-        maxSizeBytes: Long = ATTACHMENT_MAX_SIZE,
+        maxSizeBytes: Long = ATTACHMENT_MAX_BYTES_SIZE,
     ): UriFilterResult = withContext(Dispatchers.IO) {
         var tooLargeCount = 0
 
@@ -782,5 +784,13 @@ object ContextExtensions {
 
     suspend fun Context.showNoAppToOpenFileOrAccessDeniedToast() {
         return showToast(getString(R.string.no_app_to_open_or_access_denied))
+    }
+
+    suspend fun Context.readArticleSources(): List<ArticleSourceDto> {
+        return withContext(Dispatchers.IO) {
+            assets.open(ARTICLE_SOURCES_FILE)
+                .bufferedReader()
+                .use { it.readText().fromJson<List<ArticleSourceDto>>() ?: listOf() }
+        }
     }
 }

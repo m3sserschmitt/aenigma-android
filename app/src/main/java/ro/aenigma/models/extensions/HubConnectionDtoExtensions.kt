@@ -35,7 +35,7 @@ import ro.aenigma.models.hubInvocation.RouteResult
 import ro.aenigma.models.hubInvocation.RoutingRequest
 import ro.aenigma.util.Constants.Companion.AUTHENTICATE_METHOD
 import ro.aenigma.util.Constants.Companion.CLEANUP_METHOD
-import ro.aenigma.util.Constants.Companion.CLIENT_METHOD_INVOCATION_TIMEOUT
+import ro.aenigma.util.Constants.Companion.CLIENT_METHOD_INVOCATION_MILLISECONDS_TIMEOUT
 import ro.aenigma.util.Constants.Companion.GENERATE_NONCE_METHOD
 import ro.aenigma.util.Constants.Companion.PULL_METHOD
 import ro.aenigma.util.Constants.Companion.ROUTE_MESSAGE_METHOD
@@ -53,7 +53,7 @@ object HubConnectionDtoExtensions {
     }
 
     suspend fun <T : Any> Single<T>.awaitOrDefault(
-        timeout: Long = CLIENT_METHOD_INVOCATION_TIMEOUT,
+        timeout: Long = CLIENT_METHOD_INVOCATION_MILLISECONDS_TIMEOUT,
         unit: java.util.concurrent.TimeUnit = java.util.concurrent.TimeUnit.MILLISECONDS,
         default: T?
     ): T? = try {
@@ -63,7 +63,7 @@ object HubConnectionDtoExtensions {
     }
 
     suspend fun Completable.awaitOrDefault(
-        timeout: Long = CLIENT_METHOD_INVOCATION_TIMEOUT,
+        timeout: Long = CLIENT_METHOD_INVOCATION_MILLISECONDS_TIMEOUT,
         unit: java.util.concurrent.TimeUnit = java.util.concurrent.TimeUnit.MILLISECONDS
     ): Boolean = try {
         timeout(timeout, unit).await()

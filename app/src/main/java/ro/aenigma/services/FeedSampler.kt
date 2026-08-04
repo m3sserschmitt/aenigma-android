@@ -24,6 +24,7 @@ package ro.aenigma.services
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import org.apache.commons.rng.UniformRandomProvider
 import org.apache.commons.rng.sampling.distribution.AliasMethodDiscreteSampler
@@ -37,6 +38,8 @@ import ro.aenigma.util.Constants.Companion.WEB_ARTICLES_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.LOCAL_MEDIA_FEED_WEIGHT
 import ro.aenigma.util.Constants.Companion.NEWS_FEED_SIZE
 import ro.aenigma.util.ContextExtensions.getArticle
+import ro.aenigma.util.ContextExtensions.readArticleSources
+import ro.aenigma.util.StringExtensions.getHttpRootUri
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.collections.emptyList
@@ -122,22 +125,27 @@ class FeedSampler @Inject constructor(
         }
     }
 
-    private suspend fun getWebArticles(): List<ArticleDto> {
-        return try {
-            repository.remote.getArticlesIndex().map { article -> article.prettyFormat() }
-        } catch (_: Exception) {
-            listOf()
+    private suspend fun getWebArticles(sources: List<String>): List<List<ArticleDto>> =
+        coroutineScope {
+            sources.map { source ->
+                async {
+                    repository.remote.getArticlesIndex(source).map { article ->
+                        article.prettyFormat()
+                    }
+                }
+            }.awaitAll()
         }
-    }
 
     suspend fun getFeed(): List<ArticleDto> = coroutineScope {
+        val articleSources = context.readArticleSources().mapNotNull { source ->
+            source.domain.getHttpRootUri()
+        }
         val dbDeferred = async { runCatching { getLocalArticles() } }
-        val webDeferred = async { runCatching { getWebArticles() } }
+        val webDeferred = async { runCatching { getWebArticles(articleSources) } }
         val dbResult = dbDeferred.await().getOrElse { emptyList() }
         val webResult = webDeferred.await().getOrElse { emptyList() }
-        weightedInterleave(
-            sourcesList = listOf(webResult, dbResult),
-            sourcesWeight = listOf(WEB_ARTICLES_FEED_WEIGHT, LOCAL_MEDIA_FEED_WEIGHT)
-        )
+        val sources = webResult + listOf(dbResult)
+        val weights = List(webResult.size) { WEB_ARTICLES_FEED_WEIGHT } + LOCAL_MEDIA_FEED_WEIGHT
+        weightedInterleave(sourcesList = sources, sourcesWeight = weights)
     }
 }

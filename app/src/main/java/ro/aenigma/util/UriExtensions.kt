@@ -23,9 +23,15 @@ package ro.aenigma.util
 
 import android.net.Uri
 import androidx.core.net.toUri
+import ro.aenigma.util.Constants.Companion.APP_DOMAIN
+import ro.aenigma.util.Constants.Companion.ARTICLES_DOMAIN
 import ro.aenigma.util.Constants.Companion.SHARE_API_PATH
+import ro.aenigma.util.Constants.Companion.WEB_DOMAIN
 
 object UriExtensions {
+
+    private val uriParamRegex = Regex("[?&]url=([^&#]+)")
+
     @JvmStatic
     fun Uri.isRemote(): Boolean {
         return scheme in listOf("http", "https")
@@ -39,13 +45,27 @@ object UriExtensions {
     @JvmStatic
     fun Uri.getArticleUri(): Uri? {
         return try {
-            val regex = Regex("[?&]url=([^&#]+)")
-            val match = regex.find(toString().lowercase())
+            val match = uriParamRegex.find(toString().lowercase())
             val encodedValue = match?.groups?.get(1)?.value
             val decodedValue = encodedValue?.let { Uri.decode(it) }
             decodedValue?.toUri()
         } catch (_: Exception) {
             null
         }
+    }
+
+    @JvmStatic
+    fun Uri.isArticlesDomain(): Boolean {
+        return host?.lowercase() == ARTICLES_DOMAIN
+    }
+
+    @JvmStatic
+    fun Uri.isWebDomain(): Boolean {
+        return host?.lowercase() == WEB_DOMAIN
+    }
+
+    @JvmStatic
+    fun Uri.isAppDomain(): Boolean {
+        return host?.lowercase() == APP_DOMAIN
     }
 }

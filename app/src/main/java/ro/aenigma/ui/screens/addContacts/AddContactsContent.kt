@@ -73,22 +73,24 @@ fun AddContactsContent(
     qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedDataDto>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
-    isContactImport: Boolean = false,
+    openLinkLoadingDialogVisible: Boolean = false,
     onQrCodeFound: (ExportedContactDataDto) -> Unit,
     onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onCreateLinkClicked: () -> Unit,
-    onGetLink: (String) -> Unit,
-    onSharedDataConfirm: () ->  Unit,
+    onOpenLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkCompleted: () -> Unit = { },
+    onLinkSubmitted: (String) -> Unit = { },
     onForwardUri: (String) -> Unit = { }
 ) {
     var useLinkDialogVisible by remember { mutableStateOf(false) }
     var createLinkDialogVisible by remember { mutableStateOf(false) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
-    var useLinkLoadingDialogVisible by remember(key1 = isContactImport) {
-        mutableStateOf(isContactImport)
+    var useLinkLoadingDialogVisible by remember(key1 = openLinkLoadingDialogVisible) {
+        mutableStateOf(openLinkLoadingDialogVisible)
     }
     var createLinkLoadingDialogVisible by remember { mutableStateOf(false) }
 
@@ -97,9 +99,10 @@ fun AddContactsContent(
         state = importedContactDetails,
         onConfirmButtonClicked = {
             if (importedContactDetails is RequestState.Error) {
-                onSharedDataConfirm()
-            } else {
+                onOpenLinkResult(false)
+            } else if (importedContactDetails is RequestState.Success) {
                 saveContactDialogVisible = true
+                onOpenLinkResult(true)
             }
             useLinkLoadingDialogVisible = false
         }
@@ -110,9 +113,10 @@ fun AddContactsContent(
         state = sharedDataCreate,
         onConfirmButtonClicked = {
             if (sharedDataCreate is RequestState.Error) {
-                onSharedDataConfirm()
-            } else {
+                onCreateLinkResult(false)
+            } else if(sharedDataCreate is RequestState.Success) {
                 createLinkDialogVisible = true
+                onCreateLinkResult(true)
             }
             createLinkLoadingDialogVisible = false
         }
@@ -143,7 +147,7 @@ fun AddContactsContent(
         visible = createLinkDialogVisible,
         sharedData = sharedDataCreate,
         onConfirmButtonClick = {
-            onSharedDataConfirm()
+            onCreateLinkCompleted()
             createLinkDialogVisible = false
         },
         onForwardUri = onForwardUri
@@ -152,7 +156,7 @@ fun AddContactsContent(
     UseLinkDialog(
         visible = useLinkDialogVisible,
         onConfirmClicked = { link ->
-            onGetLink(link)
+            onLinkSubmitted(link)
             useLinkDialogVisible = false
             useLinkLoadingDialogVisible = true
         },
@@ -372,8 +376,8 @@ fun AddContactsContentPreview()
                 onSaveContactDismissed = { },
                 onCreateLinkClicked = { },
                 sharedDataCreate = RequestState.Idle,
-                onSharedDataConfirm = { },
-                onGetLink = { },
+                onCreateLinkResult = { },
+                onLinkSubmitted = { },
             )
         }
     }

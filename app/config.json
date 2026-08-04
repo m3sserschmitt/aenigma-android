@@ -1,0 +1,14 @@
+{
+  "defaultLanguageCode": "en",
+  "app": {
+    "domain": "aenigma.ro",
+    "onionService": "bdhpslhrwcj3teiq24esu7r4qyuuvfk3un75b3ro4k3cb2bllyhnrjqd.onion"
+  },
+  "articles": {
+    "domain": "articles.aenigma.ro"
+  },
+  "web": {
+    "domain": "web.aenigma.ro",
+    "articleUrlTemplate": "https://web.aenigma.ro/#/blog/article?url=%s"
+  }
+}

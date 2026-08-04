@@ -31,7 +31,7 @@ import java.io.IOException
 class BufferedRequestBody(
     private val file: File,
     private val mediaType: MediaType,
-    private val bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_SIZE,
+    private val bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_BYTES_SIZE,
     private val onProgress: (percent: Int) -> Unit = { }
 ) : RequestBody() {
 

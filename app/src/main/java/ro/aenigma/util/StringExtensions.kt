@@ -21,22 +21,36 @@
 
 package ro.aenigma.util
 
+import android.net.Uri
 import androidx.core.net.toUri
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.erdtman.jcs.JsonCanonicalizer
+import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.SerializerExtensions.createJsonMapper
+import ro.aenigma.util.UriExtensions.isArticlesDomain
 import ro.aenigma.util.UriExtensions.isRemote
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
 object StringExtensions {
 
-    fun String?.getBaseUrl(): String? {
+    private val hostRegex = Regex(
+        "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}(?::\\d+)?$"
+    )
+
+    private val onionRegex = Regex("^[a-zA-Z2-7]{56}\\.onion(?::\\d+)?$")
+
+    private val imageExtensions =
+        setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "tiff", "avif")
+
+    fun String?.getRootUri(): String? {
         return try {
-            val uri = this?.toUri() ?: return null
+            val uri = this?.trimSlashAndSpace()?.toUri() ?: return null
+            val scheme = uri.scheme ?: return null
+            val host = uri.host ?: return null
             val port = if (uri.port != -1) ":${uri.port}" else ""
-            return "${uri.scheme}://${uri.host}$port"
-        } catch (_:Exception) {
+            "$scheme://$host$port/"
+        } catch (_: Exception) {
             null
         }
     }
@@ -50,24 +64,28 @@ object StringExtensions {
     }
 
     fun String?.getHttpUri(): String? {
+        val trimmedUri = this?.trimSlashAndSpace() ?: return null
         return try {
-            val uri = this?.trimSlashAndSpace()?.toUri() ?: return null
-            return if (uri.scheme != null && uri.host != null) {
-                uri.toString()
-            } else if (isOnionAddress()) {
-                "http://$this"
-            } else if (isDomain()) {
-                "https://$this"
-            } else {
-                null
+            val uri = trimmedUri.toUri()
+            when {
+                uri.scheme != null && uri.host != null -> uri.toString()
+                trimmedUri.isOnionAddress() -> "http://$trimmedUri/"
+                trimmedUri.isHostAddress() -> "https://$trimmedUri/"
+                else -> null
             }
         } catch (_: Exception) {
             null
         }
     }
 
+    fun String?.getHttpRootUri(): String? {
+        return getHttpUri().getRootUri()
+    }
+
     fun String.getHttpUri(path: String): String? {
-        return "${this.getHttpUri()?.trimSlashAndSpace() ?: return null}/${path.trimSlashAndSpace()}"
+        return "${
+            this.getHttpRootUri()?.trimSlashAndSpace() ?: return null
+        }/${path.trimSlashAndSpace()}/"
     }
 
     fun String?.trimSlashAndSpace(): String? {
@@ -75,16 +93,11 @@ object StringExtensions {
     }
 
     @OptIn(ExperimentalContracts::class)
-    fun String?.isDomain(): Boolean {
+    fun String?.isHostAddress(): Boolean {
         contract {
-            returns(true) implies (this@isDomain != null)
+            returns(true) implies (this@isHostAddress != null)
         }
-        return try {
-            val domainRegex = Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(?::\\d+)?$")
-            return domainRegex.matches(this ?: return false)
-        } catch (_: Exception) {
-            false
-        }
+        return hostRegex.matches(this ?: return false)
     }
 
     @OptIn(ExperimentalContracts::class)
@@ -92,12 +105,7 @@ object StringExtensions {
         contract {
             returns(true) implies (this@isOnionAddress != null)
         }
-        return try {
-            val regex = Regex("^[a-z2-7]{56}\\.onion(?::\\d+)?$")
-            return regex.matches(this ?: return false)
-        } catch (_: Exception) {
-            false
-        }
+        return onionRegex.matches(this ?: return false)
     }
 
     fun String?.getQueryParameter(key: String): String? {
@@ -127,9 +135,6 @@ object StringExtensions {
     }
 
     fun String?.isRemoteImageUri(): Boolean {
-        val imageExtensions =
-            setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "tiff", "avif")
-
         val path = try {
             java.net.URI(this).path ?: this
         } catch (_: Exception) {
@@ -247,5 +252,14 @@ object StringExtensions {
             returns(true) implies (this@isTextMime != null)
         }
         return this?.startsWith("text/", ignoreCase = true) == true
+    }
+
+    @JvmStatic
+    fun String.getFormatedWebArticleUri(): String {
+        return if (toUri().isArticlesDomain()) {
+            String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(this))
+        } else {
+            this
+        }
     }
 }

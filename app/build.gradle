@@ -1,3 +1,5 @@
+import groovy.json.JsonSlurper
+
 plugins
 {
     id('com.android.application')
@@ -30,6 +32,23 @@ android {
         ksp {
             arg("room.schemaLocation", "$projectDir/schemas")
         }
+
+        def configFile = file("config.json")
+        def config = configFile.exists() ? new JsonSlurper().parseText(configFile.text) : [:]
+
+        def defaultLanguageCode = config.defaultLanguageCode
+        def appDomain = config.app?.domain
+        def appOnionService = config.app?.onionService
+        def articlesDomain = config.articles?.domain
+        def webDomain = config.web?.domain
+        def webArticleUrlTemplate = config.web?.articleUrlTemplate
+
+        buildConfigField "String", "DEFAULT_LANGUAGE_CODE", defaultLanguageCode ? "\"${defaultLanguageCode}\"" : "null"
+        buildConfigField "String", "APP_DOMAIN", appDomain ? "\"${appDomain}\"" : "null"
+        buildConfigField "String", "APP_ONION_SERVICE", appOnionService ? "\"${appOnionService}\"" : "null"
+        buildConfigField "String", "ARTICLES_DOMAIN", articlesDomain ? "\"${articlesDomain}\"" : "null"
+        buildConfigField "String", "WEB_DOMAIN", webDomain ? "\"${webDomain}\"" : "null"
+        buildConfigField "String", "WEB_ARTICLE_URL_TEMPLATE", webArticleUrlTemplate ? "\"${webArticleUrlTemplate}\"" : "null"
     }
 
     buildFeatures {
@@ -204,3 +223,10 @@ dependencies {
 
     implementation 'org.apache.tika:tika-core:3.3.1'
 }
+
+tasks.register("copyConfigJson", Copy) {
+    from "articleSources.json"
+    into "src/main/assets"
+}
+
+preBuild.dependsOn copyConfigJson

@@ -70,13 +70,13 @@ class OnionParsingService @Inject constructor(keysManager: KeysManager) {
             return try {
                 val decryptedData =
                     CryptoProvider.unsealOnionEx(pendingMessageDto.content) ?: return null
-                if (decryptedData.size < Constants.ADDRESS_SIZE_BYTES + 1) {
+                if (decryptedData.size < Constants.ADDRESS_BYTES_SIZE + 1) {
                     return null
                 }
                 val chatId =
-                    HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_SIZE_BYTES))
+                    HexConverter.toHex(decryptedData.sliceArray(0 until Constants.ADDRESS_BYTES_SIZE))
                 val content =
-                    String(decryptedData.sliceArray(Constants.ADDRESS_SIZE_BYTES until decryptedData.size))
+                    String(decryptedData.sliceArray(Constants.ADDRESS_BYTES_SIZE until decryptedData.size))
                 val dateReceivedOnServer = pendingMessageDto.dateReceived?.normalize()
                 ParsedMessageDto(chatId, content, dateReceivedOnServer, pendingMessageDto.uuid)
             } catch (_: Exception) {

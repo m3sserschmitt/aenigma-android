@@ -53,7 +53,7 @@ import ro.aenigma.models.factories.ExportedContactDataFactory
 import ro.aenigma.models.factories.MessageDtoFactory
 import ro.aenigma.services.MessageSaver
 import ro.aenigma.services.Notifier
-import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_BYTES_SIZE
 
 @HiltWorker
 class GroupUploadWorker @AssistedInject constructor(
@@ -270,7 +270,7 @@ class GroupUploadWorker @AssistedInject constructor(
         if (accessCount <= 0) {
             return Result.failure()
         }
-        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_BYTES_SIZE)
         val torPreference = repository.local.useTor.firstOrNull() == true
         val orbotPreference = repository.local.useOrbot.firstOrNull() == true
         val usingTor = torPreference || orbotPreference

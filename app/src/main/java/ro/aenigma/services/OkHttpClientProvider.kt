@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import okhttp3.OkHttpClient
 import ro.aenigma.data.LocalDataSource
 import ro.aenigma.util.Constants
-import ro.aenigma.util.Constants.Companion.OK_HTTP_CONNECT_TIMEOUT
+import ro.aenigma.util.Constants.Companion.OK_HTTP_CONNECT_MILLISECONDS_TIMEOUT
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -36,11 +36,17 @@ open class OkHttpClientProvider @Inject constructor(
 ) : IOkHttpClientProvider {
     companion object {
         @JvmStatic
-        fun getInstance(useTor: Boolean, useOrbot: Boolean, authToken: String? = null): OkHttpClient {
+        fun getInstance(
+            useTor: Boolean,
+            useOrbot: Boolean,
+            authToken: String? = null,
+            readTimeoutMilliseconds: Long = 0,
+            writeTimeoutMilliseconds: Long = 0
+        ): OkHttpClient {
             return OkHttpClient.Builder()
-                .readTimeout(0, TimeUnit.SECONDS)
-                .connectTimeout(OK_HTTP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS)
-                .writeTimeout(0, TimeUnit.SECONDS)
+                .readTimeout(readTimeoutMilliseconds, TimeUnit.MILLISECONDS)
+                .connectTimeout(OK_HTTP_CONNECT_MILLISECONDS_TIMEOUT, TimeUnit.MILLISECONDS)
+                .writeTimeout(writeTimeoutMilliseconds, TimeUnit.MILLISECONDS)
                 .apply {
                     if (useTor || useOrbot) {
                         proxy(Constants.TOR_PROXY)
@@ -59,11 +65,19 @@ open class OkHttpClientProvider @Inject constructor(
         }
     }
 
-    override suspend fun getInstance(): OkHttpClient? {
+    override suspend fun getInstance(
+        readTimeoutMilliseconds: Long,
+        writeTimeoutMilliseconds: Long
+    ): OkHttpClient? {
         return try {
             val useTor = localDataSource.useTor.firstOrNull() == true
             val useOrbot = localDataSource.useOrbot.firstOrNull() == true
-            getInstance(useTor, useOrbot)
+            getInstance(
+                useTor = useTor,
+                useOrbot = useOrbot,
+                readTimeoutMilliseconds = readTimeoutMilliseconds,
+                writeTimeoutMilliseconds = writeTimeoutMilliseconds
+            )
         } catch (_: Exception) {
             null
         }

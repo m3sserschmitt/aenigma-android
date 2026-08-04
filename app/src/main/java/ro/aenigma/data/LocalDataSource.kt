@@ -71,7 +71,9 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.markAsDeleted
 import ro.aenigma.models.extensions.MessageDtoExtensions.toEntity
 import ro.aenigma.models.extensions.VertexDtoExtensions.toEntity
 import ro.aenigma.models.factories.MessageDtoFactory
-import ro.aenigma.util.Constants.Companion.API_BASE_URL
+import ro.aenigma.util.Constants.Companion.APP_API_BASE_URL
+import ro.aenigma.util.Constants.Companion.APP_ONION_SERVICE_API_BASE_URL
+import ro.aenigma.util.Constants.Companion.ARTICLES_API_BASE_URL
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
 import ro.aenigma.util.Constants.Companion.MARKDOWN_FILE_EXTENSION
 import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
@@ -83,6 +85,7 @@ import ro.aenigma.util.ContextExtensions.readNewsFeed
 import ro.aenigma.util.ContextExtensions.readText
 import ro.aenigma.util.ContextExtensions.toContentUri
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
+import ro.aenigma.util.StringExtensions.getHttpRootUri
 import javax.inject.Inject
 
 class LocalDataSource @Inject constructor(
@@ -184,23 +187,48 @@ class LocalDataSource @Inject constructor(
         return preferencesDataStore.saveNotificationServicePreference(notificationServicePreference)
     }
 
-    suspend fun getHostname(guard: ServerInfoDto): String? {
+    suspend inline fun <reified T> torBasedDecision(onUseTor: () -> T, onNotUseTor: () -> T): T {
         val useTor = useTor.firstOrNull() == true
         val useOrbot = useOrbot.firstOrNull() == true
         return if (useTor || useOrbot) {
-            if (guard.onionService.isNullOrBlank()) {
-                guard.hostname
-            } else {
-                guard.onionService
-            }
+            onUseTor()
         } else {
-            guard.hostname
+            onNotUseTor()
         }
     }
 
-    suspend fun getGuardHostname(): String? {
-        val guard = getGuard() ?: return API_BASE_URL
-        return getHostname(guard.toServerInfoDto())
+    suspend fun getAppBaseApi(guard: ServerInfoDto): String? {
+        return torBasedDecision(
+            onUseTor = {
+                if (guard.onionService.isNullOrBlank()) {
+                    guard.hostname
+                } else {
+                    guard.onionService
+                }
+            },
+            onNotUseTor = {
+                guard.hostname
+            }
+        ).getHttpRootUri()
+    }
+
+    suspend fun getDefaultBaseApi(): String? {
+        return torBasedDecision(
+            onUseTor = { APP_ONION_SERVICE_API_BASE_URL },
+            onNotUseTor = { APP_API_BASE_URL }
+        ).getHttpRootUri()
+    }
+
+    suspend fun getArticlesBaseApi(): String? {
+        return torBasedDecision(
+            onUseTor = { ARTICLES_API_BASE_URL },
+            onNotUseTor = { ARTICLES_API_BASE_URL }
+        ).getHttpRootUri()
+    }
+
+    suspend fun getAppBaseApi(): String? {
+        val guard = getGuard() ?: return getDefaultBaseApi()
+        return getAppBaseApi(guard.toServerInfoDto())
     }
 
     fun getContactWithMessagesFlow(): Flow<List<ContactWithLastMessageDto>> {

@@ -19,15 +19,9 @@
     along with Aenigma.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-package ro.aenigma.services
+package ro.aenigma.models
 
-import okhttp3.OkHttpClient
-
-class OkHttpClientProviderDefault: IOkHttpClientProvider {
-    override suspend fun getInstance(
-        readTimeoutMilliseconds: Long,
-        writeTimeoutMilliseconds: Long
-    ): OkHttpClient {
-        return OkHttpClient.Builder().build()
-    }
-}
+data class ArticleSourceDto(
+    val domain: String? = null,
+    val description: String? = null
+)

@@ -162,7 +162,7 @@ fun ContactsScreen(
             mainViewModel.setAttachments(listOf())
             navigateToRoot()
         },
-        onContactSaveDismissed = { mainViewModel.resetContactChanges() }
+        onContactSaveDismissed = { mainViewModel.resetSharedData() }
     )
 }
 

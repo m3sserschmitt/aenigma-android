@@ -21,7 +21,6 @@
 
 package ro.aenigma.ui.screens.feed
 
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -46,10 +45,10 @@ import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.LoadingScreen
-import ro.aenigma.util.Constants.Companion.WEB_ARTICLE_URL_TEMPLATE
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.ContextExtensions.showFailedToShareToast
 import ro.aenigma.util.RequestState
+import ro.aenigma.util.StringExtensions.getFormatedWebArticleUri
 import ro.aenigma.util.StringExtensions.isRemoteUri
 import ro.aenigma.viewmodels.MainViewModel
 
@@ -75,7 +74,7 @@ fun ArticleScreen(
         imageTransformer = mainViewModel.provideMarkdownImageTransformer(),
         onShareArticle = { uri ->
             if (uri.isRemoteUri()) {
-                if (!context.shareText(String.format(WEB_ARTICLE_URL_TEMPLATE, Uri.encode(uri)))) {
+                if (!context.shareText(uri.getFormatedWebArticleUri())) {
                     coroutineScope.launch { context.showFailedToShareToast() }
                 }
             } else if (messageId != null) {

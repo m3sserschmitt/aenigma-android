@@ -23,14 +23,14 @@ package ro.aenigma.models.extensions
 
 import ro.aenigma.models.NeighborhoodDto
 import ro.aenigma.util.StringExtensions.getHost
-import ro.aenigma.util.StringExtensions.getHttpUri
+import ro.aenigma.util.StringExtensions.getHttpRootUri
 
 object NeighborhoodExtensions {
     @JvmStatic
     fun NeighborhoodDto.normalizeHostname(): NeighborhoodDto {
         return copy(
-            hostname = hostname?.getHttpUri(),
-            onionService = onionService?.getHttpUri()
+            hostname = hostname?.getHttpRootUri(),
+            onionService = onionService?.getHttpRootUri()
         )
     }
 

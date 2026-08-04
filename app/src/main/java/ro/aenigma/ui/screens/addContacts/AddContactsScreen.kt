@@ -70,7 +70,7 @@ fun AddContactsScreen(
     val floatingButtonVisible = profileToShare == null
             && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
     val uri by mainViewModel.uri.collectAsState()
-    var isContactImport by remember(key1 = uri) { mutableStateOf(uri != null) }
+    var openLinkLoadingDialogVisible by remember(key1 = uri) { mutableStateOf(uri != null) }
 
     LaunchedEffect(key1 = true) {
         mainViewModel.generateCode(profileToShare)
@@ -87,7 +87,7 @@ fun AddContactsScreen(
         qrCode = qrCode,
         sharedDataCreate = sharedDataCreate,
         importedContactDetails = importedContactDetails,
-        isContactImport = isContactImport,
+        openLinkLoadingDialogVisible = openLinkLoadingDialogVisible,
         floatingButtonVisible = floatingButtonVisible,
         ephemeralLinksPreference = ephemeralLinksPreference,
         onResetUsernameClicked = { mainViewModel.resetUserName() },
@@ -108,20 +108,30 @@ fun AddContactsScreen(
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact(name)
+            mainViewModel.resetSharedData()
             mainViewModel.setUri(null)
             navigateToRoot()
         },
         onSaveContactDismissed = {
-            mainViewModel.resetContactChanges()
             scannerState = QrCodeScannerState.SHARE_CODE
+            mainViewModel.resetSharedData()
             mainViewModel.setUri(null)
         },
-        onNewContactNameChanged = { newContactName ->
-            newContactName.isNotBlank()
-        },
+        onNewContactNameChanged = { newContactName -> newContactName.isNotBlank() },
         onCreateLinkClicked = { mainViewModel.createContactShareLink() },
-        onGetLink = { url -> mainViewModel.openContactSharedData(url) },
-        onSharedDataConfirm = { mainViewModel.resetContactChanges() },
+        onLinkSubmitted = { url -> mainViewModel.openContactSharedData(url) },
+        onOpenLinkResult = { success ->
+            if(!success) {
+                mainViewModel.resetSharedData()
+            }
+            mainViewModel.setUri(null)
+        },
+        onCreateLinkResult = { success ->
+            if(!success) {
+                mainViewModel.resetSharedData()
+            }
+        },
+        onCreateLinkCompleted = { mainViewModel.resetSharedData() },
         onForwardUri = onForwardUri,
         navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
         navigateBack = navigateBack
@@ -136,7 +146,7 @@ fun AddContactsScreen(
     importedContactDetails: RequestState<ExportedContactDataDto> = RequestState.Idle,
     ephemeralLinksPreference: Boolean = false,
     moreOptionsMenuExpanded: Boolean = false,
-    isContactImport: Boolean = false,
+    openLinkLoadingDialogVisible: Boolean = false,
     floatingButtonVisible: Boolean = true,
     onResetUsernameClicked: () -> Unit = { },
     onEphemeralLinksPreferenceChanged: (Boolean) -> Unit = { },
@@ -147,8 +157,10 @@ fun AddContactsScreen(
     onSaveContactDismissed: () -> Unit = { },
     onNewContactNameChanged: (String) -> Boolean  = { true },
     onCreateLinkClicked: () -> Unit = { },
-    onGetLink: (String) -> Unit = { },
-    onSharedDataConfirm: () -> Unit = { },
+    onLinkSubmitted: (String) -> Unit = { },
+    onOpenLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkCompleted: () -> Unit = { },
     onForwardUri: (String) -> Unit = { },
     navigateToAddContactsHelpScreen: () -> Unit = { },
     navigateBack: () -> Unit = { }
@@ -189,15 +201,17 @@ fun AddContactsScreen(
                 qrCode = qrCode,
                 sharedDataCreate = sharedDataCreate,
                 importedContactDetails = importedContactDetails,
-                isContactImport = isContactImport,
+                openLinkLoadingDialogVisible = openLinkLoadingDialogVisible,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
                 onServerInfoQrCodeFound = onServerInfoQrCodeFound,
                 onNewContactNameChanged = onNewContactNameChanged,
                 onCreateLinkClicked = onCreateLinkClicked,
-                onGetLink = onGetLink,
-                onSharedDataConfirm = onSharedDataConfirm,
+                onLinkSubmitted = onLinkSubmitted,
+                onOpenLinkResult = onOpenLinkResult,
+                onCreateLinkResult = onCreateLinkResult,
+                onCreateLinkCompleted = onCreateLinkCompleted,
                 onForwardUri = onForwardUri
             )
         },
