@@ -181,6 +181,7 @@ fun AddContactsContent(
 
         QrCodeScannerState.SCAN_CODE -> {
             QrCodeScanner<ExportedContactDataDto>(
+                modifier = Modifier.fillMaxSize(),
                 onQrCodeFound = { data ->
                     onQrCodeFound(data)
                 }
@@ -189,6 +190,7 @@ fun AddContactsContent(
 
         QrCodeScannerState.SCAN_SERVER_INFO_CODE -> {
             QrCodeScanner<ServerInfoDto>(
+                modifier = Modifier.fillMaxSize(),
                 onQrCodeFound = { data ->
                     onServerInfoQrCodeFound(data)
                 }
