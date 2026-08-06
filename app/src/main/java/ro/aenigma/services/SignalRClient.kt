@@ -48,11 +48,11 @@ import ro.aenigma.models.hubInvocation.CleanupResult
 import ro.aenigma.models.hubInvocation.GenerateTokenResult
 import ro.aenigma.models.hubInvocation.PullResult
 import ro.aenigma.util.Constants
-import ro.aenigma.util.Constants.Companion.SIGNALR_HANDSHAKE_TIMEOUT
+import ro.aenigma.util.Constants.Companion.SIGNALR_HANDSHAKE_MILLISECONDS_TIMEOUT
 import ro.aenigma.util.Constants.Companion.ONION_ROUTING_ENDPOINT
 import ro.aenigma.util.Constants.Companion.PULL_METHOD
-import ro.aenigma.util.Constants.Companion.SIGNALR_SERVER_TIMEOUT_INTERVAL
-import ro.aenigma.util.Constants.Companion.SIGNALR_KEEP_ALIVE_INTERVAL
+import ro.aenigma.util.Constants.Companion.SIGNALR_SERVER_MILLISECONDS_TIMEOUT_INTERVAL
+import ro.aenigma.util.Constants.Companion.SIGNALR_KEEP_ALIVE_MILLISECONDS_INTERVAL
 import ro.aenigma.util.StringExtensions.getHttpUri
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -87,9 +87,9 @@ class SignalRClient @Inject constructor(
             return HubConnectionDto(
                 connection = HubConnectionBuilder
                     .create(uri)
-                    .withServerTimeout(SIGNALR_SERVER_TIMEOUT_INTERVAL)
-                    .withKeepAliveInterval(SIGNALR_KEEP_ALIVE_INTERVAL)
-                    .withHandshakeResponseTimeout(SIGNALR_HANDSHAKE_TIMEOUT)
+                    .withServerTimeout(SIGNALR_SERVER_MILLISECONDS_TIMEOUT_INTERVAL)
+                    .withKeepAliveInterval(SIGNALR_KEEP_ALIVE_MILLISECONDS_INTERVAL)
+                    .withHandshakeResponseTimeout(SIGNALR_HANDSHAKE_MILLISECONDS_TIMEOUT)
                     .apply {
                         if (useTor || useOrbot) {
                             withTransport(TransportEnum.LONG_POLLING)

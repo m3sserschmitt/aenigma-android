@@ -23,37 +23,44 @@ package ro.aenigma.ui.screens.addContacts
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import ro.aenigma.R
 import ro.aenigma.ui.screens.common.CameraPermissionRequiredDialog
 import ro.aenigma.ui.screens.common.ErrorScreen
 import ro.aenigma.ui.screens.common.RequestPermission
 import ro.aenigma.util.ContextExtensions.openApplicationDetails
-import ro.aenigma.util.QrCodeAnalyzer
 import ro.aenigma.util.StringExtensions.fromJson
+import java.util.concurrent.Executors
 
 @Composable
-inline fun<reified T> QrCodeScanner(
-    crossinline onQrCodeFound: (T) -> Unit
+@OptIn(ExperimentalGetImage::class)
+inline fun <reified T> QrCodeScanner(
+    modifier: Modifier = Modifier,
+    noinline onQrCodeFound: (T) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val cameraProviderFuture = remember { ProcessCameraProvider.getInstance(context) }
+    val currentOnQrCodeFound = rememberUpdatedState(onQrCodeFound)
+    var hasMatched by remember { mutableStateOf(false) }
     var cameraPermissionDialogVisible by remember { mutableStateOf(false) }
 
     var hasCameraPermission by remember {
@@ -67,8 +74,8 @@ inline fun<reified T> QrCodeScanner(
 
     RequestPermission(
         permission = Manifest.permission.CAMERA,
-        onPermissionGranted = {
-            granted -> hasCameraPermission = granted
+        onPermissionGranted = { granted ->
+            hasCameraPermission = granted
             cameraPermissionDialogVisible = !granted
         }
     )
@@ -86,49 +93,77 @@ inline fun<reified T> QrCodeScanner(
 
     if (hasCameraPermission) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier,
             factory = { ctx ->
-                val previewView = PreviewView(ctx)
-                val preview = Preview.Builder().build()
-                val selector = CameraSelector.Builder()
-                    .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                    .build()
-                preview.surfaceProvider = previewView.surfaceProvider
-                val imageAnalysis = ImageAnalysis.Builder()
-                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
-                imageAnalysis.setAnalyzer(
-                    ContextCompat.getMainExecutor(ctx),
-                    QrCodeAnalyzer { result ->
-                        result?.let { decodedData ->
-                            val data = decodedData.fromJson<T>()
-                            if(data != null) {
-                                cameraProviderFuture.get().unbindAll()
-                                onQrCodeFound(data)
+                PreviewView(ctx).apply {
+                    val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                    val cameraExecutor = Executors.newSingleThreadExecutor()
+                    val scanner = BarcodeScanning.getClient()
+
+                    cameraProviderFuture.addListener({
+                        val cameraProvider = cameraProviderFuture.get()
+
+                        val preview = Preview.Builder()
+                            .build()
+                            .also { it.surfaceProvider = this.surfaceProvider }
+
+                        val imageAnalysis = ImageAnalysis.Builder()
+                            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                            .build()
+                            .also { analysis ->
+                                analysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                                    val mediaImage = imageProxy.image
+                                    if (mediaImage == null || hasMatched) {
+                                        imageProxy.close()
+                                        return@setAnalyzer
+                                    }
+
+                                    val inputImage = InputImage.fromMediaImage(
+                                        mediaImage,
+                                        imageProxy.imageInfo.rotationDegrees
+                                    )
+
+                                    scanner.process(inputImage)
+                                        .addOnSuccessListener { barcodes ->
+                                            if (hasMatched) return@addOnSuccessListener
+
+                                            for (barcode in barcodes) {
+                                                val rawValue = barcode.rawValue ?: continue
+                                                val decoded = try {
+                                                    rawValue.fromJson<T>()
+                                                } catch (_: Exception) {
+                                                    null
+                                                }
+
+                                                if (decoded != null) {
+                                                    hasMatched = true
+                                                    cameraProvider.unbindAll()
+                                                    currentOnQrCodeFound.value(decoded)
+                                                    break
+                                                }
+                                            }
+                                        }
+                                        .addOnCompleteListener {
+                                            imageProxy.close()
+                                        }
+                                }
                             }
 
+                        try {
+                            cameraProvider.unbindAll()
+                            cameraProvider.bindToLifecycle(
+                                lifecycleOwner,
+                                CameraSelector.DEFAULT_BACK_CAMERA,
+                                preview,
+                                imageAnalysis
+                            )
+                        } catch (_: Exception) {
                         }
-                    }
-                )
-
-                try {
-                    cameraProviderFuture.get().unbindAll()
-                    cameraProviderFuture.get().bindToLifecycle(
-                        lifecycleOwner,
-                        selector,
-                        preview,
-                        imageAnalysis
-                    )
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    }, ContextCompat.getMainExecutor(ctx))
                 }
-
-                return@AndroidView previewView
             }
         )
-    }
-    else
-    {
+    } else {
         ErrorScreen(
             text = stringResource(id = R.string.camera_permission_required)
         )

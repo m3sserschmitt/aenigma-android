@@ -21,9 +21,10 @@
 
 package ro.aenigma.crypto
 
-import ro.aenigma.util.Constants.Companion.KEY_SIZE_BITS
+import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_BITS_SIZE
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter
 import ro.aenigma.models.KeyPairDto
+import ro.aenigma.util.Constants.Companion.PRIVATE_KEY_ALGORITHM
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.io.StringWriter
@@ -33,13 +34,11 @@ class KeysHelper {
 
     companion object {
 
-        private const val KEYS_ALGORITHM = "RSA"
-
         @JvmStatic
         fun generateKeyPair(): KeyPair? {
             return try {
-                val keyPairGenerator = KeyPairGenerator.getInstance(KEYS_ALGORITHM)
-                keyPairGenerator.initialize(KEY_SIZE_BITS)
+                val keyPairGenerator = KeyPairGenerator.getInstance(PRIVATE_KEY_ALGORITHM)
+                keyPairGenerator.initialize(PRIVATE_KEY_BITS_SIZE)
                 keyPairGenerator.generateKeyPair()
             } catch (_: Exception) {
                 null

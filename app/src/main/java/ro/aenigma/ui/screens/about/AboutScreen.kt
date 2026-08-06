@@ -57,12 +57,14 @@ import ro.aenigma.R
 import ro.aenigma.ui.screens.common.DialogContentTemplate
 import ro.aenigma.ui.screens.common.StandardAppBar
 import androidx.core.net.toUri
+import ro.aenigma.crypto.CryptoProvider
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 
 @Composable
 fun AboutScreen(
-    navigateBack: () -> Unit,
-    navigateToLicensesScreen: () -> Unit,
-    navigateToPrivacyPolicy: () -> Unit
+    navigateBack: () -> Unit = { },
+    navigateToLicensesScreen: () -> Unit = { },
+    navigateToPrivacyPolicyScreen: () -> Unit = { }
 ) {
     var appLicenseVisible by remember { mutableStateOf(false) }
     var apacheLicenseVisible by remember { mutableStateOf(false) }
@@ -105,8 +107,8 @@ fun AboutScreen(
                 .padding(
                     top = padding.calculateTopPadding(),
                     bottom = padding.calculateBottomPadding(),
-                    start = 8.dp,
-                    end = 8.dp
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 )
                 .verticalScroll(scrollState)
         ) {
@@ -163,8 +165,12 @@ fun AboutScreen(
                 action = navigateToLicensesScreen,
             )
 
+            val opensslString = stringResource(id = R.string.openssl)
+            val opensslVersion = remember {
+                CryptoProvider.getOpenSslFullVersion() ?: opensslString
+            }
             Text(
-                text = stringResource(R.string.backed_by_openssl),
+                text = stringResource(R.string.backed_by_openssl, opensslVersion),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -180,7 +186,7 @@ fun AboutScreen(
             Link(
                 context = context,
                 url = stringResource(id = R.string.privacy_policy),
-                action = navigateToPrivacyPolicy
+                action = navigateToPrivacyPolicyScreen
             )
             VerticalDivider(
                 modifier = Modifier.weight(1f)
@@ -235,7 +241,7 @@ fun LicenseDialog(
     onCloseButtonClicked: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-    if (visible ) {
+    if (visible) {
         BasicAlertDialog(
             onDismissRequest = { }
         ) {
@@ -277,13 +283,8 @@ fun readRawTextResource(
 
 @Preview
 @Composable
-fun AboutScreenPreview()
-{
-    AboutScreen(
-        navigateBack = { },
-        navigateToLicensesScreen = { },
-        navigateToPrivacyPolicy = { }
-    )
+fun AboutScreenPreview() {
+    AboutScreen()
 }
 
 @Preview

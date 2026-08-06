@@ -55,7 +55,7 @@ import ro.aenigma.models.extensions.MessageDtoExtensions.toArtifactDto
 import ro.aenigma.services.Notifier
 import ro.aenigma.services.SignalrController
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
-import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_SIZE
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_KEY_BYTES_SIZE
 import ro.aenigma.util.Constants.Companion.SEND_MESSAGES_CHUNK_SIZE
 import ro.aenigma.util.ContextExtensions.createZip
 import ro.aenigma.util.ContextExtensions.getCacheFile
@@ -104,7 +104,7 @@ class MessageSenderWorker @AssistedInject constructor(
         groupResourceUrl: String?,
         passphrase: String?
     ): String? {
-        if (path.isEmpty() || destination.publicKey == null) {
+        if (path.isEmpty() || destination.publicKey == null || path.size < 3) {
             return null
         }
 
@@ -151,6 +151,7 @@ class MessageSenderWorker @AssistedInject constructor(
             val paths = pathFinder.calculatePaths(contact).filter { item ->
                 item.startVertex.address == signatureService.address
                         && item.endVertex.address == contact.address
+                        && item.vertexList.size > 2
             }
             if (paths.isNotEmpty()) {
                 buildOnion(
@@ -162,7 +163,9 @@ class MessageSenderWorker @AssistedInject constructor(
                     groupResourceUrl = resourceUrl,
                     passphrase = passphrase
                 )
-            } else null
+            } else {
+                null
+            }
         }
         return signalrController.sendMessages(onions)
     }
@@ -200,7 +203,7 @@ class MessageSenderWorker @AssistedInject constructor(
         )
         repository.local.insertOrUpdateAttachment(attachment)
 
-        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_SIZE)
+        val key = CryptoProvider.generateRandomBytes(ENCRYPTION_KEY_BYTES_SIZE)
         val useTor = repository.local.useTor.firstOrNull() == true
         val useOrbot = repository.local.useOrbot.firstOrNull() == true
         val usingTor = useOrbot || useTor

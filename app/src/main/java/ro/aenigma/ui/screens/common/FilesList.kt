@@ -66,7 +66,7 @@ import ro.aenigma.models.factories.NewPostSheetStateDtoFactory
 import ro.aenigma.services.IOkHttpClientProvider
 import ro.aenigma.services.UriBatcher
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_BYTES_SIZE
 import ro.aenigma.util.ContextExtensions.filterSharedUris
 import ro.aenigma.util.ContextExtensions.getFileTypeIcon
 import ro.aenigma.util.LongExtensions.toMegabytes
@@ -244,7 +244,7 @@ fun FileItem(
 fun rememberFilesPicker(
     onFilesSelected: (List<String>) -> Unit,
     maxCount: Int = ATTACHMENTS_MAX_COUNT,
-    maxSizeBytes: Long = ATTACHMENT_MAX_SIZE
+    maxSizeBytes: Long = ATTACHMENT_MAX_BYTES_SIZE
 ): ManagedActivityResultLauncher<Array<String>, List<@JvmSuppressWildcards Uri>> {
     val context = LocalContext.current
     val tooManyAttachmentsString =
@@ -313,7 +313,7 @@ fun FilesSelector(
     val coroutineScope = rememberCoroutineScope()
     val totalPostSizeExceededString = stringResource(
         id = R.string.total_post_size_exceeded,
-        ATTACHMENT_MAX_SIZE.toMegabytes()
+        ATTACHMENT_MAX_BYTES_SIZE.toMegabytes()
     )
     Row(
         modifier = modifier,

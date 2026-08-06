@@ -39,7 +39,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import ro.aenigma.R
 import ro.aenigma.models.ContactWithGroupDto
-import ro.aenigma.models.MessageWithDetailsDto
 import ro.aenigma.services.ClientStatus
 import ro.aenigma.models.enums.ContactType
 import ro.aenigma.models.enums.MessageType
@@ -52,15 +51,16 @@ import ro.aenigma.ui.screens.common.ReplyToMessageAppBarAction
 import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.util.RequestState
 
 @Composable
 fun ChatAppBar(
-    messages: RequestState<List<MessageWithDetailsDto>>,
     contact: RequestState<ContactWithGroupDto>,
     isMember: Boolean,
     isAdmin: Boolean,
+    moreOptionsMenuExpanded: Boolean = false,
     connectionStatus: ClientStatus,
     isClientWorkerRunning: Boolean = false,
     isSelectionMode: Boolean,
@@ -77,7 +77,8 @@ fun ChatAppBar(
     onSearchClicked: (String) -> Unit,
     onGroupActionClicked: (MessageType) -> Unit,
     navigateBack: () -> Unit,
-    navigateToAddContactsScreen: (String) -> Unit
+    navigateToAddContactsScreen: (String) -> Unit,
+    navigateToChatHelpScreen: () -> Unit = { }
 ) {
     var searchQuery by remember { mutableStateOf("") }
     LaunchedEffect(key1 = isSearchMode)
@@ -129,11 +130,15 @@ fun ChatAppBar(
                         tint = MaterialTheme.colorScheme.onBackground,
                         onSearchModeTriggered = onSearchModeTriggered
                     )
+                    ShowInfoAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onShowInfoClicked = navigateToChatHelpScreen
+                    )
                     MoreActions(
-                        messages = messages,
                         isGroup = contact.data.contact.type == ContactType.GROUP,
                         isMember = isMember,
                         isAdmin = isAdmin,
+                        expanded = moreOptionsMenuExpanded,
                         onDeleteAllClicked = onDeleteAllClicked,
                         onRenameContactClicked = onRenameContactClicked,
                         onShareContactClicked = {
@@ -149,22 +154,20 @@ fun ChatAppBar(
 
 @Composable
 fun MoreActions(
-    messages: RequestState<List<MessageWithDetailsDto>>,
     isGroup: Boolean,
     isMember: Boolean,
     isAdmin: Boolean,
+    expanded: Boolean = false,
     onDeleteAllClicked: () -> Unit,
     onRenameContactClicked: () -> Unit,
     onShareContactClicked: () -> Unit,
     onGroupActionClicked: (MessageType) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var isExpanded by remember(key1 = expanded) { mutableStateOf(expanded) }
 
     BasicDropdownMenu(
-        expanded = expanded,
-        onToggle = {
-            isExpanded -> expanded = isExpanded
-        }
+        expanded = isExpanded,
+        onToggle = { value -> isExpanded = value }
     ) {
         BasicDropDownMenuItem(
             imageVector = Icons.Filled.Edit,
@@ -173,7 +176,7 @@ fun MoreActions(
             visible = (isGroup && isMember && isAdmin) || !isGroup,
             onClick = {
                 onRenameContactClicked()
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -183,7 +186,7 @@ fun MoreActions(
             visible = !isGroup,
             onClick = {
                 onShareContactClicked()
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -193,7 +196,7 @@ fun MoreActions(
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_ADD)
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -203,7 +206,7 @@ fun MoreActions(
             visible = isGroup && isMember && isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_REMOVE)
-                expanded = false
+                isExpanded = false
             }
         )
         BasicDropDownMenuItem(
@@ -213,22 +216,19 @@ fun MoreActions(
             visible = isGroup && isMember && !isAdmin,
             onClick = {
                 onGroupActionClicked(MessageType.GROUP_MEMBER_LEAVE)
-                expanded = false
+                isExpanded = false
             }
         )
-        if(messages is RequestState.Success)
-        {
-            BasicDropDownMenuItem(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = stringResource(id = R.string.delete),
-                visible = messages.data.isNotEmpty(),
-                text = stringResource(id = R.string.clear_conversation),
-                onClick = {
-                    onDeleteAllClicked()
-                    expanded = false
-                }
-            )
-        }
+        BasicDropDownMenuItem(
+            imageVector = Icons.Filled.Delete,
+            contentDescription = stringResource(id = R.string.delete),
+            visible = true,
+            text = stringResource(id = R.string.clear_conversation),
+            onClick = {
+                onDeleteAllClicked()
+                isExpanded = false
+            }
+        )
     }
 }
 
@@ -236,7 +236,6 @@ fun MoreActions(
 @Preview
 fun DefaultChatAppBarPreview() {
     ChatAppBar(
-        messages = RequestState.Success(listOf()),
         isSelectionMode = false,
         connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(
@@ -273,7 +272,6 @@ fun DefaultChatAppBarPreview() {
 @Composable
 fun SelectionModeChatAppBarPreview() {
     ChatAppBar(
-        messages = RequestState.Success(listOf()),
         isSelectionMode = true,
         connectionStatus = ClientStatus.NotConnected,
         contact = RequestState.Success(

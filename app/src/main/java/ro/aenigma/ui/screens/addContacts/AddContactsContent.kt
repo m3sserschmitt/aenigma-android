@@ -73,22 +73,24 @@ fun AddContactsContent(
     qrCode: RequestState<QrCodeDto>,
     sharedDataCreate: RequestState<CreatedSharedDataDto>,
     importedContactDetails: RequestState<ExportedContactDataDto>,
-    isContactImport: Boolean = false,
+    openLinkLoadingDialogVisible: Boolean = false,
     onQrCodeFound: (ExportedContactDataDto) -> Unit,
     onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
     onNewContactNameChanged: (String) -> Boolean,
     onSaveContact: (String) -> Unit,
     onSaveContactDismissed: () -> Unit,
     onCreateLinkClicked: () -> Unit,
-    onGetLink: (String) -> Unit,
-    onSharedDataConfirm: () ->  Unit,
+    onOpenLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkCompleted: () -> Unit = { },
+    onLinkSubmitted: (String) -> Unit = { },
     onForwardUri: (String) -> Unit = { }
 ) {
     var useLinkDialogVisible by remember { mutableStateOf(false) }
     var createLinkDialogVisible by remember { mutableStateOf(false) }
     var saveContactDialogVisible by remember { mutableStateOf(false) }
-    var useLinkLoadingDialogVisible by remember(key1 = isContactImport) {
-        mutableStateOf(isContactImport)
+    var useLinkLoadingDialogVisible by remember(key1 = openLinkLoadingDialogVisible) {
+        mutableStateOf(openLinkLoadingDialogVisible)
     }
     var createLinkLoadingDialogVisible by remember { mutableStateOf(false) }
 
@@ -97,9 +99,10 @@ fun AddContactsContent(
         state = importedContactDetails,
         onConfirmButtonClicked = {
             if (importedContactDetails is RequestState.Error) {
-                onSharedDataConfirm()
-            } else {
+                onOpenLinkResult(false)
+            } else if (importedContactDetails is RequestState.Success) {
                 saveContactDialogVisible = true
+                onOpenLinkResult(true)
             }
             useLinkLoadingDialogVisible = false
         }
@@ -110,16 +113,21 @@ fun AddContactsContent(
         state = sharedDataCreate,
         onConfirmButtonClicked = {
             if (sharedDataCreate is RequestState.Error) {
-                onSharedDataConfirm()
-            } else {
+                onCreateLinkResult(false)
+            } else if(sharedDataCreate is RequestState.Success) {
                 createLinkDialogVisible = true
+                onCreateLinkResult(true)
             }
             createLinkLoadingDialogVisible = false
         }
     )
 
     val requestSuccessful = importedContactDetails is RequestState.Success
-    val initialName = if (requestSuccessful) importedContactDetails.data.name ?: "" else ""
+    val initialName = if (requestSuccessful) {
+        importedContactDetails.data.name ?: ""
+    } else {
+        ""
+    }
     SaveNewContactDialog(
         visible = scannerState == QrCodeScannerState.SAVE
                 || (requestSuccessful && saveContactDialogVisible),
@@ -139,7 +147,7 @@ fun AddContactsContent(
         visible = createLinkDialogVisible,
         sharedData = sharedDataCreate,
         onConfirmButtonClick = {
-            onSharedDataConfirm()
+            onCreateLinkCompleted()
             createLinkDialogVisible = false
         },
         onForwardUri = onForwardUri
@@ -148,7 +156,7 @@ fun AddContactsContent(
     UseLinkDialog(
         visible = useLinkDialogVisible,
         onConfirmClicked = { link ->
-            onGetLink(link)
+            onLinkSubmitted(link)
             useLinkDialogVisible = false
             useLinkLoadingDialogVisible = true
         },
@@ -173,6 +181,7 @@ fun AddContactsContent(
 
         QrCodeScannerState.SCAN_CODE -> {
             QrCodeScanner<ExportedContactDataDto>(
+                modifier = Modifier.fillMaxSize(),
                 onQrCodeFound = { data ->
                     onQrCodeFound(data)
                 }
@@ -181,6 +190,7 @@ fun AddContactsContent(
 
         QrCodeScannerState.SCAN_SERVER_INFO_CODE -> {
             QrCodeScanner<ServerInfoDto>(
+                modifier = Modifier.fillMaxSize(),
                 onQrCodeFound = { data ->
                     onServerInfoQrCodeFound(data)
                 }
@@ -277,15 +287,20 @@ fun DisplayPortraitQrCode(
             )
         )
         PortraitQrCode(
+            modifier = Modifier.padding(
+                top = 12.dp,
+                bottom = 6.dp
+            ),
             qrCode = qrCode
         )
         Text(
-            modifier = Modifier.alpha(.75f),
+            modifier = Modifier.alpha(.75f)
+                .padding(start = 16.dp, end = 16.dp),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             text = qrCode.label,
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onBackground,
             fontWeight = FontWeight.Bold
         )
@@ -312,6 +327,10 @@ fun DisplayLandscapeQrCode(
         verticalAlignment = Alignment.CenterVertically
     ) {
         LandscapeQrCode(
+            modifier = Modifier.padding(
+                start = 12.dp,
+                end = 12.dp
+            ),
             qrCode = qrCode
         )
         Column(
@@ -335,12 +354,12 @@ fun DisplayLandscapeQrCode(
                 onUseLinkClicked = onUseLinkClicked
             )
             Text(
-                modifier = Modifier.alpha(.75f),
+                modifier = Modifier.alpha(.75f).padding(start = 16.dp, end = 16.dp),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
                 text = qrCode.label,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onBackground,
                 fontWeight = FontWeight.Bold
             )
@@ -367,8 +386,8 @@ fun AddContactsContentPreview()
                 onSaveContactDismissed = { },
                 onCreateLinkClicked = { },
                 sharedDataCreate = RequestState.Idle,
-                onSharedDataConfirm = { },
-                onGetLink = { },
+                onCreateLinkResult = { },
+                onLinkSubmitted = { },
             )
         }
     }

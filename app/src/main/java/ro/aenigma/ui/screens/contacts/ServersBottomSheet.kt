@@ -63,6 +63,7 @@ import ro.aenigma.ui.screens.common.LoadingScreen
 import ro.aenigma.ui.screens.common.PrimaryButton
 import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.ShareTextButton
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleTextInput
 import ro.aenigma.ui.screens.common.selectable
@@ -217,13 +218,14 @@ fun SearchBar(
 }
 
 @Composable
-fun SheetTitleBar(
+fun ServersTitleBar(
     title: String,
     connectionStatus: ClientStatus = ClientStatus.NotConnected,
     isClientWorkerRunning: Boolean = false,
     onRetryConnection: () -> Unit = { },
     onScanCodeClicked: () -> Unit = { },
-    onConnectPeopleClicked: () -> Unit = { }
+    onConnectPeopleClicked: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { }
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -257,6 +259,10 @@ fun SheetTitleBar(
                 tint = MaterialTheme.colorScheme.onBackground
             )
         }
+        ShowInfoAppBarAction(
+            tint = MaterialTheme.colorScheme.onBackground,
+            onShowInfoClicked = navigateToServersSheetHelpScreen
+        )
     }
 }
 
@@ -270,15 +276,17 @@ fun SheetContent(
     onRetryConnection: () -> Unit = { },
     onServerClicked: (ServerInfoDto) -> Unit = { },
     onScanCodeClicked: () -> Unit = { },
-    onConnectPeopleClicked: () -> Unit = { }
+    onConnectPeopleClicked: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { }
 ) {
-    SheetTitleBar(
+    ServersTitleBar(
         title = title,
         connectionStatus = connectionStatus,
         isClientWorkerRunning = isClientWorkerRunning,
         onRetryConnection = onRetryConnection,
         onScanCodeClicked = onScanCodeClicked,
-        onConnectPeopleClicked = onConnectPeopleClicked
+        onConnectPeopleClicked = onConnectPeopleClicked,
+        navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
     )
 
     when (servers) {
@@ -326,7 +334,8 @@ fun SheetContent(
     onRetryConnection: () -> Unit = { },
     onServerClicked: (ServerInfoDto) -> Unit = { },
     onScanCodeClicked: () -> Unit = { },
-    onConnectPeopleClicked: () -> Unit = { }
+    onConnectPeopleClicked: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { }
 ) {
     when (sheetState.selectedSection) {
         ServersSheetSection.SERVERS -> SheetContent(
@@ -339,6 +348,7 @@ fun SheetContent(
             onServerClicked = onServerClicked,
             onScanCodeClicked = onScanCodeClicked,
             onConnectPeopleClicked = onConnectPeopleClicked,
+            navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
         )
 
         ServersSheetSection.HISTORY -> SheetContent(
@@ -350,7 +360,8 @@ fun SheetContent(
             onRetryConnection = onRetryConnection,
             onServerClicked = onServerClicked,
             onScanCodeClicked = onScanCodeClicked,
-            onConnectPeopleClicked = onConnectPeopleClicked
+            onConnectPeopleClicked = onConnectPeopleClicked,
+            navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
         )
     }
 }
@@ -371,7 +382,8 @@ fun ServersBottomSheet(
     onServerClicked: (ServerInfoDto) -> Unit = { },
     onConnectClicked: () -> Unit = { },
     onScanCodeClicked: () -> Unit = { },
-    onConnectPeopleClicked: () -> Unit = { }
+    onConnectPeopleClicked: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { }
 ) {
     BottomSheetTemplate(
         navigationBarItems = {
@@ -410,7 +422,8 @@ fun ServersBottomSheet(
             onRetryConnection = onRetryConnection,
             onServerClicked = onServerClicked,
             onScanCodeClicked = onScanCodeClicked,
-            onConnectPeopleClicked = onConnectPeopleClicked
+            onConnectPeopleClicked = onConnectPeopleClicked,
+            navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
         )
         SearchBar(
             modifier = Modifier.fillMaxWidth(),

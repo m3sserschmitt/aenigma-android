@@ -37,7 +37,7 @@ object FileExtensions {
 
     fun File.asBufferedRequestBody(
         mediaType: MediaType,
-        bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_SIZE,
+        bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_BYTES_SIZE,
         onProgress: (percent: Int) -> Unit = { }
     ): RequestBody {
         return BufferedRequestBody(this, mediaType, bufferSize, onProgress)
@@ -45,7 +45,7 @@ object FileExtensions {
 
     fun File.asBufferedRequestBody(
         mediaType: String,
-        bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_SIZE,
+        bufferSize: Int = Constants.REQUEST_BODY_DEFAULT_BUFFER_BYTES_SIZE,
         onProgress: (percent: Int) -> Unit = { }
     ): RequestBody {
         return asBufferedRequestBody(mediaType.toMediaType(), bufferSize, onProgress)
@@ -58,9 +58,9 @@ object FileExtensions {
     ): RequestBody {
         return asBufferedRequestBody(
             mediaType, if (usingTor) {
-                Constants.REQUEST_BODY_BUFFER_SIZE_OVER_TOR
+                Constants.REQUEST_BODY_BUFFER_BYTES_SIZE_OVER_TOR
             } else {
-                Constants.REQUEST_BODY_DEFAULT_BUFFER_SIZE
+                Constants.REQUEST_BODY_DEFAULT_BUFFER_BYTES_SIZE
             },
             onProgress
         )

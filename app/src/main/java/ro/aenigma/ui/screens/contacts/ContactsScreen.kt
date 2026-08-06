@@ -66,6 +66,7 @@ import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toExpanded
 import ro.aenigma.models.extensions.ServersSheetStateDtoExtensions.toPartiallyExpanded
 import ro.aenigma.models.factories.ContactDtoFactory
 import ro.aenigma.models.factories.MessageDtoFactory
+import ro.aenigma.models.factories.ServersSheetStateDtoFactory
 import ro.aenigma.ui.screens.common.SnackBar
 import ro.aenigma.ui.screens.common.ExitSelectionMode
 import ro.aenigma.ui.screens.common.InstallOrbotDialog
@@ -76,6 +77,7 @@ import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
 import ro.aenigma.util.BottomSheetScaffoldStateExtensions.isNotFullyExpanded
 import ro.aenigma.util.Constants.Companion.BOTTOM_SHEET_PEEK_HEIGHT
 import ro.aenigma.util.Constants.Companion.BROADCAST_CONTACT_ADDRESS
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
 import ro.aenigma.util.ContextExtensions.isOrbotInstalled
 import ro.aenigma.util.ContextExtensions.openOrbot
 import ro.aenigma.util.ContextExtensions.redirectToOrbotOnPlayStore
@@ -89,6 +91,8 @@ fun ContactsScreen(
     navigateToAddContactScreen: (String?) -> Unit,
     navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
+    navigateToContactsHelpScreen: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { },
     navigateToRoot: () -> Unit,
     mainViewModel: MainViewModel
 ) {
@@ -143,12 +147,13 @@ fun ContactsScreen(
         onDeleteSelectedItems = { contactsToDelete -> mainViewModel.deleteContacts(contactsToDelete) },
         navigateToAddContactScreen = navigateToAddContactScreen,
         navigateToAboutScreen = navigateToAboutScreen,
+        navigateToContactsHelpScreen = navigateToContactsHelpScreen,
+        navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen,
         onContactRenamed = { contactToBeRenamed, newName ->
             mainViewModel.renameContact(contactToBeRenamed, newName)
         },
         onNewContactNameChanged = { newValue -> newValue.isNotBlank() },
         onGroupCreated = { selectedItems, name -> mainViewModel.createGroup(selectedItems, name) },
-        onResetUserNameClicked = { mainViewModel.resetUserName() },
         onForwardAttachments = { chatIds ->
             mainViewModel.redirectAttachments(chatIds)
             mainViewModel.redirectText(chatIds)
@@ -158,46 +163,50 @@ fun ContactsScreen(
             mainViewModel.setAttachments(listOf())
             navigateToRoot()
         },
-        onContactSaveDismissed = { mainViewModel.resetContactChanges() }
+        onContactSaveDismissed = { mainViewModel.resetSharedData() }
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactsScreen(
-    connectionStatus: ClientStatus,
+    connectionStatus: ClientStatus = ClientStatus.Authenticated,
     isClientWorkerRunning: Boolean = false,
-    contacts: RequestState<List<ContactWithLastMessageDto>>,
-    servers: RequestState<List<ServerInfoDto>>,
-    serversHistory: RequestState<List<ServerInfoDto>>,
-    serversSheetState: ServersSheetStateDto,
-    useTor: Boolean,
-    useOrbot: Boolean,
+    contacts: RequestState<List<ContactWithLastMessageDto>> = RequestState.Success(listOf()),
+    servers: RequestState<List<ServerInfoDto>> = RequestState.Success(listOf()),
+    serversHistory: RequestState<List<ServerInfoDto>> = RequestState.Idle,
+    serversSheetState: ServersSheetStateDto = ServersSheetStateDtoFactory.create(),
+    useTor: Boolean = false,
+    useOrbot: Boolean = false,
+    moreOptionsMenuExpanded: Boolean = false,
     notificationServicePreference: Boolean = false,
-    torCircuitState: TorCircuitState,
+    torCircuitState: TorCircuitState = TorCircuitState.UNDEFINED,
     isForwardMode: Boolean = false,
-    onTorPreferenceChanged: (Boolean) -> Unit,
-    onOrbotPreferenceChanged: (Boolean) -> Unit,
+    isSelectionMode: Boolean = false,
+    selectedItems: Map<String, ContactWithLastMessageDto> = mapOf(),
+    onTorPreferenceChanged: (Boolean) -> Unit = { },
+    onOrbotPreferenceChanged: (Boolean) -> Unit = { },
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
-    onRetryConnection: () -> Unit,
-    onSearch: (String) -> Unit,
-    onServersSearch: (String) -> Unit,
-    onServerConnectClicked: (String) -> Unit,
-    onServerClicked: (ServerInfoDto) -> Unit,
-    onScanServerCodeClicked: () -> Unit,
+    onRetryConnection: () -> Unit = { },
+    onSearch: (String) -> Unit = { },
+    onServersSearch: (String) -> Unit = { },
+    onServerConnectClicked: (String) -> Unit = { },
+    onServerClicked: (ServerInfoDto) -> Unit = { },
+    onScanServerCodeClicked: () -> Unit = { },
     onConnectPeopleClicked: () -> Unit = { },
-    onServersSheetStateChanged: (ServersSheetStateDto) -> Unit,
-    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit,
-    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit,
-    onNewContactNameChanged: (String) -> Boolean,
-    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit,
-    onContactSaveDismissed: () -> Unit,
-    onResetUserNameClicked: () -> Unit,
+    onServersSheetStateChanged: (ServersSheetStateDto) -> Unit = { },
+    onDeleteSelectedItems: (List<ContactWithLastMessageDto>) -> Unit = { },
+    onContactRenamed: (ContactWithLastMessageDto, String) -> Unit = { _, _ -> },
+    onNewContactNameChanged: (String) -> Boolean = { true },
+    onGroupCreated: (List<ContactWithLastMessageDto>, String) -> Unit  = { _, _ -> },
+    onContactSaveDismissed: () -> Unit = { },
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: (List<String>) -> Unit = { },
-    navigateToAddContactScreen: (String?) -> Unit,
-    navigateToAboutScreen: () -> Unit,
-    navigateToChatScreen: (String) -> Unit
+    navigateToAddContactScreen: (String?) -> Unit = { },
+    navigateToContactsHelpScreen: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { },
+    navigateToAboutScreen: () -> Unit = { },
+    navigateToChatScreen: (String) -> Unit = { }
 ) {
     var createGroupDialogVisible by remember { mutableStateOf(false) }
     var renameContactDialogVisible by remember { mutableStateOf(false) }
@@ -206,11 +215,16 @@ fun ContactsScreen(
     var orbotInfoDialogVisible by remember { mutableStateOf(false) }
     var torServiceInfoDialogVisible by remember { mutableStateOf(false) }
     var isSearchMode by remember { mutableStateOf(false) }
-    var isSelectionMode by remember { mutableStateOf(false) }
+    var isSelection by remember(key1 = isSelectionMode) { mutableStateOf(isSelectionMode) }
     var serversSearchQuery by remember { mutableStateOf("") }
-    val selectedItems = remember { mutableStateMapOf<String, ContactWithLastMessageDto>() }
+    val selectedContactItems = remember(key1 = selectedItems) {
+        mutableStateMapOf<String, ContactWithLastMessageDto>().apply { putAll(selectedItems) }
+    }
     val snackBarHostState = remember { SnackbarHostState() }
-    val bottomSheetState = rememberStandardBottomSheetState(initialValue = serversSheetState.sheetState)
+    val bottomSheetState = rememberStandardBottomSheetState(
+        initialValue = serversSheetState.sheetState,
+        skipHiddenState = false
+    )
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = bottomSheetState)
     val cannotShareChannelsString = stringResource(id = R.string.cannot_share_channels)
     val couldNotSelectChannelString = stringResource(id = R.string.cannot_select_channels_to_create_channel)
@@ -292,9 +306,9 @@ fun ContactsScreen(
         visible = deleteContactsConfirmationVisible,
         onConfirmClicked = {
             deleteContactsConfirmationVisible = false
-            onDeleteSelectedItems(selectedItems.values.toList())
-            isSelectionMode = false
-            selectedItems.clear()
+            onDeleteSelectedItems(selectedContactItems.values.toList())
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismissClicked = {
             deleteContactsConfirmationVisible = false
@@ -305,13 +319,13 @@ fun ContactsScreen(
         visible = renameContactDialogVisible,
         onNewContactNameChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            val contact = selectedItems.values.singleOrNull()
+            val contact = selectedContactItems.values.singleOrNull()
             if (contact != null) {
                 onContactRenamed(contact, name)
             }
             renameContactDialogVisible = false
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismiss = {
             renameContactDialogVisible = false
@@ -322,10 +336,10 @@ fun ContactsScreen(
         visible = createGroupDialogVisible,
         onTextChanged = onNewContactNameChanged,
         onConfirmClicked = { name ->
-            onGroupCreated(selectedItems.values.toList(), name)
+            onGroupCreated(selectedContactItems.values.toList(), name)
             createGroupDialogVisible = false
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         },
         onDismissClicked = {
             onContactSaveDismissed()
@@ -334,24 +348,24 @@ fun ContactsScreen(
     )
 
     BackHandler(
-        enabled = isSearchMode || isSelectionMode || isForwardMode
+        enabled = isSearchMode || isSelection || isForwardMode
     ) {
         if (isSearchMode) {
             isSearchMode = false
-        } else if (isSelectionMode) {
-            selectedItems.clear()
-            isSelectionMode = false
+        } else if (isSelection) {
+            selectedContactItems.clear()
+            isSelection = false
         } else if (isForwardMode) {
             onRemoveAttachments()
         }
     }
 
     ExitSelectionMode(
-        isSelectionMode = isSelectionMode,
-        selectedItemsCount = selectedItems.size,
+        isSelectionMode = isSelection,
+        selectedItemsCount = selectedContactItems.size,
         onSelectionModeExited = {
-            isSelectionMode = false
-            selectedItems.clear()
+            isSelection = false
+            selectedContactItems.clear()
         }
     )
 
@@ -392,7 +406,8 @@ fun ContactsScreen(
                     onServerClicked = onServerClicked,
                     onSheetStateChanged = onServersSheetStateChanged,
                     onScanCodeClicked = onScanServerCodeClicked,
-                    onConnectPeopleClicked = onConnectPeopleClicked
+                    onConnectPeopleClicked = onConnectPeopleClicked,
+                    navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen
                 )
             }
         },
@@ -412,6 +427,7 @@ fun ContactsScreen(
                 isSearchMode = isSearchMode,
                 useTor = useTor,
                 useOrbot = useOrbot,
+                moreOptionsMenuExpanded = moreOptionsMenuExpanded,
                 notificationServicePreference = notificationServicePreference,
                 torCircuitState = torCircuitState,
                 isForwardMode = isForwardMode,
@@ -444,10 +460,10 @@ fun ContactsScreen(
                     isSearchMode = false
                 },
                 onSelectionModeExited = {
-                    selectedItems.clear()
+                    selectedContactItems.clear()
                 },
-                isSelectionMode = isSelectionMode,
-                selectedItemsCount = selectedItems.size,
+                isSelectionMode = isSelection,
+                selectedItemsCount = selectedContactItems.size,
                 onOpenServersList = {
                     if (bottomSheetScaffoldState.isNotFullyExpanded()) {
                         onServersSheetStateChanged(serversSheetState.toExpanded())
@@ -462,7 +478,7 @@ fun ContactsScreen(
                     renameContactDialogVisible = true
                 },
                 onShareSelectedItemsClicked = {
-                    val selectedItem = selectedItems.values.singleOrNull()?.contact
+                    val selectedItem = selectedContactItems.values.singleOrNull()?.contact
                     if (selectedItem != null && selectedItem.type == ContactType.CONTACT) {
                         navigateToAddContactScreen(selectedItem.address)
                     } else if (selectedItem != null && selectedItem.type == ContactType.GROUP) {
@@ -471,25 +487,25 @@ fun ContactsScreen(
                     }
                 },
                 onCreateGroupClicked = {
-                    if (selectedItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
+                    if (selectedContactItems.any { item -> item.value.contact.type == ContactType.GROUP }) {
                         Toast.makeText(context, couldNotSelectChannelString, Toast.LENGTH_SHORT)
                             .show()
-                    } else if (selectedItems.any { item -> item.value.contact.address == BROADCAST_CONTACT_ADDRESS }) {
+                    } else if (selectedContactItems.any { item -> item.value.contact.address == BROADCAST_CONTACT_ADDRESS }) {
                         Toast.makeText(context, couldNotSelectBroadcastString, Toast.LENGTH_SHORT)
                             .show()
                     } else {
                         createGroupDialogVisible = true
                     }
                 },
-                onResetUsernameClicked = onResetUserNameClicked,
                 onForwardAttachments = {
-                    onForwardAttachments(selectedItems.keys.toList())
-                    selectedItems.clear()
-                    isSelectionMode = false
+                    onForwardAttachments(selectedContactItems.keys.toList())
+                    selectedContactItems.clear()
+                    isSelection = false
                 },
                 onRemoveAttachments = onRemoveAttachments,
                 onRetryConnection = onRetryConnection,
-                navigateToAboutScreen = navigateToAboutScreen
+                navigateToAboutScreen = navigateToAboutScreen,
+                navigateToContactsHelpScreen = navigateToContactsHelpScreen
             )
         },
     ) { paddingValues ->
@@ -511,23 +527,25 @@ fun ContactsScreen(
             ContactsContent(
                 modifier = Modifier.padding(
                     top = paddingValues.calculateTopPadding(),
-                    bottom = BOTTOM_SHEET_PEEK_HEIGHT
+                    bottom = paddingValues.calculateBottomPadding(),
+                    start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                    end = HORIZONTAL_SCREEN_CONTENT_PADDING
                 ),
                 contacts = contacts,
                 isSearchMode = isSearchMode,
                 navigateToChatScreen = navigateToChatScreen,
                 onItemSelected = { selectedContact ->
-                    if (!isSelectionMode) {
-                        isSelectionMode = true
+                    if (!isSelection) {
+                        isSelection = true
                     }
 
-                    selectedItems[selectedContact.contact.address] = selectedContact
+                    selectedContactItems[selectedContact.contact.address] = selectedContact
                 },
                 onItemDeselected = { deselectedContact ->
-                    selectedItems.remove(deselectedContact.contact.address)
+                    selectedContactItems.remove(deselectedContact.contact.address)
                 },
-                isSelectionMode = isSelectionMode,
-                selectedContacts = selectedItems
+                isSelectionMode = isSelection,
+                selectedContacts = selectedContactItems
             )
         }
     }
@@ -538,7 +556,6 @@ fun ContactsFab(
     onFabClicked: () -> Unit
 ) {
     FloatingActionButton(
-        modifier = Modifier.padding(bottom = BOTTOM_SHEET_PEEK_HEIGHT),
         containerColor = MaterialTheme.colorScheme.primaryContainer,
         onClick = { onFabClicked() },
     ) {
@@ -552,75 +569,108 @@ fun ContactsFab(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val contactsPreview = RequestState.Success(
+    listOf(
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "123",
+                name = "John",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), MessageDtoFactory.createOutgoing(
+                chatId = "123",
+                text = "Awesome!",
+                type = MessageType.TEXT,
+                actionFor = null,
+            )
+        ),
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "124",
+                name = "Elizabeth",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), MessageDtoFactory.createIncoming(
+                chatId = "124",
+                text = "Can't wait to see you tomorrow!",
+                type = MessageType.TEXT,
+                senderAddress = "124",
+                serverUUID = null,
+                actionFor = null,
+                refId = null,
+                dateReceivedOnServer = ZonedDateTime.now()
+            )
+        ),
+        ContactWithLastMessageDto(
+            ContactDtoFactory.createContact(
+                address = "125",
+                name = "Broadcast",
+                publicKey = null,
+                guardHostname = null,
+                guardAddress = null,
+            ), null
+        )
+    )
+)
+
+private val serversPreview = RequestState.Success(
+    listOf(
+        ServerInfoDto(
+            address = "123",
+            graphVersion = "123",
+            onionService = "http://bdhpslhrwcj3teiq24esu7r4qyuuvfk3un75b3ro4k3cb2bllyhnrjqd.onion",
+            hostname = "https://aenigma.ro"
+        ),
+        ServerInfoDto(
+            address = "124",
+            graphVersion = "124",
+            onionService = "http://wsgdrsbqpjqwxxktn6zkywo6arhdcmuqadfvfubdmhzggdg6uaejcpid.onion"
+        )
+    )
+)
+
 @Preview
 @Composable
 fun ContactsScreenPreview() {
     ContactsScreen(
-        connectionStatus = ClientStatus.Connected,
-        useTor = true,
-        useOrbot = false,
-        torCircuitState = TorCircuitState.OK,
-        onTorPreferenceChanged = { _ -> },
-        onOrbotPreferenceChanged = { },
-        onRetryConnection = {},
-        onContactRenamed = { _, _ -> },
-        onNewContactNameChanged = { true },
-        onDeleteSelectedItems = {},
-        onSearch = {},
-        onServersSearch = {},
-        onServerClicked = {},
-        onServerConnectClicked = {},
-        onScanServerCodeClicked = {},
-        onServersSheetStateChanged = { },
-        onGroupCreated = { _, _ -> },
-        contacts = RequestState.Success(
-            listOf(
-                ContactWithLastMessageDto(
-                    ContactDtoFactory.createContact(
-                        address = "123",
-                        name = "John",
-                        publicKey = null,
-                        guardHostname = null,
-                        guardAddress = null,
-                    ), MessageDtoFactory.createOutgoing(
-                        chatId = "123",
-                        text = "Awesome!",
-                        type = MessageType.TEXT,
-                        actionFor = null,
-                    )
-                ),
-                ContactWithLastMessageDto(
-                    ContactDtoFactory.createContact(
-                        address = "124",
-                        name = "Elizabeth",
-                        publicKey = null,
-                        guardHostname = null,
-                        guardAddress = null,
-                    ), MessageDtoFactory.createIncoming(
-                        chatId = "124",
-                        text = "Can't wait to see you tomorrow!",
-                        type = MessageType.TEXT,
-                        senderAddress = "124",
-                        serverUUID = null,
-                        actionFor = null,
-                        refId = null,
-                        dateReceivedOnServer = ZonedDateTime.now()
-                    )
-                )
-            )
-        ),
-        servers = RequestState.Idle,
-        serversHistory = RequestState.Idle,
+        contacts = contactsPreview
+    )
+}
+
+@Preview
+@Composable
+fun ContactsScreenSelectionModePreview() {
+    ContactsScreen(
+        contacts = contactsPreview,
+        isSelectionMode = true,
+        selectedItems = mapOf(
+            contactsPreview.data.first().contact.address to contactsPreview.data.first()
+        )
+    )
+}
+
+@Preview
+@Composable
+fun ContactsScreenMoreOptionsExpandedPreview() {
+    ContactsScreen(
+        contacts = contactsPreview,
+        moreOptionsMenuExpanded = true
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview
+@Composable
+fun ContactsScreenServersBottomSheetPreview() {
+    ContactsScreen(
+         contacts = contactsPreview,
         serversSheetState = ServersSheetStateDto(
-            sheetState = SheetValue.Hidden,
+            sheetState = SheetValue.Expanded,
             selectedSection = ServersSheetSection.SERVERS
         ),
-        onResetUserNameClicked = {},
-        navigateToChatScreen = {},
-        navigateToAddContactScreen = {},
-        onContactSaveDismissed = {},
-        navigateToAboutScreen = { },
+        servers = serversPreview
     )
 }
 
@@ -629,5 +679,29 @@ fun ContactsScreenPreview() {
 fun ContactsScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         ContactsScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenSelectionModeDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenSelectionModePreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenMoreOptionsExpandedDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenMoreOptionsExpandedPreview()
+    }
+}
+
+@Preview
+@Composable
+fun ContactsScreenServersBottomSheetDarkPreview() {
+    ApplicationComposeDarkTheme {
+        ContactsScreenServersBottomSheetPreview()
     }
 }

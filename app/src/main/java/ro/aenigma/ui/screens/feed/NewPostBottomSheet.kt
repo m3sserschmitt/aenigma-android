@@ -23,6 +23,7 @@ package ro.aenigma.ui.screens.feed
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
@@ -40,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -67,9 +69,29 @@ import ro.aenigma.ui.screens.common.BottomSheetTitle
 import ro.aenigma.ui.screens.common.FilesCountIndicator
 import ro.aenigma.ui.screens.common.FilesSelector
 import ro.aenigma.ui.screens.common.PrimaryButton
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.SimpleInfoScreen
 import ro.aenigma.ui.screens.common.SimpleOutlineTextInput
 import ro.aenigma.util.Constants.Companion.INFO_SCREEN_ICON_SIZE
+
+@Composable
+fun EditArticleTitleBar(
+    navigateToFeedHelpScreen: () -> Unit = { },
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BottomSheetTitle(
+            modifier = Modifier.weight(1f),
+            title = stringResource(id = R.string.compose_article)
+        )
+        ShowInfoAppBarAction(
+            tint = MaterialTheme.colorScheme.onBackground,
+            onShowInfoClicked = navigateToFeedHelpScreen
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,13 +99,14 @@ fun EditArticleSection(
     modifier: Modifier = Modifier,
     sheetState: NewPostSheetStateDto = NewPostSheetStateDtoFactory.create(),
     onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
-    onPostClicked: () -> Unit = { }
+    onPostClicked: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { },
 ) {
     var titleError by remember { mutableStateOf(false) }
     var contentError by remember { mutableStateOf(false) }
 
-    BottomSheetTitle(
-        title = stringResource(id = R.string.compose_article)
+    EditArticleTitleBar(
+        navigateToFeedHelpScreen = navigateToNewPostSheetHelpScreen
     )
 
     Column(
@@ -245,7 +268,8 @@ fun SheetContent(
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
-    onPostClicked: () -> Unit = { }
+    onPostClicked: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { },
 ) {
     when (sheetState.selectedSection) {
         NewPostSheetSection.EDIT -> {
@@ -253,7 +277,8 @@ fun SheetContent(
                 modifier = modifier,
                 sheetState = sheetState,
                 onSheetStateChanged = onSheetStateChanged,
-                onPostClicked = onPostClicked
+                onPostClicked = onPostClicked,
+                navigateToNewPostSheetHelpScreen = navigateToNewPostSheetHelpScreen
             )
         }
 
@@ -317,7 +342,8 @@ fun NewPostBottomSheet(
     imageTransformer: ImageTransformer = NoOpImageTransformerImpl(),
     okHttpClientProvider: IOkHttpClientProvider = OkHttpClientProviderDefault(),
     onSheetStateChanged: (NewPostSheetStateDto) -> Unit = { },
-    onPostClicked: () -> Unit = { }
+    onPostClicked: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { }
 ) {
     BottomSheetTemplate(
         navigationBarItems = {
@@ -351,7 +377,8 @@ fun NewPostBottomSheet(
             imageTransformer = imageTransformer,
             okHttpClientProvider = okHttpClientProvider,
             onSheetStateChanged = onSheetStateChanged,
-            onPostClicked = onPostClicked
+            onPostClicked = onPostClicked,
+            navigateToNewPostSheetHelpScreen = navigateToNewPostSheetHelpScreen
         )
     }
 }

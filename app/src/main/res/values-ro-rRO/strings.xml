@@ -73,7 +73,7 @@
     <string name="message_selection">Statusul de selectarea al mesajului</string>
     <string name="message_delivery_status">Statusul de expediere al mesajului</string>
     <string name="please_wait">Vă rugăm așteptați</string>
-    <string name="app_name_and_version">Aenigma\nVersiunea: %s</string>
+    <string name="app_name_and_version">Aenigma - Comunicare Privată\nVersiunea: %s</string>
     <string name="copyright_notices">© 2025–2026 Romulus-Emanuel Ruja &lt;romulus.ruja@aenigma.ro&gt;. Toate drepturile rezervate.</string>
     <string name="gpl_license_info">Această aplicație este distribuită sub GNU General Public License, versiunea 3 (GPLv3). Aveți dreptul să redistribuiți și/sau  modificați această aplicație sub termenii GNU General Public License Version 3.</string>
     <string name="source_code_available_at">Codul sursă al aplicației este disponibil la:</string>
@@ -121,7 +121,7 @@
     <string name="downloading_file">Se descarcă un fișier</string>
     <string name="files">Fișiere</string>
     <string name="unknown_file">Fișier necunoscut</string>
-    <string name="no_app_to_open">Nu s-a găsit o aplicație pentru a deschide fișierul</string>
+    <string name="no_app_to_open_or_access_denied">Nu s-a găsit o aplicație pentru a deschide fișierul sau accessul este restricționat</string>
     <string name="open">Deschide</string>
     <string name="news">Noutăți</string>
     <string name="there_is_nothing_here">Nu este nimic aici pentru moment</string>
@@ -137,13 +137,13 @@
     <string name="files_received">Cineva ți-a trimis niște fișiere</string>
     <string name="new_message">Mesaj nou</string>
     <string name="restart_app_to_retry">Reporniți aplicația pentru a reîncerca</string>
-    <string name="backed_by_openssl">OpenSSL 3.0, licențiată sub:</string>
+    <string name="backed_by_openssl">Criptografie bazată pe %s, licențiată sub:</string>
     <string name="privacy_policy">Politica de confidențialitate</string>
     <string name="tor_starting">Se inițializează TOR</string>
     <string name="connected_through_tor">Conectat prin rețeaua Onion Router</string>
     <string name="tor_stopped">Serviciul TOR a fost oprit</string>
     <string name="background_work">Lucrează în fundal</string>
-    <string name="servers">Servere disponibile</string>
+    <string name="servers">Servere</string>
     <string name="history">Istoric</string>
     <string name="connect">Conectează</string>
     <string name="no_server_found">Nu am găsit niciun server</string>
@@ -159,7 +159,7 @@
     <string name="compose_article">Compuneți</string>
     <string name="title">Titlu</string>
     <string name="cover_photo">Imagine de copertă</string>
-    <string name="optional_description">Sumar opțional</string>
+    <string name="optional_description">Previzualizare opțională</string>
     <string name="content">Povestea</string>
     <string name="empty_article_cover">Începeți să editați articolul pentru a previzualiza coperta</string>
     <string name="empty_article_content">Nu există conținut pentru previzualizare</string>
@@ -177,4 +177,7 @@
     <string name="disconnected">Deconectat</string>
     <string name="no_permission_to_open">Nu aveți permisiune pentru a deschide fișierul</string>
     <string name="total_post_size_exceeded">Un maxim de %.2f MB este permis pentru distribuire</string>
+    <string name="export_qr_code">Exportați codul QR</string>
+    <string name="ephemeral_links">Link-uri efemere</string>
+    <string name="info">Informații</string>
 </resources>

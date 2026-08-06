@@ -64,6 +64,7 @@ import org.apache.tika.Tika
 import ro.aenigma.R
 import ro.aenigma.activities.AppActivity
 import ro.aenigma.models.ArticleDto
+import ro.aenigma.models.ArticleSourceDto
 import ro.aenigma.models.AttachmentsMetadataDto
 import ro.aenigma.models.FileDisplayInfoDto
 import ro.aenigma.models.MessageDto
@@ -72,8 +73,10 @@ import ro.aenigma.models.UriFilterResult
 import ro.aenigma.models.extensions.MessageDtoExtensions.isFile
 import ro.aenigma.models.extensions.MessageDtoExtensions.isNotSent
 import ro.aenigma.models.extensions.MessageWithDetailsDtoExtensions.toArticleDto
+import ro.aenigma.util.Constants.Companion.ARTICLE_SOURCES_FILE
 import ro.aenigma.util.Constants.Companion.ATTACHMENTS_MAX_COUNT
-import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_SIZE
+import ro.aenigma.util.Constants.Companion.ATTACHMENT_MAX_BYTES_SIZE
+import ro.aenigma.util.Constants.Companion.EXPORTED_QR_CODE_FILE
 import ro.aenigma.util.Constants.Companion.IMAGES_CACHE_DIRECTORY
 import ro.aenigma.util.Constants.Companion.IMAGE_COMPRESSION_QUALITY
 import ro.aenigma.util.Constants.Companion.JSON_FILE_EXTENSION
@@ -89,6 +92,7 @@ import ro.aenigma.util.StringExtensions.isApkMime
 import ro.aenigma.util.StringExtensions.isArchiveMime
 import ro.aenigma.util.StringExtensions.isAudioMime
 import ro.aenigma.util.StringExtensions.isImageMime
+import ro.aenigma.util.StringExtensions.isRemoteImageUri
 import ro.aenigma.util.StringExtensions.isJsonMime
 import ro.aenigma.util.StringExtensions.isMarkdownMime
 import ro.aenigma.util.StringExtensions.isPdfMime
@@ -98,6 +102,7 @@ import ro.aenigma.util.StringExtensions.isVideoMime
 import ro.aenigma.util.UriExtensions.isRemote
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(Constants.DATASTORE_PREFERENCES)
@@ -171,10 +176,17 @@ object ContextExtensions {
 
     suspend fun Context.getFileTypeIcon(uri: String): FileDisplayInfoDto {
         if (uri.isRemoteUri()) {
-            return FileDisplayInfoDto(
-                painterResourceId = R.drawable.ic_link,
-                isImage = false
-            )
+            return if (uri.isRemoteImageUri()) {
+                FileDisplayInfoDto(
+                    painterResourceId = R.drawable.ic_photo,
+                    isImage = true
+                )
+            } else {
+                FileDisplayInfoDto(
+                    painterResourceId = R.drawable.ic_link,
+                    isImage = false
+                )
+            }
         }
         val mime = getFileType(uri)
         return when {
@@ -227,6 +239,10 @@ object ContextExtensions {
 
     fun Context.getPublicKeyFile(): File {
         return File(filesDir, PUBLIC_KEY_FILE)
+    }
+
+    fun Context.getQRCodeFile(): File {
+        return File(filesDir, EXPORTED_QR_CODE_FILE)
     }
 
     private suspend fun createDirectory(parent: File, directory: String): File {
@@ -450,7 +466,7 @@ object ContextExtensions {
 
     suspend fun Context.splitFilesFirstFitDecreasing(
         uris: List<String>,
-        limitBytes: Long = ATTACHMENT_MAX_SIZE
+        limitBytes: Long = ATTACHMENT_MAX_BYTES_SIZE
     ): List<List<String>> {
 
         val entries = uris.map { Entry(it, sizeOf(it)) }
@@ -506,8 +522,8 @@ object ContextExtensions {
         this.startActivity(intent)
     }
 
-    suspend fun Context.openUriInExternalApp(uri: Uri) {
-        try {
+    suspend fun Context.openUriInExternalApp(uri: Uri): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_VIEW).apply {
                 data = uri
                 addCategory(Intent.CATEGORY_BROWSABLE)
@@ -521,59 +537,44 @@ object ContextExtensions {
                 }
             }
             startActivity(intent)
-        } catch (_: SecurityException) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_permission_to_open),
-                Toast.LENGTH_SHORT
-            ).show()
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.no_app_to_open),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    fun Context.shareText(text: String) {
-        try {
+    fun Context.shareText(text: String): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_SEND)
             intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_TEXT, text)
-            this.startActivity(
+            startActivity(
                 Intent.createChooser(
                     intent,
                     getString(R.string.share_via)
                 )
             )
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.failed_to_share),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    fun Context.copyToClipboard(text: String) {
-        try {
+    fun Context.copyToClipboard(text: String): Boolean {
+        return try {
             val clipboard = this.getSystemService(
                 Context.CLIPBOARD_SERVICE
             ) as ClipboardManager
             val data = ClipData.newPlainText("", text)
             clipboard.setPrimaryClip(data)
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                this.getString(R.string.failed_to_copy_to_clipboard),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    suspend fun Context.shareUri(uri: Uri) {
-        try {
+    suspend fun Context.shareUri(uri: Uri): Boolean {
+        return try {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = getFileType(uri)
                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -582,17 +583,14 @@ object ContextExtensions {
             startActivity(
                 Intent.createChooser(intent, getString(R.string.share_via))
             )
+            true
         } catch (_: Exception) {
-            Toast.makeText(
-                this,
-                getString(R.string.failed_to_share),
-                Toast.LENGTH_SHORT
-            ).show()
+            false
         }
     }
 
-    suspend fun Context.shareUriOrText(uri: Uri) {
-        if (uri.isRemote()) {
+    suspend fun Context.shareUriOrText(uri: Uri): Boolean {
+        return if (uri.isRemote()) {
             shareText(text = uri.toString())
         } else {
             shareUri(uri = uri)
@@ -724,7 +722,7 @@ object ContextExtensions {
     suspend fun Context.filterSharedUris(
         uris: List<Uri>,
         maxCount: Int = ATTACHMENTS_MAX_COUNT,
-        maxSizeBytes: Long = ATTACHMENT_MAX_SIZE,
+        maxSizeBytes: Long = ATTACHMENT_MAX_BYTES_SIZE,
     ): UriFilterResult = withContext(Dispatchers.IO) {
         var tooLargeCount = 0
 
@@ -754,5 +752,45 @@ object ContextExtensions {
         }
 
         UriFilterResult(accepted, tooLargeCount, excessCount)
+    }
+
+    suspend fun Context.saveQRCode(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
+        try {
+            val file = getQRCodeFile()
+            FileOutputStream(file).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+            }
+            toContentUri(file)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    suspend fun Context.shareQrCode(bitmap: Bitmap): Boolean {
+        val uri = saveQRCode(bitmap) ?: return false
+        return shareUri(uri = uri)
+    }
+
+    suspend fun Context.showToast(message: String) {
+        val context = this
+        return withContext(Dispatchers.Main) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    suspend fun Context.showFailedToShareToast() {
+        return showToast(message = getString(R.string.failed_to_share))
+    }
+
+    suspend fun Context.showNoAppToOpenFileOrAccessDeniedToast() {
+        return showToast(getString(R.string.no_app_to_open_or_access_denied))
+    }
+
+    suspend fun Context.readArticleSources(): List<ArticleSourceDto> {
+        return withContext(Dispatchers.IO) {
+            assets.open(ARTICLE_SOURCES_FILE)
+                .bufferedReader()
+                .use { it.readText().fromJson<List<ArticleSourceDto>>() ?: listOf() }
+        }
     }
 }

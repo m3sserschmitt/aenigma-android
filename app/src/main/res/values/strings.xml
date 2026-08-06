@@ -72,7 +72,7 @@
     <string name="message_selection">Message selection status</string>
     <string name="message_delivery_status">Message delivery status</string>
     <string name="please_wait">Please wait</string>
-    <string name="app_name_and_version">Aenigma\nVersion: %s</string>
+    <string name="app_name_and_version">Aenigma - Private Messaging\nVersion: %s</string>
     <string name="copyright_notices">© 2025–2026 Romulus-Emanuel Ruja &lt;romulus.ruja@aenigma.ro&gt;. All rights reserved.</string>
     <string name="gpl_license_info">This app is licensed under the GNU General Public License, version 3 (GPLv3). You are free to redistribute and/or modify this app under the terms of the GNU General Public License Version 3.</string>
     <string name="source_code_available_at">The source code of this app is available at:</string>
@@ -123,7 +123,7 @@
     <string name="downloading_file">Downloading file</string>
     <string name="files">Files</string>
     <string name="unknown_file">Unknown file</string>
-    <string name="no_app_to_open">No app found to open this file</string>
+    <string name="no_app_to_open_or_access_denied">No app found to open this file or access denied</string>
     <string name="open">Open</string>
     <string name="news">News</string>
     <string name="there_is_nothing_here">There is nothing here right now</string>
@@ -139,7 +139,7 @@
     <string name="files_received">Someone sent you some files</string>
     <string name="new_message">New message</string>
     <string name="restart_app_to_retry">Restart the app to retry</string>
-    <string name="backed_by_openssl">Backed by OpenSSL 3.0 cryptography, licensed under:</string>
+    <string name="backed_by_openssl">Backed by %s cryptography, licensed under:</string>
     <string name="apache_v2_0_license" translatable="false">Apache License Version 2.0</string>
     <string name="apache_v2_0_license_title" translatable="false">Apache License Version 2.0, January 2004</string>
     <string name="privacy_policy">Privacy policy</string>
@@ -147,7 +147,7 @@
     <string name="connected_through_tor">Connected through The Onion Router network</string>
     <string name="tor_stopped">TOR Service stopped</string>
     <string name="background_work">Background work</string>
-    <string name="servers">Available servers</string>
+    <string name="servers">Servers</string>
     <string name="history">History</string>
     <string name="connect">Connect</string>
     <string name="no_server_found">No server found</string>
@@ -163,7 +163,7 @@
     <string name="compose_article">Compose</string>
     <string name="title">Title</string>
     <string name="cover_photo">Cover image</string>
-    <string name="optional_description">Optional summary</string>
+    <string name="optional_description">Optional preview</string>
     <string name="content">Story</string>
     <string name="empty_article_cover">Start editing the article to preview the cover</string>
     <string name="empty_article_content">There is no content to preview yet</string>
@@ -182,4 +182,8 @@
     <string name="disconnected">Disconnected</string>
     <string name="no_permission_to_open">No permission to open this file</string>
     <string name="total_post_size_exceeded">You are allowed to share a maximum of %.2f MB</string>
+    <string name="openssl" translatable="false">OpenSSL</string>
+    <string name="export_qr_code">Export QR code</string>
+    <string name="ephemeral_links">Ephemeral links</string>
+    <string name="info">Info</string>
 </resources>

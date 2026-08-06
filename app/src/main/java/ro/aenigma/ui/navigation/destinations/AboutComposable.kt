@@ -32,7 +32,7 @@ fun NavGraphBuilder.aboutComposable (
     notifier: Notifier,
     navigateBack: () -> Unit,
     navigateToLicensesScreen: () -> Unit,
-    navigateToPrivacyPolicy: () -> Unit
+    navigateToPrivacyPolicyScreen: () -> Unit
 ) {
     composable(
         route = Screens.ABOUT_SCREEN_PATH
@@ -45,7 +45,7 @@ fun NavGraphBuilder.aboutComposable (
         AboutScreen(
             navigateBack = navigateBack,
             navigateToLicensesScreen = navigateToLicensesScreen,
-            navigateToPrivacyPolicy = navigateToPrivacyPolicy
+            navigateToPrivacyPolicyScreen = navigateToPrivacyPolicyScreen
         )
     }
 }

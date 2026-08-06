@@ -24,10 +24,8 @@ package ro.aenigma.ui.navigation
 import android.net.Uri
 import androidx.navigation.NavController
 import ro.aenigma.util.Constants.Companion.APP_DEEP_LINK_SCHEME
-import ro.aenigma.util.Constants.Companion.PRIVACY_POLICY_URL_TEMPLATE
 import ro.aenigma.util.QrCodeScannerState
 import ro.aenigma.viewmodels.MainViewModel
-import java.util.Locale
 
 class Screens(navController: NavController, mainViewModel: MainViewModel) {
 
@@ -46,6 +44,13 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
         const val LICENSES_ROOT_PATH = "licenses"
         const val FEED_ROOT_PATH = "feed"
         const val ARTICLE_ROOT_PATH = "article"
+        const val PRIVACY_POLICY_ROOT_PATH = "privacyPolicy"
+        const val CONTACTS_HELP_ROOT_PATH = "contactsHelp"
+        const val ADD_CONTACTS_HELP_ROOT_PATH = "addContactsHelp"
+        const val SERVERS_SHEET_HELP_ROOT_PATH = "serversSheetHelp"
+        const val FEED_HELP_ROOT_PATH = "feedHelp"
+        const val NEW_POST_SHEET_HELP_ROOT_PATH = "newPostSheetHelp"
+        const val CHAT_HELP_ROOT_PATH = "chatHelp"
 
         const val CONTACTS_PATH =
             "$CONTACTS_ROOT_PATH?" +
@@ -56,7 +61,6 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
         const val ADD_CONTACTS_PATH =
             "$ADD_CONTACTS_ROOT_PATH?" +
                     "$CONTACT_ID_ARG={$CONTACT_ID_ARG}&" +
-                    "$URI_ARG={$URI_ARG}&" +
                     "$SCANNER_STATE_ARG={$SCANNER_STATE_ARG}"
         const val ABOUT_SCREEN_PATH = ABOUT_ROOT_PATH
         const val LICENSES_SCREEN_PATH = LICENSES_ROOT_PATH
@@ -66,7 +70,13 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
                     "$URI_ARG={$URI_ARG}&" +
                     "$TITLE_ARG={$TITLE_ARG}&" +
                     "$MESSAGE_ID_ARG={$MESSAGE_ID_ARG}"
-
+        const val PRIVACY_POLICY_SCREEN_PATH = PRIVACY_POLICY_ROOT_PATH
+        const val CONTACTS_HELP_SCREEN_PATH = CONTACTS_HELP_ROOT_PATH
+        const val SERVERS_SHEET_HELP_SCREEN_PATH = SERVERS_SHEET_HELP_ROOT_PATH
+        const val ADD_CONTACTS_HELP_SCREEN_PATH = ADD_CONTACTS_HELP_ROOT_PATH
+        const val FEED_HELP_SCREEN_PATH = FEED_HELP_ROOT_PATH
+        const val NEW_POST_SHEET_HELP_SCREEN_PATH = NEW_POST_SHEET_HELP_ROOT_PATH
+        const val CHAT_HELP_SCREEN_PATH = CHAT_HELP_ROOT_PATH
         const val ROOT_PATH = CONTACTS_ROOT_PATH
 
         @JvmStatic
@@ -76,44 +86,37 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
 
         @JvmStatic
         fun getChatDeepLink(chatId: String): Uri {
-            return Uri.Builder().scheme(APP_DEEP_LINK_SCHEME).authority(CHAT_ROOT_PATH).appendPath(chatId).build()
+            return Uri.Builder().scheme(APP_DEEP_LINK_SCHEME).authority(CHAT_ROOT_PATH)
+                .appendPath(chatId).build()
         }
 
         @JvmStatic
         fun getAddContactsScreenRoute(
             contactId: String?,
-            uri: String?,
             scannerState: QrCodeScannerState
         ): String {
             val builder = Uri.Builder()
                 .path(ADD_CONTACTS_ROOT_PATH)
                 .appendQueryParameter(SCANNER_STATE_ARG, scannerState.toString())
             contactId?.let { builder.appendQueryParameter(CONTACT_ID_ARG, it) }
-            uri?.let { builder.appendQueryParameter(URI_ARG, it) }
             return builder.build().toString()
         }
 
         @JvmStatic
-        fun getArticleScreenRoute(uri: String, title: String?, messageId: Long?): String {
+        fun getArticleScreenRoute(uri: String?, title: String?, messageId: Long?): String {
             val builder = Uri.Builder()
                 .path(ARTICLE_ROOT_PATH)
-                .appendQueryParameter(URI_ARG, uri)
-            messageId.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
-            title.let { builder.appendQueryParameter(TITLE_ARG, it) }
+            messageId?.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
+            title?.let { builder.appendQueryParameter(TITLE_ARG, it) }
+            uri?.let { builder.appendQueryParameter(URI_ARG, uri) }
             return builder.build().toString()
-        }
-
-        @JvmStatic
-        fun getPrivacyPolicyScreenRoute(): String {
-            val url = String.format(PRIVACY_POLICY_URL_TEMPLATE, Locale.getDefault().language)
-            return getArticleScreenRoute(url, null, null)
         }
 
         @JvmStatic
         fun getContactsRoute(uri: String?, messageId: Long?): String {
             val builder = Uri.Builder().path(CONTACTS_ROOT_PATH)
             uri?.let { builder.appendQueryParameter(URI_ARG, it) }
-            messageId.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
+            messageId?.let { builder.appendQueryParameter(MESSAGE_ID_ARG, it.toString()) }
             return builder.build().toString()
         }
     }
@@ -144,17 +147,6 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
         navController.navigate(
             getAddContactsScreenRoute(
                 contactId = contactId,
-                uri = null,
-                scannerState = QrCodeScannerState.SHARE_CODE
-            )
-        )
-    }
-
-    val getSharedContact: (uri: String) -> Unit = { uri ->
-        navController.navigate(
-            getAddContactsScreenRoute(
-                contactId = null,
-                uri = uri,
                 scannerState = QrCodeScannerState.SHARE_CODE
             )
         )
@@ -164,7 +156,6 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
         navController.navigate(
             getAddContactsScreenRoute(
                 contactId = null,
-                uri = null,
                 scannerState = QrCodeScannerState.SCAN_SERVER_INFO_CODE
             )
         )
@@ -179,10 +170,24 @@ class Screens(navController: NavController, mainViewModel: MainViewModel) {
         navController.navigate(FEED_SCREEN_PATH)
     }
 
-    val article: (uri: String, title: String?, messageId: Long?) -> Unit =
+    val article: (uri: String?, title: String?, messageId: Long?) -> Unit =
         { uri, title, messageId ->
-            navController.navigate(getArticleScreenRoute(uri, title, messageId))
+            navController.navigate(
+                getArticleScreenRoute(uri, title, messageId)
+            )
         }
 
-    val privacyPolicy: () -> Unit = { navController.navigate(getPrivacyPolicyScreenRoute()) }
+    val privacyPolicy: () -> Unit = { navController.navigate(PRIVACY_POLICY_SCREEN_PATH) }
+
+    val contactsHelp: () -> Unit = { navController.navigate(CONTACTS_HELP_SCREEN_PATH) }
+
+    val serversSheetHelp: () -> Unit = { navController.navigate(SERVERS_SHEET_HELP_SCREEN_PATH) }
+
+    val addContactsHelp: () -> Unit = { navController.navigate(ADD_CONTACTS_HELP_SCREEN_PATH) }
+
+    val feedHelp: () -> Unit = { navController.navigate(FEED_HELP_SCREEN_PATH) }
+
+    val newPostSheetHelp: () -> Unit = { navController.navigate(NEW_POST_SHEET_HELP_SCREEN_PATH) }
+
+    val chatHelp: () -> Unit = { navController.navigate(CHAT_HELP_SCREEN_PATH) }
 }

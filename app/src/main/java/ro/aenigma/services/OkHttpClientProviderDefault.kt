@@ -24,7 +24,10 @@ package ro.aenigma.services
 import okhttp3.OkHttpClient
 
 class OkHttpClientProviderDefault: IOkHttpClientProvider {
-    override suspend fun getInstance(): OkHttpClient {
+    override suspend fun getInstance(
+        readTimeoutMilliseconds: Long,
+        writeTimeoutMilliseconds: Long
+    ): OkHttpClient {
         return OkHttpClient.Builder().build()
     }
 }

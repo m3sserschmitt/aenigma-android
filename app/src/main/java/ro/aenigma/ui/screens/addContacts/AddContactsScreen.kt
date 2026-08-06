@@ -32,18 +32,22 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import kotlinx.coroutines.launch
 import ro.aenigma.R
 import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.models.ExportedContactDataDto
 import ro.aenigma.models.QrCodeDto
 import ro.aenigma.models.ServerInfoDto
-import ro.aenigma.ui.screens.common.StandardAppBar
 import ro.aenigma.ui.themes.ApplicationComposeDarkTheme
+import ro.aenigma.util.Constants.Companion.HORIZONTAL_SCREEN_CONTENT_PADDING
+import ro.aenigma.util.ContextExtensions.shareQrCode
+import ro.aenigma.util.ContextExtensions.showFailedToShareToast
 import ro.aenigma.util.RequestState
 import ro.aenigma.util.QrCodeGenerator
 import ro.aenigma.util.QrCodeScannerState
@@ -52,28 +56,30 @@ import ro.aenigma.viewmodels.MainViewModel
 @Composable
 fun AddContactsScreen(
     profileToShare: String?,
-    uri: String? = null,
     initialScannerState: QrCodeScannerState,
     navigateBack: () -> Unit,
     onForwardUri: (String) -> Unit = { },
+    navigateToAddContactsHelpScreen: () -> Unit = { },
     navigateToRoot: () -> Unit = { },
     mainViewModel: MainViewModel
 ) {
     var scannerState by remember { mutableStateOf(value = initialScannerState) }
     val qrCode by mainViewModel.qrCode.collectAsState()
+    val ephemeralLinksPreference by mainViewModel.ephemeralLinksPreference.collectAsState()
     val sharedDataCreate by mainViewModel.sharedDataCreateResult.collectAsState()
     val importedContactDetails by mainViewModel.importedContactDetails.collectAsState()
     val floatingButtonVisible = profileToShare == null
             && scannerState != QrCodeScannerState.SCAN_SERVER_INFO_CODE
-    var isContactImport by remember(key1 = uri) { mutableStateOf(!uri.isNullOrBlank()) }
+    val uri by mainViewModel.uri.collectAsState()
+    var openLinkLoadingDialogVisible by remember(key1 = uri) { mutableStateOf(uri != null) }
 
     LaunchedEffect(key1 = true) {
         mainViewModel.generateCode(profileToShare)
     }
 
     LaunchedEffect(key1 = uri) {
-        if (!uri.isNullOrBlank()) {
-            mainViewModel.openContactSharedData(uri)
+        if (uri != null) {
+            mainViewModel.openContactSharedData(uri.toString())
         }
     }
 
@@ -82,8 +88,13 @@ fun AddContactsScreen(
         qrCode = qrCode,
         sharedDataCreate = sharedDataCreate,
         importedContactDetails = importedContactDetails,
-        isContactImport = isContactImport,
+        openLinkLoadingDialogVisible = openLinkLoadingDialogVisible,
         floatingButtonVisible = floatingButtonVisible,
+        ephemeralLinksPreference = ephemeralLinksPreference,
+        onResetUsernameClicked = { mainViewModel.resetUserName() },
+        onEphemeralLinksPreferenceChanged = { ephemeralLinksPreference ->
+            mainViewModel.ephemeralLinksPreferenceChanged(ephemeralLinksPreference)
+        },
         onScannerStateChanged = { newState ->
             scannerState = newState
         },
@@ -98,56 +109,86 @@ fun AddContactsScreen(
         onSaveContact = { name ->
             scannerState = QrCodeScannerState.SHARE_CODE
             mainViewModel.saveNewContact(name)
+            mainViewModel.resetSharedData()
+            mainViewModel.setUri(null)
             navigateToRoot()
         },
         onSaveContactDismissed = {
-            mainViewModel.resetContactChanges()
             scannerState = QrCodeScannerState.SHARE_CODE
+            mainViewModel.resetSharedData()
+            mainViewModel.setUri(null)
         },
-        onNewContactNameChanged = { newContactName ->
-            newContactName.isNotBlank()
-        },
+        onNewContactNameChanged = { newContactName -> newContactName.isNotBlank() },
         onCreateLinkClicked = { mainViewModel.createContactShareLink() },
-        onGetLink = { url -> mainViewModel.openContactSharedData(url) },
-        onSharedDataConfirm = { mainViewModel.resetContactChanges() },
+        onLinkSubmitted = { url -> mainViewModel.openContactSharedData(url) },
+        onOpenLinkResult = { success ->
+            if(!success) {
+                mainViewModel.resetSharedData()
+            }
+            mainViewModel.setUri(null)
+        },
+        onCreateLinkResult = { success ->
+            if(!success) {
+                mainViewModel.resetSharedData()
+            }
+        },
+        onCreateLinkCompleted = { mainViewModel.resetSharedData() },
         onForwardUri = onForwardUri,
+        navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
         navigateBack = navigateBack
     )
 }
 
 @Composable
 fun AddContactsScreen(
-    scannerState: QrCodeScannerState,
-    qrCode: RequestState<QrCodeDto>,
-    sharedDataCreate: RequestState<CreatedSharedDataDto>,
-    importedContactDetails: RequestState<ExportedContactDataDto>,
-    isContactImport: Boolean = false,
-    floatingButtonVisible: Boolean,
-    onScannerStateChanged: (QrCodeScannerState) -> Unit,
-    onQrCodeFound: (ExportedContactDataDto) -> Unit,
-    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit,
-    onSaveContact: (String) -> Unit,
-    onSaveContactDismissed: () -> Unit,
-    onNewContactNameChanged: (String) -> Boolean,
-    onCreateLinkClicked: () -> Unit,
-    onGetLink: (String) -> Unit,
-    onSharedDataConfirm: () -> Unit,
+    scannerState: QrCodeScannerState = QrCodeScannerState.SHARE_CODE,
+    qrCode: RequestState<QrCodeDto> = RequestState.Idle,
+    sharedDataCreate: RequestState<CreatedSharedDataDto> = RequestState.Idle,
+    importedContactDetails: RequestState<ExportedContactDataDto> = RequestState.Idle,
+    ephemeralLinksPreference: Boolean = false,
+    moreOptionsMenuExpanded: Boolean = false,
+    openLinkLoadingDialogVisible: Boolean = false,
+    floatingButtonVisible: Boolean = true,
+    onResetUsernameClicked: () -> Unit = { },
+    onEphemeralLinksPreferenceChanged: (Boolean) -> Unit = { },
+    onScannerStateChanged: (QrCodeScannerState) -> Unit = { },
+    onQrCodeFound: (ExportedContactDataDto) -> Unit = { },
+    onServerInfoQrCodeFound: (ServerInfoDto) -> Unit = { },
+    onSaveContact: (String) -> Unit = { },
+    onSaveContactDismissed: () -> Unit = { },
+    onNewContactNameChanged: (String) -> Boolean  = { true },
+    onCreateLinkClicked: () -> Unit = { },
+    onLinkSubmitted: (String) -> Unit = { },
+    onOpenLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkResult: (Boolean) -> Unit = { },
+    onCreateLinkCompleted: () -> Unit = { },
     onForwardUri: (String) -> Unit = { },
-    navigateBack: () -> Unit
+    navigateToAddContactsHelpScreen: () -> Unit = { },
+    navigateBack: () -> Unit = { }
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            val isScanning =
-                scannerState == QrCodeScannerState.SCAN_CODE || scannerState == QrCodeScannerState.SCAN_SERVER_INFO_CODE
-            StandardAppBar(
-                title = if (isScanning) {
-                    stringResource(R.string.scan_qr_code)
-                } else {
-                    stringResource(R.string.add_contacts)
+            AddContactsAppBar(
+                moreOptionsMenuExpanded = moreOptionsMenuExpanded,
+                scannerState = scannerState,
+                ephemeralLinksPreference = ephemeralLinksPreference,
+                onResetUsernameClicked = onResetUsernameClicked,
+                onEphemeralLinksPreferenceChanged = onEphemeralLinksPreferenceChanged,
+                onExportQrCodeClicked = {
+                    if (qrCode is RequestState.Success) {
+                        coroutineScope.launch {
+                            if (!context.shareQrCode(bitmap = qrCode.data.code)) {
+                                context.showFailedToShareToast()
+                            }
+                        }
+                    }
                 },
-                navigateBack = navigateBack,
-                transparent = isScanning
+                navigateToAddContactsHelpScreen = navigateToAddContactsHelpScreen,
+                navigateBack = navigateBack
             )
         },
         content = { paddingValues ->
@@ -156,20 +197,24 @@ fun AddContactsScreen(
                     .padding(
                         top = paddingValues.calculateTopPadding(),
                         bottom = paddingValues.calculateBottomPadding(),
+                        start = HORIZONTAL_SCREEN_CONTENT_PADDING,
+                        end = HORIZONTAL_SCREEN_CONTENT_PADDING
                     ),
                 scannerState = scannerState,
                 qrCode = qrCode,
                 sharedDataCreate = sharedDataCreate,
                 importedContactDetails = importedContactDetails,
-                isContactImport = isContactImport,
+                openLinkLoadingDialogVisible = openLinkLoadingDialogVisible,
                 onSaveContact = onSaveContact,
                 onSaveContactDismissed = onSaveContactDismissed,
                 onQrCodeFound = onQrCodeFound,
                 onServerInfoQrCodeFound = onServerInfoQrCodeFound,
                 onNewContactNameChanged = onNewContactNameChanged,
                 onCreateLinkClicked = onCreateLinkClicked,
-                onGetLink = onGetLink,
-                onSharedDataConfirm = onSharedDataConfirm,
+                onLinkSubmitted = onLinkSubmitted,
+                onOpenLinkResult = onOpenLinkResult,
+                onCreateLinkResult = onCreateLinkResult,
+                onCreateLinkCompleted = onCreateLinkCompleted,
                 onForwardUri = onForwardUri
             )
         },
@@ -216,7 +261,21 @@ fun QrScannerFab(
 @Composable
 fun AddContactsScreenPreview() {
     AddContactsScreen(
-        scannerState = QrCodeScannerState.SHARE_CODE,
+        qrCode = RequestState.Success(
+            QrCodeDto(
+                QrCodeGenerator(
+                    400,
+                    400
+                ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
+            )
+        )
+    )
+}
+
+@Preview
+@Composable
+fun AddContactsScreenMoreOptionsMenuExpandedPreview() {
+    AddContactsScreen(
         qrCode = RequestState.Success(
             QrCodeDto(
                 QrCodeGenerator(
@@ -225,19 +284,7 @@ fun AddContactsScreenPreview() {
                 ).encodeAsBitmap("Congratulation, dude! You cracked the code!")!!, "John", true
             )
         ),
-        sharedDataCreate = RequestState.Idle,
-        importedContactDetails = RequestState.Idle,
-        floatingButtonVisible = true,
-        onNewContactNameChanged = { true },
-        onQrCodeFound = { },
-        onServerInfoQrCodeFound = { },
-        onSaveContact = { },
-        onScannerStateChanged = { },
-        onSaveContactDismissed = { },
-        navigateBack = { },
-        onCreateLinkClicked = { },
-        onGetLink = { },
-        onSharedDataConfirm = { }
+        moreOptionsMenuExpanded = true
     )
 }
 
@@ -246,5 +293,13 @@ fun AddContactsScreenPreview() {
 fun AddContactsScreenDarkPreview() {
     ApplicationComposeDarkTheme {
         AddContactsScreenPreview()
+    }
+}
+
+@Preview
+@Composable
+fun AddContactsScreenMoreOptionsMenuExpandedDarkPreview() {
+    ApplicationComposeDarkTheme {
+        AddContactsScreenMoreOptionsMenuExpandedPreview()
     }
 }

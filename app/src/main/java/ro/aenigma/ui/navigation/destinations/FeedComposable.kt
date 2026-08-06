@@ -32,7 +32,9 @@ import ro.aenigma.viewmodels.MainViewModel
 fun NavGraphBuilder.feedComposable (
     notifier: Notifier,
     mainViewModel: MainViewModel,
-    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToArticleScreen: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToFeedHelpScreen: () -> Unit = { },
+    navigateToNewPostSheetHelpScreen: () -> Unit = { },
     redirectUri: (String) -> Unit
 ) {
     composable(
@@ -45,8 +47,10 @@ fun NavGraphBuilder.feedComposable (
 
         FeedScreen(
             mainViewModel = mainViewModel,
-            navigateToArticle = navigateToArticle,
-            redirectUri = redirectUri
+            navigateToArticleScreen = navigateToArticleScreen,
+            redirectUri = redirectUri,
+            navigateToFeedHelpScreen = navigateToFeedHelpScreen,
+            navigateToNewPostSheetHelpScreen = navigateToNewPostSheetHelpScreen
         )
     }
 }

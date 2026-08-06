@@ -66,7 +66,7 @@ class SignalRClientWorker @AssistedInject constructor(
         }
 
         if (ok && !signalrController.isConnected() && action contains ClientAction.Connect) {
-            ok = signalrController.connect(repository.local.getGuardHostname())
+            ok = signalrController.connect(repository.local.getAppBaseApi())
         }
 
         if (ok && signalrController.isAuthenticated() && action contains ClientAction.Pull) {

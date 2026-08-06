@@ -38,6 +38,8 @@ fun NavGraphBuilder.contactsComposable(
     navigateToScanServerScreen: () -> Unit,
     navigateToAboutScreen: () -> Unit,
     navigateToChatScreen: (String) -> Unit,
+    navigateToContactsHelpScreen: () -> Unit = { },
+    navigateToServersSheetHelpScreen: () -> Unit = { },
     navigateToRoot: () -> Unit,
 ) {
     composable(
@@ -73,6 +75,8 @@ fun NavGraphBuilder.contactsComposable(
             navigateToScanServerScreen = navigateToScanServerScreen,
             navigateToChatScreen = navigateToChatScreen,
             navigateToAboutScreen = navigateToAboutScreen,
+            navigateToContactsHelpScreen = navigateToContactsHelpScreen,
+            navigateToServersSheetHelpScreen = navigateToServersSheetHelpScreen,
             navigateToRoot = navigateToRoot,
             mainViewModel = mainViewModel
         )

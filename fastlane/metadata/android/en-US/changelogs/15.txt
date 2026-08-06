@@ -1,0 +1,4 @@
+* Added QR code sharing and permanent connection links
+* Added in-app user guide articles
+* Small UI improvements
+* Upgraded to OpenSsl 3.0.21 cryptography

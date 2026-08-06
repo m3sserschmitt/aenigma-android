@@ -26,6 +26,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import retrofit2.Response
 import ro.aenigma.crypto.CryptoProvider
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
@@ -34,7 +35,7 @@ import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.publicKeyMatchAddress
 import ro.aenigma.crypto.extensions.SignatureExtensions.getStringDataFromSignature
 import ro.aenigma.crypto.services.SignatureService
-import ro.aenigma.data.network.EnigmaApi
+import ro.aenigma.data.network.AenigmaApi
 import ro.aenigma.models.ArticleDto
 import ro.aenigma.models.CreatedSharedDataDto
 import ro.aenigma.models.GroupDataDto
@@ -46,16 +47,16 @@ import ro.aenigma.models.TorCheckDto
 import ro.aenigma.models.VertexDto
 import ro.aenigma.models.extensions.NeighborhoodExtensions.normalizeHostname
 import ro.aenigma.services.RetrofitProvider
-import ro.aenigma.util.Constants.Companion.ARTICLES_INDEX_URL_TEMPLATE
 import ro.aenigma.util.Constants.Companion.DEFAULT_LANGUAGE_CODE
 import ro.aenigma.util.ContextExtensions.createTempCacheFile
 import ro.aenigma.util.FileExtensions.asBufferedRequestBody
 import ro.aenigma.util.ResponseBodyExtensions.saveToFile
 import ro.aenigma.util.SerializerExtensions.toCanonicalJson
 import ro.aenigma.util.StringExtensions.fromJson
-import ro.aenigma.util.StringExtensions.getBaseUrl
+import ro.aenigma.util.StringExtensions.getHttpRootUri
 import ro.aenigma.util.StringExtensions.getTagQueryParameter
 import java.io.File
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,7 +69,7 @@ class RemoteDataSource @Inject constructor(
     companion object {
         @JvmStatic
         private suspend fun getSharedData(
-            api: EnigmaApi,
+            api: AenigmaApi,
             tag: String,
             expectedPublisherAddress: String?
         ): SharedDataDto? {
@@ -123,7 +124,7 @@ class RemoteDataSource @Inject constructor(
 
         @JvmStatic
         private suspend fun verifyServerInfo(
-            api: EnigmaApi,
+            api: AenigmaApi,
             expectedAddress: String? = null
         ): GuardDto? {
             val response = api.getServerInfo()
@@ -191,11 +192,33 @@ class RemoteDataSource @Inject constructor(
                 neighborhood = neighborhood
             )
         }
+
+        @JvmStatic
+        inline fun <reified T> getLocalizedContent(
+            fetcher: (languageCode: String) -> Response<T>?
+        ): T? {
+            return try {
+                val languageCode = Locale.getDefault().language
+                var response = fetcher(languageCode) ?: return null
+                var body = response.body()
+                if (response.code() == 404 || body == null) {
+                    response = fetcher(DEFAULT_LANGUAGE_CODE) ?: return null
+                    body = response.body() ?: return null
+                }
+                if (response.code() == 200) {
+                    body
+                } else {
+                    null
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     suspend fun getServerInfo(): GuardDto? {
         return try {
-            verifyServerInfo(retrofitProvider.getApi() ?: return null)
+            verifyServerInfo(retrofitProvider.getAenigmaApi() ?: return null)
         } catch (_: Exception) {
             null
         }
@@ -203,7 +226,7 @@ class RemoteDataSource @Inject constructor(
 
     suspend fun getVertices(): List<VertexDto> {
         return try {
-            val response = retrofitProvider.getApi()?.getVertices() ?: return listOf()
+            val response = retrofitProvider.getAenigmaApi()?.getVertices() ?: return listOf()
             val body = response.body()
 
             if (response.code() != 200 || body == null) {
@@ -230,7 +253,7 @@ class RemoteDataSource @Inject constructor(
             val sharedDataCreate =
                 SharedDataCreate(signature.publicKey, signature.signedData, accessCount)
             val response =
-                retrofitProvider.getApi()?.createSharedData(sharedDataCreate) ?: return null
+                retrofitProvider.getAenigmaApi()?.createSharedData(sharedDataCreate) ?: return null
             val body = response.body()
             if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
                 return null
@@ -241,28 +264,31 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun incrementSharedDataAccessCount(url: String): Boolean {
+    suspend fun incrementSharedDataAccessCount(hostOrUrl: String): Boolean {
         try {
-            return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
-                ?.incrementSharedDataAccessCount(url.getTagQueryParameter() ?: return false)
+            return retrofitProvider.getAenigmaApi(hostOrUrl.getHttpRootUri() ?: return false)
+                ?.incrementSharedDataAccessCount(hostOrUrl.getTagQueryParameter() ?: return false)
                 ?.code() == 200
         } catch (_: Exception) {
             return false
         }
     }
 
-    suspend fun getSharedData(url: String, expectedPublisherAddress: String?): SharedDataDto? {
-        val tag = url.getTagQueryParameter() ?: return null
-        val baseUrl = url.getBaseUrl() ?: return null
+    suspend fun getSharedData(
+        hostOrUrl: String,
+        expectedPublisherAddress: String?
+    ): SharedDataDto? {
+        val tag = hostOrUrl.getTagQueryParameter() ?: return null
+        val baseUrl = hostOrUrl.getHttpRootUri() ?: return null
         return getSharedData(
-            retrofitProvider.getApi(baseUrl) ?: return null,
+            retrofitProvider.getAenigmaApi(baseUrl) ?: return null,
             tag,
             expectedPublisherAddress
         )
     }
 
     suspend fun getGroupData(
-        url: String,
+        hostOrUrl: String,
         existentGroup: GroupDataDto?,
         key: ByteArray,
         expectedPublisherAddress: String
@@ -270,7 +296,7 @@ class RemoteDataSource @Inject constructor(
         var groupDataFile: File? = null
         return try {
             groupDataFile = context.createTempCacheFile(null)
-            if (getEncryptedFile(url, key, groupDataFile)) {
+            if (getEncryptedFile(hostOrUrl, key, groupDataFile)) {
                 val groupData = groupDataFile.readText().fromJson<GroupDataDto>() ?: return null
                 validateGroupData(groupData, existentGroup, expectedPublisherAddress)
             } else {
@@ -322,7 +348,8 @@ class RemoteDataSource @Inject constructor(
                 .toString()
                 .toRequestBody("text/plain".toMediaType())
             val response =
-                retrofitProvider.getApi()?.postFile(file = filePart, maxAccessCount = countPart)
+                retrofitProvider.getAenigmaApi()
+                    ?.postFile(file = filePart, maxAccessCount = countPart)
                     ?: return null
             val body = response.body()
             if (response.code() != 200 || body?.tag == null || body.resourceUrl == null) {
@@ -357,31 +384,33 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun incrementFileAccessCount(url: String): Boolean {
+    suspend fun incrementFileAccessCount(hostOrUrl: String): Boolean {
         try {
-            return retrofitProvider.getApi(url.getBaseUrl() ?: return false)
-                ?.incrementFileAccessCount(url.getTagQueryParameter() ?: return false)
+            return retrofitProvider.getAenigmaApi(hostOrUrl.getHttpRootUri() ?: return false)
+                ?.incrementFileAccessCount(hostOrUrl.getTagQueryParameter() ?: return false)
                 ?.code() == 200
         } catch (_: Exception) {
             return false
         }
     }
 
-    suspend fun getServerInfo(url: String, expectedAddress: String? = null): GuardDto? {
+    suspend fun getServerInfo(hostOrUrl: String, expectedAddress: String? = null): GuardDto? {
         return try {
-            val baseUrl = url.getBaseUrl() ?: return null
-            val api = retrofitProvider.getApi(baseUrl) ?: return null
+            val baseUrl = hostOrUrl.getHttpRootUri() ?: return null
+            val api = retrofitProvider.getAenigmaApi(baseUrl) ?: return null
             verifyServerInfo(api, expectedAddress)
         } catch (_: Exception) {
             null
         }
     }
 
-    suspend fun getFile(url: String, outFile: File): Boolean {
+    suspend fun getFile(hostOrUrl: String, outFile: File): Boolean {
         return try {
-            val tag = url.getTagQueryParameter() ?: return false
-            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return false)?.getFile(tag)
-                ?: return false
+            val tag = hostOrUrl.getTagQueryParameter() ?: return false
+            val response =
+                retrofitProvider.getAenigmaApi(hostOrUrl.getHttpRootUri() ?: return false)
+                    ?.getFile(tag)
+                    ?: return false
             val body = response.body()
             if (response.code() != 200 || body == null) {
                 false
@@ -394,11 +423,11 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getEncryptedFile(url: String, key: ByteArray, outFile: File): Boolean {
+    suspend fun getEncryptedFile(hostOrUrl: String, key: ByteArray, outFile: File): Boolean {
         var encryptedFile: File? = null
         return try {
             encryptedFile = context.createTempCacheFile(null)
-            getFile(url, encryptedFile) && CryptoProvider.decrypt(encryptedFile, outFile, key)
+            getFile(hostOrUrl, encryptedFile) && CryptoProvider.decrypt(encryptedFile, outFile, key)
         } catch (_: Exception) {
             false
         } finally {
@@ -406,37 +435,59 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    private suspend fun requestArticles(url: String): List<ArticleDto> {
-        return try {
-            val response =
-                retrofitProvider.getApi(url.getBaseUrl() ?: return listOf())?.getArticlesIndex(url)
-                    ?: return listOf()
-            val body = response.body()
-            if (response.code() != 200 || body == null) {
-                listOf()
-            } else {
-                body
-            }
-        } catch (_: Exception) {
-            listOf()
+    suspend fun getArticlesIndex(hostOrUrl: String): List<ArticleDto> {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi(hostOrUrl.getHttpRootUri() ?: return listOf())
+                ?.getArticlesIndex(languageCode)
+        } ?: listOf()
+    }
+
+    suspend fun getContactsScreenHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getContactsScreenHelp(languageCode)
         }
     }
 
-    suspend fun getArticles(
-        url: String,
-        fallback: String = String.format(ARTICLES_INDEX_URL_TEMPLATE, DEFAULT_LANGUAGE_CODE)
-    ): List<ArticleDto> {
-        val response = requestArticles(url)
-        return response.ifEmpty {
-            requestArticles(fallback)
+    suspend fun getServersSheetHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getServersSheetHelp(languageCode)
         }
     }
 
-    suspend fun getText(url: String): String? {
+    suspend fun getChatScreenHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getChatScreenHelp(languageCode)
+        }
+    }
+
+    suspend fun getAddContactsHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getAddContactsHelp(languageCode)
+        }
+    }
+
+    suspend fun getFeedScreenHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getFeedScreenHelp(languageCode)
+        }
+    }
+
+    suspend fun getNewPostSheetHelp(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getNewPostSheetHelp(languageCode)
+        }
+    }
+
+    suspend fun getPrivacyPolicy(): String? {
+        return getLocalizedContent { languageCode ->
+            retrofitProvider.getAenigmaArticlesApi()?.getPrivacyPolicy(languageCode)
+        }
+    }
+
+    suspend fun getText(hostOrUrl: String): String? {
         return try {
             val response =
-                retrofitProvider.getApi(url.getBaseUrl() ?: return null)?.getText(url)
-                    ?: return null
+                retrofitProvider.getAenigmaArticlesApi()?.getText(hostOrUrl) ?: return null
             val body = response.body() ?: return null
             if (response.code() != 200) {
                 null
@@ -448,9 +499,10 @@ class RemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun checkTor(url: String): TorCheckDto? {
+    suspend fun checkTor(hostOrUrl: String): TorCheckDto? {
         return try {
-            val response = retrofitProvider.getApi(url.getBaseUrl() ?: return null)?.checkTor(url)
+            val response = retrofitProvider.getAenigmaApi(hostOrUrl.getHttpRootUri() ?: return null)
+                ?.checkTor(hostOrUrl)
                 ?: return null
             val body = response.body() ?: return null
             if (response.code() != 200) {

@@ -43,11 +43,18 @@ import ro.aenigma.R
 import ro.aenigma.services.Notifier
 import ro.aenigma.ui.navigation.destinations.aboutComposable
 import ro.aenigma.ui.navigation.destinations.addContactsComposable
+import ro.aenigma.ui.navigation.destinations.addContactsHelpComposable
 import ro.aenigma.ui.navigation.destinations.chatComposable
 import ro.aenigma.ui.navigation.destinations.contactsComposable
 import ro.aenigma.ui.navigation.destinations.licensesComposable
 import ro.aenigma.ui.navigation.destinations.articleComposable
+import ro.aenigma.ui.navigation.destinations.chatHelpComposable
+import ro.aenigma.ui.navigation.destinations.contactsHelpComposable
 import ro.aenigma.ui.navigation.destinations.feedComposable
+import ro.aenigma.ui.navigation.destinations.feedHelpComposable
+import ro.aenigma.ui.navigation.destinations.newPostSheetHelpComposable
+import ro.aenigma.ui.navigation.destinations.privacyPolicyComposable
+import ro.aenigma.ui.navigation.destinations.serversSheetHelpComposable
 import ro.aenigma.util.Constants.Companion.NAVIGATION_BAR_HEIGHT
 import ro.aenigma.util.NavBackStackEntryExtensions.isContactsSelected
 import ro.aenigma.util.NavBackStackEntryExtensions.isFeedSelected
@@ -118,6 +125,8 @@ fun SetupNavigation(
                 navigateToAddContactScreen = screen.addContacts,
                 navigateToScanServerScreen = screen.scanServerCode,
                 navigateToAboutScreen = screen.about,
+                navigateToContactsHelpScreen = screen.contactsHelp,
+                navigateToServersSheetHelpScreen = screen.serversSheetHelp,
                 navigateToRoot = screen.root,
                 mainViewModel = mainViewModel
             )
@@ -126,12 +135,14 @@ fun SetupNavigation(
                 navigateBack = screen.back,
                 navigateToAddContactsScreen = screen.addContacts,
                 redirectUri = screen.forwardUri,
-                navigateToArticle = screen.article
+                navigateToArticleScreen = screen.article,
+                navigateToChatHelpScreen = screen.chatHelp
             )
             addContactsComposable(
                 notifier = notifier,
                 navigateBack = screen.back,
                 onForwardUri = screen.forwardUri,
+                navigateToAddContactsHelpScreen = screen.addContactsHelp,
                 navigateToRoot = screen.root,
                 mainViewModel = mainViewModel
             )
@@ -139,7 +150,7 @@ fun SetupNavigation(
                 notifier = notifier,
                 navigateBack = screen.back,
                 navigateToLicensesScreen = screen.licenses,
-                navigateToPrivacyPolicy = screen.privacyPolicy
+                navigateToPrivacyPolicyScreen = screen.privacyPolicy,
             )
             licensesComposable(
                 notifier = notifier,
@@ -148,7 +159,9 @@ fun SetupNavigation(
             feedComposable(
                 notifier = notifier,
                 mainViewModel = mainViewModel,
-                navigateToArticle = screen.article,
+                navigateToArticleScreen = screen.article,
+                navigateToFeedHelpScreen = screen.feedHelp,
+                navigateToNewPostSheetHelpScreen = screen.newPostSheetHelp,
                 redirectUri = screen.forwardUri
             )
             articleComposable(
@@ -156,6 +169,41 @@ fun SetupNavigation(
                 mainViewModel = mainViewModel,
                 navigateBack = screen.back,
                 forwardMessage = screen.forwardMessage
+            )
+            privacyPolicyComposable(
+                notifier = notifier,
+                mainViewModel = mainViewModel,
+                navigateBack = screen.back
+            )
+            contactsHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
+            )
+            addContactsHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
+            )
+            feedHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
+            )
+            chatHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
+            )
+            serversSheetHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
+            )
+            newPostSheetHelpComposable(
+                notifier = notifier,
+                navigateBack = screen.back,
+                mainViewModel = mainViewModel
             )
         }
     }

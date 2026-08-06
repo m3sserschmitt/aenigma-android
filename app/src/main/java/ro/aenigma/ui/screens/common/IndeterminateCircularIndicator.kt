@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun IndeterminateCircularIndicator(
+    modifier: Modifier = Modifier,
     visible: Boolean,
     text: String,
     size: Dp = 18.dp,
@@ -46,8 +47,10 @@ fun IndeterminateCircularIndicator(
     textStyle: TextStyle = TextStyle.Default
 ) {
     if (visible) {
-        Row(verticalAlignment = Alignment.CenterVertically)
-        {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             CircularProgressIndicator(
                 strokeWidth = 1.dp,
                 modifier = Modifier.size(size),

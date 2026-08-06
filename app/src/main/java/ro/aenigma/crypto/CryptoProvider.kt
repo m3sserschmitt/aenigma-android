@@ -27,6 +27,12 @@ import android.util.Base64
 import ro.aenigma.crypto.extensions.AddressExtensions.isValidAddress
 import ro.aenigma.crypto.extensions.Base64Extensions.isValidBase64
 import ro.aenigma.crypto.extensions.PublicKeyExtensions.isValidPublicKey
+import ro.aenigma.util.Constants.Companion.AUTHENTICATION_TAG_BITS_SIZE
+import ro.aenigma.util.Constants.Companion.IV_BYTES_SIZE
+import ro.aenigma.util.Constants.Companion.MASTER_KEY_ALIAS
+import ro.aenigma.util.Constants.Companion.MASTER_KEY_BITS_SIZE
+import ro.aenigma.util.Constants.Companion.MASTER_KEY_PROVIDER
+import ro.aenigma.util.Constants.Companion.ENCRYPTION_CIPHER
 import java.io.File
 import java.security.KeyStore
 import java.security.SecureRandom
@@ -40,18 +46,6 @@ object CryptoProvider {
         generateMasterKey()
         System.loadLibrary("aenigma-wrapper")
     }
-
-    private const val MASTER_KEY_ALIAS = "AenigmaMasterKey"
-
-    private const val MASTER_KEY_PROVIDER = "AndroidKeyStore"
-
-    private const val MASTER_KEY_BITS_SIZE = 256
-
-    private const val PRIVATE_KEY_ENCRYPTION_CIPHER = "AES/GCM/NoPadding"
-
-    private const val AUTHENTICATION_TAG_BITS_SIZE = 128
-
-    private const val IV_BYTES_SIZE = 12
 
     private external fun initDecryption(privateKey: ByteArray, passphrase: ByteArray): Boolean
 
@@ -74,6 +68,17 @@ object CryptoProvider {
     ): ByteArray?
 
     private external fun getPKeySize(publicKey: ByteArray): Int
+
+    private external fun getOpenSslVersion(): ByteArray
+
+    @JvmStatic
+    fun getOpenSslFullVersion(): String? {
+        return try {
+            String(getOpenSslVersion())
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     @JvmStatic
     fun getPublicKeySize(publicKey: String): Int {
@@ -245,7 +250,7 @@ object CryptoProvider {
     @JvmStatic
     fun masterKeyEncrypt(plaintext: ByteArray): ByteArray? {
         try {
-            val cipher = Cipher.getInstance(PRIVATE_KEY_ENCRYPTION_CIPHER)
+            val cipher = Cipher.getInstance(ENCRYPTION_CIPHER)
             cipher.init(Cipher.ENCRYPT_MODE, getMasterKey())
             return cipher.iv + cipher.doFinal(plaintext)
         } catch (_: Exception) {
@@ -256,7 +261,7 @@ object CryptoProvider {
     @JvmStatic
     fun masterKeyDecrypt(ciphertext: ByteArray): ByteArray? {
         try {
-            val cipher = Cipher.getInstance(PRIVATE_KEY_ENCRYPTION_CIPHER)
+            val cipher = Cipher.getInstance(ENCRYPTION_CIPHER)
             cipher.init(Cipher.DECRYPT_MODE, getMasterKey(), getGCMParametersSpec(ciphertext))
             return cipher.doFinal(ciphertext.copyOfRange(IV_BYTES_SIZE, ciphertext.size))
         } catch (_: Exception) {

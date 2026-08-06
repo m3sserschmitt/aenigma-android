@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -46,6 +47,8 @@ import ro.aenigma.util.ContextExtensions.copyToClipboard
 import ro.aenigma.util.ContextExtensions.openUriInExternalApp
 import ro.aenigma.util.ContextExtensions.shareText
 import ro.aenigma.util.ContextExtensions.shareUriOrText
+import ro.aenigma.util.ContextExtensions.showFailedToShareToast
+import ro.aenigma.util.ContextExtensions.showNoAppToOpenFileOrAccessDeniedToast
 
 @Composable
 fun ShareButton(
@@ -120,7 +123,13 @@ fun OpenInExternalAppButton(
     val coroutineScope = rememberCoroutineScope()
     OpenInExternalAppButton(
         tint = tint,
-        onClick = { coroutineScope.launch { context.openUriInExternalApp(uri) } }
+        onClick = {
+            coroutineScope.launch {
+                if (!context.openUriInExternalApp(uri)) {
+                    context.showNoAppToOpenFileOrAccessDeniedToast()
+                }
+            }
+        }
     )
 }
 
@@ -155,7 +164,13 @@ fun ShareUriButton(
     val coroutineScope = rememberCoroutineScope()
     ShareButton(
         tint = tint,
-        onClick = { coroutineScope.launch { context.shareUriOrText(uri) } }
+        onClick = {
+            coroutineScope.launch {
+                if(!context.shareUriOrText(uri)) {
+                    context.showFailedToShareToast()
+                }
+            }
+        }
     )
 }
 
@@ -165,9 +180,14 @@ fun ShareTextButton(
     tint: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     ShareButton(
         tint = tint,
-        onClick = { context.shareText(text) }
+        onClick = {
+            if(!context.shareText(text)) {
+                coroutineScope.launch { context.showFailedToShareToast() }
+            }
+        }
     )
 }
 
@@ -177,8 +197,13 @@ fun CopyToClipboardButton(
     tint: Color = Color.Unspecified
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     IconButton(
-        onClick = { context.copyToClipboard(text) }
+        onClick = {
+            if(!context.copyToClipboard(text)) {
+                coroutineScope.launch { context.showFailedToShareToast() }
+            }
+        }
     ) {
         Icon(
             painter = painterResource(id = R.drawable.ic_copy),
@@ -241,6 +266,24 @@ fun ReloadButton (
             imageVector = Icons.Filled.Refresh,
             contentDescription = stringResource(
                 id = R.string.reload
+            ),
+            tint = tint
+        )
+    }
+}
+
+@Composable
+fun InfoButton(
+    tint: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = onClick
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Info,
+            contentDescription = stringResource(
+                id = R.string.info
             ),
             tint = tint
         )

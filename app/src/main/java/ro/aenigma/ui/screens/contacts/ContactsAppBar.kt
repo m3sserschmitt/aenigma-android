@@ -22,10 +22,8 @@
 package ro.aenigma.ui.screens.contacts
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,8 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import ro.aenigma.R
@@ -55,6 +51,7 @@ import ro.aenigma.ui.screens.common.ReloadClientAppBarAction
 import ro.aenigma.ui.screens.common.SearchAppBar
 import ro.aenigma.ui.screens.common.SelectionModeAppBar
 import ro.aenigma.ui.screens.common.ShareTopAppBarAction
+import ro.aenigma.ui.screens.common.ShowInfoAppBarAction
 import ro.aenigma.ui.screens.common.StandardAppBar
 
 @Composable
@@ -66,6 +63,7 @@ fun ContactsAppBar(
     selectedItemsCount: Int,
     useTor: Boolean,
     useOrbot: Boolean,
+    moreOptionsMenuExpanded: Boolean = false,
     notificationServicePreference: Boolean = false,
     torCircuitState: TorCircuitState,
     isForwardMode: Boolean = false,
@@ -80,10 +78,10 @@ fun ContactsAppBar(
     onDeleteSelectedItemsClicked: () -> Unit,
     onRenameSelectedItemClicked: () -> Unit,
     onShareSelectedItemsClicked: () -> Unit,
-    onResetUsernameClicked: () -> Unit,
     onRemoveAttachments: () -> Unit = { },
     onForwardAttachments: () -> Unit = { },
     onNotificationServicePreferenceChanged: (Boolean) -> Unit = { },
+    navigateToContactsHelpScreen: () -> Unit = { },
     onCreateGroupClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
@@ -157,6 +155,12 @@ fun ContactsAppBar(
                     tint = MaterialTheme.colorScheme.onBackground,
                     onSearchModeTriggered = onSearchTriggered
                 )
+                if(!isForwardMode) {
+                    ShowInfoAppBarAction(
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        onShowInfoClicked = navigateToContactsHelpScreen
+                    )
+                }
                 if (isSelectionMode && isForwardMode) {
                     ForwardAttachmentsAppBarAction(
                         tint = MaterialTheme.colorScheme.onBackground,
@@ -166,9 +170,9 @@ fun ContactsAppBar(
                 if (!isForwardMode) {
                     MoreActions(
                         navigateToAboutScreen = navigateToAboutScreen,
-                        onResetUsernameClicked = onResetUsernameClicked,
                         useTor = useTor,
                         useOrbot = useOrbot,
+                        expanded = moreOptionsMenuExpanded,
                         notificationServicePreference = notificationServicePreference,
                         torCircuitState = torCircuitState,
                         onTorPreferenceChanged = onTorPreferenceChanged,
@@ -198,18 +202,18 @@ fun ContactsAppBar(
 fun MoreActions(
     useTor: Boolean,
     useOrbot: Boolean,
+    expanded: Boolean = false,
     notificationServicePreference: Boolean,
     torCircuitState: TorCircuitState,
     onTorPreferenceChanged: (Boolean) -> Unit,
     onOrbotPreferenceChanged: (Boolean) -> Unit,
     onNotificationServicePreferenceChanged: (Boolean) -> Unit,
-    onResetUsernameClicked: () -> Unit,
     navigateToAboutScreen: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var isExpanded by remember(key1 = expanded) { mutableStateOf(expanded) }
     BasicDropdownMenu(
-        expanded = expanded,
-        onToggle = { isExpended -> expanded = isExpended }
+        expanded = isExpanded,
+        onToggle = { value -> isExpanded = value }
     ) {
         TorSwitch(
             useTor = useTor,
@@ -226,21 +230,12 @@ fun MoreActions(
             onNotificationServicePreferenceChanged = onNotificationServicePreferenceChanged
         )
         BasicDropDownMenuItem(
-            imageVector = Icons.Filled.AccountCircle,
-            contentDescription = stringResource(id = R.string.reset_username),
-            text = stringResource(id = R.string.reset_username),
-            onClick = {
-                onResetUsernameClicked()
-                expanded = false
-            }
-        )
-        BasicDropDownMenuItem(
             imageVector = Icons.Filled.Info,
             contentDescription = stringResource(id = R.string.about_app),
             text = stringResource(id = R.string.about_app),
             onClick = {
                 navigateToAboutScreen()
-                expanded = false
+                isExpanded = false
             }
         )
     }
@@ -256,14 +251,8 @@ fun TorSwitch(
         value = useTor,
         isActive = useTor && torCircuitState.isOk(),
         text = stringResource(id = R.string.tor_service),
-        icon = {
-            Icon(
-                modifier = Modifier.alpha(.75f),
-                painter = painterResource(id = R.drawable.ic_vpn),
-                contentDescription = stringResource(id = R.string.tor_service),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        },
+        painter = painterResource(id = R.drawable.ic_vpn),
+        contentDescription = stringResource(id = R.string.tor_service),
         onValueChanged = onTorPreferenceChanged
     )
 }
@@ -278,14 +267,8 @@ fun OrbotSwitch(
         value = useOrbot,
         isActive = useOrbot && torCircuitState.isOk(),
         text = stringResource(id = R.string.orbot_service),
-        icon = {
-            Icon(
-                modifier = Modifier.alpha(.75f),
-                painter = painterResource(id = R.drawable.ic_vpn),
-                contentDescription = stringResource(id = R.string.orbot_service),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        },
+        painter = painterResource(id = R.drawable.ic_vpn),
+        contentDescription = stringResource(id = R.string.orbot_service),
         onValueChanged = onOrbotPreferenceChanged
     )
 }
@@ -299,15 +282,8 @@ fun NotificationServiceSwitch(
         value = notificationServicePreference,
         isActive = notificationServicePreference,
         text = stringResource(id = R.string.notification_service),
-        icon = {
-            Icon(
-                modifier = Modifier.alpha(.75f),
-                imageVector = Icons.Filled.Notifications,
-                contentDescription = stringResource(id = R.string.notification_service),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        },
+        imageVector = Icons.Filled.Notifications,
+        contentDescription = stringResource(id = R.string.notification_service),
         onValueChanged = onNotificationServicePreferenceChanged
     )
 }
-

@@ -40,7 +40,8 @@ fun NavGraphBuilder.chatComposable(
     redirectUri: (String) -> Unit,
     navigateBack: () -> Unit,
     navigateToAddContactsScreen: (String) -> Unit,
-    navigateToArticle: (uri: String, title: String?, messageId: Long?) -> Unit
+    navigateToArticleScreen: (uri: String, title: String?, messageId: Long?) -> Unit,
+    navigateToChatHelpScreen: () -> Unit = { }
 ) {
     composable(
         route = Screens.CHAT_PATH,
@@ -74,7 +75,8 @@ fun NavGraphBuilder.chatComposable(
         ChatScreen(
             navigateBack = navigateBack,
             navigateToAddContactsScreen = navigateToAddContactsScreen,
-            navigateToArticle = navigateToArticle,
+            navigateToArticleScreen = navigateToArticleScreen,
+            navigateToChatHelpScreen = navigateToChatHelpScreen,
             redirectUri = redirectUri,
             chatViewModel = chatViewModel,
             chatId = chatId
