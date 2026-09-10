@@ -124,6 +124,20 @@
 
 -keep class org.apache.tika.** { *; }
 
+-dontwarn aQute.bnd.annotation.spi.ServiceConsumers
+-dontwarn javax.lang.model.SourceVersion
+-dontwarn javax.lang.model.element.AnnotationMirror
+-dontwarn javax.lang.model.element.AnnotationValue
+-dontwarn javax.lang.model.element.Element
+-dontwarn javax.lang.model.element.ExecutableElement
+-dontwarn javax.lang.model.element.Name
+-dontwarn javax.lang.model.element.TypeElement
+-dontwarn javax.lang.model.type.DeclaredType
+-dontwarn javax.lang.model.type.TypeMirror
+-dontwarn javax.tools.Diagnostic$Kind
+-dontwarn javax.tools.FileObject
+-dontwarn javax.tools.JavaFileManager$Location
+-dontwarn javax.tools.StandardLocation
 -dontwarn aQute.bnd.annotation.Version
 -dontwarn javax.xml.stream.XMLInputFactory
 -dontwarn javax.xml.stream.XMLResolver
