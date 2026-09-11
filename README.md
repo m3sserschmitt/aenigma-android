@@ -12,7 +12,7 @@ public key cryptography.
 
 - Anonymous sign-up with no personal information required
 - No data collection or processing
-- Built with transparency, privacy, and user autonomy in mind
+- Built with transparency, privacy and user autonomy in mind
 
 <a href="https://play.google.com/store/apps/details?id=ro.aenigma">
   <img alt="Get it on Google Play"
@@ -80,7 +80,7 @@ export ANDROID_HOME=<sdk-path>
 > in your project's local properties file at `local.properties`.
 ### License
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![License: GPL v3 or later](https://img.shields.io/badge/License-GPLv3%2B-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 This project is licensed under the GNU General Public License v3.0. See the
 [LICENSE](./LICENSE) file for details.
