@@ -1,0 +1,2 @@
+* Upgraded to OpenSSL 3.5.8
+* Upgraded app dependencies

@@ -1,7 +1,7 @@
 /*
     Aenigma - Private Messaging
     Client Android mobile application for Aenigma - Federated messaging system
-    Copyright © 2025-2026 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+    Copyright © 2023-2026 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
     This file is part of Aenigma project.
 

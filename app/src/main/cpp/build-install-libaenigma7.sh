@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Aenigma - Federal messaging system
-# Copyright © 2024-2025 Romulus-Emanuel Ruja <romulus-emanuel.ruja@tutanota.com>
+# Copyright © 2023-2025 Romulus-Emanuel Ruja <romulus.ruja@aenigma.ro>
 
 # This file is part of Aenigma project.
 
